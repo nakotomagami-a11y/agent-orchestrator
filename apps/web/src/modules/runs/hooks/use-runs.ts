@@ -26,7 +26,7 @@ export function useRuns(filters?: {
 
 export function useRun(runId: string | null) {
   return useQuery({
-    queryKey: runId ? queryKeys.runs.detail(runId) : ["__noop"],
+    queryKey: queryKeys.runs.detail(runId ?? "__none"),
     queryFn: () => apiFetch<PersistedRun>(API_ROUTES.run(runId!)),
     enabled: !!runId,
   });

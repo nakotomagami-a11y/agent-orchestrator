@@ -1,27 +1,19 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 /**
- * Cross-fade route content. The first paint is instant (no animation); each
- * subsequent route change fades the new content in over 160ms via CSS opacity.
+ * Cross-fade route content. CSS keyed on the pathname — the browser handles
+ * the animation, so no extra render pass per navigation.
  */
 export function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    setVisible(false);
-    const id = requestAnimationFrame(() => setVisible(true));
-    return () => cancelAnimationFrame(id);
-  }, [pathname]);
-
   return (
     <div
+      key={pathname}
+      className="page-transition"
       style={{
-        opacity: visible ? 1 : 0,
-        transition: "opacity 160ms ease-out",
         flex: 1,
         minHeight: 0,
         display: "flex",

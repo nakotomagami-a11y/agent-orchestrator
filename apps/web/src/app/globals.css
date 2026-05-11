@@ -845,3 +845,11 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+.page-transition {
+  animation: page-fade-in 160ms ease-out;
+}
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

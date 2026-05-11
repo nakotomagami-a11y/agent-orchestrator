@@ -15,7 +15,7 @@ export function useProjects() {
 
 export function useProject(id: string | null) {
   return useQuery({
-    queryKey: id ? queryKeys.projects.detail(id) : ["__noop"],
+    queryKey: queryKeys.projects.detail(id ?? "__none"),
     queryFn: () => apiFetch<Project>(API_ROUTES.project(id!)),
     enabled: !!id,
   });
