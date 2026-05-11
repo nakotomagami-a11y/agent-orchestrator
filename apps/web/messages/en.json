@@ -226,9 +226,11 @@
     "tag_effort": "effort: {effort}"
   },
   "project_activity": {
-    "empty": "No runs yet for this project.",
-    "today_label": "Today",
-    "earlier_label": "Earlier"
+    "card_title": "Activity",
+    "loading": "loading…",
+    "sub_runs": "{count, plural, one {# run} other {# runs}}",
+    "sub_today": "· {amount} today",
+    "empty": "No runs yet on this project. Summon an agent from the office."
   },
   "add_agent_modal": {
     "title": "Add agent",
@@ -272,15 +274,8 @@
     "description_empty": "—"
   },
   "runs": {
-    "title": "Activity",
-    "empty": "No runs yet.",
-    "status_running": "Running",
-    "status_done": "Done",
-    "status_error": "Error",
-    "status_aborted": "Aborted",
-    "status_queued": "Queued",
-    "cost_label": "${amount}",
-    "duration_label": "{seconds}s"
+    "empty_title": "No runs yet",
+    "runs_count_sub": "{count, plural, one {# run} other {# runs}}"
   },
   "run_detail": {
     "prompt_card_title": "Prompt",
@@ -338,18 +333,37 @@
     "aborted": "Aborted by you"
   },
   "limits": {
-    "title": "Claude limits & usage",
-    "today_label": "Today",
-    "five_hour_label": "Last 5 hours",
-    "weekly_label": "This week",
-    "spent_label": "Spent",
-    "budget_label": "Budget",
-    "remaining_label": "Remaining",
-    "model_label": "Model",
-    "runs_label": "Runs",
-    "budget_placeholder": "Daily budget (USD)",
-    "budget_aria": "Daily budget in dollars",
-    "save_button": "Save limits"
+    "title": "Claude limits",
+    "done_button": "Done",
+    "section_plan": "Plan",
+    "section_usage": "Usage",
+    "section_by_model": "By model",
+    "label_plan": "Plan",
+    "label_period": "Period",
+    "label_quota_cap": "Quota cap (USD)",
+    "quota_hint": "Set 0 to just track usage — no cap displayed.",
+    "quota_placeholder": "e.g. 200",
+    "period_week": "Weekly (resets Monday)",
+    "period_month": "Monthly (resets 1st)",
+    "metric_today": "Today",
+    "metric_this_week": "This week",
+    "metric_this_month": "This month",
+    "metric_runs_in_period": "Runs in period",
+    "usage_of_quota": "{used} of {quota} used",
+    "usage_no_quota": "{used} used this {period}",
+    "period_week_short": "week",
+    "period_month_short": "month",
+    "resets_in": "resets in {duration}",
+    "no_quota_aria": "No quota set",
+    "pct_used_aria": "{pct}% used",
+    "pct_of_cap": "{pct}% of cap",
+    "pct_of_period_aria": "{pct}% of period cost",
+    "model_row_summary": "{count, plural, one {# run} other {# runs}} · {tokens} tok · {cost}",
+    "caveat": "Counts only what Agent Office summoned (saved in",
+    "caveat_path": "~/.claude/agent-office/runs.log",
+    "caveat_suffix": "). Anything you ran through plain",
+    "caveat_claude": "claude",
+    "caveat_tail": "outside the dashboard isn't included."
   },
   "errors": {
     "claude_unavailable": "Claude CLI is not available.",

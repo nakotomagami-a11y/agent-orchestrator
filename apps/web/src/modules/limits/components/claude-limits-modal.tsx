@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { TextInput } from "@/components/ui/text-input";
 import { Select } from "@/components/ui/select";
@@ -26,6 +27,7 @@ const PLAN_OPTIONS: ClaudePlan[] = ["pro", "max-5x", "max-20x", "api", "custom"]
  * caveat is shown explicitly.
  */
 export function ClaudeLimitsModal() {
+  const t = useTranslations();
   useClaudeLimitsHydration();
   const open = useClaudeLimitsStore((s) => s.open);
   const setOpen = useClaudeLimitsStore((s) => s.setOpen);
@@ -70,18 +72,18 @@ export function ClaudeLimitsModal() {
     <ModalShell
       open={open}
       onClose={() => setOpen(false)}
-      title="Claude limits"
+      title={t("limits.title")}
       size="md"
       footer={
         <button type="button" className="btn" onClick={() => setOpen(false)}>
-          Done
+          {t("limits.done_button")}
         </button>
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <Section title="Plan">
+        <Section title={t("limits.section_plan")}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Field label="Plan">
+            <Field label={t("limits.label_plan")}>
               <Select
                 value={plan}
                 onChange={(e) => update({ plan: e.target.value as ClaudePlan })}
@@ -91,19 +93,19 @@ export function ClaudeLimitsModal() {
                 ))}
               </Select>
             </Field>
-            <Field label="Period">
+            <Field label={t("limits.label_period")}>
               <Select
                 value={period}
                 onChange={(e) => update({ period: e.target.value as LimitsPeriod })}
               >
-                <option value="week">Weekly (resets Monday)</option>
-                <option value="month">Monthly (resets 1st)</option>
+                <option value="week">{t("limits.period_week")}</option>
+                <option value="month">{t("limits.period_month")}</option>
               </Select>
             </Field>
             <Field
-              label="Quota cap (USD)"
+              label={t("limits.label_quota_cap")}
               span={2}
-              hint="Set 0 to just track usage — no cap displayed."
+              hint={t("limits.quota_hint")}
             >
               <TextInput
                 type="number"
@@ -115,13 +117,13 @@ export function ClaudeLimitsModal() {
                   const v = Number(e.target.value);
                   update({ quotaUsd: Number.isFinite(v) && v >= 0 ? v : 0 });
                 }}
-                placeholder="e.g. 200"
+                placeholder={t("limits.quota_placeholder")}
               />
             </Field>
           </div>
         </Section>
 
-        <Section title="Usage">
+        <Section title={t("limits.section_usage")}>
           {runsQ.isLoading ? (
             <Skeleton width="100%" height={70} />
           ) : (
@@ -143,13 +145,13 @@ export function ClaudeLimitsModal() {
                   fontSize: 12,
                 }}
               >
-                <Metric label="Today" value={`$${usedToday.toFixed(2)}`} />
+                <Metric label={t("limits.metric_today")} value={`$${usedToday.toFixed(2)}`} />
                 <Metric
-                  label={period === "week" ? "This week" : "This month"}
+                  label={period === "week" ? t("limits.metric_this_week") : t("limits.metric_this_month")}
                   value={`$${usedPeriod.toFixed(2)}`}
                 />
                 <Metric
-                  label="Runs in period"
+                  label={t("limits.metric_runs_in_period")}
                   value={inPeriod.length.toLocaleString()}
                 />
               </div>
@@ -158,7 +160,7 @@ export function ClaudeLimitsModal() {
         </Section>
 
         {modelRows.length > 0 ? (
-          <Section title="By model">
+          <Section title={t("limits.section_by_model")}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {modelRows.map(([m, b]) => (
                 <ModelRow

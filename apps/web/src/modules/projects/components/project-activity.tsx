@@ -1,6 +1,7 @@
 "use client";
 
 import { match } from "ts-pattern";
+import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +27,7 @@ export type ProjectActivityProps = {
  * History tab so you can see the full transcript in context.
  */
 export function ProjectActivity({ projectId }: ProjectActivityProps) {
+  const t = useTranslations();
   const select = useOfficeStore((s) => s.select);
   const { data, isLoading } = useRuns({ projectId, limit: 100 });
 
@@ -39,13 +41,12 @@ export function ProjectActivity({ projectId }: ProjectActivityProps) {
   return (
     <Card>
       <CardHeader
-        title="Activity"
+        title={t("project_activity.card_title")}
         sub={
           isLoading
-            ? "loading…"
-            : `${runs.length} run${runs.length === 1 ? "" : "s"}${
-                todayCost > 0 ? ` · ${formatCost(todayCost)} today` : ""
-              }`
+            ? t("project_activity.loading")
+            : t("project_activity.sub_runs", { count: runs.length }) +
+              (todayCost > 0 ? " " + t("project_activity.sub_today", { amount: formatCost(todayCost) }) : "")
         }
       />
       {isLoading ? (
@@ -65,7 +66,7 @@ export function ProjectActivity({ projectId }: ProjectActivityProps) {
             textAlign: "center",
           }}
         >
-          No runs yet on this project. Summon an agent from the office.
+          {t("project_activity.empty")}
         </div>
       ) : (
         <div>
