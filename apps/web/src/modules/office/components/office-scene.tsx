@@ -7,6 +7,7 @@ import {
   DECORATIONS,
   applyPlacement,
   decorationKey,
+  hasBridgeCap,
   isPlacementValid,
   popDecoration,
   type DecorationKind,
@@ -253,8 +254,11 @@ export function OfficeScene() {
         return;
       }
 
-      // Decoration tool: validate against current terrain.
+      // Decoration tool: validate against current terrain, and refuse
+      // to place on a tile that's reserved as a bridge ramp — those
+      // cells render an auto-cap and can't host other decorations.
       if (!isPlacementValid(tool, cellHasGrass)) return;
+      if (hasBridgeCap(x, y, grid, decorations)) return;
       setDecorations((prev) => {
         const stack = applyPlacement(prev[key], tool);
         return { ...prev, [key]: stack };

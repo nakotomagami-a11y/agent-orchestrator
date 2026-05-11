@@ -8,6 +8,7 @@ import {
   DECORATIONS,
   decorationKey,
   familyOf,
+  hasBridgeCap,
   isPlacementValid,
   type DecorationKind,
   type DecorationsMap,
@@ -296,6 +297,9 @@ function isToolValidAt(
   if (tool === "erase") return cellHasGrass || (stack !== undefined && stack.length > 0);
   if (!isPlacementValid(tool, cellHasGrass)) return false;
   if (stack?.includes(tool)) return false; // already exactly that kind
+  // Cells acting as a bridge ramp are reserved for the cap — block any
+  // new decoration placement there.
+  if (hasBridgeCap(x, y, grid, decorations)) return false;
   return true;
 }
 

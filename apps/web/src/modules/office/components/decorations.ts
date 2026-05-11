@@ -454,6 +454,36 @@ export function familyOf(kind: DecorationKind): DecoFamily {
 }
 
 /**
+ * True when a bridge end-cap would render on cell `(x, y)`. Mirrors the
+ * cap-painting logic in OfficeMap: a cap appears iff the cell is land
+ * AND a neighbouring water cell holds a bridge middle that points at
+ * this cell (horizontal bridge on the L/R neighbour, vertical bridge on
+ * the T/B neighbour).
+ *
+ * Used to block decoration placement on the cap cell — once a bridge
+ * uses a land tile as its anchor, that tile is reserved for the
+ * bridge ramp.
+ */
+export function hasBridgeCap(
+  x: number,
+  y: number,
+  grid: boolean[][],
+  decorations: DecorationsMap,
+): boolean {
+  if (grid[y]?.[x] !== true) return false;
+  const has = (cx: number, cy: number, kind: DecorationKind): boolean => {
+    const stack = decorations[decorationKey(cx, cy)];
+    return !!stack && stack.includes(kind);
+  };
+  return (
+    has(x - 1, y, "bridge_h") ||
+    has(x + 1, y, "bridge_h") ||
+    has(x, y - 1, "bridge_v") ||
+    has(x, y + 1, "bridge_v")
+  );
+}
+
+/**
  * Apply a single placement to a cell's stack, returning the new stack.
  *
  *   - If the cell already has a decoration of the same family, replace
