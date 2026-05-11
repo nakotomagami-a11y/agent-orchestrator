@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
+import { API_ROUTES } from "@agent-office/shared/config/routes";
 
 type SlashCommand = {
   cmd: string;
@@ -17,11 +25,28 @@ const SLASH_COMMANDS: SlashCommand[] = [
   { cmd: "/history", descKey: "composer.command_history_desc" },
 ];
 
+type Attachment = {
+  /** Local id for React keying — not persisted. */
+  localId: string;
+  /** Display name (filename). */
+  name: string;
+  /** On-disk path returned by the upload endpoint; absent while pending. */
+  path?: string;
+  /** While true, upload is still in flight. */
+  pending: boolean;
+  /** Error message if upload failed. The chip stays visible so the user can dismiss it. */
+  error?: string;
+};
+
 export type ComposerProps = {
   disabled?: boolean;
   onSubmit: (text: string) => void;
   onAbort?: () => void;
   abortable?: boolean;
+  /** Agent owning this chat — used as the default upload target. */
+  agentId: string;
+  /** When set, uploads go to the project's uploads dir instead of the agent's. */
+  projectId?: string;
   /** Shown as a chip in the toolbar (e.g. "haiku"). */
   modelChip?: string;
   /** Shown as a chip in the toolbar (e.g. "cwd: ~/proj"). */
@@ -32,11 +57,16 @@ export type ComposerProps = {
   onCommand?: (cmd: string) => void;
 };
 
+let attachmentCounter = 0;
+const nextAttachmentId = () => `att-${Date.now().toString(36)}-${attachmentCounter++}`;
+
 export function Composer({
   disabled,
   onSubmit,
   onAbort,
   abortable,
+  agentId,
+  projectId,
   modelChip,
   cwdChip,
   seed,
@@ -44,7 +74,7 @@ export function Composer({
 }: ComposerProps) {
   const t = useTranslations();
   const [value, setValue] = useState("");
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashIdx, setSlashIdx] = useState(0);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -64,12 +94,60 @@ export function Composer({
     return SLASH_COMMANDS.filter((s) => s.cmd.slice(1).startsWith(q));
   }, [value]);
 
+  const uploadOne = async (file: File): Promise<void> => {
+    const localId = nextAttachmentId();
+    setAttachments((prev) => [...prev, { localId, name: file.name, pending: true }]);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const target = projectId
+        ? API_ROUTES.projectUploads(projectId)
+        : API_ROUTES.agentUploads(agentId);
+      const res = await fetch(target, { method: "POST", body: form });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? `HTTP ${res.status}`);
+      }
+      const data = (await res.json()) as { filename: string; path: string; size: number };
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.localId === localId
+            ? { ...a, pending: false, path: data.path, name: data.filename }
+            : a,
+        ),
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setAttachments((prev) =>
+        prev.map((a) =>
+          a.localId === localId ? { ...a, pending: false, error: msg } : a,
+        ),
+      );
+    }
+  };
+
+  const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const files: File[] = [];
+    for (const item of Array.from(e.clipboardData.items)) {
+      if (item.kind === "file") {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (files.length === 0) return;
+    e.preventDefault();
+    for (const file of files) {
+      void uploadOne(file);
+    }
+  };
+
   const send = () => {
     const v = value.trim();
-    if (!v && attachments.length === 0) return;
+    const ready = attachments.filter((a) => a.path);
+    if (!v && ready.length === 0) return;
     if (disabled) return;
+    if (attachments.some((a) => a.pending)) return;
 
-    // Handle inline slash commands locally — never sent to the agent.
     if (v.startsWith("/")) {
       const [cmd] = v.split(/\s+/);
       if (cmd && SLASH_COMMANDS.some((s) => s.cmd === cmd) && onCommand) {
@@ -81,7 +159,9 @@ export function Composer({
     }
 
     const composed =
-      attachments.length > 0 ? `${v}\n\n[attached: ${attachments.join(", ")}]`.trimStart() : v;
+      ready.length > 0
+        ? `${v}\n\n${t("composer.attachments_intro")}\n${ready.map((a) => `- ${a.path}`).join("\n")}`.trimStart()
+        : v;
     onSubmit(composed);
     setValue("");
     setAttachments([]);
@@ -134,9 +214,16 @@ export function Composer({
 
   const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
-    setAttachments((prev) => [...prev, ...files.map((f) => f.name)]);
+    for (const file of files) {
+      void uploadOne(file);
+    }
     if (fileRef.current) fileRef.current.value = "";
   };
+
+  const anyPending = attachments.some((a) => a.pending);
+  const hasReadyAttachments = attachments.some((a) => a.path);
+  const sendDisabled =
+    disabled || anyPending || (!value.trim() && !hasReadyAttachments);
 
   return (
     <div className="composer">
@@ -163,14 +250,32 @@ export function Composer({
         <div className="composer-box">
           {attachments.length > 0 ? (
             <div className="composer-attachments">
-              {attachments.map((name, i) => (
-                <span key={`${name}-${i}`} className="attach-chip">
-                  <Icon name="folder" size={11} /> {name}
+              {attachments.map((a) => (
+                <span
+                  key={a.localId}
+                  className="attach-chip"
+                  title={a.error ? t("composer.upload_failed_title", { error: a.error }) : a.path ?? a.name}
+                  style={
+                    a.error
+                      ? { borderColor: "var(--error)", color: "var(--error)" }
+                      : a.pending
+                        ? { opacity: 0.7 }
+                        : undefined
+                  }
+                >
+                  {a.pending ? (
+                    <Icon name="refresh" size={11} style={{ animation: "spin 1s linear infinite" }} />
+                  ) : (
+                    <Icon name={a.error ? "x" : "folder"} size={11} />
+                  )}{" "}
+                  {a.pending ? t("composer.uploading_label") : a.name}
                   <button
                     type="button"
                     className="x"
-                    aria-label={t("composer.remove_chip_aria", { name })}
-                    onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                    aria-label={t("composer.remove_chip_aria", { name: a.name })}
+                    onClick={() =>
+                      setAttachments((prev) => prev.filter((x) => x.localId !== a.localId))
+                    }
                     style={{
                       background: "transparent",
                       border: "none",
@@ -191,6 +296,7 @@ export function Composer({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={onKey}
+            onPaste={onPaste}
             placeholder={t("composer.input_placeholder")}
             aria-label={t("composer.input_aria")}
             rows={1}
@@ -199,18 +305,18 @@ export function Composer({
             <button
               type="button"
               className="btn sm ghost"
-              title="Attach"
+              title={t("composer.attach_title")}
               onClick={() => fileRef.current?.click()}
-              aria-label="Attach file"
+              aria-label={t("composer.attach_title")}
             >
               <Icon name="attach" />
             </button>
             <button
               type="button"
               className="btn sm ghost"
-              title="Insert slash command"
+              title={t("composer.slash_insert_title")}
               onClick={() => onChange("/")}
-              aria-label="Insert slash command"
+              aria-label={t("composer.slash_insert_aria")}
             >
               <Icon name="slash" />
             </button>
@@ -229,15 +335,16 @@ export function Composer({
                     fontFamily: "var(--font-mono)",
                   }}
                 >
-                  <span className="kbd">⏎</span> send · <span className="kbd">⇧⏎</span> newline
+                  <span className="kbd">⏎</span> {t("composer.shortcut_send")} ·{" "}
+                  <span className="kbd">⇧⏎</span> {t("composer.shortcut_newline")}
                 </span>
               )}
               <button
                 type="button"
                 className="send-btn"
                 onClick={send}
-                disabled={disabled || (!value.trim() && attachments.length === 0)}
-                aria-label="Send"
+                disabled={sendDisabled}
+                aria-label={t("composer.send_label")}
               >
                 <Icon name="send" />
               </button>

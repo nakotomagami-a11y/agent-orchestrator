@@ -291,6 +291,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
         onSubmit={onSubmit}
         abortable={isStreaming && activeRunId !== null}
         onAbort={onAbort}
+        agentId={agent.id}
+        projectId={projectId}
         modelChip={agent.defaultModel ?? "default"}
         cwdChip={projectId ? `project: ${projectId}` : undefined}
         seed={pendingSeed}
