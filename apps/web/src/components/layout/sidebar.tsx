@@ -77,6 +77,7 @@ export function Sidebar() {
           label={t("nav.agents")}
           active={isActiveRoute(pathname, PAGE_ROUTES.agents)}
         />
+        <LimitsNavButton spendToday={spendToday} />
       </nav>
 
       <div style={{ display: "grid", gridTemplateRows: "auto 1fr", minHeight: 0 }}>
@@ -199,47 +200,44 @@ export function Sidebar() {
 }
 
 function SidebarFoot({ spendToday }: { spendToday: number }) {
+  return (
+    <Link
+      href={PAGE_ROUTES.settings}
+      className="sidebar-foot"
+      aria-label="Open settings"
+      style={{ textDecoration: "none", color: "var(--txt)" }}
+    >
+      <div className="me" aria-hidden>
+        P
+      </div>
+      <div>
+        <div className="me-name">Local</div>
+        <div className="me-sub">single-user</div>
+      </div>
+      <div className="foot-spend" aria-label={`Spend today $${spendToday.toFixed(2)}`}>
+        ${spendToday.toFixed(2)}
+      </div>
+    </Link>
+  );
+}
+
+function LimitsNavButton({ spendToday }: { spendToday: number }) {
   const openLimits = useClaudeLimitsStore((s) => s.setOpen);
   return (
-    <div className="sidebar-foot">
-      <Link
-        href={PAGE_ROUTES.settings}
-        aria-label="Open settings"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          textDecoration: "none",
-          color: "var(--txt)",
-          flex: 1,
-          minWidth: 0,
-        }}
-      >
-        <div className="me" aria-hidden>
-          P
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <div className="me-name">Local</div>
-          <div className="me-sub">single-user</div>
-        </div>
-      </Link>
-      <button
-        type="button"
-        onClick={() => openLimits(true)}
-        className="foot-spend"
-        title="Claude limits & usage"
-        aria-label={`Claude limits — spend today $${spendToday.toFixed(2)}`}
-        style={{
-          font: "inherit",
-          cursor: "pointer",
-          display: "inline-flex",
-          alignItems: "center",
-          gap: 6,
-        }}
-      >
-        <Icon name="gauge" size={12} />
-        ${spendToday.toFixed(2)} today
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => openLimits(true)}
+      className="nav-item"
+      aria-label="Claude limits and usage"
+      style={{
+        font: "inherit",
+        width: "100%",
+        cursor: "pointer",
+      }}
+    >
+      <Icon name="gauge" />
+      <span>Limits</span>
+      <span className="badge">${spendToday.toFixed(2)}</span>
+    </button>
   );
 }
