@@ -67,6 +67,11 @@ export type DecorationKind =
   | "house1"
   | "house2"
   | "house3"
+  | "house_blue"
+  | "house_purple"
+  | "house_red"
+  | "house_yellow"
+  | "house_goblin"
   | "tower"
   | "castle"
   | "water_rock"
@@ -233,6 +238,38 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
   house3: {
     label: "House 3",
     src: "/decorations/house3.png",
+    frameW: 128, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  // Knights House — 4 faction colour variants from the Update 010 pack.
+  house_blue: {
+    label: "House (Blue)",
+    src: "/decorations/house_blue.png",
+    frameW: 128, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  house_purple: {
+    label: "House (Purple)",
+    src: "/decorations/house_purple.png",
+    frameW: 128, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  house_red: {
+    label: "House (Red)",
+    src: "/decorations/house_red.png",
+    frameW: 128, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  house_yellow: {
+    label: "House (Yellow)",
+    src: "/decorations/house_yellow.png",
+    frameW: 128, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  // Goblin Wood House — the only Goblin house variant in the pack.
+  house_goblin: {
+    label: "Goblin House",
+    src: "/decorations/house_goblin.png",
     frameW: 128, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
   },
