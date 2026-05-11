@@ -103,6 +103,27 @@ export const summonRequestSchema = z.object({
 });
 
 export const runsQuerySchema = z.object({
-  agent: z.string().optional(),
-  limit: z.string().optional(),
+  agent: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]+$/)
+    .optional(),
+  project: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]+$/)
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+
+export const skillsRegistryQuerySchema = z.object({
+  refresh: z
+    .string()
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
+});
+
+export const healthQuerySchema = z.object({
+  force: z
+    .string()
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
 });
