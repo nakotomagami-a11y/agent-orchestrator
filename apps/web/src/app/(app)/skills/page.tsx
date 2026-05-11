@@ -7,7 +7,7 @@ export default async function SkillsRoute() {
     <>
       <div className="toolbar">
         <h1>{t("nav.skills")}</h1>
-        <span className="sub">· browse and install agent capability packages</span>
+        <span className="sub">{t("skills_page.sub")}</span>
       </div>
       <SkillsPage />
     </>

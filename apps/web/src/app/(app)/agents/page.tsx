@@ -10,7 +10,7 @@ export default async function AgentsPage() {
     <>
       <div className="toolbar">
         <h1>{t("nav.agents")}</h1>
-        <span className="sub">· every markdown file in ~/.claude/agents/</span>
+        <span className="sub">{t("agent.list_sub")}</span>
         <div className="right">
           <Link href={PAGE_ROUTES.agentNew} className="btn sm primary">
             <Icon name="plus" /> {t("office.new_agent")}

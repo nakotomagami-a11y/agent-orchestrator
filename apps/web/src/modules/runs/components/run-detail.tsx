@@ -48,19 +48,19 @@ export function RunDetail({ runId }: RunDetailProps) {
           right={<StatusDot status={status} />}
         />
         <div style={{ padding: "12px 16px", display: "grid", gridTemplateColumns: "120px 1fr", rowGap: 8, columnGap: 12, fontSize: 12 }}>
-          <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>model</span>
+          <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_model")}</span>
           <span style={{ fontFamily: "var(--font-mono)" }}>{run.model} · {run.effort}</span>
-          <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>tokens</span>
+          <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_tokens")}</span>
           <span style={{ fontFamily: "var(--font-mono)" }}>{run.tokensIn}↓ / {run.tokensOut}↑</span>
           {run.cwd ? (
             <>
-              <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>cwd</span>
+              <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_cwd")}</span>
               <span style={{ fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis" }}>{run.cwd}</span>
             </>
           ) : null}
           {run.projectId ? (
             <>
-              <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>project</span>
+              <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_project")}</span>
               <span style={{ fontFamily: "var(--font-mono)" }}>{run.projectId} · {run.instanceLabel ?? run.instanceId}</span>
             </>
           ) : null}
@@ -68,19 +68,19 @@ export function RunDetail({ runId }: RunDetailProps) {
       </Card>
 
       <Card>
-        <CardHeader title="Prompt" />
+        <CardHeader title={t("run_detail.prompt_card_title")} />
         <div style={{ padding: 16 }}>
           <CodeBlock body={run.prompt} lang="prompt" />
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="Output" />
+        <CardHeader title={t("run_detail.output_card_title")} />
         <div style={{ padding: 16 }}>
           {run.output ? (
             <CodeBlock body={run.output} lang={run.status === "error" ? "error" : "stdout"} />
           ) : (
-            <p style={{ color: "var(--txt-3)", fontSize: 13 }}>(no output)</p>
+            <p style={{ color: "var(--txt-3)", fontSize: 13 }}>{t("run_detail.output_empty")}</p>
           )}
         </div>
       </Card>

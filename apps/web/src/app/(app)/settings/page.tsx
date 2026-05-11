@@ -7,7 +7,7 @@ export default async function SettingsRoute() {
     <>
       <div className="toolbar">
         <h1>{t("nav.settings")}</h1>
-        <span className="sub">· local-only configuration</span>
+        <span className="sub">{t("settings_page.sub")}</span>
       </div>
       <SettingsPage />
     </>

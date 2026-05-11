@@ -105,7 +105,27 @@
   "agent": {
     "title_view": "Agent",
     "title_new": "New agent",
-    "title_edit": "Edit agent"
+    "title_edit": "Edit agent",
+    "new_sub": "· write a fresh markdown definition",
+    "list_sub": "· every markdown file in ~/.claude/agents/"
+  },
+  "projects_page": {
+    "sub": "· scanned from your projects root"
+  },
+  "activity_page": {
+    "sub": "· run history across all agents"
+  },
+  "settings_page": {
+    "sub": "· local-only configuration"
+  },
+  "skills_page": {
+    "sub": "· browse and install agent capability packages"
+  },
+  "run": {
+    "title": "Run"
+  },
+  "project": {
+    "title": "Project"
   },
   "agent_form": {
     "title_new": "New agent",
@@ -263,17 +283,13 @@
     "duration_label": "{seconds}s"
   },
   "run_detail": {
-    "back_aria": "Back to activity",
-    "prompt_label": "Prompt",
-    "output_label": "Output",
-    "metadata_label": "Run details",
-    "agent_label": "Agent",
-    "model_label": "Model",
-    "started_label": "Started",
-    "finished_label": "Finished",
-    "duration_label": "Duration",
-    "cost_label": "Cost",
-    "cwd_label": "Working directory"
+    "prompt_card_title": "Prompt",
+    "output_card_title": "Output",
+    "output_empty": "(no output)",
+    "field_model": "model",
+    "field_tokens": "tokens",
+    "field_cwd": "cwd",
+    "field_project": "project"
   },
   "summon": {
     "open_chat": "Open chat",
@@ -291,27 +307,35 @@
     "abort_aria": "Abort current run",
     "abort_title": "Abort current run",
     "remove_chip_aria": "Remove {name}",
-    "command_model_desc": "Switch model for this prompt (sonnet/haiku/opus)",
-    "command_effort_desc": "Set thinking effort (low/medium/high)",
-    "command_budget_desc": "Cap spend in USD for this run",
-    "command_skills_desc": "Attach skills (comma-separated)",
-    "command_clear_desc": "Clear pinned options",
-    "command_help_desc": "List available slash commands"
+    "command_clear_desc": "Start a new thread",
+    "command_branch_desc": "Fork the current thread",
+    "command_memory_desc": "Edit this agent's memory",
+    "command_prompt_desc": "View the system prompt",
+    "command_history_desc": "Show recent runs"
   },
   "chat_head": {
     "open_chat_aria": "Open chat with {name}",
-    "close_aria": "Close chat panel"
+    "close_aria": "Close chat panel",
+    "sub": "{id} · {model} · effort {effort}",
+    "model_default": "default",
+    "effort_default": "default",
+    "usage_title": "tokens in / out · cost",
+    "branch_button": "Branch",
+    "branch_title": "Branch conversation",
+    "new_button": "New",
+    "new_title": "New thread",
+    "edit_title": "Edit agent",
+    "edit_aria": "Edit agent"
   },
   "live_status": {
-    "thinking": "Thinking…",
-    "calling_tool": "Running {tool}…",
-    "writing": "Writing…",
-    "reading": "Reading…",
-    "running": "Running…",
-    "waiting": "Waiting…",
-    "queued": "Queued…",
-    "starting": "Starting…",
-    "done": "Done"
+    "idle": "Idle",
+    "sending": "Sending message…",
+    "connecting": "Connecting to agent…",
+    "working": "Working… (no output yet)",
+    "streaming": "Streaming response…",
+    "done": "Finished",
+    "error": "Error — see message above",
+    "aborted": "Aborted by you"
   },
   "limits": {
     "title": "Claude limits & usage",

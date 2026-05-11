@@ -7,7 +7,7 @@ export default async function ProjectsRoute() {
     <>
       <div className="toolbar">
         <h1>{t("nav.projects")}</h1>
-        <span className="sub">· scanned from your projects root</span>
+        <span className="sub">{t("projects_page.sub")}</span>
       </div>
       <ProjectsList />
     </>

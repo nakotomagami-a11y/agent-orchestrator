@@ -6,15 +6,15 @@ import { Icon } from "@/components/ui/icon";
 
 type SlashCommand = {
   cmd: string;
-  desc: string;
+  descKey: string;
 };
 
 const SLASH_COMMANDS: SlashCommand[] = [
-  { cmd: "/clear", desc: "Start a new thread" },
-  { cmd: "/branch", desc: "Fork the current thread" },
-  { cmd: "/memory", desc: "Edit this agent's memory" },
-  { cmd: "/prompt", desc: "View the system prompt" },
-  { cmd: "/history", desc: "Show recent runs" },
+  { cmd: "/clear", descKey: "composer.command_clear_desc" },
+  { cmd: "/branch", descKey: "composer.command_branch_desc" },
+  { cmd: "/memory", descKey: "composer.command_memory_desc" },
+  { cmd: "/prompt", descKey: "composer.command_prompt_desc" },
+  { cmd: "/history", descKey: "composer.command_history_desc" },
 ];
 
 export type ComposerProps = {
@@ -154,7 +154,7 @@ export function Composer({
                 onClick={() => insertSlash(s.cmd)}
               >
                 <span className="cmd">{s.cmd}</span>
-                <span className="desc">{s.desc}</span>
+                <span className="desc">{t(s.descKey)}</span>
               </button>
             ))}
           </div>

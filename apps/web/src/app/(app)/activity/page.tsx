@@ -7,7 +7,7 @@ export default async function ActivityPage() {
     <>
       <div className="toolbar">
         <h1>{t("nav.activity")}</h1>
-        <span className="sub">· run history across all agents</span>
+        <span className="sub">{t("activity_page.sub")}</span>
       </div>
       <ActivityFeed />
     </>

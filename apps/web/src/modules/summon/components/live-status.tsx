@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 
 export type ChatPhase =
@@ -12,15 +13,15 @@ export type ChatPhase =
   | "error"
   | "aborted";
 
-const COPY: Record<ChatPhase, { label: string; tone: "info" | "warn" | "ok" | "err" | "ghost" }> = {
-  idle: { label: "Idle", tone: "ghost" },
-  sending: { label: "Sending message…", tone: "info" },
-  connecting: { label: "Connecting to agent…", tone: "info" },
-  working: { label: "Working… (no output yet)", tone: "warn" },
-  streaming: { label: "Streaming response…", tone: "info" },
-  done: { label: "Finished", tone: "ok" },
-  error: { label: "Error — see message above", tone: "err" },
-  aborted: { label: "Aborted by you", tone: "ghost" },
+const TONE: Record<ChatPhase, "info" | "warn" | "ok" | "err" | "ghost"> = {
+  idle: "ghost",
+  sending: "info",
+  connecting: "info",
+  working: "warn",
+  streaming: "info",
+  done: "ok",
+  error: "err",
+  aborted: "ghost",
 };
 
 const TONE_COLOUR: Record<"info" | "warn" | "ok" | "err" | "ghost", string> = {
@@ -44,8 +45,10 @@ export function LiveStatus({
   phase: ChatPhase;
   hint?: string;
 }) {
+  const t = useTranslations();
   if (phase === "idle") return null;
-  const { label, tone } = COPY[phase];
+  const tone = TONE[phase];
+  const label = t(`live_status.${phase}`);
   const colour = TONE_COLOUR[tone];
   const active = phase === "sending" || phase === "connecting" || phase === "working" || phase === "streaming";
   return (

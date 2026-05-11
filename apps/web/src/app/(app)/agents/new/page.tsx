@@ -1,11 +1,13 @@
+import { getTranslations } from "next-intl/server";
 import { AgentForm } from "@/modules/agents/components/agent-form";
 
-export default function NewAgentPage() {
+export default async function NewAgentPage() {
+  const t = await getTranslations();
   return (
     <>
       <div className="toolbar">
-        <h1>New agent</h1>
-        <span className="sub">· write a fresh markdown definition</span>
+        <h1>{t("agent.title_new")}</h1>
+        <span className="sub">{t("agent.new_sub")}</span>
       </div>
       <AgentForm mode="new" />
     </>
