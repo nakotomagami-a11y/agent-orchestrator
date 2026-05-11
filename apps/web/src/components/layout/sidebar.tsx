@@ -70,10 +70,10 @@ export function Sidebar() {
           active={isActiveRoute(pathname, PAGE_ROUTES.activity)}
         />
         <NavItem
-          href={PAGE_ROUTES.templates}
+          href={PAGE_ROUTES.agents}
           icon="templates"
-          label={t("nav.templates")}
-          active={isActiveRoute(pathname, PAGE_ROUTES.templates)}
+          label={t("nav.agents")}
+          active={isActiveRoute(pathname, PAGE_ROUTES.agents)}
         />
       </nav>
 
