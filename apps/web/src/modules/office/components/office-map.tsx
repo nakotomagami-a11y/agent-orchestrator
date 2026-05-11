@@ -38,6 +38,11 @@ export type AgentPositions = Record<string, DragRef>;
  */
 
 const TILE = 64;
+/** Rendered size of a placed-agent sprite (and its drag/hover ghost) in
+ *  CSS pixels. The pawn bbox (64×104) scales to this size inside the
+ *  square; bigger values let the character extend visibly above the
+ *  cell, smaller values shrink it back into the tile. */
+const AGENT_SIZE = 96;
 const TILESET = "/tiles/grass.png";
 const FOAM_SHEET = "/tiles/water-foam.png";
 // Each foam frame is the size of 3 tiles per side (192 px), and the sheet
@@ -483,7 +488,7 @@ export function OfficeMap({
           if (!agent) return null;
           // Sit the character centred on the cell, anchored at the
           // bottom so taller frames extend upward.
-          const SIZE = 48;
+          const SIZE = AGENT_SIZE;
           const left = x * TILE + (TILE - SIZE) / 2;
           const top = (y + 1) * TILE - SIZE;
           // Animation rule: agents idle by default and only switch to a
@@ -550,7 +555,7 @@ export function OfficeMap({
             if (!agent) return null;
             const valid = isAgentDropValid(hover.x, hover.y, dragging);
             const tint = valid ? "#22c55e" : "#ef4444";
-            const SIZE = 48;
+            const SIZE = AGENT_SIZE;
             const left = hover.x * TILE + (TILE - SIZE) / 2;
             const top = (hover.y + 1) * TILE - SIZE;
             return (
