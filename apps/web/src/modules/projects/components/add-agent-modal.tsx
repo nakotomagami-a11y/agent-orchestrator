@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { TextInput } from "@/components/ui/text-input";
@@ -25,6 +26,7 @@ export function AddAgentModal({
   onClose,
   onProjectChange,
 }: AddAgentModalProps) {
+  const t = useTranslations();
   const [targetId, setTargetId] = useState<string | null>(projectId);
   const projectsQ = useProjects();
   const projects = projectsQ.data;
@@ -66,11 +68,11 @@ export function AddAgentModal({
     <ModalShell
       open={open}
       onClose={handleClose}
-      title={targetId ? "Add agent" : "Add agent — pick a project"}
+      title={targetId ? t("add_agent_modal.title") : t("add_agent_modal.title_pick_project")}
       size="lg"
       footer={
         <button type="button" className="btn" onClick={handleClose}>
-          Done
+          {t("add_agent_modal.done_button")}
         </button>
       }
     >
@@ -93,6 +95,7 @@ function ProjectPickerStep({
   onPick: (id: string) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations();
   const projectsQ = useProjects();
   const projects = projectsQ.data ?? [];
 
@@ -104,14 +107,14 @@ function ProjectPickerStep({
     return (
       <div style={{ padding: 24, textAlign: "center", color: "var(--txt-3)", fontSize: 13 }}>
         <p style={{ marginBottom: 12 }}>
-          No projects yet — agents are added to a project's roster.
+          {t("add_agent_modal.no_projects_hint")}
         </p>
         <Link
           href={PAGE_ROUTES.settings}
           className="btn primary"
           onClick={onClose}
         >
-          Configure projects root
+          {t("add_agent_modal.configure_root_button")}
         </Link>
       </div>
     );
@@ -120,7 +123,7 @@ function ProjectPickerStep({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <span style={{ fontSize: 12, color: "var(--txt-3)" }}>
-        Which project should the new agent join?
+        {t("add_agent_modal.pick_project_prompt")}
       </span>
       {projects.map((p) => (
         <button
@@ -161,7 +164,7 @@ function ProjectPickerStep({
             ) : null}
           </div>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>
-            {p.instanceCount} agent{p.instanceCount === 1 ? "" : "s"}
+            {t("projects.instances_count", { count: p.instanceCount })}
           </span>
         </button>
       ))}
@@ -176,6 +179,7 @@ function AgentPickerStep({
   projectId: string;
   onChangeProject: () => void;
 }) {
+  const t = useTranslations();
   const projectQ = useProject(projectId);
   const agentsQ = useAgents();
   const addMut = useAddInstance();
@@ -218,7 +222,7 @@ function AgentPickerStep({
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, color: "var(--txt-2)" }}>
-          Adding to{" "}
+          {t("add_agent_modal.adding_to_label")}{" "}
           <strong style={{ color: "var(--txt)" }}>{projectLabel}</strong>
         </span>
         <button
@@ -234,15 +238,15 @@ function AgentPickerStep({
             padding: 0,
           }}
         >
-          Change project
+          {t("add_agent_modal.change_project_button")}
         </button>
         <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--txt-3)" }}>
-          Click to add · click again to add another
+          {t("add_agent_modal.click_to_add_hint")}
         </span>
       </div>
 
       <TextInput
-        placeholder="Filter by name, description, or skill…"
+        placeholder={t("add_agent_modal.filter_placeholder")}
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         autoFocus
@@ -267,7 +271,7 @@ function AgentPickerStep({
         <Skeleton width="100%" height={120} />
       ) : agents.length === 0 ? (
         <div style={{ padding: 24, textAlign: "center", color: "var(--txt-3)", fontSize: 13 }}>
-          No agent definitions found in <code>~/.claude/agents/</code>.
+          {t("add_agent_modal.no_definitions")}
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -331,7 +335,7 @@ function AgentPickerStep({
                         marginTop: 4,
                       }}
                     >
-                      already in roster: {count}
+                      {t("add_agent_modal.already_in_roster", { count })}
                     </div>
                   ) : null}
                 </div>
@@ -349,10 +353,10 @@ function AgentPickerStep({
                   }}
                 >
                   {busy ? (
-                    "adding…"
+                    t("add_agent_modal.adding_label")
                   ) : (
                     <>
-                      <Icon name="plus" size={12} /> Add
+                      <Icon name="plus" size={12} /> {t("add_agent_modal.add_button")}
                     </>
                   )}
                 </span>
@@ -361,7 +365,7 @@ function AgentPickerStep({
           })}
           {filtered.length === 0 ? (
             <div style={{ padding: 16, fontSize: 12, color: "var(--txt-3)" }}>
-              No agents match “{filter}”.
+              {t("common.no_matches", { query: filter })}
             </div>
           ) : null}
         </div>

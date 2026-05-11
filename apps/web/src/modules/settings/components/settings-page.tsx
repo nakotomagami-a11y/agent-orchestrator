@@ -53,12 +53,12 @@ export function SettingsPage() {
   return (
     <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Card>
-        <CardHeader title="Projects root" sub="absolute path; ~ is expanded" />
+        <CardHeader title={t("settings.projects_root_card_title")} sub={t("settings.projects_root_card_sub")} />
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
           <TextInput
             value={root}
             onChange={(e) => setRoot(e.target.value)}
-            placeholder="/home/you/Documents"
+            placeholder={t("settings.projects_root_placeholder")}
           />
           <div>
             <div
@@ -71,7 +71,7 @@ export function SettingsPage() {
                 marginBottom: 6,
               }}
             >
-              Exclusions
+              {t("settings.exclusions_label")}
             </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
               <TextInput
@@ -83,7 +83,7 @@ export function SettingsPage() {
                     addExclusion();
                   }
                 }}
-                placeholder="node_modules"
+                placeholder={t("settings.exclusions_placeholder")}
               />
               <button type="button" className="btn" onClick={addExclusion}>
                 <Icon name="plus" />
@@ -103,13 +103,13 @@ export function SettingsPage() {
                 </span>
               ))}
               {excluded.length === 0 ? (
-                <span style={{ fontSize: 12, color: "var(--txt-3)" }}>none</span>
+                <span style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("settings.exclusions_empty")}</span>
               ) : null}
             </div>
           </div>
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
             {savedAt ? (
-              <span style={{ alignSelf: "center", fontSize: 12, color: "var(--done)" }}>Saved.</span>
+              <span style={{ alignSelf: "center", fontSize: 12, color: "var(--done)" }}>{t("common.saved")}</span>
             ) : null}
             <button
               type="button"
@@ -117,7 +117,7 @@ export function SettingsPage() {
               disabled={writeMut.isPending || !root.trim()}
               onClick={onSave}
             >
-              {writeMut.isPending ? "Saving…" : t("common.save")}
+              {writeMut.isPending ? t("common.saving") : t("common.save")}
             </button>
           </div>
         </div>
@@ -125,8 +125,11 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader
-          title="Scanned projects"
-          sub={`${scanQ.data?.filter((e) => !e.excluded).length ?? 0} visible · ${scanQ.data?.filter((e) => e.excluded).length ?? 0} excluded`}
+          title={t("settings.scanned_card_title")}
+          sub={t("settings.scanned_card_sub", {
+            visible: scanQ.data?.filter((e) => !e.excluded).length ?? 0,
+            excluded: scanQ.data?.filter((e) => e.excluded).length ?? 0,
+          })}
         />
         <div style={{ padding: 16 }}>
           {scanQ.isLoading ? (
@@ -151,12 +154,12 @@ export function SettingsPage() {
                   <span style={{ fontWeight: 500 }}>{entry.name}</span>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>{entry.fullPath}</span>
                   {entry.excluded ? (
-                    <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--txt-4)" }}>excluded</span>
+                    <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--txt-4)" }}>{t("settings.excluded_badge")}</span>
                   ) : null}
                 </li>
               ))}
               {!scanQ.data || scanQ.data.length === 0 ? (
-                <span style={{ fontSize: 12, color: "var(--txt-3)" }}>nothing under that root</span>
+                <span style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("settings.scanned_empty")}</span>
               ) : null}
             </ul>
           )}

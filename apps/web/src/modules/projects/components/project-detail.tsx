@@ -38,7 +38,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
       <Card>
         <CardHeader title={project.meta.name} sub={project.meta.cwd} />
         <div style={{ padding: 16, fontSize: 13, color: "var(--txt-2)" }}>
-          {project.meta.description || "(no description)"}
+          {project.meta.description || t("project_detail.no_description")}
         </div>
       </Card>
 
@@ -46,13 +46,13 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
 
       <Card>
         <CardHeader
-          title="Roster"
-          sub={`${project.meta.roster.length} agent${project.meta.roster.length === 1 ? "" : "s"}`}
+          title={t("project_detail.roster_card_title")}
+          sub={t("project_detail.roster_card_sub", { count: project.meta.roster.length })}
         />
         <div>
           {project.meta.roster.length === 0 ? (
             <div style={{ padding: 16, fontSize: 13, color: "var(--txt-3)" }}>
-              No agents added yet. Use the office page to summon and assign.
+              {t("project_detail.roster_empty")}
             </div>
           ) : (
             project.meta.roster.map((inst) => (
@@ -75,8 +75,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {inst.model ? <Tag>model: {inst.model}</Tag> : null}
-                  {inst.effort ? <Tag>effort: {inst.effort}</Tag> : null}
+                  {inst.model ? <Tag>{t("project_detail.tag_model", { model: inst.model })}</Tag> : null}
+                  {inst.effort ? <Tag>{t("project_detail.tag_effort", { effort: inst.effort })}</Tag> : null}
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
@@ -84,7 +84,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     className="btn sm primary"
                     onClick={() => openChat(inst.agentId, { instanceId: inst.instanceId })}
                   >
-                    <Icon name="send" /> Chat
+                    <Icon name="send" /> {t("project_detail.chat_button")}
                   </button>
                   <button
                     type="button"
@@ -92,11 +92,11 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     onClick={() => {
                       const label = inst.label ?? inst.agentId;
                       const ok = window.confirm(
-                        `Remove ${label} from ${project.meta.name}? Their conversation stays archived so you can still read it.`,
+                        t("project_detail.remove_confirm", { label, project: project.meta.name }),
                       );
                       if (ok) removeMut.mutate({ projectId: id, instanceId: inst.instanceId });
                     }}
-                    title="Remove from project"
+                    title={t("project_detail.remove_title")}
                   >
                     <Icon name="x" />
                   </button>
@@ -109,8 +109,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
 
       <Card>
         <CardHeader
-          title="Memory"
-          sub={`composes into every roster summon for ${project.meta.name}`}
+          title={t("project_detail.memory_card_title")}
+          sub={t("project_detail.memory_card_sub", { project: project.meta.name })}
         />
         <div style={{ padding: 16 }}>
           <MemoryEditor
@@ -119,7 +119,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               updateMut.mutateAsync({ id, patch: { memory: content } })
             }
             rows={12}
-            placeholder="Project-wide context that prepends to every agent prompt."
+            placeholder={t("project_detail.memory_placeholder")}
             saveLabel={t("common.save")}
           />
         </div>
