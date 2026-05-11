@@ -4,10 +4,13 @@
  * bundle never has to compile this file — the fs and os imports
  * below would fail there otherwise.
  *
- * Installs the bundled starter-kit (curated agents + skills) into
- * `~/.claude/` on a fresh machine so the UI lands populated. Each
- * directory is checked independently and existing user data is never
- * overwritten — subsequent restarts are no-ops.
+ * Installs the bundled starter SKILLS into `~/.claude/agents/_skills/`
+ * on a fresh machine. Agents are NOT auto-installed here — the
+ * first-run wizard lets the user pick which of the bundled agents to
+ * import, so seeding all 13 on boot would defeat that choice.
+ *
+ * Existing user data is never overwritten — subsequent restarts are
+ * no-ops.
  */
 
 import {
@@ -20,9 +23,7 @@ import {
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const CLAUDE_DIR = join(homedir(), ".claude");
-const AGENTS_DIR = join(CLAUDE_DIR, "agents");
-const SKILLS_DIR = join(AGENTS_DIR, "_skills");
+const SKILLS_DIR = join(homedir(), ".claude", "agents", "_skills");
 
 function resolveStarterDataDir(): string | null {
   const candidates: string[] = [];
@@ -49,17 +50,6 @@ function isDir(p: string): boolean {
   }
 }
 
-function hasAgentMdFiles(dir: string): boolean {
-  if (!existsSync(dir)) return false;
-  try {
-    return readdirSync(dir).some(
-      (f) => f.endsWith(".md") && !f.startsWith("_") && !f.endsWith(".memory.md"),
-    );
-  } catch {
-    return false;
-  }
-}
-
 function hasSkillFolders(dir: string): boolean {
   if (!existsSync(dir)) return false;
   try {
@@ -74,21 +64,7 @@ function hasSkillFolders(dir: string): boolean {
 try {
   const starterDir = resolveStarterDataDir();
   if (starterDir) {
-    let agents = 0;
     let skills = 0;
-
-    const starterAgents = join(starterDir, "agents");
-    if (existsSync(starterAgents) && !hasAgentMdFiles(AGENTS_DIR)) {
-      mkdirSync(AGENTS_DIR, { recursive: true });
-      for (const name of readdirSync(starterAgents)) {
-        const from = join(starterAgents, name);
-        const to = join(AGENTS_DIR, name);
-        if (existsSync(to)) continue;
-        cpSync(from, to);
-        agents++;
-      }
-    }
-
     const starterSkills = join(starterDir, "skills");
     if (existsSync(starterSkills) && !hasSkillFolders(SKILLS_DIR)) {
       mkdirSync(SKILLS_DIR, { recursive: true });
@@ -101,10 +77,9 @@ try {
         skills++;
       }
     }
-
-    if (agents > 0 || skills > 0) {
+    if (skills > 0) {
       // eslint-disable-next-line no-console
-      console.log(`[starter-bootstrap] seeded ${agents} agent(s), ${skills} skill(s)`);
+      console.log(`[starter-bootstrap] seeded ${skills} skill(s)`);
     }
   }
 } catch (err) {

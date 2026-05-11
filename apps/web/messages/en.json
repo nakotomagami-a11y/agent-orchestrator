@@ -64,7 +64,36 @@
     "empty": "Nothing here yet.",
     "open_settings": "Open settings",
     "no_matches": "No matches for \"{query}\".",
-    "spend_today_aria": "Spend today ${amount}"
+    "spend_today_aria": "Spend today ${amount}",
+    "back": "Back",
+    "next": "Next"
+  },
+  "first_run": {
+    "title": "Welcome to Agent Office",
+    "subtitle": "A two-minute setup. You can change everything later in Settings.",
+    "step_root": "Projects",
+    "step_excluded": "Excluded",
+    "step_agents": "Agents",
+    "step_project": "First project",
+    "root_title": "Where do your projects live?",
+    "root_hint": "Point this at the folder that holds your code. Each direct subfolder becomes a candidate project. Tilde paths (~) and absolute paths both work.",
+    "root_examples": "Examples: ~/Documents, ~/code, /Users/you/dev",
+    "excluded_title": "Folders to skip",
+    "excluded_hint": "Names you don't want treated as projects. Hidden folders (starting with a dot) are always skipped automatically.",
+    "excluded_placeholder": "node_modules, dist, …",
+    "excluded_add": "Add",
+    "excluded_remove": "Remove {name}",
+    "agents_title": "Pick your starter team",
+    "agents_hint": "These are demo agents you can import. They give you a sense of how the app works — feel free to delete the ones you won't use, or untick them now.",
+    "agents_select_all": "Select all ({count})",
+    "project_title": "Create your first project",
+    "project_hint": "Pick one of the folders we scanned and we'll set it up as your first project. You can skip this and create projects later.",
+    "project_empty": "No subfolders found under {root}. You can skip this step and create a project later.",
+    "project_name_label": "Display name",
+    "project_skip_hint": "Skip by clicking Finish without picking a folder.",
+    "finish": "Finish",
+    "finishing": "Setting things up…",
+    "error_root_required": "Projects root is required."
   },
   "sidebar": {
     "roster_label": "Roster · {count}",
@@ -132,6 +161,8 @@
     "title_edit": "Edit {id}",
     "card_prompt_title": "System prompt",
     "card_prompt_sub": "markdown body",
+    "card_avatar_title": "Avatar",
+    "card_avatar_sub": "Pick a Tiny Swords unit, or leave blank for an auto pick.",
     "label_name": "Name",
     "label_id": "ID (slug)",
     "label_desc": "Description",
@@ -166,6 +197,15 @@
     "uses_count": "{count, plural, one {# use} other {# uses}}",
     "model_default": "default",
     "description_empty": "—"
+  },
+  "unit_picker": {
+    "faction_legend": "Faction",
+    "kind_legend": "Unit",
+    "auto_hint": "Auto pick from agent name.",
+    "custom_hint": "Custom override saved to frontmatter.",
+    "reset": "Reset",
+    "reset_aria": "Reset to auto pick",
+    "preview_aria": "{faction} {kind} avatar"
   },
   "agent_details": {
     "tab_conversation": "Conversation",
@@ -371,6 +411,12 @@
     "edit_title": "Edit agent",
     "edit_aria": "Edit agent"
   },
+  "chat_thread": {
+    "load_earlier": "Load {count, plural, one {# earlier message} other {# earlier messages}}",
+    "load_earlier_aria": "Load {count, plural, one {# earlier message} other {# earlier messages}}",
+    "jump_to_latest": "Jump to latest",
+    "jump_to_latest_aria": "Scroll to the most recent message"
+  },
   "live_status": {
     "idle": "Idle",
     "sending": "Sending message…",
@@ -380,6 +426,11 @@
     "done": "Finished",
     "error": "Error — see message above",
     "aborted": "Aborted by you"
+  },
+  "tool_chain": {
+    "actions": "{count, plural, one {# action} other {# actions}}",
+    "label_now": "now",
+    "label_last": "last"
   },
   "limits": {
     "title": "Claude limits",
