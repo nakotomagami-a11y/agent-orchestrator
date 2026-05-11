@@ -46,6 +46,7 @@ export type DecoFamily =
   | "grave"
   | "scarecrow"
   | "sheep"
+  | "gold_mine"
   | "bridge";
 
 export type DecorationKind =
@@ -96,6 +97,9 @@ export type DecorationKind =
   | "gravestone"
   | "scarecrow"
   | "sheep"
+  | "gold_mine_active"
+  | "gold_mine_inactive"
+  | "gold_mine_destroyed"
   | "bridge_h"
   | "bridge_v";
 
@@ -274,6 +278,30 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/house_goblin.png",
     frameW: 128, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
+  },
+  // Gold Mine — three states from the Update 010 Resources/Gold Mine
+  // folder. All 192×128 static frames anchored at bottom-centre (the
+  // sprite spans ~3 cells wide and ~2 cells tall visually). Single
+  // "gold_mine" family so a cell only ever shows one state at a time —
+  // switching between active/inactive/destroyed swaps the sprite in
+  // place.
+  gold_mine_active: {
+    label: "Gold mine (active)",
+    src: "/decorations/gold_mine_active.png",
+    frameW: 192, frameH: 128, frames: 1,
+    terrain: "land", category: "buildings", family: "gold_mine",
+  },
+  gold_mine_inactive: {
+    label: "Gold mine (inactive)",
+    src: "/decorations/gold_mine_inactive.png",
+    frameW: 192, frameH: 128, frames: 1,
+    terrain: "land", category: "buildings", family: "gold_mine",
+  },
+  gold_mine_destroyed: {
+    label: "Gold mine (destroyed)",
+    src: "/decorations/gold_mine_destroyed.png",
+    frameW: 192, frameH: 128, frames: 1,
+    terrain: "land", category: "buildings", family: "gold_mine",
   },
   tower: {
     label: "Tower",
