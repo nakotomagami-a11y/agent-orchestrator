@@ -42,6 +42,7 @@ export function useAddInstance() {
         body: { agentId, init },
       }),
     onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all });
       qc.invalidateQueries({ queryKey: queryKeys.projects.detail(vars.projectId) });
     },
   });
@@ -53,7 +54,9 @@ export function useRemoveInstance() {
     mutationFn: ({ projectId, instanceId }: { projectId: string; instanceId: string }) =>
       apiFetch<Project>(API_ROUTES.projectRosterItem(projectId, instanceId), { method: "DELETE" }),
     onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all });
       qc.invalidateQueries({ queryKey: queryKeys.projects.detail(vars.projectId) });
     },
   });
 }
+

@@ -11,12 +11,14 @@ export type OfficeView = "iso" | "cards";
  */
 export type AgentTab = "conversation" | "configuration" | "history" | "memory" | "settings";
 
-type SelectOptions = { tab?: AgentTab };
+type SelectOptions = { tab?: AgentTab; instanceId?: string | null };
 
 type OfficeState = {
   view: OfficeView;
   zoom: number;
   selectedId: string | null;
+  /** Roster instance under selection (one of selectedId's `AgentInstance`s). */
+  selectedInstanceId: string | null;
   inspectorOpen: boolean;
   /** When set, the modal opens on this tab once and then clears it. */
   pendingTab: AgentTab | null;
@@ -40,6 +42,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   view: "iso",
   zoom: 1,
   selectedId: null,
+  selectedInstanceId: null,
   inspectorOpen: false,
   pendingTab: null,
   setView: (next) => set({ view: next }),
@@ -50,6 +53,7 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
   select: (id, opts) =>
     set({
       selectedId: id,
+      selectedInstanceId: id !== null ? opts?.instanceId ?? null : null,
       inspectorOpen: id !== null,
       pendingTab: id !== null ? opts?.tab ?? null : null,
     }),
@@ -58,5 +62,5 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     if (t) set({ pendingTab: null });
     return t;
   },
-  closeInspector: () => set({ inspectorOpen: false, pendingTab: null }),
+  closeInspector: () => set({ inspectorOpen: false, pendingTab: null, selectedInstanceId: null }),
 }));

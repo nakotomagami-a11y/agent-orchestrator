@@ -13,37 +13,86 @@ import { useOfficeAgents, type OfficeAgent } from "@/modules/office/hooks/use-of
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
-import { useProject } from "@/modules/projects/hooks/use-projects";
+import { useProject, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
+import type { AgentInstance } from "@agent-office/shared/types";
+
+type RosterRow = {
+  /** Stable React key. */
+  key: string;
+  agent: OfficeAgent;
+  /** Roster instance for this row (null when there's no active project). */
+  instance: AgentInstance | null;
+  /** Display name. Uses instance.label if set; else agent.name; else short id. */
+  displayName: string;
+};
 
 export function Sidebar() {
   const t = useTranslations();
   const pathname = usePathname();
   const { agents, workingCount, spendToday } = useOfficeAgents();
   const selectedId = useOfficeStore((s) => s.selectedId);
+  const selectedInstanceId = useOfficeStore((s) => s.selectedInstanceId);
   const select = useOfficeStore((s) => s.select);
 
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const projectQ = useProject(activeProjectId);
   const project = projectQ.data;
+  const removeMut = useRemoveInstance();
 
-  const rosterAgents = useMemo<OfficeAgent[]>(() => {
-    if (!project) return agents;
-    const rosterIds = new Set(project.meta.roster.map((i) => i.agentId));
-    return agents.filter((a) => rosterIds.has(a.id));
+  // When a project is active, the roster lists *instances* (one row per
+  // entry in `project.meta.roster`). Two `frontend-craftsman` instances
+  // become two separate rows. When no project is active, fall back to a
+  // flat agent-definition list.
+  const rosterRows = useMemo<RosterRow[]>(() => {
+    if (!project) {
+      return agents.map((a) => ({
+        key: a.id,
+        agent: a,
+        instance: null,
+        displayName: a.name,
+      }));
+    }
+    const agentsById = new Map(agents.map((a) => [a.id, a] as const));
+    const seenSameAgent = new Map<string, number>();
+    const rows: RosterRow[] = [];
+    for (const inst of project.meta.roster) {
+      const a = agentsById.get(inst.agentId);
+      if (!a) continue;
+      const count = (seenSameAgent.get(inst.agentId) ?? 0) + 1;
+      seenSameAgent.set(inst.agentId, count);
+      const totalForAgent = project.meta.roster.filter((i) => i.agentId === inst.agentId).length;
+      const displayName = inst.label
+        ? inst.label
+        : totalForAgent > 1
+          ? `${a.name} #${count}`
+          : a.name;
+      rows.push({ key: inst.instanceId, agent: a, instance: inst, displayName });
+    }
+    return rows;
   }, [agents, project]);
 
   const [filter, setFilter] = useState("");
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
-    if (!q) return rosterAgents;
-    return rosterAgents.filter((a) => {
-      if (a.name.toLowerCase().includes(q)) return true;
-      if (a.short.toLowerCase().includes(q)) return true;
-      if (a.skills?.some((s) => s.toLowerCase().includes(q))) return true;
-      if (a.task?.toLowerCase().includes(q)) return true;
+    if (!q) return rosterRows;
+    return rosterRows.filter((r) => {
+      if (r.displayName.toLowerCase().includes(q)) return true;
+      if (r.agent.short.toLowerCase().includes(q)) return true;
+      if (r.agent.skills?.some((s) => s.toLowerCase().includes(q))) return true;
+      if (r.agent.task?.toLowerCase().includes(q)) return true;
       return false;
     });
-  }, [rosterAgents, filter]);
+  }, [rosterRows, filter]);
+
+  const onRemove = (row: RosterRow) => {
+    if (!activeProjectId || !row.instance) return;
+    const ok = window.confirm(
+      `Remove ${row.displayName} from ${project?.meta.name ?? "this project"}? ` +
+      `Their conversation stays archived so you can still read it.`,
+    );
+    if (!ok) return;
+    removeMut.mutate({ projectId: activeProjectId, instanceId: row.instance.instanceId });
+  };
 
   return (
     <aside className="sidebar" aria-label={t("app.name")}>
@@ -82,7 +131,7 @@ export function Sidebar() {
 
       <div style={{ display: "grid", gridTemplateRows: "auto 1fr", minHeight: 0 }}>
         <div className="section-h" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span>Roster · {rosterAgents.length}</span>
+          <span>Roster · {rosterRows.length}</span>
           <input
             type="text"
             value={filter}
@@ -104,7 +153,7 @@ export function Sidebar() {
           />
         </div>
         <div className="roster-list">
-          {project && rosterAgents.length === 0 ? (
+          {project && rosterRows.length === 0 ? (
             <div
               style={{
                 padding: "12px 14px",
@@ -116,7 +165,7 @@ export function Sidebar() {
               No agents in {project.meta.name}. Click <strong>Add agent</strong> on the
               office toolbar.
             </div>
-          ) : !project && rosterAgents.length === 0 ? (
+          ) : !project && rosterRows.length === 0 ? (
             <div
               style={{
                 padding: "12px 14px",
@@ -129,64 +178,27 @@ export function Sidebar() {
               <code>~/.claude/agents/</code>.
             </div>
           ) : (
-            filtered.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className={"roster-row" + (selectedId === a.id ? " on" : "")}
-                onClick={() => select(a.id)}
-                title="Click to view details · open chat from there"
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  font: "inherit",
-                  color: "inherit",
-                  textAlign: "left",
-                }}
-              >
-                <div className="av">
-                  <PixelSprite
-                    agent={a}
-                    size={32}
-                    animate={false}
-                    action={a.status === "working" ? "typing" : "idle"}
-                  />
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    className="nm"
-                    style={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {a.name}
-                  </div>
-                  <div
-                    className="ml"
-                    style={{
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {a.status === "idle"
-                      ? "ready"
-                      : a.status === "done"
-                        ? "✓ " + (a.taskKind || "done")
-                        : a.status === "queued"
-                          ? "in queue"
-                          : a.status === "error"
-                            ? "needs attention"
-                            : a.task ?? a.status}
-                  </div>
-                </div>
-                <span className={"st " + a.status} title={a.status} />
-              </button>
-            ))
+            filtered.map((row) => {
+              const isSelected =
+                selectedId === row.agent.id &&
+                (row.instance ? selectedInstanceId === row.instance.instanceId : selectedInstanceId === null);
+              return (
+                <RosterEntry
+                  key={row.key}
+                  row={row}
+                  selected={isSelected}
+                  canRemove={!!row.instance}
+                  onSelect={() =>
+                    select(row.agent.id, {
+                      instanceId: row.instance?.instanceId ?? null,
+                    })
+                  }
+                  onRemove={() => onRemove(row)}
+                />
+              );
+            })
           )}
-          {filtered.length === 0 && rosterAgents.length > 0 ? (
+          {filtered.length === 0 && rosterRows.length > 0 ? (
             <div style={{ padding: "8px 14px", fontSize: 11, color: "var(--txt-3)" }}>
               No matches for “{filter}”.
             </div>
@@ -218,6 +230,115 @@ function SidebarFoot({ spendToday }: { spendToday: number }) {
         ${spendToday.toFixed(2)}
       </div>
     </Link>
+  );
+}
+
+function RosterEntry({
+  row,
+  selected,
+  canRemove,
+  onSelect,
+  onRemove,
+}: {
+  row: RosterRow;
+  selected: boolean;
+  canRemove: boolean;
+  onSelect: () => void;
+  onRemove: () => void;
+}) {
+  const { agent, displayName } = row;
+  return (
+    <div
+      className={"roster-row" + (selected ? " on" : "")}
+      style={{ position: "relative" }}
+    >
+      <button
+        type="button"
+        onClick={onSelect}
+        title="Click to view details · open chat from there"
+        style={{
+          all: "unset",
+          cursor: "pointer",
+          display: "grid",
+          gridTemplateColumns: "32px 1fr auto",
+          alignItems: "center",
+          gap: 10,
+          width: "100%",
+        }}
+      >
+        <div className="av">
+          <PixelSprite
+            agent={agent}
+            size={32}
+            animate={false}
+            action={agent.status === "working" ? "typing" : "idle"}
+          />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div
+            className="nm"
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {displayName}
+          </div>
+          <div
+            className="ml"
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {agent.status === "idle"
+              ? "ready"
+              : agent.status === "done"
+                ? "✓ " + (agent.taskKind || "done")
+                : agent.status === "queued"
+                  ? "in queue"
+                  : agent.status === "error"
+                    ? "needs attention"
+                    : agent.task ?? agent.status}
+          </div>
+        </div>
+        <span className={"st " + agent.status} title={agent.status} />
+      </button>
+      {canRemove ? (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove();
+          }}
+          aria-label={`Remove ${displayName} from this project`}
+          title="Remove from project"
+          className="roster-row-remove"
+          style={{
+            position: "absolute",
+            right: 6,
+            top: "50%",
+            transform: "translateY(-50%)",
+            background: "var(--bg-1)",
+            border: "1px solid var(--line)",
+            borderRadius: 999,
+            width: 22,
+            height: 22,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "var(--txt-3)",
+            cursor: "pointer",
+            opacity: 0,
+            transition: "opacity 120ms",
+          }}
+        >
+          <Icon name="x" size={11} />
+        </button>
+      ) : null}
+    </div>
   );
 }
 

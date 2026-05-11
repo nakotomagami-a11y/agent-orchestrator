@@ -12,6 +12,7 @@ import {
   clearTranscript,
   loadTranscript,
   saveTranscript,
+  transcriptKey,
 } from "../utils/transcript-store";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
@@ -50,12 +51,18 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   const summon = useSummon();
   const abort = useAbortRun();
 
+  // Composite key: each `(agentId, instanceId)` pair gets its own
+  // transcript. Removing + re-adding an agent yields a new instanceId and
+  // therefore a fresh thread, while the old transcript stays in storage
+  // for archive viewing.
+  const tKey = transcriptKey(agent.id, instanceId);
+
   // ── State ──
   // `thread` is the canonical transcript shown to the user. Stream items
   // get spliced *into* it via runStartIndexRef, not concatenated alongside.
-  const [thread, setThread] = useState<ThreadItem[]>(() => loadTranscript(agent.id)?.items ?? []);
+  const [thread, setThread] = useState<ThreadItem[]>(() => loadTranscript(tKey)?.items ?? []);
   const [activeRunId, setActiveRunId] = useState<string | null>(
-    () => loadTranscript(agent.id)?.activeRunId ?? null,
+    () => loadTranscript(tKey)?.activeRunId ?? null,
   );
   const [resumeProbed, setResumeProbed] = useState(false);
   const [pendingSeed, setPendingSeed] = useState<string | undefined>();
@@ -63,16 +70,16 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   const runStartIndexRef = useRef<number | null>(null);
   const fallbackAttemptedRef = useRef<string | null>(null);
 
-  // ── Agent switch: swap the entire thread state ──
+  // ── Agent or instance switch: swap the entire thread state ──
   useEffect(() => {
-    const t = loadTranscript(agent.id);
+    const t = loadTranscript(tKey);
     setThread(t?.items ?? []);
     setActiveRunId(t?.activeRunId ?? null);
     setResumeProbed(false);
     setPhaseOverride(null);
     runStartIndexRef.current = null;
     fallbackAttemptedRef.current = null;
-  }, [agent.id]);
+  }, [tKey]);
 
   const stream = useRunStream(activeRunId);
 
@@ -174,8 +181,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
 
   // ── Write-through to localStorage ──
   useEffect(() => {
-    saveTranscript(agent.id, thread, activeRunId);
-  }, [agent.id, thread, activeRunId]);
+    saveTranscript(tKey, thread, activeRunId);
+  }, [tKey, thread, activeRunId]);
 
   // ── Submit ──
   const onSubmit = (text: string) => {
@@ -220,7 +227,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
 
   // ── New / Branch ──
   const newThread = () => {
-    clearTranscript(agent.id);
+    clearTranscript(tKey);
     setThread([]);
     setActiveRunId(null);
     setPhaseOverride(null);

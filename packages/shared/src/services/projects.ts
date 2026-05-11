@@ -145,10 +145,19 @@ export function deleteProject(id: string): boolean {
   return true;
 }
 
+/**
+ * Generate an instance id that's never been used in this roster *and*
+ * also includes a short timestamp/random suffix so re-adding the same
+ * agent after a remove yields a fresh id — that's how chat transcripts
+ * key off the instance, so collisions would carry old conversations
+ * into a new "colleague".
+ */
 function makeInstanceId(agentId: string, existing: AgentInstance[]): string {
   const taken = new Set(existing.map((i) => i.instanceId));
-  for (let n = 1; n < 10000; n++) {
-    const candidate = `${agentId}-${n}`;
+  const suffix = () =>
+    Date.now().toString(36).slice(-4) + Math.random().toString(36).slice(2, 5);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const candidate = `${agentId}-${suffix()}`;
     if (!taken.has(candidate)) return candidate;
   }
   return `${agentId}-${Date.now()}`;

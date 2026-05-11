@@ -239,6 +239,9 @@ body {
 }
 .roster-row:hover { background: var(--bg-3); }
 .roster-row.on   { background: var(--acc-faint); }
+.roster-row:hover .roster-row-remove,
+.roster-row:focus-within .roster-row-remove { opacity: 1; }
+.roster-row-remove:hover { color: var(--error); border-color: var(--error); }
 .roster-row .av  { width: 32px; height: 32px; position: relative; }
 .roster-row .nm  { font-size: 12.5px; font-weight: 500; color: var(--txt); }
 .roster-row .ml  { font-size: 10.5px; color: var(--txt-3); font-family: var(--font-mono); }

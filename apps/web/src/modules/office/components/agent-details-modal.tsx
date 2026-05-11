@@ -26,6 +26,7 @@ type Tab = AgentTab;
  */
 export function AgentDetailsModal() {
   const selectedId = useOfficeStore((s) => s.selectedId);
+  const selectedInstanceId = useOfficeStore((s) => s.selectedInstanceId);
   const inspectorOpen = useOfficeStore((s) => s.inspectorOpen);
   const closeInspector = useOfficeStore((s) => s.closeInspector);
   const consumePendingTab = useOfficeStore((s) => s.consumePendingTab);
@@ -84,7 +85,12 @@ export function AgentDetailsModal() {
           </div>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             {tab === "conversation" ? (
-              <ChatPanel agent={agent} onClose={closeInspector} onEdit={() => setTab("settings")} />
+              <ChatPanel
+                agent={agent}
+                instanceId={selectedInstanceId ?? undefined}
+                onClose={closeInspector}
+                onEdit={() => setTab("settings")}
+              />
             ) : null}
             {tab === "configuration" ? <ConfigurationTab agent={agent} /> : null}
             {tab === "history" ? <HistoryTab agentId={agent.id} /> : null}

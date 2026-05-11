@@ -9,7 +9,7 @@ import { Tag } from "@/components/ui/tag";
 import { Icon } from "@/components/ui/icon";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject, useRemoveInstance, useUpdateProject } from "../hooks/use-projects";
-import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
+import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { ProjectActivity } from "./project-activity";
 
 export type ProjectDetailProps = { id: string };
@@ -19,7 +19,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   const projectQ = useProject(id);
   const updateMut = useUpdateProject();
   const removeMut = useRemoveInstance();
-  const openChat = useSummonStore((s) => s.openChat);
+  const openChat = useOfficeStore((s) => s.select);
   const [memoryDraft, setMemoryDraft] = useState<string | null>(null);
 
   if (projectQ.isLoading) {
@@ -86,14 +86,21 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   <button
                     type="button"
                     className="btn sm primary"
-                    onClick={() => openChat(inst.agentId, { projectId: id, instanceId: inst.instanceId })}
+                    onClick={() => openChat(inst.agentId, { instanceId: inst.instanceId })}
                   >
                     <Icon name="send" /> Chat
                   </button>
                   <button
                     type="button"
                     className="btn sm danger"
-                    onClick={() => removeMut.mutate({ projectId: id, instanceId: inst.instanceId })}
+                    onClick={() => {
+                      const label = inst.label ?? inst.agentId;
+                      const ok = window.confirm(
+                        `Remove ${label} from ${project.meta.name}? Their conversation stays archived so you can still read it.`,
+                      );
+                      if (ok) removeMut.mutate({ projectId: id, instanceId: inst.instanceId });
+                    }}
+                    title="Remove from project"
                   >
                     <Icon name="x" />
                   </button>
