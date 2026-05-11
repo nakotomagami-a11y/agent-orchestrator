@@ -271,6 +271,11 @@ export type OfficeMapProps = {
 /**
  * Whether `tool` would actually do something at (x, y). Drives the
  * green/red hover tint in build mode.
+ *
+ * Decoration placement: invalid if the tool's terrain doesn't match the
+ * cell. Otherwise valid even if the cell already has something — solids
+ * replace any existing solid; overlays append (unless the exact same
+ * kind is already in the stack, in which case it's a no-op = invalid).
  */
 function isToolValidAt(
   tool: BuildTool,
@@ -280,10 +285,13 @@ function isToolValidAt(
   decorations: DecorationsMap,
 ): boolean {
   const cellHasGrass = grid[y]?.[x] === true;
-  const hasDecoration = decorations[decorationKey(x, y)] !== undefined;
+  const stack = decorations[decorationKey(x, y)];
   if (tool === "grass") return !cellHasGrass;
-  if (tool === "erase") return cellHasGrass || hasDecoration;
-  return isPlacementValid(tool, cellHasGrass);
+  if (tool === "erase") return cellHasGrass || (stack !== undefined && stack.length > 0);
+  if (!isPlacementValid(tool, cellHasGrass)) return false;
+  // Already-present exact duplicate of an overlay is a no-op.
+  if (DECORATIONS[tool].overlay && stack?.includes(tool)) return false;
+  return true;
 }
 
 export function OfficeMap({
@@ -313,14 +321,16 @@ export function OfficeMap({
     return dragRefKey(existing) === dragRefKey(ref);
   };
 
-  // Sort decorations by their cell Y so lower rows draw on top of higher
-  // rows — gives natural depth-stacking for tall sprites like trees.
-  const decoList = Object.entries(decorations)
-    .map(([key, kind]) => {
-      const [xs, ys] = key.split(",");
-      return { x: Number(xs), y: Number(ys), kind };
-    })
-    .sort((a, b) => a.y - b.y);
+  // Flatten the decoration map into per-cell layers, then sort by cell Y
+  // (lower rows draw on top of higher rows for depth). Within a cell the
+  // stack order is preserved — solids first, overlays on top — so e.g. a
+  // bush placed on a tree's cell paints over the trunk.
+  const decoList = Object.entries(decorations).flatMap(([key, stack]) => {
+    const [xs, ys] = key.split(",");
+    const x = Number(xs);
+    const y = Number(ys);
+    return stack.map((kind, layer) => ({ x, y, kind, layer }));
+  }).sort((a, b) => a.y - b.y || a.layer - b.layer);
 
   // Build a hover-preview decoration when the user is hovering a cell
   // with a decoration tool armed. Rendered with reduced opacity and a
@@ -375,7 +385,7 @@ export function OfficeMap({
         const top = (d.y + 1) * TILE - def.frameH;
         return (
           <div
-            key={`deco-${decorationKey(d.x, d.y)}`}
+            key={`deco-${decorationKey(d.x, d.y)}-${d.layer}`}
             className={def.animClass}
             aria-label={def.label}
             style={{

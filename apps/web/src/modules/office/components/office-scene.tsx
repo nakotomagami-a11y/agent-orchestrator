@@ -5,8 +5,10 @@ import { OfficeMap, type AgentPositions } from "./office-map";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
   DECORATIONS,
+  applyPlacement,
   decorationKey,
   isPlacementValid,
+  popDecoration,
   type DecorationKind,
   type DecorationsMap,
 } from "./decorations";
@@ -74,8 +76,17 @@ function loadDecorations(): DecorationsMap {
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
       const out: DecorationsMap = {};
       for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+        // Old shape (pre-stacking): single string per cell. Wrap it.
         if (typeof value === "string" && value in DECORATIONS) {
-          out[key] = value as DecorationKind;
+          out[key] = [value as DecorationKind];
+          continue;
+        }
+        // New shape: ordered array of kinds.
+        if (Array.isArray(value)) {
+          const arr = value.filter(
+            (v): v is DecorationKind => typeof v === "string" && v in DECORATIONS,
+          );
+          if (arr.length > 0) out[key] = arr;
         }
       }
       return out;
@@ -171,23 +182,23 @@ export function OfficeScene() {
           next[y]![x] = true;
           return next;
         });
-        // Defensive: if a water decoration was somehow on this cell (only
-        // possible across schema changes), clear it.
+        // Defensive: drop any water-only decorations now stranded on land.
         setDecorations((prev) => {
           const existing = prev[key];
-          if (existing && DECORATIONS[existing].terrain === "water") {
-            const next = { ...prev };
-            delete next[key];
-            return next;
-          }
-          return prev;
+          if (!existing) return prev;
+          const kept = existing.filter((k) => DECORATIONS[k].terrain === "land");
+          if (kept.length === existing.length) return prev;
+          const next = { ...prev };
+          if (kept.length === 0) delete next[key];
+          else next[key] = kept;
+          return next;
         });
         return;
       }
 
       if (tool === "erase") {
-        // Topmost first: agent → decoration → terrain. Up to three clicks
-        // to fully empty a cell that has all three.
+        // Topmost first: agent → decoration (LIFO from stack) → terrain.
+        // A heavily-decorated cell needs multiple clicks to fully clear.
         if (agentPositions[key]) {
           setAgentPositions((prev) => {
             const next = { ...prev };
@@ -196,12 +207,17 @@ export function OfficeScene() {
           });
           return;
         }
-        if (decorations[key]) {
-          setDecorations((prev) => {
-            const next = { ...prev };
-            delete next[key];
-            return next;
-          });
+        const stack = decorations[key];
+        if (stack && stack.length > 0) {
+          const popped = popDecoration(stack);
+          if (popped) {
+            setDecorations((prev) => {
+              const next = { ...prev };
+              if (popped.stack.length === 0) delete next[key];
+              else next[key] = popped.stack;
+              return next;
+            });
+          }
           return;
         }
         if (cellHasGrass) {
@@ -214,10 +230,12 @@ export function OfficeScene() {
         return;
       }
 
-      // Decoration tool: validate against current terrain. Mismatched
-      // clicks are no-ops so the user can see the wrong tool is selected.
+      // Decoration tool: validate against current terrain.
       if (!isPlacementValid(tool, cellHasGrass)) return;
-      setDecorations((prev) => ({ ...prev, [key]: tool }));
+      setDecorations((prev) => {
+        const stack = applyPlacement(prev[key], tool);
+        return { ...prev, [key]: stack };
+      });
     },
     [grid, decorations, agentPositions, tool],
   );

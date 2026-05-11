@@ -58,6 +58,15 @@ export interface DecorationDef {
   terrain: Terrain;
   category: DecoCategory;
   animClass?: string;
+  /**
+   * When true, this decoration is a small "overlay" sprite that's allowed
+   * to coexist with any other decoration in the same cell — bushes and
+   * small rocks specifically. Cells may hold any number of overlays plus
+   * at most one non-overlay ("solid") decoration. When false (default),
+   * placing the decoration replaces any other solid at the cell while
+   * leaving overlays untouched.
+   */
+  overlay?: boolean;
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -66,51 +75,51 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Bush 1",
     src: "/decorations/bush.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush",
+    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
   },
   bush2: {
     label: "Bush 2",
     src: "/decorations/bush2.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush",
+    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
   },
   bush3: {
     label: "Bush 3",
     src: "/decorations/bush3.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush",
+    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
   },
   bush4: {
     label: "Bush 4",
     src: "/decorations/bush4.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush",
+    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
   },
 
-  // ─ Rocks (static, 64×64) ────────────────────────────────────────────
+  // ─ Rocks (static, 64×64) — overlays, coexist with anything ─────────
   rock: {
     label: "Rock 1",
     src: "/decorations/rock.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", overlay: true,
   },
   rock2: {
     label: "Rock 2",
     src: "/decorations/rock2.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", overlay: true,
   },
   rock3: {
     label: "Rock 3",
     src: "/decorations/rock3.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", overlay: true,
   },
   rock4: {
     label: "Rock 4",
     src: "/decorations/rock4.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", overlay: true,
   },
 
   // ─ Stumps (static, 192×256) ─────────────────────────────────────────
@@ -238,8 +247,16 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
 
 export const DECORATION_KINDS: DecorationKind[] = Object.keys(DECORATIONS) as DecorationKind[];
 
-/** "x,y" → DecorationKind. Sparse — cells with no decoration aren't keys. */
-export type DecorationsMap = Record<string, DecorationKind>;
+/**
+ * "x,y" → ordered list of decorations stacked at that cell. The list is
+ * read back-to-front: earlier entries render below later entries. By
+ * convention placement keeps solids before overlays, so a tree's leaves
+ * draw under any bushes/rocks placed at the same cell.
+ *
+ * Sparse — cells with no decoration aren't keys (empty arrays are
+ * cleaned up on erase so the map size stays minimal).
+ */
+export type DecorationsMap = Record<string, DecorationKind[]>;
 
 export function decorationKey(x: number, y: number): string {
   return `${x},${y}`;
@@ -251,4 +268,46 @@ export function decorationKey(x: number, y: number): string {
  */
 export function isPlacementValid(kind: DecorationKind, cellHasGrass: boolean): boolean {
   return DECORATIONS[kind].terrain === (cellHasGrass ? "land" : "water");
+}
+
+export function isOverlay(kind: DecorationKind): boolean {
+  return DECORATIONS[kind].overlay === true;
+}
+
+/**
+ * Apply a single placement to a cell's stack, returning the new stack.
+ *
+ *   - Overlays append (skipping exact-kind duplicates).
+ *   - Solids replace any existing solid at the cell, keeping overlays.
+ *
+ * `existing` may be undefined for empty cells. The returned array is
+ * always non-empty after a successful placement.
+ */
+export function applyPlacement(
+  existing: DecorationKind[] | undefined,
+  next: DecorationKind,
+): DecorationKind[] {
+  const stack = existing ? [...existing] : [];
+  if (isOverlay(next)) {
+    if (stack.includes(next)) return stack; // already there — no-op
+    // Solids stay first in the stack so they paint behind overlays.
+    return [...stack, next];
+  }
+  // Solid: remove any existing solid, keep overlays, put new solid first.
+  const overlays = stack.filter((k) => isOverlay(k));
+  return [next, ...overlays];
+}
+
+/**
+ * Remove the topmost decoration from a cell's stack — last-in-first-out.
+ * Returns the new stack (possibly empty) and the removed kind, or null
+ * if nothing was there.
+ */
+export function popDecoration(
+  existing: DecorationKind[] | undefined,
+): { stack: DecorationKind[]; removed: DecorationKind } | null {
+  if (!existing || existing.length === 0) return null;
+  const stack = [...existing];
+  const removed = stack.pop()!;
+  return { stack, removed };
 }
