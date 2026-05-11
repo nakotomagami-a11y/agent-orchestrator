@@ -798,7 +798,8 @@ body {
 
 /* Cards office grid */
 .cards-office {
-  padding: 18px;
+  /* Top padding clears the absolutely-positioned `.office-hud` chips */
+  padding: 64px 18px 18px;
   overflow: auto;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
