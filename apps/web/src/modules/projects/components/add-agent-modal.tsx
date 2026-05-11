@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { TextInput } from "@/components/ui/text-input";
@@ -26,11 +26,31 @@ export function AddAgentModal({
   onProjectChange,
 }: AddAgentModalProps) {
   const [targetId, setTargetId] = useState<string | null>(projectId);
+  const projectsQ = useProjects();
+  const projects = projectsQ.data;
+  const autoPickedRef = useRef(false);
 
   // When the modal opens, snap to whatever the parent says is active.
   useEffect(() => {
-    if (open) setTargetId(projectId);
+    if (open) {
+      setTargetId(projectId);
+      autoPickedRef.current = false;
+    }
   }, [open, projectId]);
+
+  // If the modal is open with no active project but exactly one project
+  // exists, skip the picker step. Pure UX shortcut for the single-project
+  // case — without this, every Add agent click is a two-step flow.
+  useEffect(() => {
+    if (!open) return;
+    if (targetId) return;
+    if (autoPickedRef.current) return;
+    if (!projects || projects.length !== 1) return;
+    const only = projects[0]!.id;
+    autoPickedRef.current = true;
+    setTargetId(only);
+    onProjectChange?.(only);
+  }, [open, targetId, projects, onProjectChange]);
 
   const handleClose = () => {
     setTargetId(projectId);
