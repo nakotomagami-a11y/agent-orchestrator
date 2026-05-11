@@ -7,8 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { OfficeToolbar } from "./office-toolbar";
 import { OfficeHud } from "./office-hud";
-import { OfficeZoom } from "./office-zoom";
-import { IsoOffice } from "./iso-office";
+import { OfficeScene } from "./office-scene";
 import { CardsOffice } from "./cards-office";
 import { useOfficeStore } from "../hooks/use-office-store";
 import { useOfficeAgents } from "../hooks/use-office-agents";
@@ -21,7 +20,6 @@ export function OfficeView() {
   const t = useTranslations();
   const view = useOfficeStore((s) => s.view);
   const setView = useOfficeStore((s) => s.setView);
-  const zoom = useOfficeStore((s) => s.zoom);
   const selectedId = useOfficeStore((s) => s.selectedId);
   const select = useOfficeStore((s) => s.select);
 
@@ -81,37 +79,39 @@ export function OfficeView() {
           spendToday={spendToday}
         />
 
-        {match({ isLoading: floorLoading, hasProject: !!project, count: scopedAgents.length })
-          .with({ isLoading: true }, () => (
-            <div style={{ padding: 24 }}>
-              <Skeleton width={200} height={20} />
-              <div style={{ height: 12 }} />
-              <Skeleton width="100%" height={400} />
-            </div>
-          ))
-          .with({ hasProject: true, count: 0 }, () => (
-            <EmptyState
-              icon="users"
-              title={t("office.empty_roster_title")}
-              description={t("office.empty_roster_hint")}
-            />
-          ))
-          .with({ hasProject: false, count: 0 }, () => (
-            <EmptyState
-              icon="users"
-              title={t("office.no_project_selected")}
-              description={t("office.no_project_hint")}
-            />
-          ))
-          .otherwise(() =>
-            view === "iso" ? (
-              <IsoOffice agents={scopedAgents} selectedId={selectedId} onSelect={selectFromFloor} zoom={zoom} />
-            ) : (
+        {/* Iso view: new game-asset-based scene. Always renders, even with
+            zero agents — the scene itself is the view; agents are placed on
+            top in later iterations. Cards view keeps its existing
+            loading/empty-state branches since it's a list, not a canvas. */}
+        {view === "iso" ? (
+          <OfficeScene />
+        ) : (
+          match({ isLoading: floorLoading, hasProject: !!project, count: scopedAgents.length })
+            .with({ isLoading: true }, () => (
+              <div style={{ padding: 24 }}>
+                <Skeleton width={200} height={20} />
+                <div style={{ height: 12 }} />
+                <Skeleton width="100%" height={400} />
+              </div>
+            ))
+            .with({ hasProject: true, count: 0 }, () => (
+              <EmptyState
+                icon="users"
+                title={t("office.empty_roster_title")}
+                description={t("office.empty_roster_hint")}
+              />
+            ))
+            .with({ hasProject: false, count: 0 }, () => (
+              <EmptyState
+                icon="users"
+                title={t("office.no_project_selected")}
+                description={t("office.no_project_hint")}
+              />
+            ))
+            .otherwise(() => (
               <CardsOffice agents={scopedAgents} selectedId={selectedId} onSelect={selectFromFloor} />
-            ),
-          )}
-
-        {view === "iso" && scopedAgents.length > 0 ? <OfficeZoom /> : null}
+            ))
+        )}
       </div>
     </>
   );
