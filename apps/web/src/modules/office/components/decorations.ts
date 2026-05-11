@@ -45,6 +45,7 @@ export type DecoFamily =
   | "sign"
   | "grave"
   | "scarecrow"
+  | "sheep"
   | "bridge";
 
 export type DecorationKind =
@@ -94,6 +95,7 @@ export type DecorationKind =
   | "bone_sign"
   | "gravestone"
   | "scarecrow"
+  | "sheep"
   | "bridge_h"
   | "bridge_v";
 
@@ -420,6 +422,17 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/scarecrow.png",
     frameW: 192, frameH: 192, frames: 1,
     terrain: "land", category: "land", family: "scarecrow",
+  },
+
+  // ─ Sheep (animated, 8 × 128×128). Reuses the deco-bush keyframe
+  //   since both sheets have identical 1024×128 stride. Agents standing
+  //   on a sheep tile while working switch to the knife animation
+  //   (sheep-shearing pose) — see OfficeMap. ───────────────────────────
+  sheep: {
+    label: "Sheep",
+    src: "/decorations/sheep.png",
+    frameW: 128, frameH: 128, frames: 8,
+    terrain: "land", category: "land", family: "sheep", animClass: "deco-bush",
   },
 
   // ─ Bridges (static 64×64, water-only). Only the middle plank is

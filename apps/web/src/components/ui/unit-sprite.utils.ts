@@ -37,6 +37,9 @@ interface UnitDef {
   hammer?: SheetSpec;
   /** Mining-rock animation. Pawn-only. */
   pickaxe?: SheetSpec;
+  /** Sheep-shearing / knife animation. Pawn-only; routed when an agent
+   *  is co-located with a sheep decoration while working. */
+  knife?: SheetSpec;
   /**
    * Character bounding box inside one frame, in native sprite pixels. We crop
    * to this region so the avatar shows the character, not the empty padding
@@ -56,6 +59,7 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     axe: { frames: 6 },
     hammer: { frames: 3 },
     pickaxe: { frames: 6 },
+    knife: { frames: 4 },
     bbox: { x: 64, y: 60, w: 64, h: 104 },
     label: "Pawn",
   },
@@ -124,7 +128,7 @@ export function formatUnit(u: UnitSelection): string {
   return `${u.faction}/${u.kind}`;
 }
 
-export type UnitSheetState = "idle" | "run" | "axe" | "hammer" | "pickaxe";
+export type UnitSheetState = "idle" | "run" | "axe" | "hammer" | "pickaxe" | "knife";
 
 export function unitSheetSrc(
   faction: UnitFaction,

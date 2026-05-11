@@ -20,10 +20,10 @@ export type UnitSpriteProps = {
   size?: number;
   /** Loop the sprite-sheet animation. Disable in very dense lists. */
   animate?: boolean;
-  /** Which action sheet to play. "axe" / "hammer" / "pickaxe" each require
-   *  the kind to declare the matching sheet in UNIT_DEFS (pawn does);
-   *  otherwise the sprite gracefully falls back to idle. */
-  action?: "idle" | "working" | "axe" | "hammer" | "pickaxe";
+  /** Which action sheet to play. Each named action requires the kind to
+   *  declare the matching sheet in UNIT_DEFS (pawn does); otherwise the
+   *  sprite gracefully falls back to idle. */
+  action?: "idle" | "working" | "axe" | "hammer" | "pickaxe" | "knife";
   /** Mirror horizontally — used when the contextual target (e.g. a tree
    *  being chopped) is on the pawn's left rather than its default right. */
   flip?: boolean;
@@ -95,6 +95,9 @@ export function UnitSprite({
   } else if (action === "pickaxe" && def.pickaxe) {
     sheet = def.pickaxe;
     state = "pickaxe";
+  } else if (action === "knife" && def.knife) {
+    sheet = def.knife;
+    state = "knife";
   }
   const src = unitSheetSrc(unit.faction, unit.kind, state);
 

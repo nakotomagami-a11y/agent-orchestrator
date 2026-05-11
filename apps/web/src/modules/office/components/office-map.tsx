@@ -489,21 +489,21 @@ export function OfficeMap({
           // Animation rule: agents idle by default and only switch to a
           // work animation while they're actively running a task. The work
           // animation is picked from whatever resource shares their cell —
-          // tree → axe, rock → pickaxe — and falls back to a generic
-          // hammer-build pose when nothing's there. Same-cell only by
-          // design: neighbouring cells no longer count, so an agent has
-          // to be standing on the resource for the matching animation.
+          // tree → axe, rock → pickaxe, sheep → knife — and falls back to
+          // a generic hammer-build pose when nothing's there. Same-cell
+          // only by design: neighbouring cells no longer count, so an
+          // agent has to be standing on the resource for the matching
+          // animation.
           const isWorking =
             agent.status === "working" || agent.status === "thinking";
-          let action: "idle" | "axe" | "pickaxe" | "hammer" = "idle";
+          let action: "idle" | "axe" | "pickaxe" | "knife" | "hammer" = "idle";
           if (isWorking) {
             const cellStack = decorations[decorationKey(x, y)];
-            const hasTree =
-              !!cellStack && cellStack.some((k) => familyOf(k) === "tree");
-            const hasRock =
-              !!cellStack && cellStack.some((k) => familyOf(k) === "rock");
-            if (hasTree) action = "axe";
-            else if (hasRock) action = "pickaxe";
+            const hasFamily = (f: string): boolean =>
+              !!cellStack && cellStack.some((k) => familyOf(k) === f);
+            if (hasFamily("tree")) action = "axe";
+            else if (hasFamily("rock")) action = "pickaxe";
+            else if (hasFamily("sheep")) action = "knife";
             else action = "hammer";
           }
           return (
