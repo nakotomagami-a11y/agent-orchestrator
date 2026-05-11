@@ -56,7 +56,7 @@ export function AgentDetail({ id }: AgentDetailProps) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>{agent.name}</h2>
             <div style={{ fontSize: 12, color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{id}</div>
-            <div style={{ fontSize: 13, color: "var(--txt-2)", marginTop: 4 }}>{agent.description || "—"}</div>
+            <div style={{ fontSize: 13, color: "var(--txt-2)", marginTop: 4 }}>{agent.description || t("agent_list.description_empty")}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
             <button type="button" className="btn primary" onClick={() => openChat(id)}>
@@ -71,29 +71,29 @@ export function AgentDetail({ id }: AgentDetailProps) {
           {agent.skills.map((s) => (
             <Tag key={s} variant="skill">#{s}</Tag>
           ))}
-          {agent.skills.length === 0 ? <span style={{ fontSize: 12, color: "var(--txt-3)" }}>no skills</span> : null}
+          {agent.skills.length === 0 ? <span style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("agent_details.no_skills")}</span> : null}
           <span style={{ flex: 1 }} />
-          <Tag>model: {agent.defaultModel ?? "default"}</Tag>
-          <Tag>effort: {agent.defaultEffort ?? "default"}</Tag>
-          <Tag>{agent.tools.length} tools</Tag>
+          <Tag>{t("agent_details.tag_model", { model: agent.defaultModel ?? t("agent_details.tag_default") })}</Tag>
+          <Tag>{t("agent_details.tag_effort", { effort: agent.defaultEffort ?? t("agent_details.tag_default") })}</Tag>
+          <Tag>{t("agent_details.tag_tools", { count: agent.tools.length })}</Tag>
         </div>
       </Card>
 
       <Tabs<TabValue>
         items={[
-          { value: "prompt", label: "System prompt" },
-          { value: "memory", label: "Memory" },
-          { value: "runs", label: "Recent runs" },
+          { value: "prompt", label: t("agent_details.tab_prompt") },
+          { value: "memory", label: t("agent_details.tab_memory") },
+          { value: "runs", label: t("agent_details.tab_runs") },
         ]}
         value={tab}
         onChange={setTab}
-        ariaLabel="Agent detail sections"
+        ariaLabel={t("agent_details.tabs_aria")}
       />
 
       {match(tab)
         .with("prompt", () => (
           <Card>
-            <CardHeader title="System prompt" sub={`~/.claude/agents/${id}.md`} />
+            <CardHeader title={t("agent_details.prompt_card_title")} sub={`~/.claude/agents/${id}.md`} />
             <div style={{ padding: 16 }}>
               {bodyQ.isLoading ? (
                 <Skeleton width="100%" height={200} />
@@ -120,7 +120,7 @@ function AgentMemoryCard({ id }: { id: string }) {
   return (
     <Card>
       <CardHeader
-        title="Memory"
+        title={t("agent_details.memory_card_title")}
         sub={`~/.claude/agents/${id}.memory.md`}
       />
       <div style={{ padding: 16 }}>
@@ -128,7 +128,7 @@ function AgentMemoryCard({ id }: { id: string }) {
           value={memoryQ.data ?? ""}
           onSave={(content) => writeMut.mutateAsync({ id, content })}
           rows={14}
-          placeholder="# Notes for this agent that compose into its system prompt at summon time."
+          placeholder={t("agent_details.memory_placeholder")}
           saveLabel={t("common.save")}
         />
       </div>

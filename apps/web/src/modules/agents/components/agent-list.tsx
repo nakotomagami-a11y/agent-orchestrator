@@ -90,7 +90,7 @@ export function AgentList() {
       <EmptyState
         icon="users"
         title={t("common.empty")}
-        description="Drop a markdown file in ~/.claude/agents/ or click 'New agent'."
+        description={t("agent_list.empty_hint")}
       />
     );
   }
@@ -126,7 +126,7 @@ export function AgentList() {
             fontSize: 13,
           }}
         >
-          No agents match the current filters.
+          {t("agent_list.no_matches")}
         </div>
       ) : (
         <div
@@ -171,14 +171,11 @@ function FilterBar({
   total: number;
   visible: number;
 }) {
+  const t = useTranslations();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <SearchInput
-          value={search}
-          onChange={onSearchChange}
-          placeholder="Search by name, description, skill, or tool…"
-        />
+        <SearchInput value={search} onChange={onSearchChange} />
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -186,14 +183,14 @@ function FilterBar({
             color: "var(--txt-3)",
           }}
         >
-          {visible} / {total} shown
+          {t("agent_list.shown_count", { visible, total })}
         </span>
       </div>
 
       {categories.length > 0 ? (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
           <FilterChip
-            label="All"
+            label={t("agent_list.filter_all")}
             count={total}
             on={active.size === 0}
             onClick={onClear}
@@ -216,12 +213,11 @@ function FilterBar({
 function SearchInput({
   value,
   onChange,
-  placeholder,
 }: {
   value: string;
   onChange: (next: string) => void;
-  placeholder: string;
 }) {
+  const t = useTranslations();
   return (
     <label
       style={{
@@ -255,8 +251,8 @@ function SearchInput({
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label="Search agents"
+        placeholder={t("agent_list.search_placeholder")}
+        aria-label={t("agent_list.search_aria")}
         style={{
           width: "100%",
           background: "transparent",
@@ -271,7 +267,7 @@ function SearchInput({
         <button
           type="button"
           onClick={() => onChange("")}
-          aria-label="Clear search"
+          aria-label={t("agent_list.clear_search_aria")}
           style={{
             background: "transparent",
             border: "none",
@@ -349,6 +345,7 @@ function AgentCard({
   onOpen: () => void;
   onEdit: () => void;
 }) {
+  const t = useTranslations();
   const sprite = paletteForAgent(agent.name);
   const category = categorize(agent);
   return (
@@ -405,8 +402,8 @@ function AgentCard({
             e.stopPropagation();
             onEdit();
           }}
-          aria-label={`Edit ${agent.name}`}
-          title="Open settings"
+          aria-label={t("agent_list.edit_aria", { name: agent.name })}
+          title={t("agent_list.edit_title")}
           style={{
             background: "transparent",
             border: "none",
@@ -433,7 +430,7 @@ function AgentCard({
           overflow: "hidden",
         }}
       >
-        {agent.description || "—"}
+        {agent.description || t("agent_list.description_empty")}
       </div>
 
       {agent.skills.length > 0 ? (
@@ -455,7 +452,7 @@ function AgentCard({
           marginTop: "auto",
         }}
       >
-        <span className="tag">{agent.defaultModel ?? "default"}</span>
+        <span className="tag">{agent.defaultModel ?? t("agent_list.model_default")}</span>
         <span
           style={{
             fontSize: 11,
@@ -466,7 +463,7 @@ function AgentCard({
             gap: 4,
           }}
         >
-          <Icon name="activity" size={11} /> {uses} use{uses === 1 ? "" : "s"}
+          <Icon name="activity" size={11} /> {t("agent_list.uses_count", { count: uses })}
         </span>
       </div>
     </div>
