@@ -12,6 +12,5 @@ export async function POST(request: Request) {
   const raw: unknown = await request.json();
   const { data, error } = validateBody(createProjectSchema, raw);
   if (error) return error;
-  // roster comes through as `unknown[]` from zod; the service normalises it.
-  return tryService(() => projects.createProject(data as Parameters<typeof projects.createProject>[0]));
+  return tryService(() => projects.createProject(data));
 }

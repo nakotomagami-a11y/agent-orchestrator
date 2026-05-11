@@ -7,7 +7,7 @@ import { join } from "node:path";
 import type { AgentInstance, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
 import { PROJECTS_DIR } from "./paths";
 import { ensureDir, writeFileAtomic } from "./fs-atomic";
-import { parseYaml, stringifyYaml, type YamlValue } from "./yaml";
+import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlValue } from "./yaml";
 import { log } from "./log";
 import { readSettings, scanProjects, slugify } from "./settings";
 import { deleteRunsForInstance } from "./store";
@@ -21,16 +21,34 @@ interface ParsedMetadata { meta: Partial<ProjectMeta>; memory: string }
 function parseMetadataFile(content: string): ParsedMetadata {
   const m = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!m) return { meta: {}, memory: content.trim() };
-  let raw: Partial<ProjectMeta> = {};
+  let raw: YamlMapping = {};
   try {
     const parsed = parseYaml(m[1]!);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      raw = parsed as Partial<ProjectMeta>;
-    }
+    if (isYamlMapping(parsed)) raw = parsed;
   } catch {
     raw = {};
   }
-  return { meta: raw, memory: (m[2] ?? "").trim() };
+  return { meta: yamlToProjectMeta(raw), memory: (m[2] ?? "").trim() };
+}
+
+function yamlToProjectMeta(m: YamlMapping): Partial<ProjectMeta> {
+  const out: Partial<ProjectMeta> = {};
+  if (typeof m.name === "string") out.name = m.name;
+  if (typeof m.description === "string") out.description = m.description;
+  if (Array.isArray(m.roster)) out.roster = normalizeRoster(m.roster);
+  return out;
+}
+
+function rosterToYaml(roster: AgentInstance[]): YamlValue {
+  return roster.map((inst) => {
+    const o: YamlMapping = { instanceId: inst.instanceId, agentId: inst.agentId };
+    if (inst.label !== undefined) o.label = inst.label;
+    if (inst.model !== undefined) o.model = inst.model;
+    if (inst.effort !== undefined) o.effort = inst.effort;
+    if (inst.permissionMode !== undefined) o.permissionMode = inst.permissionMode;
+    if (inst.room !== undefined) o.room = inst.room;
+    return o;
+  });
 }
 
 function readMetadata(id: string): ParsedMetadata | null {
@@ -68,11 +86,11 @@ function normalizeRoster(raw: unknown): AgentInstance[] {
 function writeMetadata(id: string, meta: Partial<ProjectMeta>, memory: string): void {
   ensureDir(PROJECTS_DIR);
   ensureDir(join(PROJECTS_DIR, id));
-  const fmObj: Record<string, YamlValue> = {};
+  const fmObj: YamlMapping = {};
   if (meta.name) fmObj.name = meta.name;
   if (meta.description) fmObj.description = meta.description;
   if (Array.isArray(meta.roster) && meta.roster.length > 0) {
-    fmObj.roster = meta.roster as unknown as YamlValue;
+    fmObj.roster = rosterToYaml(meta.roster);
   }
   const fmStr = Object.keys(fmObj).length === 0 ? "" : stringifyYaml(fmObj).trim();
   const body = memory.trim();
@@ -186,12 +204,9 @@ export function patchInstance(
   if (!p) throw new Error(`project '${projectId}' not found`);
   const idx = p.meta.roster.findIndex((i) => i.instanceId === instanceId);
   if (idx === -1) throw new Error(`instance '${instanceId}' not found`);
-  const safe = { ...patch } as Record<string, unknown>;
-  delete safe.instanceId;
-  delete safe.agentId;
-  const updated: AgentInstance = { ...p.meta.roster[idx]!, ...safe };
+  const updated: AgentInstance = { ...p.meta.roster[idx]!, ...patch };
   for (const k of ["label", "model", "effort", "permissionMode", "room"] as const) {
-    if (k in patch && (patch as Record<string, unknown>)[k] === "") delete updated[k];
+    if (k in patch && patch[k] === "") delete updated[k];
   }
   const roster = [...p.meta.roster];
   roster[idx] = updated;
@@ -233,9 +248,14 @@ export function resolveSummonCwd(
   return project?.meta.cwd?.trim() || undefined;
 }
 
-export function createProject(
-  input: Partial<ProjectMeta> & { id?: string; name?: string },
-): Project {
+export interface CreateProjectInput {
+  id?: string;
+  name?: string;
+  description?: string;
+  roster?: unknown[];
+}
+
+export function createProject(input: CreateProjectInput): Project {
   const settings = readSettings();
   if (!settings) throw new Error("first-run setup not complete");
   const id = input.id?.trim() || slugify(input.name ?? "");

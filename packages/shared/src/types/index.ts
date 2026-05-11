@@ -155,3 +155,11 @@ export interface SseAttachedEvent {
   status: PersistedRun["status"];
   startTs: number;
 }
+
+export type RunStreamEvent =
+  | { name: "attached"; data: SseAttachedEvent }
+  | { name: "chunk"; data: SseChunkEvent }
+  | { name: "tool"; data: SseToolEvent }
+  | { name: "usage"; data: SseUsageEvent }
+  | { name: "done"; data: SseDoneEvent }
+  | { name: "error"; data: SseErrorEvent };

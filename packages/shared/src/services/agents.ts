@@ -9,23 +9,21 @@ import { join } from "node:path";
 import type { ApiAgent, AgentBody, Project } from "../types/index";
 import { AGENTS_DIR, GLOBAL_MEMORY_PATH, isValidIdSegment } from "./paths";
 import { ensureDir, writeFileAtomic } from "./fs-atomic";
-import { parseYaml, stringifyYaml, type YamlValue } from "./yaml";
+import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlValue } from "./yaml";
 import { buildSkillsPrompt } from "./skills";
 
 interface ParsedFile {
-  fm: Record<string, unknown>;
+  fm: YamlMapping;
   body: string;
 }
 
 function parseFrontmatter(content: string): ParsedFile {
   const m = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!m) return { fm: {}, body: content };
-  let fm: Record<string, unknown> = {};
+  let fm: YamlMapping = {};
   try {
     const parsed = parseYaml(m[1]!);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      fm = parsed as Record<string, unknown>;
-    }
+    if (isYamlMapping(parsed)) fm = parsed;
   } catch {
     fm = {};
   }
