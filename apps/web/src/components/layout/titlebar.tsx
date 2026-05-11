@@ -32,17 +32,17 @@ export function Titlebar() {
             background: "linear-gradient(135deg, var(--yaru-orange), var(--yaru-purple))",
           }}
         />
-        {t("app.name")} — Studio
+        {t("app.name")} — {t("app.studio_subtitle")}
       </div>
       <div className="tb-right">
         <button
           type="button"
           className="tb-btn"
           onClick={toggle}
-          aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+          aria-label={theme === "dark" ? t("titlebar.switch_to_light") : t("titlebar.switch_to_dark")}
         >
           <Icon name={theme === "dark" ? "moon" : "sun"} size={13} />
-          {theme === "dark" ? "Dark" : "Light"}
+          {theme === "dark" ? t("titlebar.theme_dark") : t("titlebar.theme_light")}
         </button>
       </div>
     </div>

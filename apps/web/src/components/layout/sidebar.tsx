@@ -88,8 +88,10 @@ export function Sidebar() {
   const onRemove = (row: RosterRow) => {
     if (!activeProjectId || !row.instance) return;
     const ok = window.confirm(
-      `Remove ${row.displayName} from ${project?.meta.name ?? "this project"}? ` +
-      `Their conversation stays archived so you can still read it.`,
+      t("sidebar.remove_confirm", {
+        name: row.displayName,
+        project: project?.meta.name ?? "",
+      }),
     );
     if (!ok) return;
     removeMut.mutate({ projectId: activeProjectId, instanceId: row.instance.instanceId });
@@ -103,16 +105,16 @@ export function Sidebar() {
         </div>
         <div>
           <div className="brand-name">{t("app.name")}</div>
-          <div className="brand-sub">studio · v3.0</div>
+          <div className="brand-sub">{t("app.brand_sub")}</div>
         </div>
       </div>
 
-      <nav className="nav" aria-label="Primary">
+      <nav className="nav" aria-label={t("nav.primary_label")}>
         <NavItem
           href={PAGE_ROUTES.office}
           icon="home"
           label={t("nav.office")}
-          badge={workingCount > 0 ? `${workingCount} live` : undefined}
+          badge={workingCount > 0 ? t("nav.live_badge", { count: workingCount }) : undefined}
           active={isActiveRoute(pathname, PAGE_ROUTES.office, { exact: true })}
         />
         <NavItem
@@ -132,13 +134,13 @@ export function Sidebar() {
 
       <div style={{ display: "grid", gridTemplateRows: "auto 1fr", minHeight: 0 }}>
         <div className="section-h" style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span>Roster · {rosterRows.length}</span>
+          <span>{t("sidebar.roster_label", { count: rosterRows.length })}</span>
           <input
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter…"
-            aria-label="Filter roster"
+            placeholder={t("common.search_placeholder")}
+            aria-label={t("sidebar.filter_aria")}
             style={{
               marginLeft: "auto",
               background: "var(--bg-1)",
@@ -163,8 +165,7 @@ export function Sidebar() {
                 lineHeight: 1.4,
               }}
             >
-              No agents in {project.meta.name}. Click <strong>Add agent</strong> on the
-              office toolbar.
+              {t("sidebar.no_agents_in_project", { project: project.meta.name })}
             </div>
           ) : !project && rosterRows.length === 0 ? (
             <div
@@ -175,8 +176,7 @@ export function Sidebar() {
                 lineHeight: 1.4,
               }}
             >
-              No agent definitions yet. Drop a markdown file in{" "}
-              <code>~/.claude/agents/</code>.
+              {t("sidebar.no_agent_definitions")}
             </div>
           ) : (
             filtered.map((row) => {
@@ -201,7 +201,7 @@ export function Sidebar() {
           )}
           {filtered.length === 0 && rosterRows.length > 0 ? (
             <div style={{ padding: "8px 14px", fontSize: 11, color: "var(--txt-3)" }}>
-              No matches for “{filter}”.
+              {t("common.no_matches", { query: filter })}
             </div>
           ) : null}
         </div>
@@ -213,21 +213,22 @@ export function Sidebar() {
 }
 
 function SidebarFoot({ spendToday }: { spendToday: number }) {
+  const t = useTranslations();
   return (
     <Link
       href={PAGE_ROUTES.settings}
       className="sidebar-foot"
-      aria-label="Open settings"
+      aria-label={t("common.open_settings")}
       style={{ textDecoration: "none", color: "var(--txt)" }}
     >
       <div className="me" aria-hidden>
         P
       </div>
       <div>
-        <div className="me-name">Local</div>
-        <div className="me-sub">single-user</div>
+        <div className="me-name">{t("sidebar.me_name")}</div>
+        <div className="me-sub">{t("sidebar.me_sub")}</div>
       </div>
-      <div className="foot-spend" aria-label={`Spend today $${spendToday.toFixed(2)}`}>
+      <div className="foot-spend" aria-label={t("common.spend_today_aria", { amount: spendToday.toFixed(2) })}>
         ${spendToday.toFixed(2)}
       </div>
     </Link>
@@ -247,6 +248,7 @@ function RosterEntry({
   onSelect: () => void;
   onRemove: () => void;
 }) {
+  const t = useTranslations();
   const { agent, displayName } = row;
   return (
     <div
@@ -256,7 +258,7 @@ function RosterEntry({
       <button
         type="button"
         onClick={onSelect}
-        title="Click to view details · open chat from there"
+        title={t("sidebar.row_open_chat_title")}
         style={{
           // Span the parent `.roster-row` grid so name + status get
           // room instead of being squashed into the 32px avatar slot.
@@ -307,13 +309,13 @@ function RosterEntry({
             }}
           >
             {agent.status === "idle"
-              ? "ready"
+              ? t("sidebar.status_ready")
               : agent.status === "done"
-                ? "✓ " + (agent.taskKind || "done")
+                ? t("sidebar.status_done", { label: agent.taskKind || t("sidebar.status_done_default") })
                 : agent.status === "queued"
-                  ? "in queue"
+                  ? t("sidebar.status_queued")
                   : agent.status === "error"
-                    ? "needs attention"
+                    ? t("sidebar.status_needs_attention")
                     : agent.task ?? agent.status}
           </div>
         </div>
@@ -326,8 +328,8 @@ function RosterEntry({
             e.stopPropagation();
             onRemove();
           }}
-          aria-label={`Remove ${displayName} from this project`}
-          title="Remove from project"
+          aria-label={t("sidebar.remove_from_project_aria", { name: displayName })}
+          title={t("sidebar.remove_from_project_title")}
           className="roster-row-remove"
           style={{
             position: "absolute",
@@ -356,13 +358,14 @@ function RosterEntry({
 }
 
 function LimitsNavButton({ spendToday }: { spendToday: number }) {
+  const t = useTranslations();
   const openLimits = useClaudeLimitsStore((s) => s.setOpen);
   return (
     <button
       type="button"
       onClick={() => openLimits(true)}
       className="nav-item"
-      aria-label="Claude limits and usage"
+      aria-label={t("sidebar.limits_aria")}
       style={{
         font: "inherit",
         width: "100%",
@@ -370,7 +373,7 @@ function LimitsNavButton({ spendToday }: { spendToday: number }) {
       }}
     >
       <Icon name="gauge" />
-      <span>Limits</span>
+      <span>{t("nav.limits")}</span>
       <span className="badge">${spendToday.toFixed(2)}</span>
     </button>
   );

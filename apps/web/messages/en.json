@@ -1,7 +1,9 @@
 {
   "app": {
     "name": "Agent Office",
-    "tagline": "Personal fleet manager for Claude Code subagents."
+    "tagline": "Personal fleet manager for Claude Code subagents.",
+    "studio_subtitle": "Studio",
+    "brand_sub": "studio · v3.0"
   },
   "nav": {
     "office": "Office",
@@ -10,7 +12,10 @@
     "projects": "Projects",
     "skills": "Skills",
     "settings": "Settings",
-    "agents": "Agents"
+    "agents": "Agents",
+    "limits": "Limits",
+    "primary_label": "Primary",
+    "live_badge": "{count} live"
   },
   "office": {
     "title": "The office",
@@ -24,17 +29,215 @@
     "view_iso": "Iso",
     "view_cards": "Cards",
     "new_agent": "New agent",
-    "add_agent": "Add agent"
+    "add_agent": "Add agent",
+    "no_project_selected": "No project selected",
+    "no_project_hint": "Pick a project from the top-left switcher to scope the floor.",
+    "empty_roster_title": "No agents in this project yet",
+    "empty_roster_hint": "Click \"Add agent\" to drop one onto the floor."
+  },
+  "office_toolbar": {
+    "view_iso_aria": "Iso office view",
+    "view_cards_aria": "Cards office view",
+    "zoom_in_aria": "Zoom in",
+    "zoom_out_aria": "Zoom out",
+    "zoom_reset_aria": "Reset zoom"
   },
   "common": {
     "search_placeholder": "Filter…",
     "abort": "Abort",
     "close": "Close",
     "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved.",
+    "cancel": "Cancel",
     "edit": "Edit",
     "delete": "Delete",
+    "remove": "Remove",
     "loading": "Loading…",
-    "empty": "Nothing here yet."
+    "empty": "Nothing here yet.",
+    "open_settings": "Open settings",
+    "no_matches": "No matches for \"{query}\".",
+    "spend_today_aria": "Spend today ${amount}"
+  },
+  "sidebar": {
+    "roster_label": "Roster · {count}",
+    "filter_aria": "Filter roster",
+    "no_agents_in_project": "No agents in {project}. Click \"Add agent\" on the office toolbar.",
+    "no_agent_definitions": "No agent definitions yet. Drop a markdown file in ~/.claude/agents/.",
+    "row_open_chat_title": "Click to view details · open chat from there",
+    "remove_from_project_aria": "Remove {name} from this project",
+    "remove_from_project_title": "Remove from project",
+    "remove_confirm": "Remove {name} from {project}? Their conversation stays archived so you can still read it.",
+    "limits_aria": "Claude limits and usage",
+    "me_name": "Local",
+    "me_sub": "single-user",
+    "status_ready": "ready",
+    "status_done": "✓ {label}",
+    "status_done_default": "done",
+    "status_queued": "in queue",
+    "status_needs_attention": "needs attention"
+  },
+  "titlebar": {
+    "switch_to_light": "Switch to light theme",
+    "switch_to_dark": "Switch to dark theme",
+    "theme_light": "Light",
+    "theme_dark": "Dark"
+  },
+  "project_switcher": {
+    "all_projects": "All projects",
+    "all_projects_subtitle": "Browse every project · agent inherits server cwd",
+    "switch_title": "Switch project",
+    "menu_label": "Project switcher",
+    "section_loading": "Projects · loading…",
+    "section_count": "Projects ({count})",
+    "no_projects": "No projects yet — configure a projects root in Settings.",
+    "agent_count": "{count, plural, one {# agent} other {# agents}}",
+    "manage": "Manage projects…",
+    "cwd_label": "cwd {path}"
+  },
+  "agent": {
+    "title_view": "Agent",
+    "title_new": "New agent",
+    "title_edit": "Edit agent"
+  },
+  "agent_form": {
+    "placeholder_name": "Display name",
+    "placeholder_id": "agent-id (a–z, 0–9, dashes)",
+    "placeholder_desc": "What is this agent for?",
+    "placeholder_model": "sonnet, haiku, opus…",
+    "placeholder_effort": "low, medium, high",
+    "placeholder_skills": "skill1, skill2",
+    "placeholder_tools": "Bash, Read, Edit",
+    "placeholder_body": "System prompt body in markdown…",
+    "label_name": "Name",
+    "label_id": "ID",
+    "label_desc": "Description",
+    "label_model": "Model",
+    "label_effort": "Effort",
+    "label_skills": "Skills",
+    "label_tools": "Tools",
+    "label_room": "Room",
+    "label_pm": "Permission mode",
+    "label_body": "System prompt",
+    "delete_confirm": "Delete agent {name}? This removes the markdown file and memory file."
+  },
+  "agent_list": {
+    "search_placeholder": "Search agents…",
+    "search_aria": "Search agents",
+    "empty_title": "No agents yet",
+    "empty_hint": "Create a markdown file at ~/.claude/agents/<id>.md or use \"New agent\".",
+    "edit_aria": "Edit {name}",
+    "open_aria": "Open {name}"
+  },
+  "agent_details": {
+    "tab_configuration": "Configuration",
+    "tab_history": "History",
+    "tab_memory": "Memory",
+    "tab_settings": "Settings",
+    "close_aria": "Close agent details",
+    "memory_placeholder": "Notes for this agent (markdown). Saved automatically on click of Save.",
+    "memory_label": "Per-agent memory",
+    "config_skills_label": "Skills",
+    "config_tools_label": "Tools",
+    "config_model_label": "Model",
+    "config_effort_label": "Effort",
+    "config_pm_label": "Permission mode",
+    "config_room_label": "Room",
+    "no_history": "No runs yet for this agent.",
+    "settings_label_label": "Display label",
+    "settings_label_placeholder": "Override the agent name in this project (optional)",
+    "settings_model_placeholder": "Override default model",
+    "settings_effort_placeholder": "Override default effort",
+    "settings_pm_placeholder": "Override permission mode",
+    "settings_room_placeholder": "Override default room"
+  },
+  "projects": {
+    "title": "Projects",
+    "subtitle": "Pick a project to scope the office.",
+    "create_label": "New project",
+    "scan_label": "Scan for new folders",
+    "empty_title": "No projects yet",
+    "empty_hint": "Configure a projects root in Settings, then drop folders inside it.",
+    "no_root_title": "Projects root not configured",
+    "no_root_hint": "Open Settings to point Agent Office at a folder."
+  },
+  "project_detail": {
+    "back_aria": "Back to projects",
+    "memory_label": "Project memory",
+    "memory_placeholder": "Notes that every agent in this project will see.",
+    "roster_label": "Roster",
+    "roster_empty": "No agents added yet.",
+    "activity_label": "Recent activity",
+    "delete_confirm": "Delete project {name}? This removes ~/.claude/projects/{id} but leaves the source folder alone.",
+    "delete_button": "Delete project"
+  },
+  "project_activity": {
+    "empty": "No runs yet for this project.",
+    "today_label": "Today",
+    "earlier_label": "Earlier"
+  },
+  "add_agent_modal": {
+    "title": "Add agent to {project}",
+    "title_no_project": "Add agent",
+    "filter_placeholder": "Search agents…",
+    "filter_aria": "Filter agents",
+    "section_available": "Available",
+    "section_in_roster": "Already in roster",
+    "add_button": "Add to project",
+    "close_aria": "Close",
+    "no_results": "No agents match."
+  },
+  "settings": {
+    "title": "Settings",
+    "projects_root_label": "Projects root",
+    "projects_root_placeholder": "/home/you/code",
+    "projects_root_hint": "Folders directly under this path become projects.",
+    "excluded_label": "Excluded folders",
+    "excluded_placeholder": "Add a folder name to exclude…",
+    "excluded_aria": "Add excluded folder",
+    "excluded_remove_aria": "Remove {name}",
+    "scan_button": "Re-scan",
+    "save_button": "Save settings"
+  },
+  "skills": {
+    "title": "Skills",
+    "tab_installed": "Installed",
+    "tab_registry": "Registry",
+    "filter_placeholder": "Search skills…",
+    "filter_aria": "Search skills",
+    "install_button": "Install",
+    "installed_badge": "Installed",
+    "update_available_badge": "Update available",
+    "update_button": "Update",
+    "uninstall_button": "Uninstall",
+    "no_installed_title": "No skills installed",
+    "no_installed_hint": "Browse the registry tab to install one.",
+    "no_results": "No skills match.",
+    "refresh_button": "Refresh registry"
+  },
+  "runs": {
+    "title": "Activity",
+    "empty": "No runs yet.",
+    "status_running": "Running",
+    "status_done": "Done",
+    "status_error": "Error",
+    "status_aborted": "Aborted",
+    "status_queued": "Queued",
+    "cost_label": "${amount}",
+    "duration_label": "{seconds}s"
+  },
+  "run_detail": {
+    "back_aria": "Back to activity",
+    "prompt_label": "Prompt",
+    "output_label": "Output",
+    "metadata_label": "Run details",
+    "agent_label": "Agent",
+    "model_label": "Model",
+    "started_label": "Started",
+    "finished_label": "Finished",
+    "duration_label": "Duration",
+    "cost_label": "Cost",
+    "cwd_label": "Working directory"
   },
   "summon": {
     "open_chat": "Open chat",
@@ -43,9 +246,60 @@
     "effort": "Effort",
     "max_budget": "Max budget"
   },
+  "composer": {
+    "input_placeholder": "Type a prompt and press Enter…",
+    "input_aria": "Prompt",
+    "send_aria": "Send prompt",
+    "attach_aria": "Attach file",
+    "skill_aria": "Toggle skills",
+    "abort_aria": "Abort current run",
+    "abort_title": "Abort current run",
+    "remove_chip_aria": "Remove {name}",
+    "command_model_desc": "Switch model for this prompt (sonnet/haiku/opus)",
+    "command_effort_desc": "Set thinking effort (low/medium/high)",
+    "command_budget_desc": "Cap spend in USD for this run",
+    "command_skills_desc": "Attach skills (comma-separated)",
+    "command_clear_desc": "Clear pinned options",
+    "command_help_desc": "List available slash commands"
+  },
+  "chat_head": {
+    "open_chat_aria": "Open chat with {name}",
+    "close_aria": "Close chat panel"
+  },
+  "live_status": {
+    "thinking": "Thinking…",
+    "calling_tool": "Running {tool}…",
+    "writing": "Writing…",
+    "reading": "Reading…",
+    "running": "Running…",
+    "waiting": "Waiting…",
+    "queued": "Queued…",
+    "starting": "Starting…",
+    "done": "Done"
+  },
+  "limits": {
+    "title": "Claude limits & usage",
+    "today_label": "Today",
+    "five_hour_label": "Last 5 hours",
+    "weekly_label": "This week",
+    "spent_label": "Spent",
+    "budget_label": "Budget",
+    "remaining_label": "Remaining",
+    "model_label": "Model",
+    "runs_label": "Runs",
+    "budget_placeholder": "Daily budget (USD)",
+    "budget_aria": "Daily budget in dollars",
+    "save_button": "Save limits"
+  },
   "errors": {
     "claude_unavailable": "Claude CLI is not available.",
     "rate_limited": "Too many requests — try again in a moment.",
-    "not_found": "Not found."
+    "not_found": "Not found.",
+    "validation_failed": "Some fields are invalid.",
+    "invalid_id": "Invalid identifier.",
+    "payload_too_large": "That input is too large.",
+    "internal_error": "Something went wrong on the server.",
+    "bad_request": "Bad request.",
+    "missing_file": "Choose a file first."
   }
 }
