@@ -2,10 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
-import { applySseEvent } from "../utils/parse-sse-event";
+import { applySseEvent, parseSseEvent, type SseEventName } from "../utils/parse-sse-event";
 import type { RunPhase, ThreadItem, UsageMeter } from "../utils/thread-types";
 
-const EVENT_NAMES = ["attached", "chunk", "tool", "usage", "done", "error"] as const;
+const EVENT_NAMES: readonly SseEventName[] = [
+  "attached",
+  "chunk",
+  "tool",
+  "usage",
+  "done",
+  "error",
+] as const;
 
 export interface RunStreamState {
   thread: ThreadItem[];
@@ -20,6 +27,8 @@ const INITIAL: RunStreamState = {
   phase: "idle",
   error: null,
 };
+
+type SseHandler = (e: MessageEvent) => void;
 
 /**
  * Subscribes to `/api/runs/[id]/stream`. Returns the live thread + usage +
@@ -42,17 +51,20 @@ export function useRunStream(runId: string | null): RunStreamState {
     const source = new EventSource(url);
     ref.current = source;
 
-    const handlers: Record<(typeof EVENT_NAMES)[number], (e: MessageEvent) => void> = {} as never;
+    const handlers = new Map<SseEventName, SseHandler>();
+
     for (const name of EVENT_NAMES) {
-      const handler = (e: MessageEvent) => {
-        let data: unknown;
+      const handler: SseHandler = (e) => {
+        let raw: unknown;
         try {
-          data = JSON.parse(e.data);
+          raw = JSON.parse(e.data);
         } catch {
           return;
         }
+        const event = parseSseEvent(name, raw);
+        if (!event) return;
         setState((prev) => {
-          const next = applySseEvent({ thread: prev.thread, usage: prev.usage }, { name, data });
+          const next = applySseEvent({ thread: prev.thread, usage: prev.usage }, event);
           const phase: RunPhase = next.error
             ? "error"
             : next.done
@@ -69,18 +81,16 @@ export function useRunStream(runId: string | null): RunStreamState {
         });
         if (name === "done") source.close();
       };
-      handlers[name] = handler;
+      handlers.set(name, handler);
       source.addEventListener(name, handler);
     }
 
     source.onerror = () => {
-      // Browser will auto-reconnect by default. Surface the failure but keep
-      // the connection alive so a transient network blip doesn't kill the run.
       setState((prev) => (prev.phase === "done" ? prev : { ...prev, error: "stream interrupted" }));
     };
 
     return () => {
-      for (const name of EVENT_NAMES) source.removeEventListener(name, handlers[name]);
+      for (const [name, handler] of handlers) source.removeEventListener(name, handler);
       source.close();
       ref.current = null;
     };

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@agent-office/shared/hooks/api";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
@@ -40,37 +41,45 @@ export function useOfficeAgents(): OfficeAgentsResult & { isLoading: boolean } {
     refetchInterval: POLL.RUNS,
   });
 
-  const agents = (agentsQuery.data ?? []).map<OfficeAgent>((a, idx) => {
-    const hash = agentHash(a.name);
-    const status = statusFromRuns(a.name, runsQuery.data ?? []);
-    return {
-      ...a,
-      id: a.name,
-      short: shortName(a.name),
-      desk: deriveDeskCoords(idx, hash),
-      sprite: paletteForAgent(a.name).sprite,
-      status: status.status,
-      task: status.task,
-      taskKind: status.taskKind,
-    };
-  });
+  const enriched = useMemo<
+    Omit<OfficeAgentsResult, "spendToday"> & { spendToday: number }
+  >(() => {
+    const rawAgents = agentsQuery.data ?? [];
+    const rawRuns = runsQuery.data ?? [];
+    const agents = rawAgents.map<OfficeAgent>((a, idx) => {
+      const hash = agentHash(a.name);
+      const status = statusFromRuns(a.name, rawRuns);
+      return {
+        ...a,
+        id: a.name,
+        short: shortName(a.name),
+        desk: deriveDeskCoords(idx, hash),
+        sprite: paletteForAgent(a.name).sprite,
+        status: status.status,
+        task: status.task,
+        taskKind: status.taskKind,
+      };
+    });
 
-  const workingCount = agents.filter((a) => a.status === "working" || a.status === "thinking").length;
-  const idleCount = agents.filter((a) => a.status === "idle").length;
-  const errorCount = agents.filter((a) => a.status === "error").length;
+    let workingCount = 0;
+    let idleCount = 0;
+    let errorCount = 0;
+    for (const a of agents) {
+      if (a.status === "working" || a.status === "thinking") workingCount++;
+      else if (a.status === "idle") idleCount++;
+      else if (a.status === "error") errorCount++;
+    }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const spendToday = (runsQuery.data ?? [])
-    .filter((r) => r.ts >= today.getTime())
-    .reduce((sum, r) => sum + (r.cost || 0), 0);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayMs = todayStart.getTime();
+    let spendToday = 0;
+    for (const r of rawRuns) {
+      if (r.ts >= todayMs) spendToday += r.cost || 0;
+    }
 
-  return {
-    agents,
-    workingCount,
-    idleCount,
-    errorCount,
-    spendToday,
-    isLoading: agentsQuery.isLoading,
-  };
+    return { agents, workingCount, idleCount, errorCount, spendToday };
+  }, [agentsQuery.data, runsQuery.data]);
+
+  return { ...enriched, isLoading: agentsQuery.isLoading };
 }

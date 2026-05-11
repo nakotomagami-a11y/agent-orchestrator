@@ -3,26 +3,25 @@
 // Skills live at ~/.claude/agents/_skills/<name>/SKILL.md (app-managed, not
 // Claude Code's global ~/.claude/skills/). Provenance recorded in
 // <name>/.source.json so we can detect remote updates.
-//
-// Ported from `_legacy/server/skills.ts`. Only difference: GitHub URLs are
-// built via `EXTERNAL_API.github` from the routes config (rule #2).
 
 import {
   existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
+import { randomUUID } from "node:crypto";
 import type {
   RegistrySkill,
   InstalledSkill,
   SkillProvenance,
   SkillUpdate,
 } from "../types/index";
-import { writeFileAtomic } from "./fs-atomic";
+import { ensureDir, writeFileAtomic } from "./fs-atomic";
 import { SKILLS_DIR } from "./paths";
 import { log } from "./log";
 import { parseYaml } from "./yaml";
@@ -101,7 +100,7 @@ function deriveTags(source: string, name: string, description: string, path: str
 }
 
 function ensureSkillsDir(): void {
-  if (!existsSync(SKILLS_DIR)) mkdirSync(SKILLS_DIR, { recursive: true });
+  ensureDir(SKILLS_DIR);
 }
 
 function loadCachedRegistry(): CachedRegistry | null {
@@ -134,10 +133,6 @@ function readProvenance(name: string): SkillProvenance | null {
   } catch {
     return null;
   }
-}
-
-function writeProvenance(name: string, prov: SkillProvenance): void {
-  writeFileSync(provenancePath(name), JSON.stringify(prov, null, 2));
 }
 
 interface TreeEntry {
@@ -270,32 +265,41 @@ export async function installSkill(
   const skillSha = skillMdEntry?.sha ?? "";
 
   const dest = join(SKILLS_DIR, name);
-  if (existsSync(dest)) rmSync(dest, { recursive: true, force: true });
-  mkdirSync(dest, { recursive: true });
+  const staging = `${dest}.tmp-${randomUUID()}`;
+  mkdirSync(staging, { recursive: true });
 
   let written = 0;
-  for (const file of files) {
-    const rel = file.path.slice(prefix.length);
-    const localPath = join(dest, rel);
-    mkdirSync(dirname(localPath), { recursive: true });
-    const rawUrl = `https://raw.githubusercontent.com/${source}/${ref}/${file.path}`;
-    const fileRes = await fetch(rawUrl);
-    if (!fileRes.ok) {
-      log.warn("install.file_failed", { path: file.path, status: fileRes.status });
-      continue;
+  try {
+    for (const file of files) {
+      const rel = file.path.slice(prefix.length);
+      const localPath = join(staging, rel);
+      mkdirSync(dirname(localPath), { recursive: true });
+      const rawUrl = `https://raw.githubusercontent.com/${source}/${ref}/${file.path}`;
+      const fileRes = await fetch(rawUrl);
+      if (!fileRes.ok) {
+        log.warn("install.file_failed", { path: file.path, status: fileRes.status });
+        continue;
+      }
+      const buf = await fileRes.arrayBuffer();
+      writeFileSync(localPath, Buffer.from(buf));
+      written++;
     }
-    const buf = await fileRes.arrayBuffer();
-    writeFileSync(localPath, Buffer.from(buf));
-    written++;
-  }
 
-  writeProvenance(name, {
-    source,
-    ref,
-    path,
-    sha: skillSha,
-    installedAt: new Date().toISOString(),
-  });
+    writeFileSync(
+      join(staging, ".source.json"),
+      JSON.stringify(
+        { source, ref, path, sha: skillSha, installedAt: new Date().toISOString() },
+        null,
+        2,
+      ),
+    );
+
+    if (existsSync(dest)) rmSync(dest, { recursive: true, force: true });
+    renameSync(staging, dest);
+  } catch (e) {
+    rmSync(staging, { recursive: true, force: true });
+    throw e;
+  }
 
   log.info("skill.installed", { name, source, files: written, sha: skillSha.slice(0, 8) });
   return { filesWritten: written };

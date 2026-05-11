@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Icon } from "./icon";
 
 export type ToolCardProps = {
@@ -13,27 +13,36 @@ export type ToolCardProps = {
 
 export function ToolCard({ name, arg, note, children, defaultOpen = false }: ToolCardProps) {
   const [open, setOpen] = useState(defaultOpen);
+  const bodyId = useId();
   return (
     <div className="tool-card">
-      <div
+      <button
+        type="button"
         className="tc-h"
-        role="button"
-        tabIndex={0}
         aria-expanded={open}
+        aria-controls={children ? bodyId : undefined}
         onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setOpen((v) => !v);
-          }
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          font: "inherit",
+          color: "inherit",
+          cursor: "pointer",
+          textAlign: "left",
         }}
       >
         <Icon name={open ? "chevron-down" : "chevron"} size={12} />
         <span className="tc-name">{name}</span>
         {arg ? <span className="tc-arg">{arg}</span> : null}
         {note ? <span className="tc-note">{note}</span> : null}
-      </div>
-      {open && children ? <div className="tc-body">{children}</div> : null}
+      </button>
+      {open && children ? (
+        <div id={bodyId} className="tc-body">
+          {children}
+        </div>
+      ) : null}
     </div>
   );
 }

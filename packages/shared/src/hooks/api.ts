@@ -17,6 +17,28 @@ interface ApiInit extends Omit<RequestInit, "body"> {
   asText?: boolean;
 }
 
+interface ErrorEnvelope {
+  error?: string;
+  fields?: Record<string, string[]>;
+}
+
+function parseErrorEnvelope(raw: unknown): ErrorEnvelope {
+  if (!raw || typeof raw !== "object") return {};
+  const obj = raw as Record<string, unknown>;
+  const out: ErrorEnvelope = {};
+  if (typeof obj.error === "string") out.error = obj.error;
+  if (obj.fields && typeof obj.fields === "object" && !Array.isArray(obj.fields)) {
+    const fields: Record<string, string[]> = {};
+    for (const [key, value] of Object.entries(obj.fields as Record<string, unknown>)) {
+      if (Array.isArray(value) && value.every((v) => typeof v === "string")) {
+        fields[key] = value as string[];
+      }
+    }
+    if (Object.keys(fields).length > 0) out.fields = fields;
+  }
+  return out;
+}
+
 export async function apiFetch<T>(url: string, init: ApiInit = {}): Promise<T> {
   const { body, asText, headers, ...rest } = init;
   const requestInit: RequestInit = {
@@ -31,24 +53,14 @@ export async function apiFetch<T>(url: string, init: ApiInit = {}): Promise<T> {
   const res = await fetch(url, requestInit);
 
   if (!res.ok) {
-    let payload: Record<string, unknown> | null = null;
+    let envelope: ErrorEnvelope = {};
     try {
-      const parsed: unknown = await res.json();
-      if (parsed && typeof parsed === "object") {
-        payload = parsed as Record<string, unknown>;
-      }
+      envelope = parseErrorEnvelope(await res.json());
     } catch {
       /* non-json error */
     }
-    const errorValue = payload?.error;
-    const message =
-      (typeof errorValue === "string" ? errorValue : null) ?? res.statusText ?? `HTTP ${res.status}`;
-    const fieldsValue = payload?.fields;
-    const fields =
-      fieldsValue && typeof fieldsValue === "object"
-        ? (fieldsValue as Record<string, string[]>)
-        : undefined;
-    throw new ApiError(res.status, message, fields);
+    const message = envelope.error ?? res.statusText ?? `HTTP ${res.status}`;
+    throw new ApiError(res.status, message, envelope.fields);
   }
 
   if (asText) {

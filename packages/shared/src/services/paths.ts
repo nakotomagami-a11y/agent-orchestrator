@@ -22,6 +22,10 @@ export const AGENT_UPLOADS_DIR = join(AGENTS_DIR, "_uploads");
 export const PROJECT_UPLOADS_ROOT = PROJECTS_DIR; // per-project: <root>/<id>/_uploads
 export const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
+// Body size caps for text-payload routes (memory files, prompts).
+export const MAX_MEMORY_BYTES = 256 * 1024;
+export const MAX_PROMPT_BYTES = 100 * 1024;
+
 export function agentUploadsDir(agentId: string): string {
   return join(AGENT_UPLOADS_DIR, agentId);
 }
@@ -32,6 +36,17 @@ export function projectUploadsDir(projectId: string): string {
 
 export function safeFilename(name: string): string {
   return name.replace(/[/\\\0]+/g, "_").replace(/^\.+/, "").slice(0, 200) || "file";
+}
+
+// Strict validator for URL :id / :name segments that flow into path.join.
+// Rejects path separators, traversal, leading dots, and oversized names —
+// the route should respond 400 instead of silently transforming the value.
+export function isValidIdSegment(name: string): boolean {
+  if (typeof name !== "string") return false;
+  if (name.length === 0 || name.length > 128) return false;
+  if (name === "." || name === "..") return false;
+  if (name.startsWith(".")) return false;
+  return /^[A-Za-z0-9._-]+$/.test(name);
 }
 
 export function expandTilde(p: string): string {

@@ -28,15 +28,15 @@ export function SkillsPage() {
     <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Card>
         <CardHeader
-          title="Skills"
-          sub={`${installedCount} installed · ${registryQ.data?.length ?? 0} in registry`}
+          title={t("skills.title")}
+          sub={t("skills.card_sub", { installed: installedCount, total: registryQ.data?.length ?? 0 })}
         />
         <div style={{ padding: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <div style={{ flex: 1, minWidth: 220 }}>
             <TextInput
               value={filter.q}
               onChange={(e) => setFilter((f) => ({ ...f, q: e.target.value }))}
-              placeholder="filter by name, tag, source…"
+              placeholder={t("skills.filter_placeholder")}
             />
           </div>
           <label style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12.5 }}>
@@ -45,7 +45,7 @@ export function SkillsPage() {
               checked={filter.showInstalledOnly}
               onChange={(e) => setFilter((f) => ({ ...f, showInstalledOnly: e.target.checked }))}
             />
-            installed only
+            {t("skills.installed_only_label")}
           </label>
         </div>
       </Card>
@@ -53,7 +53,7 @@ export function SkillsPage() {
       {registryQ.isLoading ? (
         <Skeleton width="100%" height={300} />
       ) : filtered.length === 0 ? (
-        <EmptyState icon="cpu" title="No skills match" description={t("common.empty")} />
+        <EmptyState icon="cpu" title={t("skills.no_results_title")} description={t("common.empty")} />
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
           {filtered.map((s) => (
@@ -84,6 +84,7 @@ function SkillCard({
   onInstall: () => void;
   onUninstall: () => void;
 }) {
+  const t = useTranslations();
   return (
     <Card>
       <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 8, height: "100%" }}>
@@ -91,11 +92,11 @@ function SkillCard({
           <Icon name="cpu" />
           <strong style={{ fontSize: 13 }}>{skill.name}</strong>
           {skill.installed ? (
-            <Tag style={{ marginLeft: "auto", background: "var(--acc-faint)", color: "var(--acc)" }}>installed</Tag>
+            <Tag style={{ marginLeft: "auto", background: "var(--acc-faint)", color: "var(--acc)" }}>{t("skills.installed_badge")}</Tag>
           ) : null}
         </div>
         <div style={{ fontSize: 12, color: "var(--txt-2)", minHeight: 32 }}>
-          {skill.description || "—"}
+          {skill.description || t("skills.description_empty")}
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
           {skill.tags.slice(0, 4).map((tag) => (
@@ -108,11 +109,11 @@ function SkillCard({
           </span>
           {skill.installed ? (
             <button type="button" className="btn sm" onClick={onUninstall} disabled={busy}>
-              Remove
+              {t("skills.remove_button")}
             </button>
           ) : (
             <button type="button" className="btn sm primary" onClick={onInstall} disabled={busy}>
-              Install
+              {t("skills.install_button")}
             </button>
           )}
         </div>

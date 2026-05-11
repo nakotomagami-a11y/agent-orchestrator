@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_PROMPT_BYTES } from "@agent-office/shared/services/paths";
 
 export const agentBodySchema = z.object({
   name: z.string().min(1),
@@ -14,8 +15,6 @@ export const agentBodySchema = z.object({
 });
 
 export const agentBodyListSchema = z.array(agentBodySchema);
-
-export const agentIdParamSchema = z.object({ id: z.string().min(1) });
 
 export const settingsPatchSchema = z.object({
   projectsRoot: z.string().min(1),
@@ -87,12 +86,12 @@ export const skillInstallSchema = z.object({
 });
 
 export const promptPostSchema = z.object({
-  prompt: z.string().min(1),
+  prompt: z.string().min(1).max(MAX_PROMPT_BYTES),
 });
 
 export const summonRequestSchema = z.object({
   agentId: z.string().min(1),
-  prompt: z.string().min(1),
+  prompt: z.string().min(1).max(MAX_PROMPT_BYTES),
   model: z.string().optional(),
   effort: z.string().optional(),
   maxBudgetUsd: z.number().positive().optional(),
@@ -102,6 +101,27 @@ export const summonRequestSchema = z.object({
 });
 
 export const runsQuerySchema = z.object({
-  agent: z.string().optional(),
-  limit: z.string().optional(),
+  agent: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]+$/)
+    .optional(),
+  project: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]+$/)
+    .optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+
+export const skillsRegistryQuerySchema = z.object({
+  refresh: z
+    .string()
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
+});
+
+export const healthQuerySchema = z.object({
+  force: z
+    .string()
+    .optional()
+    .transform((v) => v === "1" || v === "true"),
 });

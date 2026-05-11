@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
@@ -11,8 +12,6 @@ import {
   useActiveProjectStore,
 } from "@/lib/active-project-store";
 
-const ALL_PROJECTS_LABEL = "All projects";
-
 function currentProjectIdFromPath(pathname: string | null): string | null {
   if (!pathname) return null;
   const match = pathname.match(/^\/projects\/([^/]+)/);
@@ -20,6 +19,7 @@ function currentProjectIdFromPath(pathname: string | null): string | null {
 }
 
 export function ProjectSwitcher() {
+  const t = useTranslations();
   const router = useRouter();
   const pathname = usePathname();
   const { data, isLoading } = useProjects();
@@ -45,7 +45,7 @@ export function ProjectSwitcher() {
 
   const currentId = activeId;
   const current = currentId ? projects.find((p) => p.id === currentId) ?? null : null;
-  const triggerLabel = current?.name ?? (currentId ? currentId : ALL_PROJECTS_LABEL);
+  const triggerLabel = current?.name ?? (currentId ? currentId : t("project_switcher.all_projects"));
 
   // rows: index 0 = "All projects", 1..N = each project, N+1 = "Manage projects…"
   const rows = useMemo(() => {
@@ -118,7 +118,7 @@ export function ProjectSwitcher() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
-        title="Switch project"
+        title={t("project_switcher.switch_title")}
         onClick={() => setOpen((v) => !v)}
       >
         <Icon name="folder" size={13} />
@@ -139,7 +139,7 @@ export function ProjectSwitcher() {
           ref={menuRef}
           id={menuId}
           role="menu"
-          aria-label="Project switcher"
+          aria-label={t("project_switcher.menu_label")}
           onKeyDown={onKey}
           style={{
             position: "absolute",
@@ -156,8 +156,8 @@ export function ProjectSwitcher() {
         >
           <ProjectRow
             href={PAGE_ROUTES.projects}
-            primary={ALL_PROJECTS_LABEL}
-            secondary="Browse every project · agent inherits server cwd"
+            primary={t("project_switcher.all_projects")}
+            secondary={t("project_switcher.all_projects_subtitle")}
             italic
             selected={currentId == null}
             highlighted={activeIndex === 0}
@@ -167,7 +167,9 @@ export function ProjectSwitcher() {
 
           <Separator />
           <SectionLabel>
-            Projects {isLoading ? "· loading…" : `(${projects.length})`}
+            {isLoading
+              ? t("project_switcher.section_loading")
+              : t("project_switcher.section_count", { count: projects.length })}
           </SectionLabel>
 
           {!isLoading && projects.length === 0 ? (
@@ -179,15 +181,15 @@ export function ProjectSwitcher() {
                 fontStyle: "italic",
               }}
             >
-              No projects yet — configure a projects root in Settings.
+              {t("project_switcher.no_projects")}
             </div>
           ) : (
             projects.map((p, i) => {
               const rowIndex = i + 1;
               const isCurrent = p.id === currentId;
               const sub = [
-                `${p.instanceCount} agent${p.instanceCount === 1 ? "" : "s"}`,
-                p.cwd ? `cwd ${p.cwd}` : null,
+                t("project_switcher.agent_count", { count: p.instanceCount }),
+                p.cwd ? t("project_switcher.cwd_label", { path: p.cwd }) : null,
               ]
                 .filter(Boolean)
                 .join(" · ");
@@ -229,7 +231,7 @@ export function ProjectSwitcher() {
               fontFamily: "inherit",
             }}
           >
-            <Icon name="settings" size={13} /> Manage projects…
+            <Icon name="settings" size={13} /> {t("project_switcher.manage")}
           </button>
         </div>
       ) : null}

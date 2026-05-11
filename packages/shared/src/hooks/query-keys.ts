@@ -4,6 +4,21 @@
  * Mirrors `packages/shared/src/hooks/query-keys.ts` rule from the architecture.
  */
 
+type RunsFilter = { agentId?: string; projectId?: string; limit?: number };
+
+// Strip undefined values + sort keys so `{}`, `{agentId: undefined}`, and
+// `{limit: 100, agentId: 'x'}` vs `{agentId: 'x', limit: 100}` hash equally
+// in TanStack Query's structural keying.
+function normalizeRunsFilter(filters: RunsFilter | undefined): Record<string, unknown> {
+  if (!filters) return {};
+  const out: Record<string, unknown> = {};
+  for (const key of Object.keys(filters).sort() as Array<keyof RunsFilter>) {
+    const value = filters[key];
+    if (value !== undefined) out[key] = value;
+  }
+  return out;
+}
+
 export const queryKeys = {
   health: ["health"] as const,
   templates: ["templates"] as const,
@@ -42,7 +57,7 @@ export const queryKeys = {
   runs: {
     all: ["runs"] as const,
     list: (filters?: { agentId?: string; projectId?: string; limit?: number }) =>
-      [...queryKeys.runs.all, "list", filters ?? {}] as const,
+      [...queryKeys.runs.all, "list", normalizeRunsFilter(filters)] as const,
     detail: (id: string) => [...queryKeys.runs.all, "detail", id] as const,
   },
 

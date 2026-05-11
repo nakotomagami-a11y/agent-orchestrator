@@ -34,21 +34,21 @@ export function OfficeToolbar({ view, setView, agentCount, workingCount }: Offic
         {activeProjectId ? (
           <>
             · {t("office.agents_count", { count: rosterCount })}
-            {project ? ` in ${project.meta.name}` : ""}
+            {project ? ` ${t("office_toolbar.in_project_label", { project: project.meta.name })}` : ""}
             {" · "}
             {t("office.working_count", { count: workingCount })}
           </>
         ) : (
           <>
-            · no project selected
-            {agentCount > 0 ? ` · ${agentCount} available` : ""}
+            · {t("office_toolbar.no_project_selected")}
+            {agentCount > 0 ? ` · ${t("office_toolbar.agents_available", { count: agentCount })}` : ""}
           </>
         )}
       </span>
       <div className="right">
         <div
           role="group"
-          aria-label="Office view"
+          aria-label={t("office_toolbar.view_group_aria")}
           style={{
             display: "inline-flex",
             border: "1px solid var(--line-2)",
@@ -93,8 +93,8 @@ export function OfficeToolbar({ view, setView, agentCount, workingCount }: Offic
           className="btn sm primary"
           title={
             activeProjectId
-              ? `Add an agent instance to ${project?.meta.name ?? activeProjectId}`
-              : "Pick a project, then add an agent"
+              ? t("office_toolbar.add_to_project_title", { project: project?.meta.name ?? activeProjectId })
+              : t("office_toolbar.add_no_project_title")
           }
           onClick={() => setAddOpen(true)}
         >

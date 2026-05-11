@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { match } from "ts-pattern";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -17,6 +18,7 @@ import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 
 export function OfficeView() {
+  const t = useTranslations();
   const view = useOfficeStore((s) => s.view);
   const setView = useOfficeStore((s) => s.setView);
   const zoom = useOfficeStore((s) => s.zoom);
@@ -76,15 +78,15 @@ export function OfficeView() {
           .with({ hasProject: true, count: 0 }, () => (
             <EmptyState
               icon="users"
-              title={`No agents in ${project?.meta.name}`}
-              description="Use the 'Add agent' button to bring an agent into this project's roster."
+              title={t("office.empty_roster_title")}
+              description={t("office.empty_roster_hint")}
             />
           ))
           .with({ hasProject: false, count: 0 }, () => (
             <EmptyState
               icon="users"
-              title="No agents yet"
-              description="Drop a markdown file in ~/.claude/agents/ or pick a project from the top-left switcher."
+              title={t("office.no_project_selected")}
+              description={t("office.no_project_hint")}
             />
           ))
           .otherwise(() =>

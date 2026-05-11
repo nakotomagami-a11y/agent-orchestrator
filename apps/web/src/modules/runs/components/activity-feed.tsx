@@ -36,7 +36,7 @@ export function ActivityFeed({ agentId }: ActivityFeedProps) {
     return (
       <EmptyState
         icon="activity"
-        title="No runs yet"
+        title={t("runs.empty_title")}
         description={t("common.empty")}
       />
     );
@@ -46,7 +46,7 @@ export function ActivityFeed({ agentId }: ActivityFeedProps) {
     <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {groups.map((group) => (
         <Card key={group.day}>
-          <CardHeader title={dayLabel(group.day)} sub={`${group.runs.length} runs`} />
+          <CardHeader title={dayLabel(group.day)} sub={t("runs.runs_count_sub", { count: group.runs.length })} />
           <div>
             {group.runs.map((run) => (
               <RunRow key={run.id} run={run} />

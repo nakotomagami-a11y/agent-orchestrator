@@ -1,7 +1,4 @@
 // Tiny structured logger — JSON lines to stderr.
-//
-// Ported from `_legacy/server/log.ts`. Keep the API identical so service code
-// reads the same as the original.
 
 type Level = "debug" | "info" | "warn" | "error";
 

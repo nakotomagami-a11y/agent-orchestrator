@@ -6,15 +6,15 @@ import { Icon } from "@/components/ui/icon";
 
 type SlashCommand = {
   cmd: string;
-  desc: string;
+  descKey: string;
 };
 
 const SLASH_COMMANDS: SlashCommand[] = [
-  { cmd: "/clear", desc: "Start a new thread" },
-  { cmd: "/branch", desc: "Fork the current thread" },
-  { cmd: "/memory", desc: "Edit this agent's memory" },
-  { cmd: "/prompt", desc: "View the system prompt" },
-  { cmd: "/history", desc: "Show recent runs" },
+  { cmd: "/clear", descKey: "composer.command_clear_desc" },
+  { cmd: "/branch", descKey: "composer.command_branch_desc" },
+  { cmd: "/memory", descKey: "composer.command_memory_desc" },
+  { cmd: "/prompt", descKey: "composer.command_prompt_desc" },
+  { cmd: "/history", descKey: "composer.command_history_desc" },
 ];
 
 export type ComposerProps = {
@@ -154,7 +154,7 @@ export function Composer({
                 onClick={() => insertSlash(s.cmd)}
               >
                 <span className="cmd">{s.cmd}</span>
-                <span className="desc">{s.desc}</span>
+                <span className="desc">{t(s.descKey)}</span>
               </button>
             ))}
           </div>
@@ -166,14 +166,22 @@ export function Composer({
               {attachments.map((name, i) => (
                 <span key={`${name}-${i}`} className="attach-chip">
                   <Icon name="folder" size={11} /> {name}
-                  <span
+                  <button
+                    type="button"
                     className="x"
-                    role="button"
-                    aria-label={`Remove ${name}`}
+                    aria-label={t("composer.remove_chip_aria", { name })}
                     onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      color: "inherit",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                    }}
                   >
                     <Icon name="x" size={10} />
-                  </span>
+                  </button>
                 </span>
               ))}
             </div>
@@ -183,8 +191,8 @@ export function Composer({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={onKey}
-            placeholder="Type a message — / for commands"
-            aria-label="Message"
+            placeholder={t("composer.input_placeholder")}
+            aria-label={t("composer.input_aria")}
             rows={1}
           />
           <div className="composer-bar">

@@ -836,3 +836,20 @@ body {
   min-height: 42px;
 }
 .desk-card .dc-meta { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--txt-3); font-family: var(--font-mono); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.page-transition {
+  animation: page-fade-in 160ms ease-out;
+}
+@keyframes page-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

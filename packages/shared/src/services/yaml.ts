@@ -7,13 +7,18 @@
 // Not a general-purpose YAML parser. The legacy server pulled in `yaml`; we
 // intentionally avoid new deps because the surface we need is small and fixed.
 
-export type YamlValue =
-  | string
-  | number
-  | boolean
-  | null
-  | YamlValue[]
-  | { [k: string]: YamlValue };
+export type YamlScalar = string | number | boolean | null;
+export type YamlMapping = { [k: string]: YamlValue };
+export type YamlSequence = YamlValue[];
+export type YamlValue = YamlScalar | YamlSequence | YamlMapping;
+
+export function isYamlMapping(v: unknown): v is YamlMapping {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
+export function isYamlSequence(v: unknown): v is YamlSequence {
+  return Array.isArray(v);
+}
 
 const SCALAR_RE = /^[A-Za-z0-9_./@:+\-]+$/;
 

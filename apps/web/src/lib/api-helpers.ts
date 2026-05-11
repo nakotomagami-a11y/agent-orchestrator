@@ -1,39 +1,91 @@
 import { NextResponse } from "next/server";
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Buffer } from "node:buffer";
+import { MAX_UPLOAD_BYTES, safeFilename, isValidIdSegment } from "@agent-office/shared/services/paths";
+import { writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
 
-const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
-
-export function notFound(message = "not found"): NextResponse {
+export function notFound(message = "not_found"): NextResponse {
   return NextResponse.json({ error: message }, { status: 404 });
 }
 
-export function badRequest(message = "bad request"): NextResponse {
+export function badRequest(message = "bad_request"): NextResponse {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
-export function serverError(message: string): NextResponse {
+export function serverError(message = "internal_error"): NextResponse {
   return NextResponse.json({ error: message }, { status: 500 });
 }
 
-/**
- * Wraps a service call. If it throws, maps "not found" → 404, anything else → 400.
- * Intended for write paths where exceptions are the natural error mechanism.
- */
+export function payloadTooLarge(maxBytes: number): NextResponse {
+  return NextResponse.json(
+    { error: "payload_too_large", maxBytes },
+    { status: 413 },
+  );
+}
+
+export type ParamResult = { value: string; error: null } | { value: null; error: NextResponse };
+export type TextResult = { text: string; error: null } | { text: null; error: NextResponse };
+
+// Validate a route :id / :name segment before it reaches the filesystem.
+// Returns either the value (safe to use) or a 400 response.
+export function validateIdParam(raw: string): ParamResult {
+  if (!isValidIdSegment(raw)) {
+    return { value: null, error: badRequest("invalid_id") };
+  }
+  return { value: raw, error: null };
+}
+
+// Read a text body with a hard byte cap. Streams in chunks so we don't pull
+// a multi-GB body into memory before checking the size.
+export async function readBoundedText(request: Request, maxBytes: number): Promise<TextResult> {
+  const reader = request.body?.getReader();
+  if (!reader) {
+    const text = await request.text();
+    if (Buffer.byteLength(text, "utf8") > maxBytes) {
+      return { text: null, error: payloadTooLarge(maxBytes) };
+    }
+    return { text, error: null };
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    if (value) {
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try {
+          await reader.cancel();
+        } catch {
+          /* best-effort */
+        }
+        return { text: null, error: payloadTooLarge(maxBytes) };
+      }
+      chunks.push(value);
+    }
+  }
+  return { text: Buffer.concat(chunks).toString("utf8"), error: null };
+}
+
+// Map service exceptions to typed error responses. ENOENT / "not found"
+// → 404, anything else → 500 (was 400 — that masked real internal errors).
 export async function tryService<T>(fn: () => Promise<T> | T): Promise<NextResponse> {
   try {
     const result = await fn();
     return NextResponse.json(result);
   } catch (e) {
-    const msg = String(e instanceof Error ? e.message : e);
-    if (/not found/i.test(msg)) return notFound(msg);
-    return badRequest(msg);
+    const err = e instanceof Error ? e : new Error(String(e));
+    const msg = err.message;
+    if (
+      (err as NodeJS.ErrnoException).code === "ENOENT" ||
+      /not found/i.test(msg) ||
+      /^invalid/i.test(msg)
+    ) {
+      return notFound(msg);
+    }
+    return serverError(msg);
   }
-}
-
-export function safeFilename(name: string): string {
-  return name.replace(/[/\\\0]+/g, "_").replace(/^\.+/, "").slice(0, 200) || "file";
 }
 
 export function listDirUploads(dir: string): Array<{ filename: string; path: string; size: number }> {
@@ -46,24 +98,16 @@ export function listDirUploads(dir: string): Array<{ filename: string; path: str
     .sort((a, b) => a.filename.localeCompare(b.filename));
 }
 
-export async function handleUpload(
-  request: Request,
-  dir: string,
-): Promise<NextResponse> {
+export async function handleUpload(request: Request, dir: string): Promise<NextResponse> {
   const form = await request.formData();
   const file = form.get("file");
-  if (!(file instanceof File)) return badRequest("missing file");
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json(
-      { error: `file too large (${file.size} > ${MAX_UPLOAD_BYTES})` },
-      { status: 413 },
-    );
-  }
+  if (!(file instanceof File)) return badRequest("missing_file");
+  if (file.size > MAX_UPLOAD_BYTES) return payloadTooLarge(MAX_UPLOAD_BYTES);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   const filename = safeFilename(file.name);
   const path = join(dir, filename);
   const buf = await file.arrayBuffer();
-  writeFileSync(path, Buffer.from(buf));
+  writeFileAtomic(path, Buffer.from(buf));
   return NextResponse.json({ filename, path, size: file.size });
 }
 
@@ -75,7 +119,6 @@ export function handleDeleteUpload(dir: string, filename: string): NextResponse 
   return NextResponse.json({ deleted: safe });
 }
 
-/** Add a Cache-Control header for read-only GETs. */
 export function cachedJson(data: unknown, maxAgeSeconds: number): NextResponse {
   const res = NextResponse.json(data);
   res.headers.set("Cache-Control", `private, max-age=${maxAgeSeconds}`);

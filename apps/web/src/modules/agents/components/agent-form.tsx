@@ -66,7 +66,7 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
 
   const onDelete = () => {
     if (mode !== "edit") return;
-    if (!window.confirm(`Delete ${values.id}? This removes ~/.claude/agents/${values.id}.md and its memory file.`)) return;
+    if (!window.confirm(t("agent_form.delete_confirm", { id: values.id }))) return;
     deleteMut.mutate(values.id, {
       onSuccess: () => {
         if (onDeleted) onDeleted();
@@ -82,76 +82,76 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
   return (
     <form onSubmit={onSubmit} className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Card>
-        <CardHeader title={mode === "new" ? "New agent" : `Edit ${values.id}`} />
+        <CardHeader title={mode === "new" ? t("agent_form.title_new") : t("agent_form.title_edit", { id: values.id })} />
         <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Field label="Name" error={errorFor("name")}>
+          <Field label={t("agent_form.label_name")} error={errorFor("name")}>
             <TextInput
               value={values.name}
               onChange={(e) => {
                 const name = e.target.value;
                 setValues((v) => ({ ...v, name, id: mode === "new" ? slugifyId(name) : v.id }));
               }}
-              placeholder="Frontend Pragmatist"
+              placeholder={t("agent_form.placeholder_name")}
               autoFocus={mode === "new"}
             />
           </Field>
-          <Field label="ID (slug)" error={errorFor("id")}>
+          <Field label={t("agent_form.label_id")} error={errorFor("id")}>
             <TextInput
               value={values.id}
               onChange={update("id")}
-              placeholder="frontend-pragmatist"
+              placeholder={t("agent_form.placeholder_id")}
               disabled={mode === "edit"}
             />
           </Field>
-          <Field label="Description" error={errorFor("desc")} span={2}>
+          <Field label={t("agent_form.label_desc")} error={errorFor("desc")} span={2}>
             <TextInput
               value={values.desc}
               onChange={update("desc")}
-              placeholder="One-line description of when to summon this agent."
+              placeholder={t("agent_form.placeholder_desc")}
             />
           </Field>
-          <Field label="Model">
+          <Field label={t("agent_form.label_model")}>
             <Select value={values.model} onChange={update("model")}>
               {MODELS.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Effort">
+          <Field label={t("agent_form.label_effort")}>
             <Select value={values.effort} onChange={update("effort")}>
               {EFFORTS.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Permission mode">
+          <Field label={t("agent_form.label_pm")}>
             <Select value={values.pm} onChange={update("pm")}>
               {PERMS.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </Select>
           </Field>
-          <Field label="Room (optional)">
-            <TextInput value={values.room} onChange={update("room")} placeholder="Build" />
+          <Field label={t("agent_form.label_room")}>
+            <TextInput value={values.room} onChange={update("room")} placeholder={t("agent_form.placeholder_room")} />
           </Field>
-          <Field label="Skills (comma-separated)" span={2}>
-            <TextInput value={values.skills} onChange={update("skills")} placeholder="frontend-design, web-artifacts-builder" />
+          <Field label={t("agent_form.label_skills")} span={2}>
+            <TextInput value={values.skills} onChange={update("skills")} placeholder={t("agent_form.placeholder_skills")} />
           </Field>
-          <Field label="Tools (comma-separated)" span={2}>
-            <TextInput value={values.tools} onChange={update("tools")} placeholder="Read, Write, Edit, Bash" />
+          <Field label={t("agent_form.label_tools")} span={2}>
+            <TextInput value={values.tools} onChange={update("tools")} placeholder={t("agent_form.placeholder_tools")} />
           </Field>
         </div>
       </Card>
 
       <Card>
-        <CardHeader title="System prompt" sub="markdown body" />
+        <CardHeader title={t("agent_form.card_prompt_title")} sub={t("agent_form.card_prompt_sub")} />
         <div style={{ padding: 16 }}>
           <Textarea
             value={values.body}
             onChange={update("body")}
             rows={18}
             invalid={!!errorFor("body")}
-            placeholder="# Agent name&#10;&#10;You are a..."
+            placeholder={t("agent_form.placeholder_body")}
           />
           {errorFor("body") ? <FieldError message={errorFor("body")!} /> : null}
         </div>
@@ -177,11 +177,11 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
               onClick={() => (onCancel ? onCancel() : router.back())}
               disabled={isPending}
             >
-              Cancel
+              {t("agent_form.cancel")}
             </button>
           )}
           <button type="submit" className="btn primary" disabled={isPending}>
-            {isPending ? "Saving…" : t("common.save")}
+            {isPending ? t("common.saving") : t("common.save")}
           </button>
         </div>
       </div>

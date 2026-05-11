@@ -26,11 +26,12 @@ export function ProjectsList() {
     return (
       <EmptyState
         icon="folder"
-        title="No projects yet"
+        title={t("projects.empty_title")}
         description={
           <>
-            Configure a projects root in <Link href={PAGE_ROUTES.settings}>Settings</Link> to scan
-            for project folders.
+            {t("projects.empty_description_prefix")}
+            <Link href={PAGE_ROUTES.settings}>{t("projects.empty_description_link")}</Link>
+            {t("projects.empty_description_suffix")}
           </>
         }
       />
@@ -40,7 +41,7 @@ export function ProjectsList() {
   return (
     <div className="tab-pane">
       <Card>
-        <CardHeader title={t("nav.projects")} sub={`${projects.length} found`} />
+        <CardHeader title={t("nav.projects")} sub={t("projects.found_count", { count: projects.length })} />
         <div>
           {projects.map((p) => (
             <Link
@@ -79,7 +80,7 @@ export function ProjectsList() {
                 ) : null}
               </div>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>
-                {p.instanceCount} agent{p.instanceCount === 1 ? "" : "s"}
+                {t("projects.instances_count", { count: p.instanceCount })}
               </span>
             </Link>
           ))}

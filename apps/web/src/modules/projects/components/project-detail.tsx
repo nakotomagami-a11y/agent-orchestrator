@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
 import { Icon } from "@/components/ui/icon";
-import { Textarea } from "@/components/ui/textarea";
 import { useProject, useRemoveInstance, useUpdateProject } from "../hooks/use-projects";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { ProjectActivity } from "./project-activity";
+import { MemoryEditor } from "@/modules/memory/components/memory-editor";
 
 export type ProjectDetailProps = { id: string };
 
@@ -20,7 +19,6 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   const updateMut = useUpdateProject();
   const removeMut = useRemoveInstance();
   const openChat = useOfficeStore((s) => s.select);
-  const [memoryDraft, setMemoryDraft] = useState<string | null>(null);
 
   if (projectQ.isLoading) {
     return (
@@ -34,15 +32,13 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   }
 
   const project = projectQ.data;
-  const memoryValue = memoryDraft ?? project.memory;
-  const memoryDirty = memoryDraft !== null && memoryDraft !== project.memory;
 
   return (
     <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Card>
         <CardHeader title={project.meta.name} sub={project.meta.cwd} />
         <div style={{ padding: 16, fontSize: 13, color: "var(--txt-2)" }}>
-          {project.meta.description || "(no description)"}
+          {project.meta.description || t("project_detail.no_description")}
         </div>
       </Card>
 
@@ -50,13 +46,13 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
 
       <Card>
         <CardHeader
-          title="Roster"
-          sub={`${project.meta.roster.length} agent${project.meta.roster.length === 1 ? "" : "s"}`}
+          title={t("project_detail.roster_card_title")}
+          sub={t("project_detail.roster_card_sub", { count: project.meta.roster.length })}
         />
         <div>
           {project.meta.roster.length === 0 ? (
             <div style={{ padding: 16, fontSize: 13, color: "var(--txt-3)" }}>
-              No agents added yet. Use the office page to summon and assign.
+              {t("project_detail.roster_empty")}
             </div>
           ) : (
             project.meta.roster.map((inst) => (
@@ -79,8 +75,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
-                  {inst.model ? <Tag>model: {inst.model}</Tag> : null}
-                  {inst.effort ? <Tag>effort: {inst.effort}</Tag> : null}
+                  {inst.model ? <Tag>{t("project_detail.tag_model", { model: inst.model })}</Tag> : null}
+                  {inst.effort ? <Tag>{t("project_detail.tag_effort", { effort: inst.effort })}</Tag> : null}
                 </div>
                 <div style={{ display: "flex", gap: 6 }}>
                   <button
@@ -88,7 +84,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     className="btn sm primary"
                     onClick={() => openChat(inst.agentId, { instanceId: inst.instanceId })}
                   >
-                    <Icon name="send" /> Chat
+                    <Icon name="send" /> {t("project_detail.chat_button")}
                   </button>
                   <button
                     type="button"
@@ -96,11 +92,11 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     onClick={() => {
                       const label = inst.label ?? inst.agentId;
                       const ok = window.confirm(
-                        `Remove ${label} from ${project.meta.name}? Their conversation stays archived so you can still read it.`,
+                        t("project_detail.remove_confirm", { label, project: project.meta.name }),
                       );
                       if (ok) removeMut.mutate({ projectId: id, instanceId: inst.instanceId });
                     }}
-                    title="Remove from project"
+                    title={t("project_detail.remove_title")}
                   >
                     <Icon name="x" />
                   </button>
@@ -113,30 +109,18 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
 
       <Card>
         <CardHeader
-          title="Memory"
-          sub={`composes into every roster summon for ${project.meta.name}`}
-          right={
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!memoryDirty || updateMut.isPending}
-              onClick={() =>
-                updateMut.mutate(
-                  { id, patch: { memory: memoryDraft ?? "" } },
-                  { onSuccess: () => setMemoryDraft(null) },
-                )
-              }
-            >
-              {updateMut.isPending ? "Saving…" : t("common.save")}
-            </button>
-          }
+          title={t("project_detail.memory_card_title")}
+          sub={t("project_detail.memory_card_sub", { project: project.meta.name })}
         />
         <div style={{ padding: 16 }}>
-          <Textarea
-            value={memoryValue}
-            onChange={(e) => setMemoryDraft(e.target.value)}
+          <MemoryEditor
+            value={project.memory}
+            onSave={(content) =>
+              updateMut.mutateAsync({ id, patch: { memory: content } })
+            }
             rows={12}
-            placeholder="Project-wide context that prepends to every agent prompt."
+            placeholder={t("project_detail.memory_placeholder")}
+            saveLabel={t("common.save")}
           />
         </div>
       </Card>

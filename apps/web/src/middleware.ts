@@ -3,8 +3,24 @@ import type { NextRequest } from "next/server";
 
 const WINDOW_MS = 60_000;
 const LIMIT = 60;
+const SWEEP_MS = 60_000;
 
 const buckets = new Map<string, { count: number; resetAt: number }>();
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __agentOfficeRateLimitSweeper: boolean | undefined;
+}
+
+if (!globalThis.__agentOfficeRateLimitSweeper) {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [id, b] of buckets) {
+      if (b.resetAt < now) buckets.delete(id);
+    }
+  }, SWEEP_MS).unref();
+  globalThis.__agentOfficeRateLimitSweeper = true;
+}
 
 function clientId(req: NextRequest): string {
   const forwarded = req.headers.get("x-forwarded-for");

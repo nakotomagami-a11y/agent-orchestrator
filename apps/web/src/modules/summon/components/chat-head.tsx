@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { PixelSprite } from "@/components/ui/pixel-sprite";
 import { Icon } from "@/components/ui/icon";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
@@ -15,6 +16,7 @@ export type ChatHeadProps = {
 };
 
 export function ChatHead({ agent, phase, usage, onBranch, onNew, onEdit }: ChatHeadProps) {
+  const t = useTranslations();
   const pill = phase === "streaming" || phase === "starting" ? "working" : null;
   return (
     <div className="chat-head">
@@ -29,14 +31,18 @@ export function ChatHead({ agent, phase, usage, onBranch, onNew, onEdit }: ChatH
       <div>
         <h2>{agent.name}</h2>
         <div className="sub">
-          {agent.id} · {agent.defaultModel ?? "default"} · effort {agent.defaultEffort ?? "default"}
+          {t("chat_head.sub", {
+            id: agent.id,
+            model: agent.defaultModel ?? t("chat_head.model_default"),
+            effort: agent.defaultEffort ?? t("chat_head.effort_default"),
+          })}
         </div>
       </div>
       <span className={"pill" + (pill ? ` ${pill}` : "")}>{phase === "idle" ? agent.status : phase}</span>
       <div className="right">
         <span
           className="pill"
-          title="tokens in / out · cost"
+          title={t("chat_head.usage_title")}
           style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}
         >
           {usage.tokensIn.toLocaleString()}↓ {usage.tokensOut.toLocaleString()}↑ · $
@@ -45,28 +51,28 @@ export function ChatHead({ agent, phase, usage, onBranch, onNew, onEdit }: ChatH
         <button
           type="button"
           className="btn sm ghost"
-          title="Branch conversation"
+          title={t("chat_head.branch_title")}
           onClick={onBranch}
           disabled={!onBranch}
         >
-          <Icon name="branch" /> Branch
+          <Icon name="branch" /> {t("chat_head.branch_button")}
         </button>
         <button
           type="button"
           className="btn sm ghost"
-          title="New thread"
+          title={t("chat_head.new_title")}
           onClick={onNew}
           disabled={!onNew}
         >
-          <Icon name="plus" /> New
+          <Icon name="plus" /> {t("chat_head.new_button")}
         </button>
         <button
           type="button"
           className="btn sm ghost"
-          title="Edit agent"
+          title={t("chat_head.edit_title")}
           onClick={onEdit}
           disabled={!onEdit}
-          aria-label="Edit agent"
+          aria-label={t("chat_head.edit_aria")}
         >
           <Icon name="edit" />
         </button>

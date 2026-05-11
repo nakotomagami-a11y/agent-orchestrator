@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { skills } from "@agent-office/shared/services";
+import { log } from "@agent-office/shared/services/log";
+import { serverError } from "@/lib/api-helpers";
+import { validateQuery } from "@/lib/validation";
+import { skillsRegistryQuerySchema } from "@/lib/validation-schemas";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const force = url.searchParams.get("refresh") === "1";
+  const { data: q, error } = validateQuery(skillsRegistryQuerySchema, url.searchParams);
+  if (error) return error;
   try {
-    const entries = await skills.fetchRegistry(force);
+    const entries = await skills.fetchRegistry(q.refresh);
     return NextResponse.json(entries);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 502 });
+    log.warn("skills.registry_failed", { err: String(e) });
+    return serverError("skill_registry_failed");
   }
 }

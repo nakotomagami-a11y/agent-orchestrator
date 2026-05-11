@@ -15,7 +15,7 @@ export function useAgents() {
 
 export function useAgent(id: string | null) {
   return useQuery({
-    queryKey: id ? queryKeys.agents.detail(id) : ["__noop"],
+    queryKey: queryKeys.agents.detail(id ?? "__none"),
     queryFn: () => apiFetch<ApiAgent>(API_ROUTES.agent(id!)),
     enabled: !!id,
   });
@@ -23,7 +23,7 @@ export function useAgent(id: string | null) {
 
 export function useAgentBody(id: string | null) {
   return useQuery({
-    queryKey: id ? queryKeys.agents.body(id) : ["__noop"],
+    queryKey: queryKeys.agents.body(id ?? "__none"),
     queryFn: () => apiFetch<string>(API_ROUTES.agentBody(id!), { asText: true }),
     enabled: !!id,
   });
@@ -31,7 +31,7 @@ export function useAgentBody(id: string | null) {
 
 export function useAgentMemory(id: string | null) {
   return useQuery({
-    queryKey: id ? queryKeys.agents.memory(id) : ["__noop"],
+    queryKey: queryKeys.agents.memory(id ?? "__none"),
     queryFn: () => apiFetch<string>(API_ROUTES.agentMemory(id!), { asText: true }),
     enabled: !!id,
   });

@@ -57,7 +57,22 @@ function gc(): void {
     }
   }
 }
-setInterval(gc, 60_000).unref();
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __agentOfficeRunsInstalled: boolean | undefined;
+}
+
+if (!globalThis.__agentOfficeRunsInstalled) {
+  setInterval(gc, 60_000).unref();
+  process.on("SIGINT", () => {
+    killAllRuns();
+  });
+  process.on("SIGTERM", () => {
+    killAllRuns();
+  });
+  globalThis.__agentOfficeRunsInstalled = true;
+}
 
 export function getLiveRun(runId: string): LiveRun | undefined {
   return liveRuns.get(runId);
@@ -113,6 +128,9 @@ export function startRun(opts: StartRunOpts): { runId: string } {
   proc.on("exit", (code) => finalizeRun(run, code ?? 1));
   proc.on("error", (err) => {
     broadcast(run, { name: "error", data: { runId: run.id, message: String(err) } });
+    if (run.status === "running") {
+      finalizeRun(run, 1);
+    }
   });
 
   return { runId };
@@ -278,6 +296,7 @@ function handleStreamLine(run: LiveRun, line: string): void {
 }
 
 function finalizeRun(run: LiveRun, exitCode: number): void {
+  if (run.status !== "running") return;
   run.status = exitCode === 0 ? "done" : "error";
   run.exitCode = exitCode;
   run.finishedAt = Date.now();
@@ -307,10 +326,3 @@ function finalizeRun(run: LiveRun, exitCode: number): void {
 
   broadcast(run, { name: "done", data: { runId: run.id, exitCode } });
 }
-
-process.on("SIGINT", () => {
-  killAllRuns();
-});
-process.on("SIGTERM", () => {
-  killAllRuns();
-});

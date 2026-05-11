@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { GnomeWindow } from "@/components/layout/gnome-window";
 import { Titlebar } from "@/components/layout/titlebar";
 import { MainShell } from "@/components/layout/main-shell";
-import { AgentDetailsModal } from "@/modules/office/components/agent-details-modal";
+import { AgentDetailsModal } from "@/modules/office/components/agent-details";
 import { ClaudeLimitsModal } from "@/modules/limits/components/claude-limits-modal";
 
 /**

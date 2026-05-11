@@ -3,8 +3,19 @@
 import { spawn } from "node:child_process";
 import type { HealthInfo } from "../types/index";
 
-let cached: HealthInfo | null = null;
-let inflight: Promise<HealthInfo> | null = null;
+interface HealthState {
+  cached: HealthInfo | null;
+  inflight: Promise<HealthInfo> | null;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __agentOfficeHealthState: HealthState | undefined;
+}
+
+const state: HealthState =
+  globalThis.__agentOfficeHealthState ??
+  (globalThis.__agentOfficeHealthState = { cached: null, inflight: null });
 
 function probe(): Promise<HealthInfo> {
   return new Promise((resolve) => {
@@ -35,13 +46,13 @@ function probe(): Promise<HealthInfo> {
 }
 
 export async function getHealth(force = false): Promise<HealthInfo> {
-  if (!force && cached) return cached;
-  if (!inflight) {
-    inflight = probe().then((info) => {
-      cached = info;
-      inflight = null;
+  if (!force && state.cached) return state.cached;
+  if (!state.inflight) {
+    state.inflight = probe().then((info) => {
+      state.cached = info;
+      state.inflight = null;
       return info;
     });
   }
-  return inflight;
+  return state.inflight;
 }
