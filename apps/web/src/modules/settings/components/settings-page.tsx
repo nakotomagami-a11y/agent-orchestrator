@@ -93,13 +93,22 @@ export function SettingsPage() {
               {excluded.map((e) => (
                 <span key={e} className="attach-chip">
                   {e}
-                  <span
-                    role="button"
+                  <button
+                    type="button"
                     className="x"
+                    aria-label={t("settings.exclusion_remove_aria", { name: e })}
                     onClick={() => setExcluded((prev) => prev.filter((x) => x !== e))}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      color: "inherit",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                    }}
                   >
                     <Icon name="x" size={11} />
-                  </span>
+                  </button>
                 </span>
               ))}
               {excluded.length === 0 ? (

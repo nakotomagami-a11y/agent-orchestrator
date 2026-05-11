@@ -13,17 +13,16 @@ export type CardsOfficeProps = {
 
 export function CardsOffice({ agents, selectedId, onSelect }: CardsOfficeProps) {
   return (
-    <div className="cards-office" role="list">
+    <ul className="cards-office" style={{ listStyle: "none", margin: 0, padding: 0 }}>
       {agents.map((a) => {
         const isWorking = a.status === "working" || a.status === "thinking";
         return (
+          <li key={a.id}>
           <button
-            key={a.id}
             type="button"
-            role="listitem"
             className={cn("desk-card", selectedId === a.id && "selected")}
             onClick={() => onSelect(a.id)}
-            style={{ textAlign: "left", border: "1px solid var(--line)", background: "var(--bg-1)" }}
+            style={{ textAlign: "left", border: "1px solid var(--line)", background: "var(--bg-1)", width: "100%" }}
           >
             <div className="dc-h">
               <div className="av">
@@ -45,8 +44,9 @@ export function CardsOffice({ agents, selectedId, onSelect }: CardsOfficeProps) 
               <span>{a.skills.map((s) => `#${s}`).join(" ")}</span>
             </div>
           </button>
+          </li>
         );
       })}
-    </div>
+    </ul>
   );
 }

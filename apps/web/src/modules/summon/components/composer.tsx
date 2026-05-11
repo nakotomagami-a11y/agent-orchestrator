@@ -166,14 +166,22 @@ export function Composer({
               {attachments.map((name, i) => (
                 <span key={`${name}-${i}`} className="attach-chip">
                   <Icon name="folder" size={11} /> {name}
-                  <span
+                  <button
+                    type="button"
                     className="x"
-                    role="button"
-                    aria-label={`Remove ${name}`}
+                    aria-label={t("composer.remove_chip_aria", { name })}
                     onClick={() => setAttachments((prev) => prev.filter((_, j) => j !== i))}
+                    style={{
+                      background: "transparent",
+                      border: "none",
+                      padding: 0,
+                      color: "inherit",
+                      cursor: "pointer",
+                      display: "inline-flex",
+                    }}
                   >
                     <Icon name="x" size={10} />
-                  </span>
+                  </button>
                 </span>
               ))}
             </div>
@@ -183,8 +191,8 @@ export function Composer({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={onKey}
-            placeholder="Type a message — / for commands"
-            aria-label="Message"
+            placeholder={t("composer.input_placeholder")}
+            aria-label={t("composer.input_aria")}
             rows={1}
           />
           <div className="composer-bar">

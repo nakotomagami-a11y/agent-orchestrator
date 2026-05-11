@@ -139,6 +139,7 @@
     "no_matches": "No agents match the current filters.",
     "shown_count": "{visible} / {total} shown",
     "filter_all": "All",
+    "open_aria": "Open {name}",
     "edit_aria": "Edit {name}",
     "edit_title": "Open settings",
     "no_skills": "no skills",
@@ -236,7 +237,8 @@
     "scanned_card_title": "Scanned projects",
     "scanned_card_sub": "{visible} visible · {excluded} excluded",
     "scanned_empty": "nothing under that root",
-    "excluded_badge": "excluded"
+    "excluded_badge": "excluded",
+    "exclusion_remove_aria": "Remove exclusion {name}"
   },
   "skills": {
     "title": "Skills",
@@ -281,8 +283,8 @@
     "max_budget": "Max budget"
   },
   "composer": {
-    "input_placeholder": "Type a prompt and press Enter…",
-    "input_aria": "Prompt",
+    "input_placeholder": "Type a message — / for commands",
+    "input_aria": "Message",
     "send_aria": "Send prompt",
     "attach_aria": "Attach file",
     "skill_aria": "Toggle skills",

@@ -351,21 +351,12 @@ function AgentCard({
   return (
     <div
       className="card"
-      role="button"
-      tabIndex={0}
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
       style={{
         padding: 16,
-        cursor: "pointer",
         display: "flex",
         flexDirection: "column",
         gap: 10,
+        position: "relative",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -384,7 +375,22 @@ function AgentCard({
         >
           <PixelSprite agent={sprite} size={32} animate={false} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <button
+          type="button"
+          onClick={onOpen}
+          aria-label={t("agent_list.open_aria", { name: agent.name })}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            font: "inherit",
+            color: "inherit",
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
           <div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>{agent.name}</div>
           <div
             style={{
@@ -395,7 +401,7 @@ function AgentCard({
           >
             {category}
           </div>
-        </div>
+        </button>
         <button
           type="button"
           onClick={(e) => {
