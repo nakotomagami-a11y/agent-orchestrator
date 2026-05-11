@@ -1,17 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { TextInput } from "@/components/ui/text-input";
 import { Icon } from "@/components/ui/icon";
 import { PixelSprite } from "@/components/ui/pixel-sprite";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { paletteForAgent } from "@/modules/office/utils/sprite-palette";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { ApiAgent } from "@agent-office/shared/types";
 import { useAgents } from "../hooks/use-agents";
 import { categorize, tallyCategories } from "../utils/categorize";
@@ -145,6 +142,7 @@ export function AgentList() {
               agent={a}
               uses={usesByAgent[a.name] ?? 0}
               onOpen={() => select(a.name)}
+              onEdit={() => select(a.name, { tab: "settings" })}
             />
           ))}
         </div>
@@ -175,26 +173,11 @@ function FilterBar({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-        <div style={{ position: "relative", flex: "1 1 320px", maxWidth: 480 }}>
-          <Icon
-            name="slash"
-            size={13}
-            style={{
-              position: "absolute",
-              left: 10,
-              top: "50%",
-              transform: "translateY(-50%) rotate(90deg)",
-              color: "var(--txt-4)",
-            }}
-          />
-          <TextInput
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search by name, description, skill, or tool…"
-            aria-label="Search agents"
-            style={{ paddingLeft: 30 }}
-          />
-        </div>
+        <SearchInput
+          value={search}
+          onChange={onSearchChange}
+          placeholder="Search by name, description, skill, or tool…"
+        />
         <span
           style={{
             fontFamily: "var(--font-mono)",
@@ -226,6 +209,83 @@ function FilterBar({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function SearchInput({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (next: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <label
+      style={{
+        position: "relative",
+        flex: "1 1 320px",
+        maxWidth: 480,
+        display: "flex",
+        alignItems: "center",
+        height: 32,
+        background: "var(--bg-1)",
+        border: "1px solid var(--line-2)",
+        borderRadius: "var(--r-md)",
+        boxShadow: "var(--shadow-1)",
+        padding: "0 12px 0 32px",
+        transition: "border-color 120ms",
+      }}
+    >
+      <Icon
+        name="search"
+        size={14}
+        style={{
+          position: "absolute",
+          left: 10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          color: "var(--txt-3)",
+          pointerEvents: "none",
+        }}
+      />
+      <input
+        type="search"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        aria-label="Search agents"
+        style={{
+          width: "100%",
+          background: "transparent",
+          border: "none",
+          outline: "none",
+          font: "inherit",
+          fontSize: 13,
+          color: "var(--txt)",
+        }}
+      />
+      {value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "var(--txt-3)",
+            padding: 4,
+            marginRight: -4,
+            display: "inline-flex",
+            borderRadius: 999,
+          }}
+        >
+          <Icon name="x" size={12} />
+        </button>
+      ) : null}
+    </label>
   );
 }
 
@@ -281,10 +341,12 @@ function AgentCard({
   agent,
   uses,
   onOpen,
+  onEdit,
 }: {
   agent: ApiAgent;
   uses: number;
   onOpen: () => void;
+  onEdit: () => void;
 }) {
   const sprite = paletteForAgent(agent.name);
   const category = categorize(agent);
@@ -336,11 +398,14 @@ function AgentCard({
             {category}
           </div>
         </div>
-        <Link
-          href={PAGE_ROUTES.agentEdit(agent.name)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label={`Edit ${agent.name} markdown file`}
-          title="Edit the markdown file"
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          aria-label={`Edit ${agent.name}`}
+          title="Open settings"
           style={{
             background: "transparent",
             border: "none",
@@ -352,7 +417,7 @@ function AgentCard({
           }}
         >
           <Icon name="edit" size={14} />
-        </Link>
+        </button>
       </div>
 
       <div

@@ -8,13 +8,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { Icon } from "@/components/ui/icon";
 import { useOfficeAgents, type OfficeAgent } from "../hooks/use-office-agents";
-import { useOfficeStore } from "../hooks/use-office-store";
+import { useOfficeStore, type AgentTab } from "../hooks/use-office-store";
 import { ChatPanel } from "@/modules/summon/components/chat-panel";
 import { useAgent, useAgentBody, useAgentMemory, useWriteAgentMemory } from "@/modules/agents/hooks/use-agents";
+import { AgentForm } from "@/modules/agents/components/agent-form";
+import { fromApi } from "@/modules/agents/utils/agent-form";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 
-type Tab = "conversation" | "configuration" | "history" | "memory" | "prompt";
+type Tab = AgentTab;
 
 /**
  * Global agent inspector — mounted once at the app shell. Tabs are modelled
@@ -26,13 +28,17 @@ export function AgentDetailsModal() {
   const selectedId = useOfficeStore((s) => s.selectedId);
   const inspectorOpen = useOfficeStore((s) => s.inspectorOpen);
   const closeInspector = useOfficeStore((s) => s.closeInspector);
+  const consumePendingTab = useOfficeStore((s) => s.consumePendingTab);
   const { agents } = useOfficeAgents();
   const agent = selectedId ? agents.find((a) => a.id === selectedId) ?? null : null;
   const [tab, setTab] = useState<Tab>("conversation");
 
   useEffect(() => {
-    if (inspectorOpen) setTab("conversation");
-  }, [inspectorOpen, selectedId]);
+    if (inspectorOpen) {
+      const pending = consumePendingTab();
+      setTab(pending ?? "conversation");
+    }
+  }, [inspectorOpen, selectedId, consumePendingTab]);
 
   const runsQ = useRuns({ agentId: agent?.id, limit: 30 });
   const tabItems = [
@@ -44,7 +50,7 @@ export function AgentDetailsModal() {
       count: runsQ.data?.length,
     },
     { value: "memory" as const, label: "Memory" },
-    { value: "prompt" as const, label: "System Prompt" },
+    { value: "settings" as const, label: "Settings" },
   ];
 
   return (
@@ -78,12 +84,18 @@ export function AgentDetailsModal() {
           </div>
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             {tab === "conversation" ? (
-              <ChatPanel agent={agent} onClose={closeInspector} onEdit={() => setTab("prompt")} />
+              <ChatPanel agent={agent} onClose={closeInspector} onEdit={() => setTab("settings")} />
             ) : null}
             {tab === "configuration" ? <ConfigurationTab agent={agent} /> : null}
             {tab === "history" ? <HistoryTab agentId={agent.id} /> : null}
             {tab === "memory" ? <MemoryTab agentId={agent.id} /> : null}
-            {tab === "prompt" ? <SystemPromptTab agentId={agent.id} /> : null}
+            {tab === "settings" ? (
+              <SettingsTab
+                agentId={agent.id}
+                onAfterSave={() => setTab("configuration")}
+                onAfterDelete={closeInspector}
+              />
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -414,10 +426,20 @@ function MemoryTab({ agentId }: { agentId: string }) {
   );
 }
 
-// ── System Prompt ─────────────────────────────────────────────────────────
-function SystemPromptTab({ agentId }: { agentId: string }) {
+// ── Settings (editable AgentForm) ────────────────────────────────────────
+function SettingsTab({
+  agentId,
+  onAfterSave,
+  onAfterDelete,
+}: {
+  agentId: string;
+  onAfterSave: () => void;
+  onAfterDelete: () => void;
+}) {
   const agentQ = useAgent(agentId);
   const bodyQ = useAgentBody(agentId);
+  const qc = useQueryClient();
+
   if (agentQ.isLoading || bodyQ.isLoading) {
     return (
       <div className="tab-pane" style={{ padding: 18 }}>
@@ -425,31 +447,29 @@ function SystemPromptTab({ agentId }: { agentId: string }) {
       </div>
     );
   }
-  const body = bodyQ.data ?? "";
+  if (!agentQ.data) {
+    return (
+      <div className="tab-pane" style={{ padding: 18, fontSize: 13, color: "var(--txt-3)" }}>
+        Couldn&apos;t load agent definition.
+      </div>
+    );
+  }
+
+  const initial = fromApi(agentQ.data, bodyQ.data ?? "");
+
   return (
     <div className="tab-pane" style={{ padding: 18, overflow: "auto" }}>
-      <div className="card">
-        <div className="card-h">
-          <span className="title">System Prompt</span>
-          <span className="sub">{body.split("\n").length} lines · markdown body</span>
-        </div>
-        <pre
-          style={{
-            margin: 0,
-            padding: 18,
-            fontFamily: "var(--font-mono)",
-            fontSize: 12.5,
-            lineHeight: 1.6,
-            color: "var(--txt)",
-            background: "var(--bg-1)",
-            whiteSpace: "pre-wrap",
-            borderRadius: "0 0 14px 14px",
-            overflow: "auto",
-          }}
-        >
-          {body || "(empty body)"}
-        </pre>
-      </div>
+      <AgentForm
+        mode="edit"
+        initial={initial}
+        hideCancel
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: queryKeys.agents.all });
+          qc.invalidateQueries({ queryKey: queryKeys.agents.body(agentId) });
+          onAfterSave();
+        }}
+        onDeleted={onAfterDelete}
+      />
     </div>
   );
 }

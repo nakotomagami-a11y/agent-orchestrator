@@ -158,6 +158,15 @@ const ICON_PATHS = {
       </>
     ),
   },
+  search: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </>
+    ),
+  },
   x: {
     ...STROKE_BASE,
     strokeWidth: 2,
