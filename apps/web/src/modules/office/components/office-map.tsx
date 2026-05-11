@@ -1,6 +1,14 @@
 "use client";
 
-import { DECORATIONS, decorationKey, type DecorationsMap } from "./decorations";
+import { useState } from "react";
+import {
+  DECORATIONS,
+  decorationKey,
+  isPlacementValid,
+  type DecorationKind,
+  type DecorationsMap,
+} from "./decorations";
+import type { BuildTool } from "./office-build-toolbar";
 
 /**
  * Grass island for the office view. Layout is data-driven: a 2D boolean
@@ -235,20 +243,42 @@ export type OfficeMapProps = {
   decorations: DecorationsMap;
   /** When true, render a clickable cell overlay so the builder can edit. */
   editable?: boolean;
+  /** Currently-armed tool, used for hover-preview tinting. */
+  tool?: BuildTool;
   /** Called with grid coords when the user clicks a cell in editable mode. */
   onCellClick?: (x: number, y: number) => void;
 };
+
+/**
+ * Whether `tool` would actually do something at (x, y). Drives the
+ * green/red hover tint in build mode.
+ */
+function isToolValidAt(
+  tool: BuildTool,
+  x: number,
+  y: number,
+  grid: boolean[][],
+  decorations: DecorationsMap,
+): boolean {
+  const cellHasGrass = grid[y]?.[x] === true;
+  const hasDecoration = decorations[decorationKey(x, y)] !== undefined;
+  if (tool === "grass") return !cellHasGrass;
+  if (tool === "erase") return cellHasGrass || hasDecoration;
+  return isPlacementValid(tool, cellHasGrass);
+}
 
 export function OfficeMap({
   grid,
   decorations,
   editable = false,
+  tool,
   onCellClick,
 }: OfficeMapProps) {
   const cols = grid[0]?.length ?? 0;
   const rows = grid.length;
   const tiles = buildTiles(grid);
   const foam = buildFoam(grid);
+  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
 
   // Sort decorations by their cell Y so lower rows draw on top of higher
   // rows — gives natural depth-stacking for tall sprites like trees.
@@ -258,6 +288,23 @@ export function OfficeMap({
       return { x: Number(xs), y: Number(ys), kind };
     })
     .sort((a, b) => a.y - b.y);
+
+  // Build a hover-preview decoration when the user is hovering a cell
+  // with a decoration tool armed. Rendered with reduced opacity and a
+  // green or red drop-shadow depending on placement validity.
+  const previewKind: DecorationKind | null =
+    editable &&
+    hover &&
+    tool &&
+    tool !== "grass" &&
+    tool !== "erase" &&
+    tool in DECORATIONS
+      ? (tool as DecorationKind)
+      : null;
+  const hoverValid =
+    editable && hover && tool
+      ? isToolValidAt(tool, hover.x, hover.y, grid, decorations)
+      : null;
 
   return (
     <div
@@ -313,27 +360,75 @@ export function OfficeMap({
           />
         );
       })}
-      {editable
-        ? Array.from({ length: rows }).flatMap((_, y) =>
-            Array.from({ length: cols }).map((_, x) => (
-              <button
-                key={`cell-${x}-${y}`}
-                type="button"
-                onClick={() => onCellClick?.(x, y)}
+      {/* Hover preview ghost — only when a decoration tool is armed and
+          we're hovering a cell. Rendered like a real decoration but with
+          reduced opacity and a green/red drop-shadow so the user can
+          tell at a glance whether the click would succeed. */}
+      {previewKind && hover && hoverValid !== null
+        ? (() => {
+            const def = DECORATIONS[previewKind];
+            const left = hover.x * TILE + (TILE - def.frameW) / 2;
+            const top = (hover.y + 1) * TILE - def.frameH;
+            const tint = hoverValid ? "#22c55e" : "#ef4444";
+            return (
+              <div
+                aria-hidden
                 style={{
                   position: "absolute",
-                  left: x * TILE,
-                  top: y * TILE,
-                  width: TILE,
-                  height: TILE,
-                  background: "transparent",
-                  border: "1px dashed rgba(255, 255, 255, 0.25)",
-                  cursor: "pointer",
-                  padding: 0,
+                  left,
+                  top,
+                  width: def.frameW,
+                  height: def.frameH,
+                  backgroundImage: `url(${def.src})`,
+                  backgroundRepeat: "no-repeat",
+                  backgroundPosition: "0 0",
+                  imageRendering: "pixelated",
+                  pointerEvents: "none",
+                  opacity: 0.6,
+                  // Stacked drop-shadows give a coloured glow that hugs
+                  // the sprite silhouette — single shadow looks weak,
+                  // doubling tightens it.
+                  filter: `drop-shadow(0 0 4px ${tint}) drop-shadow(0 0 2px ${tint})`,
                 }}
-                aria-label={`Cell ${x},${y}`}
               />
-            )),
+            );
+          })()
+        : null}
+      {editable
+        ? Array.from({ length: rows }).flatMap((_, y) =>
+            Array.from({ length: cols }).map((_, x) => {
+              const isHover = hover?.x === x && hover.y === y;
+              const valid = tool
+                ? isToolValidAt(tool, x, y, grid, decorations)
+                : false;
+              const bg = isHover
+                ? valid
+                  ? "rgba(34, 197, 94, 0.28)"
+                  : "rgba(239, 68, 68, 0.28)"
+                : "transparent";
+              return (
+                <button
+                  key={`cell-${x}-${y}`}
+                  type="button"
+                  onClick={() => onCellClick?.(x, y)}
+                  onMouseEnter={() => setHover({ x, y })}
+                  onMouseLeave={() => setHover((h) => (h?.x === x && h.y === y ? null : h))}
+                  style={{
+                    position: "absolute",
+                    left: x * TILE,
+                    top: y * TILE,
+                    width: TILE,
+                    height: TILE,
+                    background: bg,
+                    border: "1px dashed rgba(255, 255, 255, 0.25)",
+                    cursor: valid ? "pointer" : "not-allowed",
+                    padding: 0,
+                    transition: "background 80ms ease",
+                  }}
+                  aria-label={`Cell ${x},${y}`}
+                />
+              );
+            }),
           )
         : null}
     </div>

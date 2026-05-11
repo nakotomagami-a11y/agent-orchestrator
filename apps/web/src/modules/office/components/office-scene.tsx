@@ -200,6 +200,7 @@ export function OfficeScene() {
         grid={grid}
         decorations={decorations}
         editable={buildMode}
+        tool={tool}
         onCellClick={onCellClick}
       />
       <OfficeBuildToolbar
