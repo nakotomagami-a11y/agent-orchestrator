@@ -257,13 +257,25 @@ function RosterEntry({
         onClick={onSelect}
         title="Click to view details · open chat from there"
         style={{
-          all: "unset",
+          // Span the parent `.roster-row` grid so name + status get
+          // room instead of being squashed into the 32px avatar slot.
+          gridColumn: "1 / -1",
+          // Reset the button's own visual chrome, then build a 3-col
+          // grid inside that mirrors the original layout.
+          background: "transparent",
+          border: "none",
+          color: "inherit",
+          font: "inherit",
+          padding: 0,
+          margin: 0,
+          textAlign: "left",
           cursor: "pointer",
           display: "grid",
           gridTemplateColumns: "32px 1fr auto",
           alignItems: "center",
           gap: 10,
           width: "100%",
+          minWidth: 0,
         }}
       >
         <div className="av">

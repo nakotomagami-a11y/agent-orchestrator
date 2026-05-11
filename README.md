@@ -7,7 +7,6 @@ Personal fleet manager for Claude Code subagents — a GNOME-styled desktop app 
 - **Web app** (`apps/web/`) — Next.js 15 (App Router), React 19, TypeScript. UI styled after Ubuntu Yaru / modern GNOME (Yaru orange + aubergine). State: Zustand for app stores, TanStack Query for server cache. Pixel sprites are pure SVG.
 - **Shared** (`packages/shared/`) — typed config (routes, query keys) and services that read/write `~/.claude/agents/` (agent definitions) and the local project metadata.
 - **Backend** — runs in-process inside the Next.js app. Shells out to `claude -p` per summon and streams stdout back via SSE.
-- **Legacy** (`_legacy/`) — the original Bun + Vite + PixiJS prototype, kept for reference until parity is reached on the Next.js port.
 
 ## Run it
 
@@ -32,7 +31,6 @@ pnpm lint
 ```
 apps/web/            Next.js app (routes, API, UI)
 packages/shared/     shared types, route config, services
-_legacy/             previous Vite/Bun + PixiJS prototype
 ```
 
 Inside `apps/web/src`:

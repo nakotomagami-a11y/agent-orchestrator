@@ -3,9 +3,6 @@
 // Skills live at ~/.claude/agents/_skills/<name>/SKILL.md (app-managed, not
 // Claude Code's global ~/.claude/skills/). Provenance recorded in
 // <name>/.source.json so we can detect remote updates.
-//
-// Ported from `_legacy/server/skills.ts`. Only difference: GitHub URLs are
-// built via `EXTERNAL_API.github` from the routes config (rule #2).
 
 import {
   existsSync,

@@ -4,10 +4,9 @@ import type { OfficeAgent } from "../hooks/use-office-agents";
 import { shadeColor } from "@/components/ui/pixel-sprite.utils";
 
 /**
- * Top-down pixel office. Port of `_legacy/Orchestrator/v3/iso-office.jsx` —
- * 4 cubicle pods pinwheel around a hallway, with a meeting room, lounge,
- * plant strips, and scattered details. Each agent owns one of 16 seats
- * derived from `agent.desk.{tier, slot}`.
+ * Top-down pixel office: 4 cubicle pods pinwheel around a hallway, with a
+ * meeting room, lounge, plant strips, and scattered details. Each agent owns
+ * one of 16 seats derived from `agent.desk.{tier, slot}`.
  */
 
 const ROOM_W = 1040;
