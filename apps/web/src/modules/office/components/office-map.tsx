@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { UnitSprite } from "@/components/ui/unit-sprite";
+import type { OfficeAgent } from "../hooks/use-office-agents";
 import {
   DECORATIONS,
   decorationKey,
@@ -9,6 +11,15 @@ import {
   type DecorationsMap,
 } from "./decorations";
 import type { BuildTool } from "./office-build-toolbar";
+import {
+  AGENT_DRAG_MIME,
+  dragRefKey,
+  useOfficeDragStore,
+  type DragRef,
+} from "../hooks/use-office-drag";
+
+/** "x,y" → DragRef. Sparse — cells with no agent aren't keys. */
+export type AgentPositions = Record<string, DragRef>;
 
 /**
  * Grass island for the office view. Layout is data-driven: a 2D boolean
@@ -241,12 +252,20 @@ function tileStyle(t: Placed): React.CSSProperties {
 export type OfficeMapProps = {
   grid: boolean[][];
   decorations: DecorationsMap;
+  agentPositions: AgentPositions;
+  /** Index of OfficeAgent by id — used to resolve placed agents into a
+   *  UnitSprite. Passed in instead of useOfficeAgents'd here so the
+   *  component stays presentational. */
+  agentsById: Map<string, OfficeAgent>;
   /** When true, render a clickable cell overlay so the builder can edit. */
   editable?: boolean;
   /** Currently-armed tool, used for hover-preview tinting. */
   tool?: BuildTool;
   /** Called with grid coords when the user clicks a cell in editable mode. */
   onCellClick?: (x: number, y: number) => void;
+  /** Called when an agent is dropped on a grid cell. Validation (grass
+   *  + no overlap with another agent) is the caller's responsibility. */
+  onAgentDrop?: (x: number, y: number, ref: DragRef) => void;
 };
 
 /**
@@ -270,15 +289,29 @@ function isToolValidAt(
 export function OfficeMap({
   grid,
   decorations,
+  agentPositions,
+  agentsById,
   editable = false,
   tool,
   onCellClick,
+  onAgentDrop,
 }: OfficeMapProps) {
   const cols = grid[0]?.length ?? 0;
   const rows = grid.length;
   const tiles = buildTiles(grid);
   const foam = buildFoam(grid);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
+  const dragging = useOfficeDragStore((s) => s.dragging);
+
+  // Whether placing the currently-dragged agent at (x, y) would succeed:
+  // cell must be grass and not already occupied by a *different* agent
+  // (moving the same agent onto its own cell is a no-op but allowed).
+  const isAgentDropValid = (x: number, y: number, ref: DragRef): boolean => {
+    if (!(grid[y]?.[x] === true)) return false;
+    const existing = agentPositions[decorationKey(x, y)];
+    if (!existing) return true;
+    return dragRefKey(existing) === dragRefKey(ref);
+  };
 
   // Sort decorations by their cell Y so lower rows draw on top of higher
   // rows — gives natural depth-stacking for tall sprites like trees.
@@ -316,7 +349,7 @@ export function OfficeMap({
         transform: "translate(-50%, -50%)",
         width: cols * TILE,
         height: rows * TILE,
-        pointerEvents: editable ? "auto" : "none",
+        pointerEvents: editable || dragging ? "auto" : "none",
       }}
       aria-hidden
     >
@@ -360,16 +393,57 @@ export function OfficeMap({
           />
         );
       })}
-      {/* Hover preview ghost — only when a decoration tool is armed and
-          we're hovering a cell. Rendered like a real decoration but with
-          reduced opacity and a green/red drop-shadow so the user can
-          tell at a glance whether the click would succeed. */}
-      {previewKind && hover && hoverValid !== null
+      {/* Placed agents — sorted by y so lower rows draw on top of higher
+          rows for natural depth. Skips any ref whose agent isn't in the
+          current catalog (e.g. deleted agent, project switched and the
+          instance no longer exists). */}
+      {Object.entries(agentPositions)
+        .map(([key, ref]) => {
+          const [xs, ys] = key.split(",");
+          return { x: Number(xs), y: Number(ys), ref };
+        })
+        .sort((a, b) => a.y - b.y)
+        .map(({ x, y, ref }) => {
+          const agent = agentsById.get(ref.agentId);
+          if (!agent) return null;
+          // Sit the character centred on the cell, anchored at the
+          // bottom so taller frames extend upward.
+          const SIZE = 48;
+          const left = x * TILE + (TILE - SIZE) / 2;
+          const top = (y + 1) * TILE - SIZE;
+          return (
+            <div
+              key={`agent-${dragRefKey(ref)}`}
+              style={{
+                position: "absolute",
+                left,
+                top,
+                width: SIZE,
+                height: SIZE,
+                pointerEvents: "none",
+              }}
+              aria-label={agent.name}
+            >
+              <UnitSprite
+                unit={agent.unitChoice}
+                size={SIZE}
+                action={agent.status === "working" ? "working" : "idle"}
+                animate
+              />
+            </div>
+          );
+        })}
+      {/* Hover preview ghost. During a drag, this is the placed agent's
+          sprite; otherwise it's the active decoration tool's sprite. */}
+      {dragging && hover
         ? (() => {
-            const def = DECORATIONS[previewKind];
-            const left = hover.x * TILE + (TILE - def.frameW) / 2;
-            const top = (hover.y + 1) * TILE - def.frameH;
-            const tint = hoverValid ? "#22c55e" : "#ef4444";
+            const agent = agentsById.get(dragging.agentId);
+            if (!agent) return null;
+            const valid = isAgentDropValid(hover.x, hover.y, dragging);
+            const tint = valid ? "#22c55e" : "#ef4444";
+            const SIZE = 48;
+            const left = hover.x * TILE + (TILE - SIZE) / 2;
+            const top = (hover.y + 1) * TILE - SIZE;
             return (
               <div
                 aria-hidden
@@ -377,30 +451,64 @@ export function OfficeMap({
                   position: "absolute",
                   left,
                   top,
-                  width: def.frameW,
-                  height: def.frameH,
-                  backgroundImage: `url(${def.src})`,
-                  backgroundRepeat: "no-repeat",
-                  backgroundPosition: "0 0",
-                  imageRendering: "pixelated",
+                  width: SIZE,
+                  height: SIZE,
                   pointerEvents: "none",
                   opacity: 0.6,
-                  // Stacked drop-shadows give a coloured glow that hugs
-                  // the sprite silhouette — single shadow looks weak,
-                  // doubling tightens it.
                   filter: `drop-shadow(0 0 4px ${tint}) drop-shadow(0 0 2px ${tint})`,
                 }}
-              />
+              >
+                <UnitSprite
+                  unit={agent.unitChoice}
+                  size={SIZE}
+                  action="idle"
+                  animate={false}
+                />
+              </div>
             );
           })()
-        : null}
-      {editable
+        : previewKind && hover && hoverValid !== null
+          ? (() => {
+              const def = DECORATIONS[previewKind];
+              const left = hover.x * TILE + (TILE - def.frameW) / 2;
+              const top = (hover.y + 1) * TILE - def.frameH;
+              const tint = hoverValid ? "#22c55e" : "#ef4444";
+              return (
+                <div
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    left,
+                    top,
+                    width: def.frameW,
+                    height: def.frameH,
+                    backgroundImage: `url(${def.src})`,
+                    backgroundRepeat: "no-repeat",
+                    backgroundPosition: "0 0",
+                    imageRendering: "pixelated",
+                    pointerEvents: "none",
+                    opacity: 0.6,
+                    filter: `drop-shadow(0 0 4px ${tint}) drop-shadow(0 0 2px ${tint})`,
+                  }}
+                />
+              );
+            })()
+          : null}
+      {/* Cell overlay — present when in build mode OR while an agent is
+          being dragged. Outside build mode we still need cells to be
+          drop targets so users can drop an agent without entering build
+          mode first. */}
+      {editable || dragging
         ? Array.from({ length: rows }).flatMap((_, y) =>
             Array.from({ length: cols }).map((_, x) => {
               const isHover = hover?.x === x && hover.y === y;
-              const valid = tool
-                ? isToolValidAt(tool, x, y, grid, decorations)
-                : false;
+              // Validity during a drag is the agent rule; otherwise the
+              // currently-armed build tool rule.
+              const valid = dragging
+                ? isAgentDropValid(x, y, dragging)
+                : tool
+                  ? isToolValidAt(tool, x, y, grid, decorations)
+                  : false;
               const bg = isHover
                 ? valid
                   ? "rgba(34, 197, 94, 0.28)"
@@ -410,9 +518,35 @@ export function OfficeMap({
                 <button
                   key={`cell-${x}-${y}`}
                   type="button"
-                  onClick={() => onCellClick?.(x, y)}
+                  onClick={() => {
+                    if (!editable) return;
+                    onCellClick?.(x, y);
+                  }}
                   onMouseEnter={() => setHover({ x, y })}
                   onMouseLeave={() => setHover((h) => (h?.x === x && h.y === y ? null : h))}
+                  onDragOver={(e) => {
+                    if (!dragging) return;
+                    if (Array.from(e.dataTransfer.types).includes(AGENT_DRAG_MIME)) {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = valid ? "move" : "none";
+                      setHover({ x, y });
+                    }
+                  }}
+                  onDragLeave={() =>
+                    setHover((h) => (h?.x === x && h.y === y ? null : h))
+                  }
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const raw = e.dataTransfer.getData(AGENT_DRAG_MIME);
+                    if (!raw) return;
+                    try {
+                      const ref = JSON.parse(raw) as DragRef;
+                      if (!isAgentDropValid(x, y, ref)) return;
+                      onAgentDrop?.(x, y, ref);
+                    } catch {
+                      /* malformed payload — ignore */
+                    }
+                  }}
                   style={{
                     position: "absolute",
                     left: x * TILE,
@@ -420,8 +554,10 @@ export function OfficeMap({
                     width: TILE,
                     height: TILE,
                     background: bg,
-                    border: "1px dashed rgba(255, 255, 255, 0.25)",
-                    cursor: valid ? "pointer" : "not-allowed",
+                    border: editable
+                      ? "1px dashed rgba(255, 255, 255, 0.25)"
+                      : "none",
+                    cursor: editable ? (valid ? "pointer" : "not-allowed") : "default",
                     padding: 0,
                     transition: "background 80ms ease",
                   }}

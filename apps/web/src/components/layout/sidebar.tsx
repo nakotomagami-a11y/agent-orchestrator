@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { NavItem } from "./nav-item";
-import { PixelSprite } from "@/components/ui/pixel-sprite";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { isActiveRoute } from "./sidebar.utils";
 import { Icon } from "@/components/ui/icon";
@@ -16,6 +16,11 @@ import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProject, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
 import { useAgentFilter } from "@/modules/agents/hooks/use-agent-filter";
 import type { AgentInstance } from "@agent-office/shared/types";
+import {
+  AGENT_DRAG_MIME,
+  useOfficeDragStore,
+  type DragRef,
+} from "@/modules/office/hooks/use-office-drag";
 
 type RosterRow = {
   /** Stable React key. */
@@ -249,11 +254,32 @@ function RosterEntry({
   onRemove: () => void;
 }) {
   const t = useTranslations();
-  const { agent, displayName } = row;
+  const { agent, instance, displayName } = row;
+  const setDragging = useOfficeDragStore((s) => s.setDragging);
+
+  const dragRef: DragRef = instance
+    ? { agentId: agent.id, instanceId: instance.instanceId }
+    : { agentId: agent.id };
+
+  const onDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    // Stash a JSON payload so onDrop can reconstruct the ref; also push
+    // a plain-text fallback for browsers that ignore custom MIME types.
+    e.dataTransfer.setData(AGENT_DRAG_MIME, JSON.stringify(dragRef));
+    e.dataTransfer.setData("text/plain", agent.id);
+    e.dataTransfer.effectAllowed = "move";
+    setDragging(dragRef);
+  };
+
+  const onDragEnd = () => setDragging(null);
+
   return (
     <div
       className={"roster-row" + (selected ? " on" : "")}
-      style={{ position: "relative" }}
+      style={{ position: "relative", cursor: "grab" }}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      title={t("sidebar.row_open_chat_title")}
     >
       <button
         type="button"
@@ -282,12 +308,7 @@ function RosterEntry({
         }}
       >
         <div className="av">
-          <PixelSprite
-            agent={agent}
-            size={32}
-            animate={false}
-            action={agent.status === "working" ? "typing" : "idle"}
-          />
+          <AgentAvatar unit={agent.unitChoice} size={32} />
         </div>
         <div style={{ minWidth: 0 }}>
           <div

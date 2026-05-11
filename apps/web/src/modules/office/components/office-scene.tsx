@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { OfficeMap } from "./office-map";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { OfficeMap, type AgentPositions } from "./office-map";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
   DECORATIONS,
@@ -10,6 +10,8 @@ import {
   type DecorationKind,
   type DecorationsMap,
 } from "./decorations";
+import { useOfficeAgents } from "../hooks/use-office-agents";
+import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -29,31 +31,14 @@ const GRID_COLS = 16;
 const GRID_ROWS = 10;
 const GRID_STORAGE_KEY = "agent-office:office-grid:v1";
 const DECO_STORAGE_KEY = "agent-office:office-decorations:v1";
+const AGENTS_STORAGE_KEY = "agent-office:office-agents:v1";
 
-const INITIAL_ISLAND = [
-  "..XXXXXXXX..",
-  ".XXXXXXXXXX.",
-  "XXXXXXXXXXXX",
-  "XXXXXXXXXXXX",
-  "XXXXXXXXXXXX",
-  "XXXXXXXXXXXX",
-  ".XXXXXXXXXX.",
-  "..XXXXXXXX..",
-] as const;
-const ISLAND_OFFSET_X = 2;
-const ISLAND_OFFSET_Y = 1;
-
+/** Default grid is empty — users build their own island. Existing
+ *  localStorage from earlier seed-island sessions still loads as before. */
 function makeSeedGrid(): boolean[][] {
-  const grid: boolean[][] = Array.from({ length: GRID_ROWS }, () =>
+  return Array.from({ length: GRID_ROWS }, () =>
     Array.from({ length: GRID_COLS }, () => false),
   );
-  for (let y = 0; y < INITIAL_ISLAND.length; y++) {
-    const row = INITIAL_ISLAND[y]!;
-    for (let x = 0; x < row.length; x++) {
-      grid[y + ISLAND_OFFSET_Y]![x + ISLAND_OFFSET_X] = row[x] === "X";
-    }
-  }
-  return grid;
 }
 
 function loadGrid(): boolean[][] {
@@ -101,11 +86,51 @@ function loadDecorations(): DecorationsMap {
   return {};
 }
 
+function loadAgentPositions(): AgentPositions {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(AGENTS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const out: AgentPositions = {};
+      for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+        if (
+          value &&
+          typeof value === "object" &&
+          !Array.isArray(value) &&
+          typeof (value as { agentId?: unknown }).agentId === "string"
+        ) {
+          const v = value as { agentId: string; instanceId?: unknown };
+          out[key] = {
+            agentId: v.agentId,
+            instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined,
+          };
+        }
+      }
+      return out;
+    }
+  } catch {
+    /* fall through */
+  }
+  return {};
+}
+
 export function OfficeScene() {
   const [grid, setGrid] = useState<boolean[][]>(() => loadGrid());
   const [decorations, setDecorations] = useState<DecorationsMap>(() => loadDecorations());
+  const [agentPositions, setAgentPositions] = useState<AgentPositions>(() =>
+    loadAgentPositions(),
+  );
   const [buildMode, setBuildMode] = useState(false);
   const [tool, setTool] = useState<BuildTool>("grass");
+
+  const { agents } = useOfficeAgents();
+  const agentsById = useMemo(() => {
+    const m = new Map<string, (typeof agents)[number]>();
+    for (const a of agents) m.set(a.id, a);
+    return m;
+  }, [agents]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -124,6 +149,15 @@ export function OfficeScene() {
       /* best-effort */
     }
   }, [decorations]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(AGENTS_STORAGE_KEY, JSON.stringify(agentPositions));
+    } catch {
+      /* best-effort */
+    }
+  }, [agentPositions]);
 
   const onCellClick = useCallback(
     (x: number, y: number) => {
@@ -152,8 +186,16 @@ export function OfficeScene() {
       }
 
       if (tool === "erase") {
-        // Decoration first, terrain second — two clicks to fully clear a
-        // decorated grass cell.
+        // Topmost first: agent → decoration → terrain. Up to three clicks
+        // to fully empty a cell that has all three.
+        if (agentPositions[key]) {
+          setAgentPositions((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+          return;
+        }
         if (decorations[key]) {
           setDecorations((prev) => {
             const next = { ...prev };
@@ -177,8 +219,25 @@ export function OfficeScene() {
       if (!isPlacementValid(tool, cellHasGrass)) return;
       setDecorations((prev) => ({ ...prev, [key]: tool }));
     },
-    [grid, decorations, tool],
+    [grid, decorations, agentPositions, tool],
   );
+
+  // Drop handler — invoked by OfficeMap when an agent is dropped on a
+  // grid cell that passes its terrain + overlap validation. Move
+  // semantics: if the same agent is already on the map, its old cell
+  // becomes empty.
+  const onAgentDrop = useCallback((x: number, y: number, ref: DragRef) => {
+    setAgentPositions((prev) => {
+      const next: AgentPositions = {};
+      const refK = dragRefKey(ref);
+      for (const [k, v] of Object.entries(prev)) {
+        if (dragRefKey(v) === refK) continue; // dropping same agent — clear old cell
+        next[k] = v;
+      }
+      next[decorationKey(x, y)] = ref;
+      return next;
+    });
+  }, []);
 
   return (
     <div
@@ -199,9 +258,12 @@ export function OfficeScene() {
       <OfficeMap
         grid={grid}
         decorations={decorations}
+        agentPositions={agentPositions}
+        agentsById={agentsById}
         editable={buildMode}
         tool={tool}
         onCellClick={onCellClick}
+        onAgentDrop={onAgentDrop}
       />
       <OfficeBuildToolbar
         active={buildMode}
