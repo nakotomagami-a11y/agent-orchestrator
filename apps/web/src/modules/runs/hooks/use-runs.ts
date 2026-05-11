@@ -10,6 +10,7 @@ import { POLL } from "@/lib/polling";
 export function useRuns(filters?: {
   agentId?: string;
   projectId?: string;
+  instanceId?: string;
   limit?: number;
 }) {
   const limit = filters?.limit ?? 100;
@@ -17,6 +18,7 @@ export function useRuns(filters?: {
   params.set("limit", String(limit));
   if (filters?.agentId) params.set("agent", filters.agentId);
   if (filters?.projectId) params.set("project", filters.projectId);
+  if (filters?.instanceId) params.set("instance", filters.instanceId);
   return useQuery({
     queryKey: queryKeys.runs.list(filters),
     queryFn: () => apiFetch<PersistedRun[]>(`${API_ROUTES.runs}?${params.toString()}`),

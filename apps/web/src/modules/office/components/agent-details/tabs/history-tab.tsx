@@ -4,9 +4,9 @@ import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 
-export function HistoryTab({ agentId }: { agentId: string }) {
+export function HistoryTab({ agentId, instanceId }: { agentId: string; instanceId?: string }) {
   const t = useTranslations();
-  const runsQ = useRuns({ agentId, limit: 50 });
+  const runsQ = useRuns({ agentId, instanceId, limit: 50 });
   const runs = runsQ.data ?? [];
   const totalCost = runs.reduce((s, r) => s + (r.cost || 0), 0);
 

@@ -40,7 +40,11 @@ export function AgentDetailsModal() {
     }
   }, [inspectorOpen, selectedId, consumePendingTab]);
 
-  const runsQ = useRuns({ agentId: agent?.id, limit: 30 });
+  const runsQ = useRuns({
+    agentId: agent?.id,
+    instanceId: selectedInstanceId ?? undefined,
+    limit: 30,
+  });
   const tabItems = [
     { value: "conversation" as const, label: t("agent_details.tab_conversation") },
     { value: "configuration" as const, label: t("agent_details.tab_configuration") },
@@ -92,7 +96,9 @@ export function AgentDetailsModal() {
               />
             ) : null}
             {tab === "configuration" ? <ConfigurationTab agent={agent} /> : null}
-            {tab === "history" ? <HistoryTab agentId={agent.id} /> : null}
+            {tab === "history" ? (
+              <HistoryTab agentId={agent.id} instanceId={selectedInstanceId ?? undefined} />
+            ) : null}
             {tab === "memory" ? <MemoryTab agentId={agent.id} /> : null}
             {tab === "settings" ? (
               <SettingsTab

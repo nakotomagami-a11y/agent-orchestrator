@@ -12,6 +12,7 @@ export async function GET(request: Request) {
   const filtered = all.filter((r) => {
     if (q.agent && r.agentId !== q.agent) return false;
     if (q.project && r.projectId !== q.project) return false;
+    if (q.instance && r.instanceId !== q.instance) return false;
     return true;
   });
   return NextResponse.json(filtered.slice(0, limit));

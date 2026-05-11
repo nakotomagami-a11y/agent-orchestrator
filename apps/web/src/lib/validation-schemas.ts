@@ -109,6 +109,10 @@ export const runsQuerySchema = z.object({
     .string()
     .regex(/^[A-Za-z0-9._-]+$/)
     .optional(),
+  instance: z
+    .string()
+    .regex(/^[A-Za-z0-9._-]+$/)
+    .optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
 });
 

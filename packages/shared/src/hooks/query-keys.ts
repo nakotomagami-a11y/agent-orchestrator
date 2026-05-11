@@ -4,7 +4,7 @@
  * Mirrors `packages/shared/src/hooks/query-keys.ts` rule from the architecture.
  */
 
-type RunsFilter = { agentId?: string; projectId?: string; limit?: number };
+type RunsFilter = { agentId?: string; projectId?: string; instanceId?: string; limit?: number };
 
 // Strip undefined values + sort keys so `{}`, `{agentId: undefined}`, and
 // `{limit: 100, agentId: 'x'}` vs `{agentId: 'x', limit: 100}` hash equally
@@ -56,7 +56,7 @@ export const queryKeys = {
 
   runs: {
     all: ["runs"] as const,
-    list: (filters?: { agentId?: string; projectId?: string; limit?: number }) =>
+    list: (filters?: RunsFilter) =>
       [...queryKeys.runs.all, "list", normalizeRunsFilter(filters)] as const,
     detail: (id: string) => [...queryKeys.runs.all, "detail", id] as const,
   },
