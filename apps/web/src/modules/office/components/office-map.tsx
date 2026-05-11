@@ -267,6 +267,10 @@ export type OfficeMapProps = {
   /** Called when an agent is dropped on a grid cell. Validation (grass
    *  + no overlap with another agent) is the caller's responsibility. */
   onAgentDrop?: (x: number, y: number, ref: DragRef) => void;
+  /** Called when the user clicks (not drags) a placed agent. OfficeScene
+   *  routes this to either the inspector modal (normal click) or the
+   *  erase logic (build mode + erase tool selected). */
+  onAgentClick?: (x: number, y: number, ref: DragRef) => void;
 };
 
 /**
@@ -303,6 +307,7 @@ export function OfficeMap({
   tool,
   onCellClick,
   onAgentDrop,
+  onAgentClick,
 }: OfficeMapProps) {
   const cols = grid[0]?.length ?? 0;
   const rows = grid.length;
@@ -310,6 +315,7 @@ export function OfficeMap({
   const foam = buildFoam(grid);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
+  const setDragging = useOfficeDragStore((s) => s.setDragging);
 
   // Whether placing the currently-dragged agent at (x, y) would succeed:
   // cell must be grass and not already occupied by a *different* agent
@@ -359,7 +365,10 @@ export function OfficeMap({
         transform: "translate(-50%, -50%)",
         width: cols * TILE,
         height: rows * TILE,
-        pointerEvents: editable || dragging ? "auto" : "none",
+        // Always interactive — placed agents are clickable/draggable
+        // regardless of build mode. Inner cell-overlay buttons gate their
+        // own behaviour on `editable || dragging` below.
+        pointerEvents: "auto",
       }}
       aria-hidden
     >
@@ -438,15 +447,29 @@ export function OfficeMap({
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
+              className="placed-agent"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData(AGENT_DRAG_MIME, JSON.stringify(ref));
+                e.dataTransfer.setData("text/plain", ref.agentId);
+                e.dataTransfer.effectAllowed = "move";
+                setDragging(ref);
+              }}
+              onDragEnd={() => setDragging(null)}
+              onClick={() => onAgentClick?.(x, y, ref)}
               style={{
                 position: "absolute",
                 left,
                 top,
                 width: SIZE,
                 height: SIZE,
-                pointerEvents: "none",
+                pointerEvents: "auto",
+                // The element being dragged needs to be opaque enough to
+                // host pointer events but not block the drop targets
+                // behind it — they handle their own dragOver detection.
               }}
-              aria-label={agent.name}
+              aria-label={`${agent.name} — click to open, drag to move`}
+              title={agent.name}
             >
               <UnitSprite
                 unit={agent.unitChoice}

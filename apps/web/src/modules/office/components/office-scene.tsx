@@ -13,6 +13,7 @@ import {
   type DecorationsMap,
 } from "./decorations";
 import { useOfficeAgents } from "../hooks/use-office-agents";
+import { useOfficeStore } from "../hooks/use-office-store";
 import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
 
 /**
@@ -257,6 +258,27 @@ export function OfficeScene() {
     });
   }, []);
 
+  // Routes a click on a placed agent. In build mode with the erase tool
+  // armed, clear the agent at that cell. Otherwise open the inspector
+  // for the clicked agent. The inspector uses the office store's
+  // `select` action, which also flips the global selection so the
+  // sidebar row highlights in sync.
+  const selectAgent = useOfficeStore((s) => s.select);
+  const onAgentClick = useCallback(
+    (x: number, y: number, ref: DragRef) => {
+      if (buildMode && tool === "erase") {
+        setAgentPositions((prev) => {
+          const next = { ...prev };
+          delete next[decorationKey(x, y)];
+          return next;
+        });
+        return;
+      }
+      selectAgent(ref.agentId, { instanceId: ref.instanceId ?? null });
+    },
+    [buildMode, tool, selectAgent],
+  );
+
   return (
     <div
       className="office-scene"
@@ -282,6 +304,7 @@ export function OfficeScene() {
         tool={tool}
         onCellClick={onCellClick}
         onAgentDrop={onAgentDrop}
+        onAgentClick={onAgentClick}
       />
       <OfficeBuildToolbar
         active={buildMode}
