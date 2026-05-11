@@ -23,7 +23,18 @@ const FOAM_FRAME = TILE * 3;
 const FOAM_FRAMES = 16;
 
 type Coord = { c: number; r: number };
-type Placed = { c: number; r: number; x: number; y: number; rotate?: 0 | 90 };
+type Quarter = "tl" | "tr" | "bl" | "br";
+type Placed = {
+  c: number;
+  r: number;
+  x: number;
+  y: number;
+  rotate?: 0 | 90;
+  /** When set, render only the named 32×32 quadrant of the tile, anchored
+   *  to the same quadrant of the destination cell. Used to assemble an
+   *  isolated cell from the four corner tiles' matching quadrants. */
+  quarter?: Quarter;
+};
 
 const T = {
   // Low-tier 3×3 grass blob (cols 0-2, rows 0-2)
@@ -62,7 +73,7 @@ const T = {
  * The tileset doesn't appear to ship dedicated horizontal-cap tiles in
  * an obvious slot — happy to dig further if you hit those shapes.
  */
-type Picked = { tile: Coord; rotate?: 0 | 90 };
+type Picked = { tile: Coord; rotate?: 0 | 90; quarter?: Quarter };
 
 /**
  * Returns one or more visual layers for a cell. Most cells render as a
@@ -77,9 +88,17 @@ function pickGrass(grid: boolean[][], x: number, y: number): Picked[] {
   const r = !grid[y]?.[x + 1];
 
   // Isolated single tile — none of the available tiles has rims on all
-  // four sides, so layer two col_mid frames at 0° and 90°.
+  // four sides. Assemble one from the four corner tiles' matching
+  // quadrants: TL of lt_tl gives a top+left rim corner, TR of lt_tr a
+  // top+right, etc. Stitched together they cover all four edges of the
+  // cell with their correct decorative scallops.
   if (t && b && l && r) {
-    return [{ tile: T.col_mid }, { tile: T.col_mid, rotate: 90 }];
+    return [
+      { tile: T.lt_tl, quarter: "tl" },
+      { tile: T.lt_tr, quarter: "tr" },
+      { tile: T.lt_bl, quarter: "bl" },
+      { tile: T.lt_br, quarter: "br" },
+    ];
   }
 
   // 1-wide vertical (both left AND right empty, but not isolated).
@@ -123,6 +142,7 @@ function buildTiles(grid: boolean[][]): Placed[] {
           c: layer.tile.c,
           r: layer.tile.r,
           rotate: layer.rotate,
+          quarter: layer.quarter,
         });
       }
     }
@@ -174,7 +194,26 @@ function foamStyle(x: number, y: number): React.CSSProperties {
   };
 }
 
+const QUARTER = TILE / 2; // 32
+
 function tileStyle(t: Placed): React.CSSProperties {
+  if (t.quarter) {
+    // Render only the named 32×32 quadrant of the source tile, anchored
+    // to the same quadrant of the destination cell.
+    const qx = t.quarter === "tr" || t.quarter === "br" ? QUARTER : 0;
+    const qy = t.quarter === "bl" || t.quarter === "br" ? QUARTER : 0;
+    return {
+      position: "absolute",
+      left: t.x * TILE + qx,
+      top: t.y * TILE + qy,
+      width: QUARTER,
+      height: QUARTER,
+      backgroundImage: `url(${TILESET})`,
+      backgroundPosition: `-${t.c * TILE + qx}px -${t.r * TILE + qy}px`,
+      backgroundRepeat: "no-repeat",
+      imageRendering: "pixelated",
+    };
+  }
   return {
     position: "absolute",
     left: t.x * TILE,
