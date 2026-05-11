@@ -1,23 +1,24 @@
 "use client";
 
 /**
- * Hand-authored two-tier grass island for the new OfficeScene. Tiles are
- * 64-pixel slices from /tiles/grass.png (a 9×6 grid). Each placed tile is
- * absolute-positioned in a relatively-sized container so we can layer:
- * the cliff face under the upper tier draws ON TOP of the lower tier
- * grass it overlaps, instead of replacing it.
+ * Two-tier grass island composed from the Tiny Swords tileset
+ * (/tiles/grass.png — a 9×6 grid of 64-px tiles). Two systems run side by
+ * side:
  *
- * Layout reads back-to-front: the LOWER list paints first, the UPPER list
- * goes on top, the STAIR list on top of that. Within a list, later items
- * draw later, so cliff-face rows naturally sit in front of grass.
+ *   - Low tier: declared as a string-art shape; an auto-tile picker
+ *     inspects each cell's 4 neighbours and picks the right corner/edge/
+ *     interior tile. Adding/removing cells from the shape just works —
+ *     no need to hand-pick every rim tile.
  *
- * Tile-index notes (zero-indexed cols × rows into the tileset):
- *   cols 0-2 / rows 0-2   — low-tier 3×3 grass blob (no cliff)
- *   cols 5-7 / rows 0-2   — high-tier 3×3 grass blob (grass on top, cliff
- *                            face starts on row 2)
- *   cols 5-7 / rows 3-4   — cliff face continuation (pure stone wall)
- *   cols 0,2 / rows 4-5   — staircase L/R walls (the channel between them
- *                            is the implied steps)
+ *   - High tier (plateau): hand-placed because it needs the staircase
+ *     channel cut into a specific side of the cliff face. The plateau
+ *     sits on top of the low tier; the cliff face below the plateau
+ *     layers ON TOP of the low-tier grass it covers.
+ *
+ * Tile coords are guesses calibrated against visual feedback; expect to
+ * shift cells if a tile reads wrong. Cliff/grass connection in particular
+ * is fiddly — the tileset doesn't ship a clean "grass→cliff" transition
+ * row, so the plateau drops straight from grass-middle into cliff-top.
  */
 
 const TILE = 64;
@@ -26,9 +27,8 @@ const TILESET = "/tiles/grass.png";
 type Coord = { c: number; r: number };
 type Placed = { c: number; r: number; x: number; y: number };
 
-// Named tile lookup. Coords are *into the tileset image*.
 const T = {
-  // ─ Low tier (cols 0-2, rows 0-2) ─
+  // ─ Low-tier 3×3 grass blob (cols 0-2, rows 0-2) ─
   lt_tl: { c: 0, r: 0 },
   lt_t: { c: 1, r: 0 },
   lt_tr: { c: 2, r: 0 },
@@ -39,19 +39,17 @@ const T = {
   lt_b: { c: 1, r: 2 },
   lt_br: { c: 2, r: 2 },
 
-  // ─ High tier (cols 5-7, rows 0-2). Row 2 is the grass→cliff transition. ─
+  // ─ High-tier 3×3 grass (cols 5-7, rows 0-2) ─
   ht_tl: { c: 5, r: 0 },
   ht_t: { c: 6, r: 0 },
   ht_tr: { c: 7, r: 0 },
   ht_l: { c: 5, r: 1 },
   ht_m: { c: 6, r: 1 },
   ht_r: { c: 7, r: 1 },
-  ht_bl: { c: 5, r: 2 },
-  ht_b: { c: 6, r: 2 },
-  ht_br: { c: 7, r: 2 },
 
-  // ─ Cliff face continuation (cols 5-7, rows 3-4). Drawn ON TOP of the
-  //   lower tier grass that the high tier sits on. ─
+  // ─ Cliff face (cols 5-7, rows 3-4). cf_t row has a small grass
+  //   overhang at the top — meant to butt directly against grass-middle
+  //   on the plateau, no separate "grass-with-bottom-rim" tile needed. ─
   cf_tl: { c: 5, r: 3 },
   cf_t: { c: 6, r: 3 },
   cf_tr: { c: 7, r: 3 },
@@ -59,8 +57,9 @@ const T = {
   cf_b: { c: 6, r: 4 },
   cf_br: { c: 7, r: 4 },
 
-  // ─ Staircase channel walls (cols 0 and 2, rows 4-5). The col-1 middle
-  //   is transparent in the tileset — that's where the steps "live". ─
+  // ─ Staircase channel walls (cols 0 and 2, rows 4-5). Two tiles side by
+  //   side render the full stair channel; the middle tileset column is
+  //   transparent — that gap is the implied steps. ─
   stair_l: { c: 0, r: 4 },
   stair_r: { c: 2, r: 4 },
   stair_bl: { c: 0, r: 5 },
@@ -68,168 +67,132 @@ const T = {
 } satisfies Record<string, Coord>;
 
 // ─────────────────────────────────────────────────────────────────────────
-// Map composition. Coordinates here are grid cells, not pixels — multiplied
-// by TILE at render time.
+// Low tier — declarative shape + auto-tile picker
 // ─────────────────────────────────────────────────────────────────────────
 
-const MAP_COLS = 12;
-const MAP_ROWS = 9;
+// '.' = empty, 'X' = grass. Each row only steps in/out by 1 from the
+// previous so corner transitions look clean (no single-tile fingers).
+const LOW_SHAPE = [
+  "..XXXXXXXX..",
+  ".XXXXXXXXXX.",
+  "XXXXXXXXXXXX",
+  "XXXXXXXXXXXX",
+  "XXXXXXXXXXXX",
+  "XXXXXXXXXXXX",
+  ".XXXXXXXXXX.",
+  "..XXXXXXXX..",
+];
 
-function row(y: number, xs: { x: number; tile: Coord }[]): Placed[] {
-  return xs.map((it) => ({ x: it.x, y, c: it.tile.c, r: it.tile.r }));
+const MAP_COLS = LOW_SHAPE[0]!.length;
+const MAP_ROWS = LOW_SHAPE.length;
+
+function shapeToGrid(rows: readonly string[]): boolean[][] {
+  return rows.map((row) => Array.from(row, (ch) => ch === "X"));
 }
 
-// Low tier: irregular grass island. Breaks the square by indenting the
-// top-left and bottom-right corners with two-tile diagonals, and by
-// notching the right side. The rim uses the appropriate corner/edge tiles
-// at each transition; interior cells fall back to the centre grass tile.
-const LOW_TIER: Placed[] = [
-  // Row 0 — narrow top, starts 2 cells in
-  ...row(0, [
-    { x: 2, tile: T.lt_tl },
-    { x: 3, tile: T.lt_t },
-    { x: 4, tile: T.lt_t },
-    { x: 5, tile: T.lt_t },
-    { x: 6, tile: T.lt_t },
-    { x: 7, tile: T.lt_t },
-    { x: 8, tile: T.lt_t },
-    { x: 9, tile: T.lt_tr },
-  ]),
-  // Row 1 — widens out (extra cell on left)
-  ...row(1, [
-    { x: 1, tile: T.lt_tl },
-    { x: 2, tile: T.lt_m },
-    { x: 3, tile: T.lt_m },
-    { x: 4, tile: T.lt_m },
-    { x: 5, tile: T.lt_m },
-    { x: 6, tile: T.lt_m },
-    { x: 7, tile: T.lt_m },
-    { x: 8, tile: T.lt_m },
-    { x: 9, tile: T.lt_r },
-  ]),
-  // Row 2 — full width
-  ...row(2, [
-    { x: 0, tile: T.lt_tl },
-    { x: 1, tile: T.lt_m },
-    { x: 2, tile: T.lt_m },
-    { x: 3, tile: T.lt_m },
-    { x: 4, tile: T.lt_m },
-    { x: 5, tile: T.lt_m },
-    { x: 6, tile: T.lt_m },
-    { x: 7, tile: T.lt_m },
-    { x: 8, tile: T.lt_m },
-    { x: 9, tile: T.lt_m },
-    { x: 10, tile: T.lt_tr },
-  ]),
-  // Rows 3-5 — full width interior
-  ...row(3, [
-    { x: 0, tile: T.lt_l },
-    ...Array.from({ length: 10 }, (_, i) => ({ x: i + 1, tile: T.lt_m })),
-    { x: 11, tile: T.lt_r },
-  ]),
-  ...row(4, [
-    { x: 0, tile: T.lt_l },
-    ...Array.from({ length: 10 }, (_, i) => ({ x: i + 1, tile: T.lt_m })),
-    { x: 11, tile: T.lt_r },
-  ]),
-  ...row(5, [
-    { x: 0, tile: T.lt_l },
-    ...Array.from({ length: 10 }, (_, i) => ({ x: i + 1, tile: T.lt_m })),
-    { x: 11, tile: T.lt_r },
-  ]),
-  // Row 6 — bay notch on the right (stops 2 cells short)
-  ...row(6, [
-    { x: 0, tile: T.lt_l },
-    { x: 1, tile: T.lt_m },
-    { x: 2, tile: T.lt_m },
-    { x: 3, tile: T.lt_m },
-    { x: 4, tile: T.lt_m },
-    { x: 5, tile: T.lt_m },
-    { x: 6, tile: T.lt_m },
-    { x: 7, tile: T.lt_m },
-    { x: 8, tile: T.lt_m },
-    { x: 9, tile: T.lt_br },
-  ]),
-  // Row 7 — narrower bottom
-  ...row(7, [
-    { x: 0, tile: T.lt_bl },
-    { x: 1, tile: T.lt_b },
-    { x: 2, tile: T.lt_b },
-    { x: 3, tile: T.lt_b },
-    { x: 4, tile: T.lt_b },
-    { x: 5, tile: T.lt_b },
-    { x: 6, tile: T.lt_b },
-    { x: 7, tile: T.lt_b },
-    { x: 8, tile: T.lt_br },
-  ]),
-];
+/**
+ * Pick the right low-tier tile for `(x, y)` given which of its 4 neighbours
+ * are off-island. Only handles the basic 9 patterns (4 corners + 4 edges +
+ * 1 interior); diagonal-only neighbours fall back to interior since the
+ * tileset doesn't ship inner-corner tiles for grass.
+ */
+function pickLowTier(grid: boolean[][], x: number, y: number): Coord {
+  const t = !grid[y - 1]?.[x];
+  const b = !grid[y + 1]?.[x];
+  const l = !grid[y]?.[x - 1];
+  const r = !grid[y]?.[x + 1];
+  if (t && l) return T.lt_tl;
+  if (t && r) return T.lt_tr;
+  if (b && l) return T.lt_bl;
+  if (b && r) return T.lt_br;
+  if (t) return T.lt_t;
+  if (b) return T.lt_b;
+  if (l) return T.lt_l;
+  if (r) return T.lt_r;
+  return T.lt_m;
+}
 
-// High tier: a 4×3 raised plateau parked in the upper-middle of the island.
-// The bottom-of-grass row (ht_bl/ht_b/ht_br) is the visible "lip" where
-// the cliff begins; the cliff face below extends 2 more rows and sits in
-// front of the low-tier grass.
-const HT_X = 4; // grid x where high tier starts
-const HT_Y = 1; // grid y where high tier top sits
-const HT_W = 4; // width in tiles
-const HIGH_TIER: Placed[] = [
-  // Row HT_Y — top of grass
-  { x: HT_X, y: HT_Y, ...T.ht_tl },
-  ...Array.from({ length: HT_W - 2 }, (_, i) => ({
-    x: HT_X + 1 + i,
-    y: HT_Y,
-    ...T.ht_t,
-  })),
-  { x: HT_X + HT_W - 1, y: HT_Y, ...T.ht_tr },
+function buildLowTier(): Placed[] {
+  const grid = shapeToGrid(LOW_SHAPE);
+  const tiles: Placed[] = [];
+  for (let y = 0; y < grid.length; y++) {
+    const rowArr = grid[y]!;
+    for (let x = 0; x < rowArr.length; x++) {
+      if (!rowArr[x]) continue;
+      const tile = pickLowTier(grid, x, y);
+      tiles.push({ x, y, c: tile.c, r: tile.r });
+    }
+  }
+  return tiles;
+}
 
-  // Row HT_Y + 1 — middle grass
-  { x: HT_X, y: HT_Y + 1, ...T.ht_l },
-  ...Array.from({ length: HT_W - 2 }, (_, i) => ({
-    x: HT_X + 1 + i,
-    y: HT_Y + 1,
-    ...T.ht_m,
-  })),
-  { x: HT_X + HT_W - 1, y: HT_Y + 1, ...T.ht_r },
+// ─────────────────────────────────────────────────────────────────────────
+// High tier — plateau + staircase
+// ─────────────────────────────────────────────────────────────────────────
 
-  // Row HT_Y + 2 — grass→cliff transition
-  { x: HT_X, y: HT_Y + 2, ...T.ht_bl },
-  ...Array.from({ length: HT_W - 2 }, (_, i) => ({
-    x: HT_X + 1 + i,
-    y: HT_Y + 2,
-    ...T.ht_b,
-  })),
-  { x: HT_X + HT_W - 1, y: HT_Y + 2, ...T.ht_br },
+const HT_X = 4; // plateau left edge (grid col)
+const HT_Y = 1; // plateau top edge (grid row)
+const HT_W = 5; // plateau width
 
-  // Row HT_Y + 3 — cliff face middle
-  { x: HT_X, y: HT_Y + 3, ...T.cf_tl },
-  ...Array.from({ length: HT_W - 2 }, (_, i) => ({
-    x: HT_X + 1 + i,
-    y: HT_Y + 3,
-    ...T.cf_t,
-  })),
-  { x: HT_X + HT_W - 1, y: HT_Y + 3, ...T.cf_tr },
+function buildHighTier(): Placed[] {
+  const tiles: Placed[] = [];
 
-  // Row HT_Y + 4 — cliff face bottom
-  { x: HT_X, y: HT_Y + 4, ...T.cf_bl },
-  ...Array.from({ length: HT_W - 2 }, (_, i) => ({
-    x: HT_X + 1 + i,
-    y: HT_Y + 4,
-    ...T.cf_b,
-  })),
-  { x: HT_X + HT_W - 1, y: HT_Y + 4, ...T.cf_br },
-];
+  // ─ Grass top row ─
+  tiles.push(
+    { x: HT_X, y: HT_Y, ...T.ht_tl },
+    ...Array.from({ length: HT_W - 2 }, (_, i) => ({
+      x: HT_X + 1 + i,
+      y: HT_Y,
+      ...T.ht_t,
+    })),
+    { x: HT_X + HT_W - 1, y: HT_Y, ...T.ht_tr },
+  );
 
-// Staircase: a 1-tile-wide × 2-tall channel descending from the high tier.
-// Walls bracket the channel; the implied steps are the gap between them.
-const STAIR_X = HT_X + HT_W; // right of high tier
-const STAIR_Y = HT_Y + 3;
-const STAIRS: Placed[] = [
-  { x: STAIR_X, y: STAIR_Y, ...T.stair_l },
-  { x: STAIR_X + 1, y: STAIR_Y, ...T.stair_r },
-  { x: STAIR_X, y: STAIR_Y + 1, ...T.stair_bl },
-  { x: STAIR_X + 1, y: STAIR_Y + 1, ...T.stair_br },
-];
+  // ─ Two interior grass rows for a chunky plateau (no bottom-rim row
+  //   — the cliff face's `cf_t` has its own grass overhang at the top
+  //   so the transition reads as one continuous lip). ─
+  for (let dy = 1; dy <= 2; dy++) {
+    tiles.push(
+      { x: HT_X, y: HT_Y + dy, ...T.ht_l },
+      ...Array.from({ length: HT_W - 2 }, (_, i) => ({
+        x: HT_X + 1 + i,
+        y: HT_Y + dy,
+        ...T.ht_m,
+      })),
+      { x: HT_X + HT_W - 1, y: HT_Y + dy, ...T.ht_r },
+    );
+  }
 
-const ALL_TILES: Placed[] = [...LOW_TIER, ...HIGH_TIER, ...STAIRS];
+  // ─ Cliff face top row, with the staircase channel occupying the
+  //   LEFTMOST two columns. stair_l includes its own left wall so we
+  //   don't need a `cf_tl` here. ─
+  tiles.push(
+    { x: HT_X, y: HT_Y + 3, ...T.stair_l },
+    { x: HT_X + 1, y: HT_Y + 3, ...T.stair_r },
+    ...Array.from({ length: HT_W - 3 }, (_, i) => ({
+      x: HT_X + 2 + i,
+      y: HT_Y + 3,
+      ...T.cf_t,
+    })),
+    { x: HT_X + HT_W - 1, y: HT_Y + 3, ...T.cf_tr },
+  );
+
+  // ─ Cliff face bottom row ─
+  tiles.push(
+    { x: HT_X, y: HT_Y + 4, ...T.stair_bl },
+    { x: HT_X + 1, y: HT_Y + 4, ...T.stair_br },
+    ...Array.from({ length: HT_W - 3 }, (_, i) => ({
+      x: HT_X + 2 + i,
+      y: HT_Y + 4,
+      ...T.cf_b,
+    })),
+    { x: HT_X + HT_W - 1, y: HT_Y + 4, ...T.cf_br },
+  );
+
+  return tiles;
+}
+
+const ALL_TILES: Placed[] = [...buildLowTier(), ...buildHighTier()];
 
 function tileStyle(t: Placed): React.CSSProperties {
   return {
