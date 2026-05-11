@@ -500,24 +500,39 @@ export function OfficeMap({
           const left = x * TILE + (TILE - SIZE) / 2;
           const top = y * TILE + (TILE - SIZE) / 2;
           // Animation rule: agents idle by default and only switch to a
-          // work animation while they're actively running a task. The work
-          // animation is picked from whatever resource shares their cell —
-          // tree → axe, rock → pickaxe, sheep → knife — and falls back to
-          // a generic hammer-build pose when nothing's there. Same-cell
-          // only by design: neighbouring cells no longer count, so an
-          // agent has to be standing on the resource for the matching
-          // animation.
+          // work animation while they're actively running a task. The
+          // work animation is picked from nearby resources:
+          //   - tree on same tile  → axe
+          //   - rock on same tile  → pickaxe
+          //   - sheep on left/right neighbour → knife
+          //     (sheep on the same tile does NOT count — the shearing
+          //     pose only makes sense when there's something to swing
+          //     at on the side. Sheep on left flips the sprite so the
+          //     knife faces the target.)
+          //   - none of the above → hammer (generic build pose)
           const isWorking =
             agent.status === "working" || agent.status === "thinking";
           let action: "idle" | "axe" | "pickaxe" | "knife" | "hammer" = "idle";
+          let flip = false;
           if (isWorking) {
             const cellStack = decorations[decorationKey(x, y)];
-            const hasFamily = (f: string): boolean =>
+            const hasOnCell = (f: string): boolean =>
               !!cellStack && cellStack.some((k) => familyOf(k) === f);
-            if (hasFamily("tree")) action = "axe";
-            else if (hasFamily("rock")) action = "pickaxe";
-            else if (hasFamily("sheep")) action = "knife";
-            else action = "hammer";
+            const hasOnNeighbour = (nx: number, ny: number, f: string): boolean => {
+              const stack = decorations[decorationKey(nx, ny)];
+              return !!stack && stack.some((k) => familyOf(k) === f);
+            };
+            const sheepRight = hasOnNeighbour(x + 1, y, "sheep");
+            const sheepLeft = hasOnNeighbour(x - 1, y, "sheep");
+            if (hasOnCell("tree")) action = "axe";
+            else if (hasOnCell("rock")) action = "pickaxe";
+            else if (sheepRight || sheepLeft) {
+              action = "knife";
+              // Right wins when sheep flank both sides — the default
+              // sprite faces right, so we only flip when the only
+              // sheep is on the left.
+              flip = !sheepRight && sheepLeft;
+            } else action = "hammer";
           }
           return (
             <div
@@ -550,6 +565,7 @@ export function OfficeMap({
                 unit={agent.unitChoice}
                 size={SIZE}
                 action={action}
+                flip={flip}
                 animate
               />
             </div>
