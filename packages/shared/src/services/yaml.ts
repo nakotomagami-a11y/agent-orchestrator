@@ -119,12 +119,21 @@ function parseMap(state: ParseState, baseIndent: number): Record<string, YamlVal
     state.i++;
 
     if (after === "") {
-      // value is on subsequent indented lines
+      // Value is on subsequent indented lines.
       const next = state.lines[state.i];
-      if (!next || next.indent <= baseIndent) {
+      if (!next) {
         obj[key] = null;
-      } else {
+      } else if (next.indent > baseIndent) {
         obj[key] = parseBlock(state, next.indent);
+      } else if (
+        next.indent === baseIndent &&
+        next.raw.slice(next.indent).startsWith("-")
+      ) {
+        // YAML allows a block sequence at the same indent as its parent key
+        // (this is what `stringifyValue` emits for arrays of objects).
+        obj[key] = parseList(state, baseIndent);
+      } else {
+        obj[key] = null;
       }
     } else if (after.startsWith("[")) {
       obj[key] = parseFlowList(after);
