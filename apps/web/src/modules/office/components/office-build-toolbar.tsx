@@ -1,7 +1,12 @@
 "use client";
 
 import { Icon } from "@/components/ui/icon";
-import { DECORATIONS, type DecorationKind } from "./decorations";
+import {
+  DECORATIONS,
+  DECORATION_KINDS,
+  type DecoCategory,
+  type DecorationKind,
+} from "./decorations";
 
 export type BuildTool = "grass" | "erase" | DecorationKind;
 
@@ -12,10 +17,20 @@ export type OfficeBuildToolbarProps = {
   onSelectTool: (next: BuildTool) => void;
 };
 
+const CATEGORY_ORDER: { id: DecoCategory; label: string }[] = [
+  { id: "land", label: "Land" },
+  { id: "buildings", label: "Buildings" },
+  { id: "water", label: "Water" },
+];
+
+const SWATCH = 36; // px — icon-only thumbnail button side length
+
 /**
  * Floating builder UI for the office scene. Inactive: a single Build
  * button bottom-right. Active: expands into a palette grouped by
- * category — terrain (grass/erase), land decorations, water decorations.
+ * category. Terrain tools have text labels; decoration variants are
+ * icon-only with tooltips so the palette stays compact even with 20+
+ * variants.
  */
 export function OfficeBuildToolbar({
   active,
@@ -41,15 +56,16 @@ export function OfficeBuildToolbar({
           style={{
             display: "flex",
             flexDirection: "column",
-            gap: 8,
-            padding: 10,
+            gap: 10,
+            padding: 12,
             background: "var(--bg-1)",
             border: "1px solid var(--line)",
             borderRadius: 10,
             boxShadow: "var(--shadow-2)",
             fontFamily: "var(--font-mono)",
             fontSize: 11.5,
-            minWidth: 240,
+            maxHeight: "70vh",
+            overflowY: "auto",
           }}
         >
           <Group label="Terrain">
@@ -67,27 +83,24 @@ export function OfficeBuildToolbar({
             />
           </Group>
 
-          <Group label="Land">
-            {(["bush", "rock", "tree"] as const).map((kind) => (
-              <DecoButton
-                key={kind}
-                kind={kind}
-                selected={tool === kind}
-                onClick={() => onSelectTool(kind)}
-              />
-            ))}
-          </Group>
-
-          <Group label="Water">
-            {(["water_rock", "duck"] as const).map((kind) => (
-              <DecoButton
-                key={kind}
-                kind={kind}
-                selected={tool === kind}
-                onClick={() => onSelectTool(kind)}
-              />
-            ))}
-          </Group>
+          {CATEGORY_ORDER.map(({ id, label }) => {
+            const kinds = DECORATION_KINDS.filter(
+              (k) => DECORATIONS[k].category === id,
+            );
+            if (kinds.length === 0) return null;
+            return (
+              <Group key={id} label={label}>
+                {kinds.map((kind) => (
+                  <DecoButton
+                    key={kind}
+                    kind={kind}
+                    selected={tool === kind}
+                    onClick={() => onSelectTool(kind)}
+                  />
+                ))}
+              </Group>
+            );
+          })}
 
           <button
             type="button"
@@ -136,13 +149,22 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
           textTransform: "uppercase",
           letterSpacing: "0.06em",
           color: "var(--txt-3)",
-          marginBottom: 4,
+          marginBottom: 6,
           paddingLeft: 2,
         }}
       >
         {label}
       </div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{children}</div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(auto-fill, ${SWATCH}px)`,
+          gap: 6,
+          maxWidth: `calc(${SWATCH}px * 6 + 30px)`,
+        }}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -162,17 +184,17 @@ function ToolButton({
     <button
       type="button"
       onClick={onClick}
+      title={label}
       style={{
-        ...buttonBase,
+        ...swatchBase,
         background: selected ? "var(--acc-faint)" : "var(--bg-2)",
         borderColor: selected ? "var(--acc)" : "var(--line)",
         color: selected ? "var(--acc)" : "var(--txt)",
-        fontWeight: selected ? 600 : 400,
       }}
       aria-pressed={selected}
+      aria-label={label}
     >
-      <Icon name={iconName} size={11} />
-      <span style={{ marginLeft: 4 }}>{label}</span>
+      <Icon name={iconName} size={14} />
     </button>
   );
 }
@@ -187,35 +209,39 @@ function DecoButton({
   onClick: () => void;
 }) {
   const def = DECORATIONS[kind];
-  // Show a small thumbnail of frame 0 of the decoration sprite. Scale the
-  // sheet so a single frame fits in the 22px swatch.
-  const swatch: React.CSSProperties = {
-    width: 22,
-    height: 22,
-    backgroundImage: `url(${def.src})`,
-    backgroundRepeat: "no-repeat",
-    backgroundSize: `${(22 / def.frameH) * def.frameW}px 22px`,
-    backgroundPosition: "0 0",
-    imageRendering: "pixelated",
-    flexShrink: 0,
-  };
+  // Show frame 0 of the sprite, scaled so the entire frame fits in the
+  // 36-px swatch. `contain` semantics via background-size.
+  const innerPad = 4;
+  const inner = SWATCH - innerPad * 2;
+  const scale = Math.min(inner / def.frameW, inner / def.frameH);
+  const drawW = def.frameW * scale;
+  const drawH = def.frameH * scale;
   return (
     <button
       type="button"
       onClick={onClick}
       title={`${def.label} — ${def.terrain}-only`}
       style={{
-        ...buttonBase,
+        ...swatchBase,
         background: selected ? "var(--acc-faint)" : "var(--bg-2)",
         borderColor: selected ? "var(--acc)" : "var(--line)",
-        color: selected ? "var(--acc)" : "var(--txt)",
-        fontWeight: selected ? 600 : 400,
-        gap: 6,
+        position: "relative",
       }}
       aria-pressed={selected}
+      aria-label={def.label}
     >
-      <span aria-hidden style={swatch} />
-      {def.label}
+      <span
+        aria-hidden
+        style={{
+          width: drawW,
+          height: drawH,
+          backgroundImage: `url(${def.src})`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: `${def.frames * drawW}px ${drawH}px`,
+          backgroundPosition: "0 0",
+          imageRendering: "pixelated",
+        }}
+      />
     </button>
   );
 }
@@ -231,4 +257,17 @@ const buttonBase: React.CSSProperties = {
   fontFamily: "inherit",
   fontSize: 11.5,
   color: "var(--txt)",
+};
+
+const swatchBase: React.CSSProperties = {
+  width: SWATCH,
+  height: SWATCH,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "var(--bg-2)",
+  border: "1px solid var(--line)",
+  borderRadius: 6,
+  cursor: "pointer",
+  padding: 0,
 };
