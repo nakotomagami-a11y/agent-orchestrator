@@ -65,6 +65,8 @@ export interface PersistedRun {
   ts: number;
   prompt: string;
   status: "running" | "done" | "error";
+  /** Subprocess exit code. 130 indicates SIGINT/SIGTERM (server restart). */
+  exitCode?: number;
   output: string;
   tokensIn: number;
   tokensOut: number;

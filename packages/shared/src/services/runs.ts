@@ -185,6 +185,14 @@ export function killAllRuns(): void {
     } catch {
       /* ignore */
     }
+    // Defensively finalise here too — `proc.on('exit')` may not get a turn
+    // if Node is about to exit. Without this, in-flight runs at SIGINT time
+    // never reach runs.log and a refresh later shows "not_found".
+    // finalizeRun is idempotent against status checks, so a real exit
+    // landing after this is a no-op.
+    if (run.status === "running") {
+      finalizeRun(run, 130);
+    }
   }
 }
 
@@ -315,6 +323,7 @@ function finalizeRun(run: LiveRun, exitCode: number): void {
     ts: run.startTs,
     prompt: run.prompt,
     status: run.status,
+    exitCode: run.exitCode,
     output: run.output,
     tokensIn: run.tokensIn,
     tokensOut: run.tokensOut,

@@ -17,7 +17,7 @@ import {
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
 import type { PersistedRun } from "@agent-office/shared/types";
-import { apiFetch } from "@agent-office/shared/hooks/api";
+import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 
@@ -65,7 +65,18 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     () => loadTranscript(tKey)?.activeRunId ?? null,
   );
   const [resumeProbed, setResumeProbed] = useState(false);
-  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [resumeError, setResumeError] = useState<
+    | { kind: "missing"; message: string }
+    | { kind: "transient"; message: string; status?: number }
+    | null
+  >(null);
+  // When a run is recovered from a server restart (exitCode 130), the
+  // partial output is spliced into the thread and we surface a recovery
+  // banner so the user knows what happened and can pick up where it stopped.
+  const [recovered, setRecovered] = useState<
+    | { runId: string; partialChars: number; tokensOut: number; cost: number }
+    | null
+  >(null);
   const [pendingSeed, setPendingSeed] = useState<string | undefined>();
   const [phaseOverride, setPhaseOverride] = useState<ChatPhase | null>(null);
   // Bumped to retry the resume probe after a failure. Lets the user recover
@@ -86,6 +97,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     setActiveRunId(t?.activeRunId ?? null);
     setResumeProbed(false);
     setResumeError(null);
+    setRecovered(null);
     setPhaseOverride(null);
     runStartIndexRef.current = null;
     fallbackAttemptedRef.current = null;
@@ -115,6 +127,19 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
               { kind: "agent-text", id: `r_${activeRunId}`, text: run.output, streaming: false },
             ]);
           }
+          // Server-restart kill (SIGINT/SIGTERM → exit code 130): the run
+          // didn't complete naturally, but everything streamed up to the
+          // moment of death is recoverable. Surface a recovery banner so
+          // the user knows they can continue the work instead of starting
+          // from scratch.
+          if (run.status === "error" && run.exitCode === 130) {
+            setRecovered({
+              runId: run.id,
+              partialChars: run.output?.length ?? 0,
+              tokensOut: run.tokensOut,
+              cost: run.cost,
+            });
+          }
           setActiveRunId(null);
         } else {
           // Still running — mark this as where the run output goes so the
@@ -125,11 +150,16 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        // Surface the failure instead of silently dropping activeRunId. The
-        // user can Retry (re-runs this probe) or Dismiss (clears the runId
-        // so the UI moves on without the run's output).
-        const msg = err instanceof Error ? err.message : String(err);
-        setResumeError(msg || "couldn't reach server");
+        // Differentiate "run is genuinely gone" (404) from "server unwell"
+        // (5xx, network). For 404 the only useful action is Drop run;
+        // Retry would just 404 again. Show that as the primary action.
+        if (err instanceof ApiError && err.status === 404) {
+          setResumeError({ kind: "missing", message: err.message || "not_found" });
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          const status = err instanceof ApiError ? err.status : undefined;
+          setResumeError({ kind: "transient", message: msg || "couldn't reach server", status });
+        }
         setResumeProbed(true);
       });
     return () => {
@@ -315,6 +345,11 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     setResumeProbed(true);
   };
 
+  const continueRecovered = () => {
+    setRecovered(null);
+    setPendingSeed("Please continue where you left off. The previous run was interrupted by a server restart — your partial output is in the thread above.");
+  };
+
   return (
     <div className="chat" role="region" aria-label={`Chat with ${agent.name}`}>
       <ChatHead
@@ -327,12 +362,32 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
       />
 
       {/* Diagnostic banners — only one shown at a time, ordered by severity.
-          Resume probe failure > lost stream > retrying stream > stale stream. */}
-      {resumeError ? (
+          Recovered > resume-missing > resume-transient > lost > retrying > stale. */}
+      {recovered ? (
+        <StreamBanner
+          kind="warn"
+          title="Recovered partial output from the previous run."
+          detail={`Run ${recovered.runId} was interrupted by a server restart (exit 130). ${recovered.partialChars.toLocaleString()} chars · ${recovered.tokensOut.toLocaleString()} tok · $${recovered.cost.toFixed(3)} streamed before the kill — appended to the thread above. Click Continue to pick up where it stopped.`}
+          primary={{ label: "Continue", onClick: continueRecovered }}
+          secondary={{ label: "Dismiss", onClick: () => setRecovered(null) }}
+        />
+      ) : resumeError?.kind === "missing" ? (
+        <StreamBanner
+          kind="warn"
+          title="This run isn't on the server anymore."
+          detail={`Run ${activeRunId} · ${resumeError.message}. Most likely the server restarted while it was in flight, so it never made it into runs.log. Drop it to clean up; Retry won't find it.`}
+          primary={{ label: "Drop run", onClick: dismissResume }}
+          secondary={{ label: "Retry anyway", onClick: retryResume }}
+        />
+      ) : resumeError?.kind === "transient" ? (
         <StreamBanner
           kind="error"
-          title="Couldn't reach the server to resume this run."
-          detail={`Run ${activeRunId} · ${resumeError}`}
+          title={
+            resumeError.status
+              ? `Server returned ${resumeError.status} when resuming this run.`
+              : "Couldn't reach the server to resume this run."
+          }
+          detail={`Run ${activeRunId} · ${resumeError.message}`}
           primary={{ label: "Retry", onClick: retryResume }}
           secondary={{ label: "Drop run", onClick: dismissResume }}
         />
