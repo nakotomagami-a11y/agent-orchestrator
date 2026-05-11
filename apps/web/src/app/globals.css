@@ -1005,10 +1005,15 @@ body {
   from { background-position-x: 0; }
   to   { background-position-x: -1536px; }
 }
-.deco-bush       { animation: deco-bush       1.6s steps(8)  infinite; }
-.deco-water-rock { animation: deco-water-rock 1.6s steps(16) infinite; }
-.deco-duck       { animation: deco-duck       0.6s steps(3)  infinite; }
-.deco-tree       { animation: deco-tree       2.4s steps(8)  infinite; }
+@keyframes deco-cursed-chest {
+  from { background-position-x: 0; }
+  to   { background-position-x: -384px; }
+}
+.deco-bush         { animation: deco-bush         1.6s steps(8)  infinite; }
+.deco-water-rock   { animation: deco-water-rock   1.6s steps(16) infinite; }
+.deco-duck         { animation: deco-duck         0.6s steps(3)  infinite; }
+.deco-tree         { animation: deco-tree         2.4s steps(8)  infinite; }
+.deco-cursed-chest { animation: deco-cursed-chest 1.8s steps(6)  infinite; }
 
 /* Placed agents on the office floor — hover + drag affordance. */
 .placed-agent {
@@ -1029,8 +1034,10 @@ body {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
+  /* Solid-ish backdrop so the app behind doesn't bleed through —
+     mostly opaque with a subtle blur for depth. */
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1039,10 +1046,14 @@ body {
 .first-run-card {
   width: min(720px, 100%);
   max-height: 90vh;
-  background: var(--bg);
-  border: 1px solid var(--line);
+  /* Use the elevated surface token (the same one cards use) so the
+     wizard reads as a panel floating above the page in both themes.
+     Previously this referenced var(--bg) which doesn't exist — the
+     card rendered transparent. */
+  background: var(--bg-elev);
+  border: 1px solid var(--line-2);
   border-radius: 12px;
-  box-shadow: var(--shadow-2);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), 0 4px 12px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -47,6 +47,7 @@ export type DecoFamily =
   | "scarecrow"
   | "sheep"
   | "gold_mine"
+  | "cursed_chest"
   | "bridge";
 
 export type DecorationKind =
@@ -100,6 +101,7 @@ export type DecorationKind =
   | "gold_mine_active"
   | "gold_mine_inactive"
   | "gold_mine_destroyed"
+  | "cursed_chest"
   | "bridge_h"
   | "bridge_v";
 
@@ -312,6 +314,15 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/gold_mine_destroyed.png",
     frameW: 192, frameH: 128, frames: 1,
     terrain: "land", category: "buildings", family: "gold_mine",
+  },
+  // Cursed chest — animated 6×64×64. Treated as a "building" so it
+  // sits in the same toolbar group as houses and the mine.
+  cursed_chest: {
+    label: "Cursed chest",
+    src: "/decorations/cursed_chest.png",
+    frameW: 64, frameH: 64, frames: 6,
+    terrain: "land", category: "buildings", family: "cursed_chest",
+    animClass: "deco-cursed-chest",
   },
   tower: {
     label: "Tower",
