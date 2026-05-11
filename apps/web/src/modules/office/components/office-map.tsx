@@ -64,39 +64,50 @@ const T = {
  */
 type Picked = { tile: Coord; rotate?: 0 | 90 };
 
-function pickGrass(grid: boolean[][], x: number, y: number): Picked {
+/**
+ * Returns one or more visual layers for a cell. Most cells render as a
+ * single tile; the isolated case (all 4 sides water) stacks two `col_mid`
+ * tiles — one unrotated for L+R rims, one rotated 90° for T+B rims after
+ * rotation — so all four sides get a proper grass edge.
+ */
+function pickGrass(grid: boolean[][], x: number, y: number): Picked[] {
   const t = !grid[y - 1]?.[x];
   const b = !grid[y + 1]?.[x];
   const l = !grid[y]?.[x - 1];
   const r = !grid[y]?.[x + 1];
 
-  // 1-wide vertical (both left AND right empty).
+  // Isolated single tile — none of the available tiles has rims on all
+  // four sides, so layer two col_mid frames at 0° and 90°.
+  if (t && b && l && r) {
+    return [{ tile: T.col_mid }, { tile: T.col_mid, rotate: 90 }];
+  }
+
+  // 1-wide vertical (both left AND right empty, but not isolated).
   if (l && r) {
-    if (t && b) return { tile: T.col_mid }; // isolated — least-bad fallback
-    if (t) return { tile: T.col_top };
-    if (b) return { tile: T.col_bot };
-    return { tile: T.col_mid };
+    if (t) return [{ tile: T.col_top }];
+    if (b) return [{ tile: T.col_bot }];
+    return [{ tile: T.col_mid }];
   }
 
-  // 1-wide horizontal (both top AND bottom empty). The tileset doesn't
-  // ship dedicated horizontal caps so we rotate the vertical column
-  // variants 90° clockwise: col_top → right-cap, col_bot → left-cap,
-  // col_mid → horizontal middle.
+  // 1-wide horizontal (both top AND bottom empty). Tileset doesn't ship
+  // dedicated horizontal caps; rotate the vertical column variants 90°
+  // clockwise: col_top → right-cap, col_bot → left-cap, col_mid →
+  // horizontal middle.
   if (t && b) {
-    if (l) return { tile: T.col_bot, rotate: 90 };
-    if (r) return { tile: T.col_top, rotate: 90 };
-    return { tile: T.col_mid, rotate: 90 };
+    if (l) return [{ tile: T.col_bot, rotate: 90 }];
+    if (r) return [{ tile: T.col_top, rotate: 90 }];
+    return [{ tile: T.col_mid, rotate: 90 }];
   }
 
-  if (t && l) return { tile: T.lt_tl };
-  if (t && r) return { tile: T.lt_tr };
-  if (b && l) return { tile: T.lt_bl };
-  if (b && r) return { tile: T.lt_br };
-  if (t) return { tile: T.lt_t };
-  if (b) return { tile: T.lt_b };
-  if (l) return { tile: T.lt_l };
-  if (r) return { tile: T.lt_r };
-  return { tile: T.lt_m };
+  if (t && l) return [{ tile: T.lt_tl }];
+  if (t && r) return [{ tile: T.lt_tr }];
+  if (b && l) return [{ tile: T.lt_bl }];
+  if (b && r) return [{ tile: T.lt_br }];
+  if (t) return [{ tile: T.lt_t }];
+  if (b) return [{ tile: T.lt_b }];
+  if (l) return [{ tile: T.lt_l }];
+  if (r) return [{ tile: T.lt_r }];
+  return [{ tile: T.lt_m }];
 }
 
 function buildTiles(grid: boolean[][]): Placed[] {
@@ -105,14 +116,15 @@ function buildTiles(grid: boolean[][]): Placed[] {
     const row = grid[y]!;
     for (let x = 0; x < row.length; x++) {
       if (!row[x]) continue;
-      const picked = pickGrass(grid, x, y);
-      tiles.push({
-        x,
-        y,
-        c: picked.tile.c,
-        r: picked.tile.r,
-        rotate: picked.rotate,
-      });
+      for (const layer of pickGrass(grid, x, y)) {
+        tiles.push({
+          x,
+          y,
+          c: layer.tile.c,
+          r: layer.tile.r,
+          rotate: layer.rotate,
+        });
+      }
     }
   }
   return tiles;
