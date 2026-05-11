@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgent, useAgentBody } from "@/modules/agents/hooks/use-agents";
@@ -16,6 +17,7 @@ export function SettingsTab({
   onAfterSave: () => void;
   onAfterDelete: () => void;
 }) {
+  const t = useTranslations();
   const agentQ = useAgent(agentId);
   const bodyQ = useAgentBody(agentId);
   const qc = useQueryClient();
@@ -30,7 +32,7 @@ export function SettingsTab({
   if (!agentQ.data) {
     return (
       <div className="tab-pane" style={{ padding: 18, fontSize: 13, color: "var(--txt-3)" }}>
-        Couldn&apos;t load agent definition.
+        {t("agent_details.settings_load_failed")}
       </div>
     );
   }

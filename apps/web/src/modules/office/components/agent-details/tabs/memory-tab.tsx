@@ -1,10 +1,12 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MemoryEditor } from "@/modules/memory/components/memory-editor";
 import { useAgentMemory, useWriteAgentMemory } from "@/modules/agents/hooks/use-agents";
 
 export function MemoryTab({ agentId }: { agentId: string }) {
+  const t = useTranslations();
   const memQ = useAgentMemory(agentId);
   const writeMem = useWriteAgentMemory();
 
@@ -20,15 +22,15 @@ export function MemoryTab({ agentId }: { agentId: string }) {
     <div className="tab-pane" style={{ padding: 18, overflow: "auto" }}>
       <div className="card">
         <div className="card-h">
-          <span className="title">Memory</span>
-          <span className="sub">facts this agent carries into every conversation</span>
+          <span className="title">{t("agent_details.memory_card_title")}</span>
+          <span className="sub">{t("agent_details.memory_card_sub")}</span>
         </div>
         <div style={{ padding: 14 }}>
           <MemoryEditor
             value={memQ.data ?? ""}
             onSave={(content) => writeMem.mutateAsync({ id: agentId, content })}
             rows={16}
-            placeholder={"preferences:\n  prefers pnpm over npm\n\nteam_voice:\n  conventional commits"}
+            placeholder={t("agent_details.memory_tab_placeholder")}
           />
         </div>
       </div>

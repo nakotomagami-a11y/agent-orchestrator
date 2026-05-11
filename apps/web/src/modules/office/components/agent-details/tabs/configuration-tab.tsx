@@ -1,25 +1,27 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { OfficeAgent } from "../../../hooks/use-office-agents";
 
 export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
+  const t = useTranslations();
   return (
     <div className="tab-pane" style={{ padding: 18, overflow: "auto" }}>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <ConfigCard title="Identity">
-          <Row k="Name" v={agent.name} />
-          <Row k="ID" v={agent.id} mono />
-          <Row k="Description" v={agent.description || "—"} />
-          <Row k="Room" v={agent.room ?? "—"} />
+        <ConfigCard title={t("agent_details.config_identity")}>
+          <Row k={t("agent_details.config_row_name")} v={agent.name} />
+          <Row k={t("agent_details.config_row_id")} v={agent.id} mono />
+          <Row k={t("agent_details.config_row_description")} v={agent.description || t("agent_details.config_value_empty")} />
+          <Row k={t("agent_details.config_row_room")} v={agent.room ?? t("agent_details.config_value_empty")} />
         </ConfigCard>
-        <ConfigCard title="Model & runtime">
-          <Row k="Model" v={agent.defaultModel ?? "default"} mono />
-          <Row k="Effort" v={agent.defaultEffort ?? "default"} mono />
-          <Row k="Permission" v={agent.permissionMode ?? "ask"} mono />
+        <ConfigCard title={t("agent_details.config_model_runtime")}>
+          <Row k={t("agent_details.config_row_model")} v={agent.defaultModel ?? t("agent_details.config_value_default")} mono />
+          <Row k={t("agent_details.config_row_effort")} v={agent.defaultEffort ?? t("agent_details.config_value_default")} mono />
+          <Row k={t("agent_details.config_row_permission")} v={agent.permissionMode ?? t("agent_details.config_value_ask")} mono />
         </ConfigCard>
-        <ConfigCard title={`Skills (${agent.skills.length})`}>
+        <ConfigCard title={t("agent_details.config_skills_card", { count: agent.skills.length })}>
           {agent.skills.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--txt-3)" }}>none</div>
+            <div style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("agent_details.config_value_none")}</div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {agent.skills.map((s) => (
@@ -28,9 +30,9 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
             </div>
           )}
         </ConfigCard>
-        <ConfigCard title={`Tools allowed (${agent.tools.length})`}>
+        <ConfigCard title={t("agent_details.config_tools_card", { count: agent.tools.length })}>
           {agent.tools.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--txt-3)" }}>none</div>
+            <div style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("agent_details.config_value_none")}</div>
           ) : (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {agent.tools.map((s) => (
@@ -40,19 +42,19 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
           )}
         </ConfigCard>
         <div style={{ gridColumn: "1 / -1" }}>
-          <ConfigCard title="Permissions" sub="workspace policy applies">
-            <PermissionRow label="Read repository files" state="allowed" />
+          <ConfigCard title={t("agent_details.config_permissions")} sub={t("agent_details.config_permissions_sub")}>
+            <PermissionRow label={t("agent_details.perm_read_files")} state="allowed" />
             <PermissionRow
-              label="Edit files"
+              label={t("agent_details.perm_edit_files")}
               state={agent.tools.includes("Edit") || agent.tools.includes("Write") ? "allowed" : "denied"}
             />
             <PermissionRow
-              label="Run bash commands"
+              label={t("agent_details.perm_run_bash")}
               state={agent.tools.includes("Bash") ? "ask" : "denied"}
-              note="will prompt for destructive commands"
+              note={t("agent_details.perm_note_bash")}
             />
             <PermissionRow
-              label="Open URLs (web)"
+              label={t("agent_details.perm_open_urls")}
               state={
                 agent.tools.includes("WebFetch") || agent.tools.includes("WebSearch")
                   ? "allowed"

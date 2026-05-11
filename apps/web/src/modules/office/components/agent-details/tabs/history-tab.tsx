@@ -1,12 +1,25 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 
 export function HistoryTab({ agentId }: { agentId: string }) {
+  const t = useTranslations();
   const runsQ = useRuns({ agentId, limit: 50 });
   const runs = runsQ.data ?? [];
   const totalCost = runs.reduce((s, r) => s + (r.cost || 0), 0);
+
+  const relTime = (ts: number): string => {
+    const diff = Date.now() - ts;
+    const m = Math.round(diff / 60000);
+    if (m < 1) return t("agent_details.history_rel_just_now");
+    if (m < 60) return t("agent_details.history_rel_minutes", { n: m });
+    const h = Math.round(m / 60);
+    if (h < 24) return t("agent_details.history_rel_hours", { n: h });
+    const d = Math.round(h / 24);
+    return t("agent_details.history_rel_days", { n: d });
+  };
 
   if (runsQ.isLoading) {
     return (
@@ -20,32 +33,32 @@ export function HistoryTab({ agentId }: { agentId: string }) {
     <div className="tab-pane" style={{ padding: 18, overflow: "auto" }}>
       <div className="card">
         <div className="card-h">
-          <span className="title">History</span>
+          <span className="title">{t("agent_details.history_card_title")}</span>
           <span className="sub">
-            {runs.length} run{runs.length === 1 ? "" : "s"} · ${totalCost.toFixed(3)} total
+            {t("agent_details.history_card_sub", { count: runs.length, total: totalCost.toFixed(3) })}
           </span>
         </div>
         {runs.length === 0 ? (
           <div style={{ padding: 18, fontSize: 13, color: "var(--txt-3)" }}>
-            No runs yet — start a conversation in the Conversation tab.
+            {t("agent_details.history_empty")}
           </div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
             <thead>
               <tr style={{ background: "var(--bg-2)", color: "var(--txt-3)" }}>
-                <th style={TH}>Run</th>
-                <th style={TH}>Prompt</th>
-                <th style={TH}>When</th>
-                <th style={TH}>Duration</th>
-                <th style={TH}>Tokens</th>
-                <th style={TH}>Cost</th>
-                <th style={TH}>Outcome</th>
+                <th style={TH}>{t("agent_details.history_col_run")}</th>
+                <th style={TH}>{t("agent_details.history_col_prompt")}</th>
+                <th style={TH}>{t("agent_details.history_col_when")}</th>
+                <th style={TH}>{t("agent_details.history_col_duration")}</th>
+                <th style={TH}>{t("agent_details.history_col_tokens")}</th>
+                <th style={TH}>{t("agent_details.history_col_cost")}</th>
+                <th style={TH}>{t("agent_details.history_col_outcome")}</th>
               </tr>
             </thead>
             <tbody>
               {runs.map((r) => {
-                const outcome = r.status === "done" ? "completed" : r.status;
-                const ok = outcome === "completed";
+                const outcome = r.status === "done" ? t("agent_details.history_outcome_completed") : r.status;
+                const ok = r.status === "done";
                 return (
                   <tr key={r.id} style={{ borderBottom: "1px solid var(--line)" }}>
                     <td style={TD_MONO}>{r.id.slice(0, 8)}</td>
@@ -98,15 +111,4 @@ const TD_MONO: React.CSSProperties = { ...TD, fontFamily: "var(--font-mono)", fo
 
 function trim(s: string, n: number) {
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
-}
-
-function relTime(ts: number): string {
-  const diff = Date.now() - ts;
-  const m = Math.round(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.round(h / 24);
-  return `${d}d ago`;
 }
