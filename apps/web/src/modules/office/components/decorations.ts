@@ -21,6 +21,24 @@
 export type Terrain = "land" | "water";
 export type DecoCategory = "land" | "buildings" | "water";
 
+/**
+ * Logical group a decoration belongs to. Each cell may hold at most one
+ * decoration per family — so 4 bush variants share family "bush", and
+ * placing bush2 on a cell that already has bush1 replaces it.
+ * Different-family decorations stack freely (bush + tree + rock all in
+ * the same cell is fine).
+ */
+export type DecoFamily =
+  | "bush"
+  | "rock"
+  | "tree"
+  | "stump"
+  | "house"
+  | "tower"
+  | "castle"
+  | "water_rock"
+  | "duck";
+
 export type DecorationKind =
   | "bush"
   | "bush2"
@@ -57,16 +75,12 @@ export interface DecorationDef {
   frames: number;
   terrain: Terrain;
   category: DecoCategory;
+  /** Placement uniqueness key — at most one decoration of each family
+   *  may occupy a cell. Variants of the same kind (bush1..bush4) share
+   *  a family so e.g. bush2 replaces bush1 at the same cell rather than
+   *  stacking two bushes. */
+  family: DecoFamily;
   animClass?: string;
-  /**
-   * When true, this decoration is a small "overlay" sprite that's allowed
-   * to coexist with any other decoration in the same cell — bushes and
-   * small rocks specifically. Cells may hold any number of overlays plus
-   * at most one non-overlay ("solid") decoration. When false (default),
-   * placing the decoration replaces any other solid at the cell while
-   * leaving overlays untouched.
-   */
-  overlay?: boolean;
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -75,25 +89,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Bush 1",
     src: "/decorations/bush.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
+    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
   },
   bush2: {
     label: "Bush 2",
     src: "/decorations/bush2.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
+    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
   },
   bush3: {
     label: "Bush 3",
     src: "/decorations/bush3.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
+    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
   },
   bush4: {
     label: "Bush 4",
     src: "/decorations/bush4.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-bush", overlay: true,
+    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
   },
 
   // ─ Rocks (static, 64×64) — overlays, coexist with anything ─────────
@@ -101,25 +115,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Rock 1",
     src: "/decorations/rock.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land", overlay: true,
+    terrain: "land", category: "land", family: "rock",
   },
   rock2: {
     label: "Rock 2",
     src: "/decorations/rock2.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land", overlay: true,
+    terrain: "land", category: "land", family: "rock",
   },
   rock3: {
     label: "Rock 3",
     src: "/decorations/rock3.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land", overlay: true,
+    terrain: "land", category: "land", family: "rock",
   },
   rock4: {
     label: "Rock 4",
     src: "/decorations/rock4.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land", overlay: true,
+    terrain: "land", category: "land", family: "rock",
   },
 
   // ─ Stumps (static, 192×256) ─────────────────────────────────────────
@@ -127,25 +141,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Stump 1",
     src: "/decorations/stump1.png",
     frameW: 192, frameH: 256, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", family: "stump",
   },
   stump2: {
     label: "Stump 2",
     src: "/decorations/stump2.png",
     frameW: 192, frameH: 256, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", family: "stump",
   },
   stump3: {
     label: "Stump 3",
     src: "/decorations/stump3.png",
     frameW: 192, frameH: 256, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", family: "stump",
   },
   stump4: {
     label: "Stump 4",
     src: "/decorations/stump4.png",
     frameW: 192, frameH: 256, frames: 1,
-    terrain: "land", category: "land",
+    terrain: "land", category: "land", family: "stump",
   },
 
   // ─ Trees (8 frames, animated sway). Tree1/Tree2 are taller (192×256
@@ -155,25 +169,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Tree 1",
     src: "/decorations/tree.png",
     frameW: 192, frameH: 256, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
   },
   tree2: {
     label: "Tree 2",
     src: "/decorations/tree2.png",
     frameW: 192, frameH: 256, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
   },
   tree3: {
     label: "Tree 3",
     src: "/decorations/tree3.png",
     frameW: 192, frameH: 192, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
   },
   tree4: {
     label: "Tree 4",
     src: "/decorations/tree4.png",
     frameW: 192, frameH: 192, frames: 8,
-    terrain: "land", category: "land", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
   },
 
   // ─ Buildings (static). Houses are 128×192; tower 128×256; castle
@@ -183,31 +197,31 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "House 1",
     src: "/decorations/house1.png",
     frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings",
+    terrain: "land", category: "buildings", family: "house",
   },
   house2: {
     label: "House 2",
     src: "/decorations/house2.png",
     frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings",
+    terrain: "land", category: "buildings", family: "house",
   },
   house3: {
     label: "House 3",
     src: "/decorations/house3.png",
     frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings",
+    terrain: "land", category: "buildings", family: "house",
   },
   tower: {
     label: "Tower",
     src: "/decorations/tower.png",
     frameW: 128, frameH: 256, frames: 1,
-    terrain: "land", category: "buildings",
+    terrain: "land", category: "buildings", family: "tower",
   },
   castle: {
     label: "Castle",
     src: "/decorations/castle.png",
     frameW: 320, frameH: 256, frames: 1,
-    terrain: "land", category: "buildings",
+    terrain: "land", category: "buildings", family: "castle",
   },
 
   // ─ Water rocks (16 frames × 64×64, bobs in time with foam) ─────────
@@ -215,25 +229,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Water rock 1",
     src: "/decorations/water-rock.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
   },
   water_rock2: {
     label: "Water rock 2",
     src: "/decorations/water-rock2.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
   },
   water_rock3: {
     label: "Water rock 3",
     src: "/decorations/water-rock3.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
   },
   water_rock4: {
     label: "Water rock 4",
     src: "/decorations/water-rock4.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
   },
 
   // ─ Duck (3 frames × 32×32, quick wobble) ────────────────────────────
@@ -241,7 +255,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Duck",
     src: "/decorations/duck.png",
     frameW: 32, frameH: 32, frames: 3,
-    terrain: "water", category: "water", animClass: "deco-duck",
+    terrain: "water", category: "water", family: "duck", animClass: "deco-duck",
   },
 };
 
@@ -270,32 +284,33 @@ export function isPlacementValid(kind: DecorationKind, cellHasGrass: boolean): b
   return DECORATIONS[kind].terrain === (cellHasGrass ? "land" : "water");
 }
 
-export function isOverlay(kind: DecorationKind): boolean {
-  return DECORATIONS[kind].overlay === true;
+export function familyOf(kind: DecorationKind): DecoFamily {
+  return DECORATIONS[kind].family;
 }
 
 /**
  * Apply a single placement to a cell's stack, returning the new stack.
  *
- *   - Overlays append (skipping exact-kind duplicates).
- *   - Solids replace any existing solid at the cell, keeping overlays.
+ *   - If the cell already has a decoration of the same family, replace
+ *     it in-place (preserves stack order).
+ *   - Otherwise append to the end.
+ *   - Exact-same-kind placement is a no-op (the returned stack is the
+ *     same reference as `existing`).
  *
- * `existing` may be undefined for empty cells. The returned array is
- * always non-empty after a successful placement.
+ * `existing` may be undefined for empty cells.
  */
 export function applyPlacement(
   existing: DecorationKind[] | undefined,
   next: DecorationKind,
 ): DecorationKind[] {
-  const stack = existing ? [...existing] : [];
-  if (isOverlay(next)) {
-    if (stack.includes(next)) return stack; // already there — no-op
-    // Solids stay first in the stack so they paint behind overlays.
-    return [...stack, next];
-  }
-  // Solid: remove any existing solid, keep overlays, put new solid first.
-  const overlays = stack.filter((k) => isOverlay(k));
-  return [next, ...overlays];
+  if (!existing || existing.length === 0) return [next];
+  const family = familyOf(next);
+  const idx = existing.findIndex((k) => familyOf(k) === family);
+  if (idx === -1) return [...existing, next];
+  if (existing[idx] === next) return existing; // no-op — already exactly that
+  const out = [...existing];
+  out[idx] = next;
+  return out;
 }
 
 /**

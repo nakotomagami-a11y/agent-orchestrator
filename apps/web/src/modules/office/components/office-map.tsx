@@ -273,9 +273,9 @@ export type OfficeMapProps = {
  * green/red hover tint in build mode.
  *
  * Decoration placement: invalid if the tool's terrain doesn't match the
- * cell. Otherwise valid even if the cell already has something — solids
- * replace any existing solid; overlays append (unless the exact same
- * kind is already in the stack, in which case it's a no-op = invalid).
+ * cell, or if the exact same kind is already in the stack (would be a
+ * no-op). Different variants of the same family are valid — they
+ * replace the existing family member in place.
  */
 function isToolValidAt(
   tool: BuildTool,
@@ -289,8 +289,7 @@ function isToolValidAt(
   if (tool === "grass") return !cellHasGrass;
   if (tool === "erase") return cellHasGrass || (stack !== undefined && stack.length > 0);
   if (!isPlacementValid(tool, cellHasGrass)) return false;
-  // Already-present exact duplicate of an overlay is a no-op.
-  if (DECORATIONS[tool].overlay && stack?.includes(tool)) return false;
+  if (stack?.includes(tool)) return false; // already exactly that kind
   return true;
 }
 
