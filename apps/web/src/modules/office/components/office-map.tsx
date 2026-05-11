@@ -4,6 +4,7 @@ import { useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import {
+  BRIDGE_CAPS,
   DECORATIONS,
   decorationKey,
   familyOf,
@@ -338,6 +339,35 @@ export function OfficeMap({
     return stack.map((kind, layer) => ({ x, y, kind, layer }));
   }).sort((a, b) => a.y - b.y || a.layer - b.layer);
 
+  // Auto-rendered bridge end-caps. For every placed bridge middle, paint
+  // the matching cap on any neighbouring land cell — left/right for a
+  // horizontal bridge, top/bottom for a vertical one. Caps are not
+  // placeable decorations; they live entirely at render time so the
+  // user's build palette only exposes the middle plank.
+  //
+  // The cap art has transparent padding on the side that connects to
+  // the bridge, so painting the full 64×64 tile over the land cell only
+  // covers the half that meets the bridge — the rest of the land tile
+  // (and any decorations on it) shows through.
+  const isLand = (cx: number, cy: number): boolean => grid[cy]?.[cx] === true;
+  const bridgeCaps: Array<{ x: number; y: number; src: string }> = [];
+  for (const [key, stack] of Object.entries(decorations)) {
+    if (!stack.some((k) => familyOf(k) === "bridge")) continue;
+    const [xs, ys] = key.split(",");
+    const x = Number(xs);
+    const y = Number(ys);
+    const hasH = stack.includes("bridge_h");
+    const hasV = stack.includes("bridge_v");
+    if (hasH) {
+      if (isLand(x - 1, y)) bridgeCaps.push({ x: x - 1, y, src: BRIDGE_CAPS.h_l.src });
+      if (isLand(x + 1, y)) bridgeCaps.push({ x: x + 1, y, src: BRIDGE_CAPS.h_r.src });
+    }
+    if (hasV) {
+      if (isLand(x, y - 1)) bridgeCaps.push({ x, y: y - 1, src: BRIDGE_CAPS.v_t.src });
+      if (isLand(x, y + 1)) bridgeCaps.push({ x, y: y + 1, src: BRIDGE_CAPS.v_b.src });
+    }
+  }
+
   // Build a hover-preview decoration when the user is hovering a cell
   // with a decoration tool armed. Rendered with reduced opacity and a
   // green or red drop-shadow depending on placement validity.
@@ -412,6 +442,28 @@ export function OfficeMap({
           />
         );
       })}
+      {/* Auto bridge end-caps. Painted after the regular decoration pass
+          so they overlay any land decorations on the cap cell. They live
+          on land tiles adjacent to a placed bridge middle, with the
+          transparent half of the sprite facing away from the bridge. */}
+      {bridgeCaps.map((cap, i) => (
+        <div
+          key={`bridge-cap-${i}-${cap.x}-${cap.y}`}
+          aria-hidden
+          style={{
+            position: "absolute",
+            left: cap.x * TILE,
+            top: cap.y * TILE,
+            width: TILE,
+            height: TILE,
+            backgroundImage: `url(${cap.src})`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "0 0",
+            imageRendering: "pixelated",
+            pointerEvents: "none",
+          }}
+        />
+      ))}
       {/* Placed agents — sorted by y so lower rows draw on top of higher
           rows for natural depth. Skips any ref whose agent isn't in the
           current catalog (e.g. deleted agent, project switched and the

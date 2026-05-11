@@ -68,6 +68,24 @@ function loadGrid(): boolean[][] {
   return makeSeedGrid();
 }
 
+// Renamed/removed bridge kinds get rewritten on load. The four cap kinds
+// (bridge_h_l/r, bridge_v_t/b) are no longer placeable — caps now auto-
+// paint on adjacent land cells — so any persisted cap drops silently.
+// The middle kinds got shorter names: bridge_h_m → bridge_h, _v_m → _v.
+const KIND_MIGRATIONS: Record<string, DecorationKind | null> = {
+  bridge_h_m: "bridge_h",
+  bridge_v_m: "bridge_v",
+  bridge_h_l: null,
+  bridge_h_r: null,
+  bridge_v_t: null,
+  bridge_v_b: null,
+};
+
+function migrateKind(raw: string): DecorationKind | null {
+  if (raw in KIND_MIGRATIONS) return KIND_MIGRATIONS[raw]!;
+  return raw in DECORATIONS ? (raw as DecorationKind) : null;
+}
+
 function loadDecorations(): DecorationsMap {
   if (typeof window === "undefined") return {};
   try {
@@ -78,15 +96,19 @@ function loadDecorations(): DecorationsMap {
       const out: DecorationsMap = {};
       for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
         // Old shape (pre-stacking): single string per cell. Wrap it.
-        if (typeof value === "string" && value in DECORATIONS) {
-          out[key] = [value as DecorationKind];
+        if (typeof value === "string") {
+          const migrated = migrateKind(value);
+          if (migrated) out[key] = [migrated];
           continue;
         }
         // New shape: ordered array of kinds.
         if (Array.isArray(value)) {
-          const arr = value.filter(
-            (v): v is DecorationKind => typeof v === "string" && v in DECORATIONS,
-          );
+          const arr: DecorationKind[] = [];
+          for (const v of value) {
+            if (typeof v !== "string") continue;
+            const migrated = migrateKind(v);
+            if (migrated) arr.push(migrated);
+          }
           if (arr.length > 0) out[key] = arr;
         }
       }

@@ -89,12 +89,8 @@ export type DecorationKind =
   | "bone_sign"
   | "gravestone"
   | "scarecrow"
-  | "bridge_h_l"
-  | "bridge_h_m"
-  | "bridge_h_r"
-  | "bridge_v_t"
-  | "bridge_v_m"
-  | "bridge_v_b";
+  | "bridge_h"
+  | "bridge_v";
 
 export interface DecorationDef {
   label: string;
@@ -389,48 +385,44 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     terrain: "land", category: "land", family: "scarecrow",
   },
 
-  // ─ Bridges (static 64×64, water-only). Six variants compose
-  //   horizontal and vertical bridges across water. End caps + middle
-  //   pieces — players tile them end-to-end on water cells to bridge
-  //   across to land. All share the "bridge" family so a cell can hold
-  //   at most one bridge tile. ─────────────────────────────────────────
-  bridge_h_l: {
-    label: "Bridge — horizontal (left)",
-    src: "/decorations/bridge-h-l.png",
-    frameW: 64, frameH: 64, frames: 1,
-    terrain: "water", category: "water", family: "bridge",
-  },
-  bridge_h_m: {
-    label: "Bridge — horizontal (middle)",
+  // ─ Bridges (static 64×64, water-only). Only the middle plank is
+  //   player-placeable — the matching end caps are painted
+  //   automatically by OfficeMap onto neighbouring land cells, so the
+  //   bridge always meets land cleanly without forcing the user to
+  //   place caps manually. Single "bridge" family per cell. ────────────
+  bridge_h: {
+    label: "Bridge — horizontal",
     src: "/decorations/bridge-h-m.png",
     frameW: 64, frameH: 64, frames: 1,
     terrain: "water", category: "water", family: "bridge",
   },
-  bridge_h_r: {
-    label: "Bridge — horizontal (right)",
-    src: "/decorations/bridge-h-r.png",
-    frameW: 64, frameH: 64, frames: 1,
-    terrain: "water", category: "water", family: "bridge",
-  },
-  bridge_v_t: {
-    label: "Bridge — vertical (top)",
-    src: "/decorations/bridge-v-t.png",
-    frameW: 64, frameH: 64, frames: 1,
-    terrain: "water", category: "water", family: "bridge",
-  },
-  bridge_v_m: {
-    label: "Bridge — vertical (middle)",
+  bridge_v: {
+    label: "Bridge — vertical",
     src: "/decorations/bridge-v-m.png",
     frameW: 64, frameH: 64, frames: 1,
     terrain: "water", category: "water", family: "bridge",
   },
-  bridge_v_b: {
-    label: "Bridge — vertical (bottom)",
-    src: "/decorations/bridge-v-b.png",
-    frameW: 64, frameH: 64, frames: 1,
-    terrain: "water", category: "water", family: "bridge",
-  },
 };
+
+/**
+ * Auto-rendered bridge end-cap sprites. These are NOT placeable
+ * decorations — OfficeMap paints them on land cells that touch a
+ * placed `bridge_h` / `bridge_v` middle tile, so the bridge always
+ * "lands" with a proper end-piece without the user having to manage
+ * caps in the build palette.
+ *
+ * Each entry is a 64×64 PNG; the sprite art already has transparent
+ * padding on the side that connects to the bridge middle (left half
+ * for the LEFT cap, right half for the RIGHT cap, etc.), so painting
+ * the full tile on top of a land cell only covers the half that
+ * meets the bridge.
+ */
+export const BRIDGE_CAPS = {
+  h_l: { src: "/decorations/bridge-h-l.png", frameW: 64, frameH: 64 },
+  h_r: { src: "/decorations/bridge-h-r.png", frameW: 64, frameH: 64 },
+  v_t: { src: "/decorations/bridge-v-t.png", frameW: 64, frameH: 64 },
+  v_b: { src: "/decorations/bridge-v-b.png", frameW: 64, frameH: 64 },
+} as const;
 
 export const DECORATION_KINDS: DecorationKind[] = Object.keys(DECORATIONS) as DecorationKind[];
 
