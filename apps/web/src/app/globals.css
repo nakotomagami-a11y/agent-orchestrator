@@ -986,3 +986,26 @@ body {
 .water-foam {
   animation: water-foam 1.6s steps(16) infinite;
 }
+
+/* Decoration animations. Each cycles through the sprite sheet's frames
+   via background-position-x, with steps() to snap between frames. */
+@keyframes deco-bush {
+  from { background-position-x: 0; }
+  to   { background-position-x: -1024px; }
+}
+@keyframes deco-water-rock {
+  from { background-position-x: 0; }
+  to   { background-position-x: -1024px; }
+}
+@keyframes deco-duck {
+  from { background-position-x: 0; }
+  to   { background-position-x: -96px; }
+}
+@keyframes deco-tree {
+  from { background-position-x: 0; }
+  to   { background-position-x: -1536px; }
+}
+.deco-bush       { animation: deco-bush       1.6s steps(8)  infinite; }
+.deco-water-rock { animation: deco-water-rock 1.6s steps(16) infinite; }
+.deco-duck       { animation: deco-duck       0.6s steps(3)  infinite; }
+.deco-tree       { animation: deco-tree       2.4s steps(8)  infinite; }

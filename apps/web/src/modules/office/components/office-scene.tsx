@@ -3,29 +3,33 @@
 import { useCallback, useEffect, useState } from "react";
 import { OfficeMap } from "./office-map";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
+import {
+  DECORATIONS,
+  decorationKey,
+  isPlacementValid,
+  type DecorationKind,
+  type DecorationsMap,
+} from "./decorations";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
- * tile grid + the builder UI state.
+ * tile grid + decorations map + builder UI state.
  *
- * The grid is a fixed 16×10 cells (large enough for a comfortable island
- * with breathing room around it). Each cell is either grass-present or
- * empty; the auto-tile picker inside OfficeMap chooses the right
- * rim/interior tile for each grass cell. Builder mode swaps the map's
- * pointer-events on and overlays clickable cells; clicking flips a cell
- * to whatever the selected tool says.
+ * Both grid and decorations persist to localStorage on every edit so the
+ * user's build survives refreshes. Decoration placement is gated by
+ * terrain: land decorations (bush, rock, tree) only on grass cells,
+ * water decorations (water rock, duck) only on water cells. Mismatched
+ * clicks are no-ops so the user can tell the wrong tool is selected.
  *
- * Grid persists to localStorage on every edit so the user's build
- * survives refreshes. The first session loads the seed island; subsequent
- * sessions load whatever the user last saved.
+ * Erase: removes a decoration first if one is present, otherwise clears
+ * the terrain. Two clicks fully empty a decorated grass cell.
  */
 
 const GRID_COLS = 16;
 const GRID_ROWS = 10;
-const STORAGE_KEY = "agent-office:office-grid:v1";
+const GRID_STORAGE_KEY = "agent-office:office-grid:v1";
+const DECO_STORAGE_KEY = "agent-office:office-decorations:v1";
 
-// Initial island shape from the previous static layout, centred in the
-// new larger editable grid.
 const INITIAL_ISLAND = [
   "..XXXXXXXX..",
   ".XXXXXXXXXX.",
@@ -46,23 +50,16 @@ function makeSeedGrid(): boolean[][] {
   for (let y = 0; y < INITIAL_ISLAND.length; y++) {
     const row = INITIAL_ISLAND[y]!;
     for (let x = 0; x < row.length; x++) {
-      const ch = row[x];
-      grid[y + ISLAND_OFFSET_Y]![x + ISLAND_OFFSET_X] = ch === "X";
+      grid[y + ISLAND_OFFSET_Y]![x + ISLAND_OFFSET_X] = row[x] === "X";
     }
   }
   return grid;
 }
 
-/**
- * Read the persisted grid from localStorage, falling back to the seed
- * island if nothing is stored or the stored shape doesn't match the
- * current grid dimensions (defensive against schema changes — e.g. if we
- * later widen the grid, an old saved state shouldn't crash the loader).
- */
 function loadGrid(): boolean[][] {
   if (typeof window === "undefined") return makeSeedGrid();
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(GRID_STORAGE_KEY);
     if (!raw) return makeSeedGrid();
     const parsed = JSON.parse(raw) as unknown;
     if (
@@ -78,37 +75,109 @@ function loadGrid(): boolean[][] {
       return parsed;
     }
   } catch {
-    /* fall through to seed */
+    /* fall through */
   }
   return makeSeedGrid();
 }
 
+function loadDecorations(): DecorationsMap {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(DECO_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      const out: DecorationsMap = {};
+      for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+        if (typeof value === "string" && value in DECORATIONS) {
+          out[key] = value as DecorationKind;
+        }
+      }
+      return out;
+    }
+  } catch {
+    /* fall through */
+  }
+  return {};
+}
+
 export function OfficeScene() {
   const [grid, setGrid] = useState<boolean[][]>(() => loadGrid());
+  const [decorations, setDecorations] = useState<DecorationsMap>(() => loadDecorations());
   const [buildMode, setBuildMode] = useState(false);
   const [tool, setTool] = useState<BuildTool>("grass");
 
-  // Write-through to localStorage whenever the grid changes. Skipped on
-  // SSR (no window) and silently swallows quota errors — persistence is
-  // best-effort, never the reason a click fails.
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(grid));
+      window.localStorage.setItem(GRID_STORAGE_KEY, JSON.stringify(grid));
     } catch {
       /* best-effort */
     }
   }, [grid]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(DECO_STORAGE_KEY, JSON.stringify(decorations));
+    } catch {
+      /* best-effort */
+    }
+  }, [decorations]);
+
   const onCellClick = useCallback(
     (x: number, y: number) => {
-      setGrid((prev) => {
-        const next = prev.map((row) => [...row]);
-        next[y]![x] = tool === "grass";
-        return next;
-      });
+      const key = decorationKey(x, y);
+      const cellHasGrass = grid[y]?.[x] === true;
+
+      if (tool === "grass") {
+        if (cellHasGrass) return;
+        setGrid((prev) => {
+          const next = prev.map((row) => [...row]);
+          next[y]![x] = true;
+          return next;
+        });
+        // Defensive: if a water decoration was somehow on this cell (only
+        // possible across schema changes), clear it.
+        setDecorations((prev) => {
+          const existing = prev[key];
+          if (existing && DECORATIONS[existing].terrain === "water") {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          }
+          return prev;
+        });
+        return;
+      }
+
+      if (tool === "erase") {
+        // Decoration first, terrain second — two clicks to fully clear a
+        // decorated grass cell.
+        if (decorations[key]) {
+          setDecorations((prev) => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+          return;
+        }
+        if (cellHasGrass) {
+          setGrid((prev) => {
+            const next = prev.map((row) => [...row]);
+            next[y]![x] = false;
+            return next;
+          });
+        }
+        return;
+      }
+
+      // Decoration tool: validate against current terrain. Mismatched
+      // clicks are no-ops so the user can see the wrong tool is selected.
+      if (!isPlacementValid(tool, cellHasGrass)) return;
+      setDecorations((prev) => ({ ...prev, [key]: tool }));
     },
-    [tool],
+    [grid, decorations, tool],
   );
 
   return (
@@ -127,7 +196,12 @@ export function OfficeScene() {
         overflow: "hidden",
       }}
     >
-      <OfficeMap grid={grid} editable={buildMode} onCellClick={onCellClick} />
+      <OfficeMap
+        grid={grid}
+        decorations={decorations}
+        editable={buildMode}
+        onCellClick={onCellClick}
+      />
       <OfficeBuildToolbar
         active={buildMode}
         tool={tool}

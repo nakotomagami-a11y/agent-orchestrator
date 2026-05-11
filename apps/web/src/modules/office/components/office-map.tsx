@@ -1,5 +1,7 @@
 "use client";
 
+import { DECORATIONS, decorationKey, type DecorationsMap } from "./decorations";
+
 /**
  * Grass island for the office view. Layout is data-driven: a 2D boolean
  * grid says where grass is, an auto-tile picker selects the right
@@ -230,17 +232,32 @@ function tileStyle(t: Placed): React.CSSProperties {
 
 export type OfficeMapProps = {
   grid: boolean[][];
+  decorations: DecorationsMap;
   /** When true, render a clickable cell overlay so the builder can edit. */
   editable?: boolean;
   /** Called with grid coords when the user clicks a cell in editable mode. */
   onCellClick?: (x: number, y: number) => void;
 };
 
-export function OfficeMap({ grid, editable = false, onCellClick }: OfficeMapProps) {
+export function OfficeMap({
+  grid,
+  decorations,
+  editable = false,
+  onCellClick,
+}: OfficeMapProps) {
   const cols = grid[0]?.length ?? 0;
   const rows = grid.length;
   const tiles = buildTiles(grid);
   const foam = buildFoam(grid);
+
+  // Sort decorations by their cell Y so lower rows draw on top of higher
+  // rows — gives natural depth-stacking for tall sprites like trees.
+  const decoList = Object.entries(decorations)
+    .map(([key, kind]) => {
+      const [xs, ys] = key.split(",");
+      return { x: Number(xs), y: Number(ys), kind };
+    })
+    .sort((a, b) => a.y - b.y);
 
   return (
     <div
@@ -269,6 +286,33 @@ export function OfficeMap({ grid, editable = false, onCellClick }: OfficeMapProp
       {tiles.map((t, i) => (
         <div key={`tile-${i}`} style={tileStyle(t)} />
       ))}
+      {decoList.map((d) => {
+        const def = DECORATIONS[d.kind];
+        // Anchor at bottom-centre of the cell: the decoration's bottom
+        // edge aligns with the cell's bottom edge, horizontally centred.
+        // Tall sprites (trees) extend upward into adjacent cells.
+        const left = d.x * TILE + (TILE - def.frameW) / 2;
+        const top = (d.y + 1) * TILE - def.frameH;
+        return (
+          <div
+            key={`deco-${decorationKey(d.x, d.y)}`}
+            className={def.animClass}
+            aria-label={def.label}
+            style={{
+              position: "absolute",
+              left,
+              top,
+              width: def.frameW,
+              height: def.frameH,
+              backgroundImage: `url(${def.src})`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "0 0",
+              imageRendering: "pixelated",
+              pointerEvents: "none",
+            }}
+          />
+        );
+      })}
       {editable
         ? Array.from({ length: rows }).flatMap((_, y) =>
             Array.from({ length: cols }).map((_, x) => (
