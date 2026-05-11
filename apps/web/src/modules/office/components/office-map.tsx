@@ -23,7 +23,7 @@ const FOAM_FRAME = TILE * 3;
 const FOAM_FRAMES = 16;
 
 type Coord = { c: number; r: number };
-type Placed = { c: number; r: number; x: number; y: number };
+type Placed = { c: number; r: number; x: number; y: number; rotate?: 0 | 90 };
 
 const T = {
   // Low-tier 3×3 grass blob (cols 0-2, rows 0-2)
@@ -62,30 +62,41 @@ const T = {
  * The tileset doesn't appear to ship dedicated horizontal-cap tiles in
  * an obvious slot — happy to dig further if you hit those shapes.
  */
-function pickGrass(grid: boolean[][], x: number, y: number): Coord {
+type Picked = { tile: Coord; rotate?: 0 | 90 };
+
+function pickGrass(grid: boolean[][], x: number, y: number): Picked {
   const t = !grid[y - 1]?.[x];
   const b = !grid[y + 1]?.[x];
   const l = !grid[y]?.[x - 1];
   const r = !grid[y]?.[x + 1];
 
-  // Vertical 1-wide: water on both left and right. Pick the cap variant
-  // by which of top/bottom is also exposed.
+  // 1-wide vertical (both left AND right empty).
   if (l && r) {
-    if (t && b) return T.col_mid; // isolated single tile — no perfect tile, mid is least bad
-    if (t) return T.col_top;
-    if (b) return T.col_bot;
-    return T.col_mid;
+    if (t && b) return { tile: T.col_mid }; // isolated — least-bad fallback
+    if (t) return { tile: T.col_top };
+    if (b) return { tile: T.col_bot };
+    return { tile: T.col_mid };
   }
 
-  if (t && l) return T.lt_tl;
-  if (t && r) return T.lt_tr;
-  if (b && l) return T.lt_bl;
-  if (b && r) return T.lt_br;
-  if (t) return T.lt_t;
-  if (b) return T.lt_b;
-  if (l) return T.lt_l;
-  if (r) return T.lt_r;
-  return T.lt_m;
+  // 1-wide horizontal (both top AND bottom empty). The tileset doesn't
+  // ship dedicated horizontal caps so we rotate the vertical column
+  // variants 90° clockwise: col_top → right-cap, col_bot → left-cap,
+  // col_mid → horizontal middle.
+  if (t && b) {
+    if (l) return { tile: T.col_bot, rotate: 90 };
+    if (r) return { tile: T.col_top, rotate: 90 };
+    return { tile: T.col_mid, rotate: 90 };
+  }
+
+  if (t && l) return { tile: T.lt_tl };
+  if (t && r) return { tile: T.lt_tr };
+  if (b && l) return { tile: T.lt_bl };
+  if (b && r) return { tile: T.lt_br };
+  if (t) return { tile: T.lt_t };
+  if (b) return { tile: T.lt_b };
+  if (l) return { tile: T.lt_l };
+  if (r) return { tile: T.lt_r };
+  return { tile: T.lt_m };
 }
 
 function buildTiles(grid: boolean[][]): Placed[] {
@@ -94,8 +105,14 @@ function buildTiles(grid: boolean[][]): Placed[] {
     const row = grid[y]!;
     for (let x = 0; x < row.length; x++) {
       if (!row[x]) continue;
-      const tile = pickGrass(grid, x, y);
-      tiles.push({ x, y, c: tile.c, r: tile.r });
+      const picked = pickGrass(grid, x, y);
+      tiles.push({
+        x,
+        y,
+        c: picked.tile.c,
+        r: picked.tile.r,
+        rotate: picked.rotate,
+      });
     }
   }
   return tiles;
@@ -156,6 +173,7 @@ function tileStyle(t: Placed): React.CSSProperties {
     backgroundPosition: `-${t.c * TILE}px -${t.r * TILE}px`,
     backgroundRepeat: "no-repeat",
     imageRendering: "pixelated",
+    transform: t.rotate ? `rotate(${t.rotate}deg)` : undefined,
   };
 }
 
