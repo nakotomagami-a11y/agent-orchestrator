@@ -30,6 +30,8 @@ interface UnitDef {
   frameH: number;
   idle: SheetSpec;
   run: SheetSpec;
+  /** Chopping-wood animation. Pawn-only for now; absent on other units. */
+  axe?: SheetSpec;
   /**
    * Character bounding box inside one frame, in native sprite pixels. We crop
    * to this region so the avatar shows the character, not the empty padding
@@ -46,6 +48,7 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     frameH: 192,
     idle: { frames: 8 },
     run: { frames: 6 },
+    axe: { frames: 6 },
     bbox: { x: 64, y: 60, w: 64, h: 104 },
     label: "Pawn",
   },
@@ -114,10 +117,12 @@ export function formatUnit(u: UnitSelection): string {
   return `${u.faction}/${u.kind}`;
 }
 
+export type UnitSheetState = "idle" | "run" | "axe";
+
 export function unitSheetSrc(
   faction: UnitFaction,
   kind: UnitKind,
-  state: "idle" | "run",
+  state: UnitSheetState,
 ): string {
   return `/units/${faction}/${kind}-${state}.png`;
 }

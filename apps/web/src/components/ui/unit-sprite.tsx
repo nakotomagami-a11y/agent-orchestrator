@@ -19,8 +19,12 @@ export type UnitSpriteProps = {
   size?: number;
   /** Loop the sprite-sheet animation. Disable in very dense lists. */
   animate?: boolean;
-  /** Which action sheet to play. "working" → Run.png; otherwise → Idle.png. */
-  action?: "idle" | "working";
+  /** Which action sheet to play. "axe" requires the kind to have an axe
+   *  sheet declared in UNIT_DEFS (pawn does); otherwise falls back to idle. */
+  action?: "idle" | "working" | "axe";
+  /** Mirror horizontally — used when the contextual target (e.g. a tree
+   *  being chopped) is on the pawn's left rather than its default right. */
+  flip?: boolean;
   /** Optional accessible label. Decorative by default. */
   label?: string;
   className?: string;
@@ -37,6 +41,7 @@ export function UnitSprite({
   size = 48,
   animate = true,
   action = "idle",
+  flip = false,
   label,
   className,
 }: UnitSpriteProps) {
@@ -70,8 +75,18 @@ export function UnitSprite({
       />
     );
   }
-  const sheet = action === "working" ? def.run : def.idle;
-  const state = action === "working" ? "run" : "idle";
+  // Pick the sheet for the requested action. "axe" gracefully falls back
+  // to idle when the kind doesn't have an axe sheet declared (only pawns
+  // do today), so non-pawn units never miss their sprite if a future rule
+  // accidentally routes "axe" to them.
+  const sheet =
+    action === "working"
+      ? def.run
+      : action === "axe" && def.axe
+        ? def.axe
+        : def.idle;
+  const state: "idle" | "run" | "axe" =
+    action === "working" ? "run" : action === "axe" && def.axe ? "axe" : "idle";
   const src = unitSheetSrc(unit.faction, unit.kind, state);
 
   const reducedMotion = usePrefersReducedMotion();
@@ -105,6 +120,9 @@ export function UnitSprite({
         overflow: "hidden",
         position: "relative",
         flexShrink: 0,
+        // Mirroring is applied to the wrapper so the background-position
+        // math below stays in the source sheet's coordinate space.
+        transform: flip ? "scaleX(-1)" : undefined,
       }}
       {...ariaProps}
     >

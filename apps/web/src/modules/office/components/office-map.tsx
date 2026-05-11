@@ -6,6 +6,7 @@ import type { OfficeAgent } from "../hooks/use-office-agents";
 import {
   DECORATIONS,
   decorationKey,
+  familyOf,
   isPlacementValid,
   type DecorationKind,
   type DecorationsMap,
@@ -420,6 +421,22 @@ export function OfficeMap({
           const SIZE = 48;
           const left = x * TILE + (TILE - SIZE) / 2;
           const top = (y + 1) * TILE - SIZE;
+          // Contextual action: chopping animation when a tree sits in an
+          // adjacent cell. Horizontal trees drive `flip` so the axe swings
+          // toward the tree; right takes precedence over left when both
+          // sides have one. Trees above/below trigger the chop but keep
+          // the default (right-facing) orientation since the sprite has
+          // no vertical swing.
+          const hasTree = (cx: number, cy: number): boolean => {
+            const stack = decorations[decorationKey(cx, cy)];
+            return !!stack && stack.some((k) => familyOf(k) === "tree");
+          };
+          const treeRight = hasTree(x + 1, y);
+          const treeLeft = hasTree(x - 1, y);
+          const treeVertical = hasTree(x, y - 1) || hasTree(x, y + 1);
+          const chopping = treeRight || treeLeft || treeVertical;
+          const action: "idle" | "axe" = chopping ? "axe" : "idle";
+          const flip = chopping && !treeRight && treeLeft;
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
@@ -436,7 +453,8 @@ export function OfficeMap({
               <UnitSprite
                 unit={agent.unitChoice}
                 size={SIZE}
-                action={agent.status === "working" ? "working" : "idle"}
+                action={action}
+                flip={flip}
                 animate
               />
             </div>
