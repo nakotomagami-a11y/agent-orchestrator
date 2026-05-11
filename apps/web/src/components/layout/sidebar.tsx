@@ -132,7 +132,7 @@ export function Sidebar() {
                 type="button"
                 className={"roster-row" + (selectedId === a.id ? " on" : "")}
                 onClick={() => select(a.id)}
-                title="Click to select · open chat from the inspector"
+                title="Click to view details · open chat from there"
                 style={{
                   background: "transparent",
                   border: "none",

@@ -1,19 +1,17 @@
-// Pure desk-assignment + visual prop derivation. Each agent gets a deterministic
-// (tier, slot) based on its position in the roster — no per-agent persistence
-// needed. 4 slots per tier, 4 tiers max (16 agents). Overflow wraps.
-
-import { isoXY, stageDimensions, TILE_W } from "./iso-coords";
+/**
+ * Deterministic seat assignment for the top-down office. Each agent gets a
+ * `(tier, slot)` pair derived from its position in the roster — no per-agent
+ * persistence needed. 4 sides per pod × 4 pods = 16 seats; overflow wraps.
+ *
+ * `plant` / `monitor` are visual flags consumed by `iso-office.tsx` to vary
+ * desk decoration.
+ */
 
 export interface DeskCoords {
   tier: number;
   slot: number;
   plant: boolean;
   monitor: 1 | 2;
-}
-
-export interface DeskPosition {
-  x: number;
-  y: number;
 }
 
 const SLOTS_PER_TIER = 4;
@@ -26,20 +24,7 @@ export function deriveDeskCoords(index: number, hash: number): DeskCoords {
   return {
     tier,
     slot,
-    // Two of every five agents get a plant; one in three a dual-monitor.
     plant: hash % 5 < 2,
     monitor: (hash % 3 === 0 ? 2 : 1) as 1 | 2,
   };
-}
-
-/**
- * Top-left corner of a 96px-wide desk for the given (tier, slot). Mirrors the
- * v3 reference which renders desks at `pos.x - 48, pos.y - 40`.
- */
-export function deskPosition(tier: number, slot: number): DeskPosition {
-  const { offsetX, offsetY } = stageDimensions();
-  const row = 5 - tier;
-  const col = 1 + slot * 2;
-  const { x, y } = isoXY(col, row);
-  return { x: x + offsetX - TILE_W * 0.75, y: y + offsetY - 40 };
 }

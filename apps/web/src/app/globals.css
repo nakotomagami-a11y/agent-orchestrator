@@ -324,51 +324,11 @@ body {
 .office-canvas {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
+  overflow: auto;
 }
-.iso-stage { position: relative; transform-origin: center center; }
-.iso-floor-svg { display: block; }
-
-.desk {
-  position: absolute;
-  width: 96px; height: 84px;
-  cursor: pointer;
-  transition: transform 160ms ease, filter 160ms ease;
-}
-.desk:hover { filter: brightness(1.08); }
-.desk.selected { transform: translateY(-2px); filter: drop-shadow(0 6px 8px rgba(233,84,32,0.25)); }
-
-.desk-name {
-  position: absolute; left: 50%;
-  bottom: -16px;
-  transform: translateX(-50%);
-  padding: 2px 8px;
-  background: var(--bg-1);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 10.5px; font-weight: 600;
-  white-space: nowrap;
-  box-shadow: var(--shadow-1);
-}
-
-.bubble {
-  position: absolute; left: 50%;
-  top: -22px;
-  transform: translateX(-50%);
-  background: var(--bg-1);
-  border: 1px solid var(--line-2);
-  padding: 3px 7px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-  color: var(--txt-2);
-  box-shadow: var(--shadow-1);
-  display: flex; align-items: center; gap: 5px;
-}
-.bubble.working { color: var(--acc); border-color: rgba(233,84,32,0.4); }
-.bubble .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--working); animation: pulseDot 1.6s infinite ease-in-out; }
-.bubble.thinking .dot { background: var(--thinking); }
-.bubble.done .dot { background: var(--done); animation: none; }
+.topdown-stage { position: relative; transform-origin: center center; }
+.workstation:hover { filter: brightness(1.04); }
+.workstation.selected { filter: drop-shadow(0 4px 6px rgba(233,84,32,0.25)); }
 
 /* ── Office HUD ── */
 .office-hud {
