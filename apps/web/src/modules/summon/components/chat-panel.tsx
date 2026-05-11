@@ -350,6 +350,23 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     setPendingSeed("Please continue where you left off. The previous run was interrupted by a server restart — your partial output is in the thread above.");
   };
 
+  // For "missing run" (404) — the original prompt is gone with the run,
+  // but the last user message in our local thread IS the prompt. Re-summon
+  // from that, treating the orphan as if it had never been started.
+  const resummonLastUserMessage = () => {
+    const lastUser = [...thread].reverse().find((it) => it.kind === "you");
+    if (!lastUser || lastUser.kind !== "you") return;
+    setResumeError(null);
+    setActiveRunId(null);
+    setResumeProbed(true);
+    setPendingSeed(lastUser.text);
+  };
+
+  const lastUserMessageText: string | null = (() => {
+    const lastUser = [...thread].reverse().find((it) => it.kind === "you");
+    return lastUser && lastUser.kind === "you" ? lastUser.text : null;
+  })();
+
   return (
     <div className="chat" role="region" aria-label={`Chat with ${agent.name}`}>
       <ChatHead
@@ -375,9 +392,21 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
         <StreamBanner
           kind="warn"
           title="This run isn't on the server anymore."
-          detail={`Run ${activeRunId} · ${resumeError.message}. Most likely the server restarted while it was in flight, so it never made it into runs.log. Drop it to clean up; Retry won't find it.`}
-          primary={{ label: "Drop run", onClick: dismissResume }}
-          secondary={{ label: "Retry anyway", onClick: retryResume }}
+          detail={`Run ${activeRunId} · ${resumeError.message}. Most likely the server restarted while it was in flight, so it never made it into runs.log. ${
+            lastUserMessageText
+              ? "Re-summon will re-send your last message as a fresh run; Drop run leaves the chat as-is."
+              : "Drop run clears the dead reference. (No previous user message in the thread to re-send.)"
+          }`}
+          primary={
+            lastUserMessageText
+              ? { label: "Re-summon last message", onClick: resummonLastUserMessage }
+              : { label: "Drop run", onClick: dismissResume }
+          }
+          secondary={
+            lastUserMessageText
+              ? { label: "Drop run", onClick: dismissResume }
+              : undefined
+          }
         />
       ) : resumeError?.kind === "transient" ? (
         <StreamBanner

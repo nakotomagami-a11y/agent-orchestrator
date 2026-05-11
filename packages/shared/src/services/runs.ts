@@ -51,6 +51,12 @@ declare global {
   var __agentOfficeLiveRuns: Map<string, LiveRun> | undefined;
   // eslint-disable-next-line no-var
   var __agentOfficeRunsInstalled: boolean | undefined;
+  // Indirection so the signal handler always invokes the *current* module's
+  // killAllRuns — without this, HMR replaces the function but the SIGINT
+  // handler stays bound to the old one and our new finalize-on-kill logic
+  // never runs until the dev server is fully restarted.
+  // eslint-disable-next-line no-var
+  var __agentOfficeKillAllRuns: (() => void) | undefined;
 }
 
 const liveRuns: Map<string, LiveRun> =
@@ -68,13 +74,18 @@ function gc(): void {
   }
 }
 
+// Always keep the current module's killAllRuns in the global slot. HMR
+// replaces the function reference each reload; the handlers below read
+// through the global so the latest version always wins.
+globalThis.__agentOfficeKillAllRuns = killAllRuns;
+
 if (!globalThis.__agentOfficeRunsInstalled) {
   setInterval(gc, 60_000).unref();
   process.on("SIGINT", () => {
-    killAllRuns();
+    globalThis.__agentOfficeKillAllRuns?.();
   });
   process.on("SIGTERM", () => {
-    killAllRuns();
+    globalThis.__agentOfficeKillAllRuns?.();
   });
   globalThis.__agentOfficeRunsInstalled = true;
 }
