@@ -10,7 +10,7 @@ Personal fleet manager for Claude Code subagents — a GNOME-styled desktop app 
 
 ## Run it
 
-Requires **Node 20+** and **pnpm**.
+Requires **Node 22+** and **pnpm**.
 
 ```sh
 pnpm install

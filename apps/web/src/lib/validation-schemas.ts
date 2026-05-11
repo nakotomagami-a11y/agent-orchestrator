@@ -16,8 +16,6 @@ export const agentBodySchema = z.object({
 
 export const agentBodyListSchema = z.array(agentBodySchema);
 
-export const agentIdParamSchema = z.object({ id: z.string().min(1) });
-
 export const settingsPatchSchema = z.object({
   projectsRoot: z.string().min(1),
   excluded: z.array(z.string()).default([]),
