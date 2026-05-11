@@ -46,7 +46,17 @@ interface LiveRun {
   sawStreamDelta: boolean;
 }
 
-const liveRuns = new Map<string, LiveRun>();
+declare global {
+  // eslint-disable-next-line no-var
+  var __agentOfficeLiveRuns: Map<string, LiveRun> | undefined;
+  // eslint-disable-next-line no-var
+  var __agentOfficeRunsInstalled: boolean | undefined;
+}
+
+const liveRuns: Map<string, LiveRun> =
+  globalThis.__agentOfficeLiveRuns ??
+  (globalThis.__agentOfficeLiveRuns = new Map());
+
 const RUN_RETENTION_MS = 5 * 60_000;
 
 function gc(): void {
@@ -56,11 +66,6 @@ function gc(): void {
       liveRuns.delete(id);
     }
   }
-}
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __agentOfficeRunsInstalled: boolean | undefined;
 }
 
 if (!globalThis.__agentOfficeRunsInstalled) {
