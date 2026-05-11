@@ -2,18 +2,15 @@
 // Per-project metadata in ~/.claude/projects/<id>/project.md (YAML frontmatter + memory body).
 // Rosters of agent instances live in that frontmatter.
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentInstance, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
 import { PROJECTS_DIR } from "./paths";
+import { ensureDir, writeFileAtomic } from "./fs-atomic";
 import { parseYaml, stringifyYaml, type YamlValue } from "./yaml";
 import { log } from "./log";
 import { readSettings, scanProjects, slugify } from "./settings";
 import { deleteRunsForInstance } from "./store";
-
-function ensureDir(): void {
-  if (!existsSync(PROJECTS_DIR)) mkdirSync(PROJECTS_DIR, { recursive: true });
-}
 
 function metadataFile(id: string): string {
   return join(PROJECTS_DIR, id, "project.md");
@@ -69,9 +66,8 @@ function normalizeRoster(raw: unknown): AgentInstance[] {
 }
 
 function writeMetadata(id: string, meta: Partial<ProjectMeta>, memory: string): void {
-  ensureDir();
-  const dir = join(PROJECTS_DIR, id);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  ensureDir(PROJECTS_DIR);
+  ensureDir(join(PROJECTS_DIR, id));
   const fmObj: Record<string, YamlValue> = {};
   if (meta.name) fmObj.name = meta.name;
   if (meta.description) fmObj.description = meta.description;
@@ -83,7 +79,7 @@ function writeMetadata(id: string, meta: Partial<ProjectMeta>, memory: string): 
   let content = "";
   if (fmStr) content += `---\n${fmStr}\n---\n\n`;
   if (body) content += `${body}\n`;
-  writeFileSync(metadataFile(id), content);
+  writeFileAtomic(metadataFile(id), content);
 }
 
 function projectFromScan(entry: ScannedEntry): Project {

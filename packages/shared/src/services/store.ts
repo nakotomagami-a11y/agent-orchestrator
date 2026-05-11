@@ -18,8 +18,19 @@ const MAX_RECENT_PROMPTS_PER_AGENT = 10;
 const LEGACY_RUNS_LOG = join(AGENTS_DIR, "_runs.log");
 const LEGACY_PROMPTS_FILE = join(AGENTS_DIR, "_recent_prompts.json");
 
-let cachedRuns: PersistedRun[] | null = null;
-let cachedPrompts: Record<string, string[]> | null = null;
+interface StoreState {
+  cachedRuns: PersistedRun[] | null;
+  cachedPrompts: Record<string, string[]> | null;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __agentOfficeStoreState: StoreState | undefined;
+}
+
+const state: StoreState =
+  globalThis.__agentOfficeStoreState ??
+  (globalThis.__agentOfficeStoreState = { cachedRuns: null, cachedPrompts: null });
 
 function ensureStateDir(): void {
   if (!existsSync(APP_STATE_DIR)) mkdirSync(APP_STATE_DIR, { recursive: true });
@@ -49,8 +60,8 @@ function loadRunsFromDisk(): PersistedRun[] {
 }
 
 export function getRuns(): PersistedRun[] {
-  if (cachedRuns === null) cachedRuns = loadRunsFromDisk();
-  return cachedRuns;
+  if (state.cachedRuns === null) state.cachedRuns = loadRunsFromDisk();
+  return state.cachedRuns;
 }
 
 export function getRun(id: string): PersistedRun | null {
@@ -59,7 +70,7 @@ export function getRun(id: string): PersistedRun | null {
 
 export function pushRun(run: PersistedRun): void {
   ensureStateDir();
-  if (cachedRuns === null) cachedRuns = loadRunsFromDisk();
+  if (state.cachedRuns === null) state.cachedRuns = loadRunsFromDisk();
   const truncated: PersistedRun = {
     ...run,
     output:
@@ -68,8 +79,8 @@ export function pushRun(run: PersistedRun): void {
         : run.output,
   };
   appendFileSync(RUNS_LOG, JSON.stringify(truncated) + "\n");
-  cachedRuns.unshift(truncated);
-  if (cachedRuns.length > MAX_RUNS_IN_MEMORY) cachedRuns.length = MAX_RUNS_IN_MEMORY;
+  state.cachedRuns.unshift(truncated);
+  if (state.cachedRuns.length > MAX_RUNS_IN_MEMORY) state.cachedRuns.length = MAX_RUNS_IN_MEMORY;
 }
 
 /**
@@ -80,12 +91,12 @@ export function pushRun(run: PersistedRun): void {
  */
 export function deleteRunsForInstance(projectId: string, instanceId: string): number {
   if (!existsSync(RUNS_LOG)) {
-    if (cachedRuns) {
-      const before = cachedRuns.length;
-      cachedRuns = cachedRuns.filter(
+    if (state.cachedRuns) {
+      const before = state.cachedRuns.length;
+      state.cachedRuns = state.cachedRuns.filter(
         (r) => !(r.projectId === projectId && r.instanceId === instanceId),
       );
-      return before - cachedRuns.length;
+      return before - state.cachedRuns.length;
     }
     return 0;
   }
@@ -113,8 +124,8 @@ export function deleteRunsForInstance(projectId: string, instanceId: string): nu
   }
   if (removed === 0) return 0;
   writeFileAtomic(RUNS_LOG, survivors.join("\n") + (survivors.length ? "\n" : ""));
-  if (cachedRuns !== null) {
-    cachedRuns = cachedRuns.filter(
+  if (state.cachedRuns !== null) {
+    state.cachedRuns = state.cachedRuns.filter(
       (r) => !(r.projectId === projectId && r.instanceId === instanceId),
     );
   }
@@ -147,20 +158,20 @@ function savePrompts(p: Record<string, string[]>): void {
 }
 
 export function getRecentPrompts(agentId: string): string[] {
-  if (cachedPrompts === null) cachedPrompts = loadPrompts();
-  return cachedPrompts[agentId] ?? [];
+  if (state.cachedPrompts === null) state.cachedPrompts = loadPrompts();
+  return state.cachedPrompts[agentId] ?? [];
 }
 
 export function pushRecentPrompt(agentId: string, prompt: string): void {
   if (!prompt.trim()) return;
-  if (cachedPrompts === null) cachedPrompts = loadPrompts();
-  const list = (cachedPrompts[agentId] ?? []).filter((p) => p !== prompt);
+  if (state.cachedPrompts === null) state.cachedPrompts = loadPrompts();
+  const list = (state.cachedPrompts[agentId] ?? []).filter((p) => p !== prompt);
   list.unshift(prompt);
-  cachedPrompts[agentId] = list.slice(0, MAX_RECENT_PROMPTS_PER_AGENT);
-  savePrompts(cachedPrompts);
+  state.cachedPrompts[agentId] = list.slice(0, MAX_RECENT_PROMPTS_PER_AGENT);
+  savePrompts(state.cachedPrompts);
 }
 
 export function getAllRecentPrompts(): Record<string, string[]> {
-  if (cachedPrompts === null) cachedPrompts = loadPrompts();
-  return { ...cachedPrompts };
+  if (state.cachedPrompts === null) state.cachedPrompts = loadPrompts();
+  return { ...state.cachedPrompts };
 }

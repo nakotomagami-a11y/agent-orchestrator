@@ -4,10 +4,11 @@
 // `buildAppendedPrompt` composes the per-summon system prompt from skills +
 // global memory + project memory + per-agent memory.
 
-import { readdirSync, readFileSync, existsSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { ApiAgent, AgentBody, Project } from "../types/index";
-import { AGENTS_DIR, GLOBAL_MEMORY_PATH } from "./paths";
+import { AGENTS_DIR, GLOBAL_MEMORY_PATH, isValidIdSegment } from "./paths";
+import { ensureDir, writeFileAtomic } from "./fs-atomic";
 import { parseYaml, stringifyYaml, type YamlValue } from "./yaml";
 import { buildSkillsPrompt } from "./skills";
 
@@ -76,9 +77,9 @@ export function listAgents(): ApiAgent[] {
 }
 
 export function writeAgent(b: AgentBody): string {
-  if (!existsSync(AGENTS_DIR)) mkdirSync(AGENTS_DIR, { recursive: true });
-  const id = b.id.replace(/[^a-z0-9-]/gi, "").toLowerCase();
-  if (!id) throw new Error("invalid id");
+  ensureDir(AGENTS_DIR);
+  if (!isValidIdSegment(b.id)) throw new Error("invalid id");
+  const id = b.id;
   const file = join(AGENTS_DIR, `${id}.md`);
   const fm: Record<string, YamlValue> = {
     name: id,
@@ -91,7 +92,7 @@ export function writeAgent(b: AgentBody): string {
   };
   if (b.room) fm.room = b.room;
   const content = `---\n${stringifyYaml(fm).trim()}\n---\n\n${b.body}\n`;
-  writeFileSync(file, content);
+  writeFileAtomic(file, content);
   return id;
 }
 
@@ -116,8 +117,8 @@ export function readMemory(path: string): string {
 }
 
 export function writeMemoryFile(path: string, content: string): void {
-  if (!existsSync(AGENTS_DIR)) mkdirSync(AGENTS_DIR, { recursive: true });
-  writeFileSync(path, content);
+  ensureDir(AGENTS_DIR);
+  writeFileAtomic(path, content);
 }
 
 export function readGlobalMemory(): string {
