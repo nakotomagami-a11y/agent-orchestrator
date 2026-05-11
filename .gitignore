@@ -14,3 +14,9 @@ next-env.d.ts
 # legacy archive — code is in _legacy/ unzipped already
 _legacy/Orchestrator.zip
 _legacy/**/dist
+
+# Raw Tiny Swords asset pack. The trimmed PNGs the app actually loads live
+# under apps/web/public/units/ and ARE tracked; PIXEL/ is the source pack
+# you'd pull from to regenerate sheets or add new units — too large
+# (~5 MB of raw assets) to keep in git.
+PIXEL/
