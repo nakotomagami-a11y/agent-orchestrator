@@ -15,6 +15,12 @@
 
 const TILE = 64;
 const TILESET = "/tiles/grass.png";
+const FOAM_SHEET = "/tiles/water-foam.png";
+// Each foam frame is the size of 3 tiles per side (192 px), and the sheet
+// is one row of 16 frames. The foam sits centred behind a tile so it
+// extends one tile-width into the surrounding water in every direction.
+const FOAM_FRAME = TILE * 3;
+const FOAM_FRAMES = 16;
 
 type Coord = { c: number; r: number };
 type Placed = { c: number; r: number; x: number; y: number };
@@ -67,6 +73,50 @@ function buildTiles(grid: boolean[][]): Placed[] {
   return tiles;
 }
 
+/**
+ * Cells that should have a foam frame painted behind them: grass cells
+ * with at least one off-island neighbour in the 8-cell ring. Diagonals
+ * count, so outside corners get foam wrapping their concave side.
+ */
+function buildFoam(grid: boolean[][]): Array<{ x: number; y: number }> {
+  const foam: Array<{ x: number; y: number }> = [];
+  const present = (x: number, y: number) => grid[y]?.[x] === true;
+  for (let y = 0; y < grid.length; y++) {
+    const row = grid[y]!;
+    for (let x = 0; x < row.length; x++) {
+      if (!row[x]) continue;
+      let edge = false;
+      for (let dy = -1; dy <= 1 && !edge; dy++) {
+        for (let dx = -1; dx <= 1 && !edge; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          if (!present(x + dx, y + dy)) edge = true;
+        }
+      }
+      if (edge) foam.push({ x, y });
+    }
+  }
+  return foam;
+}
+
+function foamStyle(x: number, y: number): React.CSSProperties {
+  // Centre a 3-tile-wide foam frame on the grass tile. The CSS keyframe
+  // (.water-foam in globals.css) animates background-position-x across
+  // the 16 frames, so every foam element pulses in sync.
+  return {
+    position: "absolute",
+    left: x * TILE - TILE,
+    top: y * TILE - TILE,
+    width: FOAM_FRAME,
+    height: FOAM_FRAME,
+    backgroundImage: `url(${FOAM_SHEET})`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "0 0",
+    backgroundSize: `${FOAM_FRAME * FOAM_FRAMES}px ${FOAM_FRAME}px`,
+    imageRendering: "pixelated",
+    pointerEvents: "none",
+  };
+}
+
 function tileStyle(t: Placed): React.CSSProperties {
   return {
     position: "absolute",
@@ -93,6 +143,7 @@ export function OfficeMap({ grid, editable = false, onCellClick }: OfficeMapProp
   const cols = grid[0]?.length ?? 0;
   const rows = grid.length;
   const tiles = buildTiles(grid);
+  const foam = buildFoam(grid);
 
   return (
     <div
@@ -108,6 +159,16 @@ export function OfficeMap({ grid, editable = false, onCellClick }: OfficeMapProp
       }}
       aria-hidden
     >
+      {/* Foam first → paints under everything else; the grass tiles cover
+          its inner square and only the outward "ring" of the foam frame
+          is visible against the water background. */}
+      {foam.map((f) => (
+        <div
+          key={`foam-${f.x}-${f.y}`}
+          className="water-foam"
+          style={foamStyle(f.x, f.y)}
+        />
+      ))}
       {tiles.map((t, i) => (
         <div key={`tile-${i}`} style={tileStyle(t)} />
       ))}
