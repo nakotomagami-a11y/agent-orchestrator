@@ -36,19 +36,47 @@ const T = {
   lt_bl: { c: 0, r: 2 },
   lt_b: { c: 1, r: 2 },
   lt_br: { c: 2, r: 2 },
+
+  // 1-wide vertical-column variants (col 3, rows 0-2). Used when a cell has
+  // both left AND right empty — i.e. it's a vertical strip of grass with
+  // water on both sides. Without these the picker would pick a regular
+  // corner tile and one side would render as a hard edge ("cut").
+  col_top: { c: 3, r: 0 }, // rims on T + L + R, grass opens down
+  col_mid: { c: 3, r: 1 }, // rims on L + R only
+  col_bot: { c: 3, r: 2 }, // rims on B + L + R, grass opens up
 } satisfies Record<string, Coord>;
 
 /**
- * Pick a grass tile for `(x, y)` from its 4 neighbours' presence. Only
- * handles the basic 9 outer patterns (corners + edges + interior); cells
- * with only diagonal-empty neighbours fall back to interior since the
- * tileset doesn't ship inner-corner tiles.
+ * Pick a grass tile for `(x, y)` from its 4 neighbours' presence.
+ * Handles:
+ *   - 4 outer corners (2 adjacent sides empty)
+ *   - 4 edges (1 side empty)
+ *   - Interior (all neighbours present)
+ *   - 1-wide vertical column (both left AND right empty) — uses the
+ *     column-cap tiles in col 3 of the tileset so 1-wide vertical
+ *     protrusions get rims on all three exposed sides instead of just
+ *     two.
+ *
+ * Limitation: 1-wide horizontal protrusions and isolated single tiles
+ * still fall through to a corner tile and will look "cut" on one side.
+ * The tileset doesn't appear to ship dedicated horizontal-cap tiles in
+ * an obvious slot — happy to dig further if you hit those shapes.
  */
 function pickGrass(grid: boolean[][], x: number, y: number): Coord {
   const t = !grid[y - 1]?.[x];
   const b = !grid[y + 1]?.[x];
   const l = !grid[y]?.[x - 1];
   const r = !grid[y]?.[x + 1];
+
+  // Vertical 1-wide: water on both left and right. Pick the cap variant
+  // by which of top/bottom is also exposed.
+  if (l && r) {
+    if (t && b) return T.col_mid; // isolated single tile — no perfect tile, mid is least bad
+    if (t) return T.col_top;
+    if (b) return T.col_bot;
+    return T.col_mid;
+  }
+
   if (t && l) return T.lt_tl;
   if (t && r) return T.lt_tr;
   if (b && l) return T.lt_bl;
