@@ -15,6 +15,11 @@ import {
 } from "./decorations";
 import type { BuildTool } from "./office-build-toolbar";
 import {
+  DEFAULT_GRASS_COLOR,
+  grassTilesetSrc,
+  type GrassColor,
+} from "./grass-colors";
+import {
   AGENT_DRAG_MIME,
   dragRefKey,
   useOfficeDragStore,
@@ -33,17 +38,18 @@ export type AgentPositions = Record<string, DragRef>;
  * builder UI in OfficeScene can place/remove grass. The auto-tile picker
  * runs on every render, so transitions stay clean as the shape changes.
  *
- * Tiles are 64-px slices from /tiles/grass.png (a 9×6 grid). Coords are
- * 0-indexed into that tileset.
+ * Tiles are 64-px slices from the active grass tileset (a 9×6 grid).
+ * The tileset URL is chosen by the island's `grassColor` prop — every
+ * color variant shares the exact same layout, so the auto-tile picker
+ * doesn't care which one is in use. Coords are 0-indexed into that grid.
  */
 
-const TILE = 64;
+export const TILE = 64;
 /** Rendered size of a placed-agent sprite (and its drag/hover ghost) in
  *  CSS pixels. The pawn bbox (64×104) scales to this size inside the
  *  square; bigger values let the character extend visibly above the
  *  cell, smaller values shrink it back into the tile. */
 const AGENT_SIZE = 96;
-const TILESET = "/tiles/grass.png";
 const FOAM_SHEET = "/tiles/water-foam.png";
 // Each foam frame is the size of 3 tiles per side (192 px), and the sheet
 // is one row of 16 frames. The foam sits centred behind a tile so it
@@ -225,7 +231,7 @@ function foamStyle(x: number, y: number): React.CSSProperties {
 
 const QUARTER = TILE / 2; // 32
 
-function tileStyle(t: Placed): React.CSSProperties {
+function tileStyle(t: Placed, tileset: string): React.CSSProperties {
   if (t.quarter) {
     // Render only the named 32×32 quadrant of the source tile, anchored
     // to the same quadrant of the destination cell.
@@ -237,7 +243,7 @@ function tileStyle(t: Placed): React.CSSProperties {
       top: t.y * TILE + qy,
       width: QUARTER,
       height: QUARTER,
-      backgroundImage: `url(${TILESET})`,
+      backgroundImage: `url(${tileset})`,
       backgroundPosition: `-${t.c * TILE + qx}px -${t.r * TILE + qy}px`,
       backgroundRepeat: "no-repeat",
       imageRendering: "pixelated",
@@ -249,7 +255,7 @@ function tileStyle(t: Placed): React.CSSProperties {
     top: t.y * TILE,
     width: TILE,
     height: TILE,
-    backgroundImage: `url(${TILESET})`,
+    backgroundImage: `url(${tileset})`,
     backgroundPosition: `-${t.c * TILE}px -${t.r * TILE}px`,
     backgroundRepeat: "no-repeat",
     imageRendering: "pixelated",
@@ -265,6 +271,9 @@ export type OfficeMapProps = {
    *  UnitSprite. Passed in instead of useOfficeAgents'd here so the
    *  component stays presentational. */
   agentsById: Map<string, OfficeAgent>;
+  /** Island-wide grass color. Selects which 9×6 tileset PNG to source
+   *  every grass tile from. Defaults to the original yellow-green. */
+  grassColor?: GrassColor;
   /** When true, render a clickable cell overlay so the builder can edit. */
   editable?: boolean;
   /** Currently-armed tool, used for hover-preview tinting. */
@@ -313,6 +322,7 @@ export function OfficeMap({
   decorations,
   agentPositions,
   agentsById,
+  grassColor = DEFAULT_GRASS_COLOR,
   editable = false,
   tool,
   onCellClick,
@@ -323,6 +333,7 @@ export function OfficeMap({
   const rows = grid.length;
   const tiles = buildTiles(grid);
   const foam = buildFoam(grid);
+  const tileset = grassTilesetSrc(grassColor);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
   const setDragging = useOfficeDragStore((s) => s.setDragging);
@@ -399,9 +410,8 @@ export function OfficeMap({
       className="office-map"
       style={{
         position: "absolute",
-        left: "50%",
-        top: "50%",
-        transform: "translate(-50%, -50%)",
+        left: 0,
+        top: 0,
         width: cols * TILE,
         height: rows * TILE,
         // Always interactive — placed agents are clickable/draggable
@@ -422,7 +432,7 @@ export function OfficeMap({
         />
       ))}
       {tiles.map((t, i) => (
-        <div key={`tile-${i}`} style={tileStyle(t)} />
+        <div key={`tile-${i}`} style={tileStyle(t, tileset)} />
       ))}
       {decoList.map((d) => {
         const def = DECORATIONS[d.kind];
@@ -502,9 +512,12 @@ export function OfficeMap({
           // Animation rule: agents idle by default and only switch to a
           // work animation while they're actively running a task. The
           // work animation is picked from nearby resources:
-          //   - tree on same tile  → axe
-          //   - rock on same tile  → pickaxe
-          //   - sheep on left/right neighbour → knife
+          //   - tree on same tile OR 1-2 cells below (trees are 256 px tall
+          //     and anchor at their base; an agent placed in the canopy area
+          //     visually appears on the tree) → axe
+          //   - rock on same tile only (rocks are exactly 64×64 — one tile;
+          //     no look-down needed) → pickaxe
+          //   - sheep on left/right neighbour (same row) → knife
           //     (sheep on the same tile does NOT count — the shearing
           //     pose only makes sense when there's something to swing
           //     at on the side. Sheep on left flips the sprite so the
@@ -515,17 +528,18 @@ export function OfficeMap({
           let action: "idle" | "axe" | "pickaxe" | "knife" | "hammer" = "idle";
           let flip = false;
           if (isWorking) {
-            const cellStack = decorations[decorationKey(x, y)];
-            const hasOnCell = (f: string): boolean =>
-              !!cellStack && cellStack.some((k) => familyOf(k) === f);
             const hasOnNeighbour = (nx: number, ny: number, f: string): boolean => {
               const stack = decorations[decorationKey(nx, ny)];
               return !!stack && stack.some((k) => familyOf(k) === f);
             };
+            const hasTreeNearby =
+              hasOnNeighbour(x, y, "tree") ||
+              hasOnNeighbour(x, y + 1, "tree") ||
+              hasOnNeighbour(x, y + 2, "tree");
             const sheepRight = hasOnNeighbour(x + 1, y, "sheep");
             const sheepLeft = hasOnNeighbour(x - 1, y, "sheep");
-            if (hasOnCell("tree")) action = "axe";
-            else if (hasOnCell("rock")) action = "pickaxe";
+            if (hasTreeNearby) action = "axe";
+            else if (hasOnNeighbour(x, y, "rock")) action = "pickaxe";
             else if (sheepRight || sheepLeft) {
               action = "knife";
               // Right wins when sheep flank both sides — the default

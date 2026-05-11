@@ -8,7 +8,12 @@
 import type { ThreadItem } from "./thread-types";
 
 const STORAGE_KEY = "agent-office:chat-transcripts:v1";
-const MAX_ITEMS_PER_KEY = 200;
+// Hard cap on items per transcript before we start trimming the oldest. The
+// UI windows the visible slice (see ChatThread VISIBLE_WINDOW), so the user
+// never renders this whole array at once — this cap is just a safety net to
+// keep localStorage from ballooning. When we move transcripts to a real
+// backend, this becomes pagination on the server.
+const MAX_ITEMS_PER_KEY = 5000;
 
 export interface Transcript {
   items: ThreadItem[];

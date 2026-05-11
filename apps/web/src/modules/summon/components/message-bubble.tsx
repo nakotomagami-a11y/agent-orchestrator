@@ -1,7 +1,7 @@
 "use client";
 
 import { match } from "ts-pattern";
-import { PixelSprite } from "@/components/ui/pixel-sprite";
+import { UnitSprite } from "@/components/ui/unit-sprite";
 import { ToolCard } from "@/components/ui/tool-card";
 import { ThinkingCard } from "@/components/ui/thinking-card";
 import { Icon } from "@/components/ui/icon";
@@ -40,7 +40,7 @@ export function MessageBubble({ item, agent }: MessageBubbleProps) {
     .with({ kind: "agent-text" }, (it) => (
       <div className="msg">
         <div className="mav" aria-hidden>
-          <PixelSprite agent={agent} size={30} animate={false} action="idle" />
+          <UnitSprite unit={agent.unitChoice} size={30} animate action="idle" />
         </div>
         <div className="bub">
           <div className="who">
@@ -63,7 +63,7 @@ export function MessageBubble({ item, agent }: MessageBubbleProps) {
     .with({ kind: "agent-tool" }, (it) => (
       <div className="msg">
         <div className="mav" aria-hidden>
-          <PixelSprite agent={agent} size={30} animate={false} action="idle" />
+          <UnitSprite unit={agent.unitChoice} size={30} animate action="idle" />
         </div>
         <div className="bub" style={{ width: "100%" }}>
           <ToolCard name={it.name} arg={it.arg} />
@@ -73,7 +73,7 @@ export function MessageBubble({ item, agent }: MessageBubbleProps) {
     .with({ kind: "agent-thinking" }, (it) => (
       <div className="msg">
         <div className="mav" aria-hidden>
-          <PixelSprite agent={agent} size={30} animate={false} action="idle" />
+          <UnitSprite unit={agent.unitChoice} size={30} animate action="idle" />
         </div>
         <div className="bub" style={{ width: "100%" }}>
           <ThinkingCard>{it.text}</ThinkingCard>

@@ -6,11 +6,13 @@ import {
   useRef,
   useState,
   type ClipboardEvent,
+  type DragEvent,
   type KeyboardEvent,
 } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { useAgentPrompts } from "../hooks/use-agent-prompts";
 
 type SlashCommand = {
   cmd: string;
@@ -77,8 +79,13 @@ export function Composer({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
   const [slashIdx, setSlashIdx] = useState(0);
+  const [promptsOpen, setPromptsOpen] = useState(false);
+  const [promptsIdx, setPromptsIdx] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const { data: savedPrompts = [] } = useAgentPrompts(agentId);
 
   useEffect(() => {
     if (seed !== undefined) {
@@ -93,6 +100,16 @@ export function Composer({
     const q = value.slice(1).toLowerCase();
     return SLASH_COMMANDS.filter((s) => s.cmd.slice(1).startsWith(q));
   }, [value]);
+
+  const filteredPrompts = useMemo(() => {
+    if (!value.startsWith("/")) return [];
+    const q = value.slice(1).toLowerCase();
+    if (!q) return savedPrompts;
+    return savedPrompts.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q),
+    );
+  }, [value, savedPrompts]);
 
   const uploadOne = async (file: File): Promise<void> => {
     const localId = nextAttachmentId();
@@ -126,6 +143,27 @@ export function Composer({
     }
   };
 
+  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
+    // Only clear when leaving the composer-inner container entirely.
+    if (!(e.currentTarget as HTMLElement).contains(e.relatedTarget as Node | null)) {
+      setDragOver(false);
+    }
+  };
+
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    for (const file of files) {
+      void uploadOne(file);
+    }
+  };
+
   const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
     const files: File[] = [];
     for (const item of Array.from(e.clipboardData.items)) {
@@ -154,6 +192,7 @@ export function Composer({
         onCommand(cmd);
         setValue("");
         setSlashOpen(false);
+        setPromptsOpen(false);
         return;
       }
     }
@@ -166,6 +205,7 @@ export function Composer({
     setValue("");
     setAttachments([]);
     setSlashOpen(false);
+    setPromptsOpen(false);
     autosize(textRef.current);
     textRef.current?.focus();
   };
@@ -173,10 +213,45 @@ export function Composer({
   const insertSlash = (cmd: string) => {
     setValue(cmd + " ");
     setSlashOpen(false);
+    setPromptsOpen(false);
+    textRef.current?.focus();
+  };
+
+  const selectPrompt = (body: string) => {
+    setValue(body);
+    setPromptsOpen(false);
+    setSlashOpen(false);
+    autosize(textRef.current);
     textRef.current?.focus();
   };
 
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Saved-prompts menu takes keyboard priority when open.
+    if (promptsOpen) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setPromptsIdx((i) => Math.min(Math.max(filteredPrompts.length - 1, 0), i + 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setPromptsIdx((i) => Math.max(0, i - 1));
+        return;
+      }
+      if (e.key === "Enter" && !e.shiftKey && filteredPrompts.length > 0) {
+        e.preventDefault();
+        const picked = filteredPrompts[promptsIdx];
+        if (picked) selectPrompt(picked.body);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setPromptsOpen(false);
+        setSlashOpen(false);
+        return;
+      }
+    }
+
     if (slashOpen && filteredSlash.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -196,6 +271,7 @@ export function Composer({
       }
       if (e.key === "Escape") {
         setSlashOpen(false);
+        setPromptsOpen(false);
         return;
       }
     }
@@ -207,8 +283,11 @@ export function Composer({
 
   const onChange = (next: string) => {
     setValue(next);
-    setSlashOpen(next.startsWith("/"));
+    const triggersSlash = next.startsWith("/");
+    setSlashOpen(triggersSlash);
     setSlashIdx(0);
+    setPromptsOpen(triggersSlash);
+    setPromptsIdx(0);
     autosize(textRef.current);
   };
 
@@ -226,7 +305,12 @@ export function Composer({
     disabled || anyPending || (!value.trim() && !hasReadyAttachments);
 
   return (
-    <div className="composer">
+    <div
+      className="composer"
+      onDragOver={onDragOver}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+    >
       <div className="composer-inner" style={{ position: "relative" }}>
         {slashOpen && filteredSlash.length > 0 ? (
           <div className="slash-popup" role="listbox" aria-label="Slash commands">
@@ -247,7 +331,47 @@ export function Composer({
           </div>
         ) : null}
 
-        <div className="composer-box">
+        {promptsOpen ? (
+          <div
+            className="slash-popup prompts-popup"
+            role="listbox"
+            aria-label={t("composer.saved_prompts_aria")}
+          >
+            {filteredPrompts.length === 0 ? (
+              <div className="prompts-empty">
+                {t("composer.saved_prompts_empty")}
+              </div>
+            ) : (
+              filteredPrompts.map((p, i) => (
+                <button
+                  key={p.body}
+                  type="button"
+                  role="option"
+                  aria-selected={i === promptsIdx}
+                  className={"item" + (i === promptsIdx ? " on" : "")}
+                  onMouseEnter={() => setPromptsIdx(i)}
+                  onClick={() => selectPrompt(p.body)}
+                >
+                  <span className="prompt-title">{p.title}</span>
+                  <span className="desc">
+                    {p.body.length > 60 ? p.body.slice(0, 57) + "…" : p.body}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+        ) : null}
+
+        <div
+          className={"composer-box" + (dragOver ? " drag-over" : "")}
+          aria-label={dragOver ? t("composer.drop_to_attach") : undefined}
+        >
+          {dragOver ? (
+            <div className="drag-overlay" aria-hidden>
+              <Icon name="attach" size={20} />
+              {t("composer.drop_to_attach")}
+            </div>
+          ) : null}
           {attachments.length > 0 ? (
             <div className="composer-attachments">
               {attachments.map((a) => (

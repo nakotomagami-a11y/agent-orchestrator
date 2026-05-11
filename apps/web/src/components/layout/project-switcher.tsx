@@ -7,6 +7,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
+import { useRuns } from "@/modules/runs/hooks/use-runs";
 import {
   useActiveProjectHydration,
   useActiveProjectStore,
@@ -24,6 +25,7 @@ export function ProjectSwitcher() {
   const pathname = usePathname();
   const { data, isLoading } = useProjects();
   const projects = useMemo(() => data ?? [], [data]);
+  const { data: runs } = useRuns({ limit: 50 });
 
   useActiveProjectHydration();
   const activeId = useActiveProjectStore((s) => s.id);
@@ -193,6 +195,17 @@ export function ProjectSwitcher() {
               ]
                 .filter(Boolean)
                 .join(" · ");
+              const projectRuns = (runs ?? []).filter((r) => r.projectId === p.id);
+              const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+              const hasRunning = projectRuns.some((r) => r.status === "running");
+              const hasRecentError = projectRuns.some(
+                (r) => r.status === "error" && r.ts > fiveMinAgo,
+              );
+              const healthDot: "working" | "error" | undefined = hasRunning
+                ? "working"
+                : hasRecentError
+                  ? "error"
+                  : undefined;
               return (
                 <ProjectRow
                   key={p.id}
@@ -201,6 +214,7 @@ export function ProjectSwitcher() {
                   secondary={sub}
                   selected={isCurrent}
                   highlighted={activeIndex === rowIndex}
+                  healthDot={healthDot}
                   onHover={() => setActiveIndex(rowIndex)}
                   onSelect={() => navigate(PAGE_ROUTES.project(p.id), p.id)}
                 />
@@ -267,6 +281,7 @@ type RowProps = {
   italic?: boolean;
   selected: boolean;
   highlighted: boolean;
+  healthDot?: "working" | "error";
   onHover: () => void;
   onSelect: () => void;
 };
@@ -278,6 +293,7 @@ function ProjectRow({
   italic,
   selected,
   highlighted,
+  healthDot,
   onHover,
   onSelect,
 }: RowProps) {
@@ -292,7 +308,7 @@ function ProjectRow({
       }}
       style={{
         display: "grid",
-        gridTemplateColumns: "16px 1fr",
+        gridTemplateColumns: "16px 1fr auto",
         gap: 10,
         alignItems: "center",
         width: "100%",
@@ -338,6 +354,21 @@ function ProjectRow({
           </div>
         ) : null}
       </span>
+      {healthDot ? (
+        <span
+          aria-hidden
+          style={{
+            display: "inline-block",
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            flexShrink: 0,
+            background: healthDot === "working" ? "var(--working)" : "var(--error)",
+          }}
+        />
+      ) : (
+        <span style={{ width: 6 }} />
+      )}
     </Link>
   );
 }

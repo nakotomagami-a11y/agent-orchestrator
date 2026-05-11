@@ -5,11 +5,11 @@ import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PixelSprite } from "@/components/ui/pixel-sprite";
+import { UnitSprite } from "@/components/ui/unit-sprite";
+import { unitForAgent } from "@/components/ui/unit-sprite.utils";
 import { StatusDot } from "@/components/ui/status-dot";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
-import { paletteForAgent } from "@/modules/office/utils/sprite-palette";
 import {
   formatCost,
   formatDuration,
@@ -89,7 +89,10 @@ function RunRow({ run, onOpen }: { run: PersistedRun; onOpen: () => void }) {
     .with("done", () => "done" as const)
     .with("error", () => "error" as const)
     .exhaustive();
-  const sprite = paletteForAgent(run.agentId);
+  // Project activity rows don't have the full ApiAgent — fall back to the
+  // hash-derived unit. Once we plumb the per-agent unit through the run
+  // record we can honour overrides here too.
+  const unit = unitForAgent(run.agentId);
   return (
     <button
       type="button"
@@ -116,7 +119,7 @@ function RunRow({ run, onOpen }: { run: PersistedRun; onOpen: () => void }) {
         }}
       >
         <div style={{ width: 32, height: 32 }} aria-hidden>
-          <PixelSprite agent={sprite} size={32} animate={false} />
+          <UnitSprite unit={unit} size={32} animate />
         </div>
         <div style={{ minWidth: 0 }}>
           <div

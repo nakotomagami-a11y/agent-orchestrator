@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
@@ -19,6 +20,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   const updateMut = useUpdateProject();
   const removeMut = useRemoveInstance();
   const openChat = useOfficeStore((s) => s.select);
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
 
   if (projectQ.isLoading) {
     return (
@@ -78,28 +80,49 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   {inst.model ? <Tag>{t("project_detail.tag_model", { model: inst.model })}</Tag> : null}
                   {inst.effort ? <Tag>{t("project_detail.tag_effort", { effort: inst.effort })}</Tag> : null}
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <button
-                    type="button"
-                    className="btn sm primary"
-                    onClick={() => openChat(inst.agentId, { instanceId: inst.instanceId })}
-                  >
-                    <Icon name="send" /> {t("project_detail.chat_button")}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn sm danger"
-                    onClick={() => {
-                      const label = inst.label ?? inst.agentId;
-                      const ok = window.confirm(
-                        t("project_detail.remove_confirm", { label, project: project.meta.name }),
-                      );
-                      if (ok) removeMut.mutate({ projectId: id, instanceId: inst.instanceId });
-                    }}
-                    title={t("project_detail.remove_title")}
-                  >
-                    <Icon name="x" />
-                  </button>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {pendingRemoveId === inst.instanceId ? (
+                    <>
+                      <span style={{ fontSize: 12, color: "var(--txt-3)" }}>
+                        {t("project_detail.remove_inline_confirm", { label: inst.label ?? inst.agentId })}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn sm"
+                        onClick={() => setPendingRemoveId(null)}
+                      >
+                        {t("common.cancel")}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn sm danger"
+                        onClick={() => {
+                          removeMut.mutate({ projectId: id, instanceId: inst.instanceId });
+                          setPendingRemoveId(null);
+                        }}
+                      >
+                        {t("common.remove")}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        className="btn sm primary"
+                        onClick={() => openChat(inst.agentId, { instanceId: inst.instanceId })}
+                      >
+                        <Icon name="send" /> {t("project_detail.chat_button")}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn sm danger"
+                        onClick={() => setPendingRemoveId(inst.instanceId)}
+                        title={t("project_detail.remove_title")}
+                      >
+                        <Icon name="x" />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))

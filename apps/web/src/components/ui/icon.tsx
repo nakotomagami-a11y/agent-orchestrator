@@ -248,6 +248,16 @@ const ICON_PATHS = {
     ...STROKE_BASE,
     body: <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />,
   },
+  server: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <rect x="2" y="3" width="20" height="6" rx="1" />
+        <rect x="2" y="15" width="20" height="6" rx="1" />
+        <path d="M6 6h.01M6 18h.01" />
+      </>
+    ),
+  },
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

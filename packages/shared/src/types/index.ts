@@ -43,6 +43,12 @@ export interface ApiAgent {
   defaultEffort?: string;
   permissionMode?: string;
   room?: string;
+  /**
+   * Optional avatar override in the form `"<faction>/<kind>"` (e.g.
+   * `"blue/pawn"`). When unset the UI hashes the agent name to pick a
+   * deterministic Tiny Swords unit.
+   */
+  unit?: string;
 }
 
 export interface AgentBody {
@@ -56,6 +62,8 @@ export interface AgentBody {
   effort: string;
   body: string;
   room?: string;
+  /** Avatar override, see {@link ApiAgent.unit}. Empty string clears it. */
+  unit?: string;
 }
 
 export interface PersistedRun {
@@ -165,3 +173,37 @@ export type RunStreamEvent =
   | { name: "usage"; data: SseUsageEvent }
   | { name: "done"; data: SseDoneEvent }
   | { name: "error"; data: SseErrorEvent };
+
+// ─── Pipeline types ──────────────────────────────────────────────────────────
+
+export interface PipelineStep {
+  agentId: string;
+  instanceId?: string;
+  /** May contain {{output}} which is replaced by the previous step's finalised output. */
+  promptTemplate: string;
+  model?: string;
+  effort?: string;
+}
+
+export interface CreatePipelineRequest {
+  steps: PipelineStep[]; // min 2, max 10
+  projectId?: string;
+  cwd?: string;
+}
+
+export interface PipelineRunStep {
+  stepIndex: number;
+  agentId: string;
+  runId: string;
+  status: "pending" | "running" | "done" | "error";
+  output?: string;
+  exitCode?: number;
+}
+
+export interface PipelineRun {
+  id: string;
+  projectId?: string;
+  steps: PipelineRunStep[];
+  status: "running" | "done" | "error";
+  createdAt: number;
+}

@@ -44,6 +44,7 @@ interface LiveRun {
   finishedAt?: number;
   parseFailures: number;
   sawStreamDelta: boolean;
+  rateLimitResetsAt?: number;
 }
 
 declare global {
@@ -92,6 +93,30 @@ if (!globalThis.__agentOfficeRunsInstalled) {
 
 export function getLiveRun(runId: string): LiveRun | undefined {
   return liveRuns.get(runId);
+}
+
+export function getRunningRuns(): PersistedRun[] {
+  return Array.from(liveRuns.values())
+    .filter((r) => r.status === "running")
+    .map((r): PersistedRun => ({
+      id: r.id,
+      agentId: r.agentId,
+      agentName: r.agentName,
+      ts: r.startTs,
+      prompt: r.prompt,
+      status: "running",
+      output: r.output,
+      tokensIn: r.tokensIn,
+      tokensOut: r.tokensOut,
+      cost: r.cost,
+      durMs: Date.now() - r.startTs,
+      model: r.model,
+      effort: r.effort,
+      cwd: r.cwd,
+      projectId: r.projectId,
+      instanceId: r.instanceId,
+      instanceLabel: r.instanceLabel,
+    }));
 }
 
 export interface StartRunOpts {
@@ -245,6 +270,9 @@ interface StreamEvent {
   message?: { content?: Array<{ type: string; text?: string; name?: string; input?: unknown }>; usage?: { input_tokens?: number; output_tokens?: number } };
   usage?: { input_tokens?: number; output_tokens?: number };
   total_cost_usd?: number;
+  is_error?: boolean;
+  error?: string;
+  rate_limit_info?: { status?: string; resetsAt?: number; rateLimitType?: string };
 }
 
 function handleStreamLine(run: LiveRun, line: string): void {
@@ -306,6 +334,23 @@ function handleStreamLine(run: LiveRun, line: string): void {
     return;
   }
 
+  if (evt.type === "rate_limit_event") {
+    const info = evt.rate_limit_info;
+    if (info?.status && info.status !== "allowed") {
+      const resetsAt = info.resetsAt;
+      run.rateLimitResetsAt = resetsAt;
+      const resetMsg = resetsAt
+        ? ` Resets at ${new Date(resetsAt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}.`
+        : "";
+      const limitType = info.rateLimitType ? ` (${info.rateLimitType} limit)` : "";
+      broadcast(run, {
+        name: "error",
+        data: { runId: run.id, message: `Rate limited by Anthropic API${limitType}.${resetMsg}` },
+      });
+    }
+    return;
+  }
+
   if (evt.type === "result") {
     if (evt.usage) {
       run.tokensIn = evt.usage.input_tokens ?? run.tokensIn;
@@ -316,6 +361,9 @@ function handleStreamLine(run: LiveRun, line: string): void {
       name: "usage",
       data: { runId: run.id, tokensIn: run.tokensIn, tokensOut: run.tokensOut, cost: run.cost },
     });
+    if (evt.is_error && evt.error) {
+      broadcast(run, { name: "error", data: { runId: run.id, message: evt.error } });
+    }
   }
 }
 

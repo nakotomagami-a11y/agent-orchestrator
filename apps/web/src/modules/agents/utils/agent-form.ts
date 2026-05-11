@@ -14,6 +14,8 @@ export interface AgentFormValues {
   model: string;
   effort: string;
   room: string;
+  /** Avatar override in `"<faction>/<kind>"` form, or empty for auto. */
+  unit: string;
   body: string;
 }
 
@@ -27,6 +29,7 @@ export const EMPTY_FORM: AgentFormValues = {
   model: "sonnet",
   effort: "high",
   room: "",
+  unit: "",
   body: "",
 };
 
@@ -52,6 +55,7 @@ export function fromApi(agent: ApiAgent, body: string): AgentFormValues {
     model: agent.defaultModel ?? "sonnet",
     effort: agent.defaultEffort ?? "high",
     room: agent.room ?? "",
+    unit: agent.unit ?? "",
     body,
   };
 }
@@ -68,6 +72,7 @@ export function toBody(values: AgentFormValues): AgentBody {
     effort: values.effort,
     body: values.body,
     room: values.room.trim() || undefined,
+    unit: values.unit.trim() || undefined,
   };
 }
 

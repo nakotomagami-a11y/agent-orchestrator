@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { OfficeMap, type AgentPositions } from "./office-map";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { OfficeMap, TILE, type AgentPositions } from "./office-map";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
   DECORATIONS,
@@ -16,6 +16,11 @@ import {
 import { useOfficeAgents } from "../hooks/use-office-agents";
 import { useOfficeStore } from "../hooks/use-office-store";
 import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
+import {
+  DEFAULT_GRASS_COLOR,
+  isGrassColor,
+  type GrassColor,
+} from "./grass-colors";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -31,11 +36,17 @@ import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
  * the terrain. Two clicks fully empty a decorated grass cell.
  */
 
-const GRID_COLS = 16;
-const GRID_ROWS = 10;
-const GRID_STORAGE_KEY = "agent-office:office-grid:v1";
-const DECO_STORAGE_KEY = "agent-office:office-decorations:v1";
-const AGENTS_STORAGE_KEY = "agent-office:office-agents:v1";
+const GRID_COLS = 40;
+const GRID_ROWS = 26;
+const MAP_W = GRID_COLS * TILE;
+const MAP_H = GRID_ROWS * TILE;
+const ZOOM_MIN = 0.25;
+const ZOOM_MAX = 3.0;
+const ZOOM_STEP = 0.15;
+const GRID_STORAGE_KEY = "agent-office:office-grid:v2";
+const DECO_STORAGE_KEY = "agent-office:office-decorations:v2";
+const AGENTS_STORAGE_KEY = "agent-office:office-agents:v2";
+const GRASS_COLOR_STORAGE_KEY = "agent-office:office-grass-color:v1";
 
 /** Default grid is empty — users build their own island. Existing
  *  localStorage from earlier seed-island sessions still loads as before. */
@@ -121,6 +132,17 @@ function loadDecorations(): DecorationsMap {
   return {};
 }
 
+function loadGrassColor(): GrassColor {
+  if (typeof window === "undefined") return DEFAULT_GRASS_COLOR;
+  try {
+    const raw = window.localStorage.getItem(GRASS_COLOR_STORAGE_KEY);
+    if (raw && isGrassColor(raw)) return raw;
+  } catch {
+    /* fall through */
+  }
+  return DEFAULT_GRASS_COLOR;
+}
+
 function loadAgentPositions(): AgentPositions {
   if (typeof window === "undefined") return {};
   try {
@@ -159,6 +181,113 @@ export function OfficeScene() {
   );
   const [buildMode, setBuildMode] = useState(false);
   const [tool, setTool] = useState<BuildTool>("grass");
+  const [grassColor, setGrassColor] = useState<GrassColor>(() => loadGrassColor());
+
+  // Camera: pan (origin 0 0) + zoom
+  const [zoom, setZoom] = useState(1.0);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const panInitRef = useRef(false);
+  const zoomRef = useRef(zoom);
+  const panRef = useRef({ x: panX, y: panY });
+  const isDragging = useRef(false);
+  const hasDragged = useRef(false);
+  const dragStart = useRef({ mx: 0, my: 0, px: 0, py: 0 });
+
+  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+  useEffect(() => { panRef.current = { x: panX, y: panY }; }, [panX, panY]);
+
+  // Centre the map on first paint
+  useEffect(() => {
+    if (panInitRef.current) return;
+    const el = containerRef.current;
+    if (!el) return;
+    panInitRef.current = true;
+    const { width, height } = el.getBoundingClientRect();
+    // Start at a comfortable zoom so the full map is visible in most viewports
+    const fitZoom = Math.min(width / MAP_W, height / MAP_H, 1) * 0.85;
+    const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, fitZoom));
+    setZoom(z);
+    setPanX((width - MAP_W * z) / 2);
+    setPanY((height - MAP_H * z) / 2);
+  }, []);
+
+  // Scroll-wheel → zoom to cursor
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const z = zoomRef.current;
+      const p = panRef.current;
+      const factor = e.deltaY < 0 ? 1 + ZOOM_STEP : 1 - ZOOM_STEP;
+      const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z * factor));
+      const wx = (mx - p.x) / z;
+      const wy = (my - p.y) / z;
+      setZoom(newZoom);
+      setPanX(mx - wx * newZoom);
+      setPanY(my - wy * newZoom);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
+
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    // Middle mouse always pans; left mouse only when not over interactive content
+    const onInteractive = !!(e.target as Element).closest('button, a, input, [draggable="true"]');
+    const isPan = e.button === 1 || (e.button === 0 && !onInteractive);
+    if (!isPan) return;
+    isDragging.current = true;
+    hasDragged.current = false;
+    dragStart.current = { mx: e.clientX, my: e.clientY, px: panRef.current.x, py: panRef.current.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    if (e.button === 1) e.preventDefault();
+    if (containerRef.current) containerRef.current.style.cursor = "grabbing";
+  }, []);
+
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return;
+    const dx = e.clientX - dragStart.current.mx;
+    const dy = e.clientY - dragStart.current.my;
+    if (!hasDragged.current && Math.hypot(dx, dy) < 4) return;
+    hasDragged.current = true;
+    setPanX(dragStart.current.px + dx);
+    setPanY(dragStart.current.py + dy);
+  }, []);
+
+  const onPointerUp = useCallback(() => {
+    isDragging.current = false;
+    if (containerRef.current) containerRef.current.style.cursor = "";
+  }, []);
+
+  const zoomBy = useCallback((factor: number) => {
+    const z = zoomRef.current;
+    const p = panRef.current;
+    const el = containerRef.current;
+    const cx = el ? el.clientWidth / 2 : MAP_W / 2;
+    const cy = el ? el.clientHeight / 2 : MAP_H / 2;
+    const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z * factor));
+    const wx = (cx - p.x) / z;
+    const wy = (cy - p.y) / z;
+    setZoom(newZoom);
+    setPanX(cx - wx * newZoom);
+    setPanY(cy - wy * newZoom);
+  }, []);
+
+  const resetCamera = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const fitZoom = Math.min(width / MAP_W, height / MAP_H, 1) * 0.85;
+    const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, fitZoom));
+    setZoom(z);
+    setPanX((width - MAP_W * z) / 2);
+    setPanY((height - MAP_H * z) / 2);
+  }, []);
 
   const { agents } = useOfficeAgents();
   const agentsById = useMemo(() => {
@@ -193,6 +322,15 @@ export function OfficeScene() {
       /* best-effort */
     }
   }, [agentPositions]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(GRASS_COLOR_STORAGE_KEY, grassColor);
+    } catch {
+      /* best-effort */
+    }
+  }, [grassColor]);
 
   const onCellClick = useCallback(
     (x: number, y: number) => {
@@ -307,6 +445,7 @@ export function OfficeScene() {
 
   return (
     <div
+      ref={containerRef}
       className="office-scene"
       style={{
         position: "relative",
@@ -319,24 +458,86 @@ export function OfficeScene() {
         backgroundRepeat: "no-repeat",
         imageRendering: "pixelated",
         overflow: "hidden",
+        cursor: "default",
       }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
     >
-      <OfficeMap
-        grid={grid}
-        decorations={decorations}
-        agentPositions={agentPositions}
-        agentsById={agentsById}
-        editable={buildMode}
-        tool={tool}
-        onCellClick={onCellClick}
-        onAgentDrop={onAgentDrop}
-        onAgentClick={onAgentClick}
-      />
+      {/* Transform wrapper: pan + zoom applied here, OfficeMap anchored at 0,0 */}
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: MAP_W,
+          height: MAP_H,
+          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+          transformOrigin: "0 0",
+        }}
+      >
+        <OfficeMap
+          grid={grid}
+          decorations={decorations}
+          agentPositions={agentPositions}
+          agentsById={agentsById}
+          grassColor={grassColor}
+          editable={buildMode}
+          tool={tool}
+          onCellClick={onCellClick}
+          onAgentDrop={onAgentDrop}
+          onAgentClick={onAgentClick}
+        />
+      </div>
+
+      {/* Zoom HUD — positioned over the scene, above the build toolbar */}
+      <div
+        className="office-zoom-hud"
+        style={{
+          position: "absolute",
+          bottom: 72,
+          right: 16,
+          zIndex: 20,
+          display: "flex",
+          flexDirection: "column",
+          gap: 2,
+          pointerEvents: "auto",
+        }}
+      >
+        <button
+          type="button"
+          className="office-zoom-btn"
+          onClick={() => zoomBy(1 + ZOOM_STEP)}
+          aria-label="Zoom in"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          className="office-zoom-btn office-zoom-pct"
+          onClick={resetCamera}
+          aria-label="Reset zoom"
+          title="Reset camera"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          type="button"
+          className="office-zoom-btn"
+          onClick={() => zoomBy(1 - ZOOM_STEP)}
+          aria-label="Zoom out"
+        >
+          −
+        </button>
+      </div>
+
       <OfficeBuildToolbar
         active={buildMode}
         tool={tool}
+        grassColor={grassColor}
         onToggle={() => setBuildMode((m) => !m)}
         onSelectTool={setTool}
+        onSelectGrassColor={setGrassColor}
       />
     </div>
   );

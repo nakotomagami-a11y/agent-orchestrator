@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { PixelSprite } from "@/components/ui/pixel-sprite";
+import { UnitSprite } from "@/components/ui/unit-sprite";
 import { Icon } from "@/components/ui/icon";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { RunPhase, UsageMeter } from "../utils/thread-types";
@@ -21,11 +21,11 @@ export function ChatHead({ agent, phase, usage, onBranch, onNew, onEdit }: ChatH
   return (
     <div className="chat-head">
       <div className="av">
-        <PixelSprite
-          agent={agent}
+        <UnitSprite
+          unit={agent.unitChoice}
           size={40}
-          action={pill === "working" ? "typing" : "idle"}
-          animate={false}
+          action={pill === "working" ? "working" : "idle"}
+          animate
         />
       </div>
       <div>

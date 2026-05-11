@@ -1,6 +1,6 @@
 "use client";
 
-import { PixelSprite } from "@/components/ui/pixel-sprite";
+import { UnitSprite } from "@/components/ui/unit-sprite";
 import { StatusDot } from "@/components/ui/status-dot";
 import { cn } from "@/lib/cn";
 import type { OfficeAgent } from "../hooks/use-office-agents";
@@ -15,7 +15,6 @@ export function CardsOffice({ agents, selectedId, onSelect }: CardsOfficeProps) 
   return (
     <ul className="cards-office" style={{ listStyle: "none", margin: 0, padding: 0 }}>
       {agents.map((a) => {
-        const isWorking = a.status === "working" || a.status === "thinking";
         return (
           <li key={a.id}>
           <button
@@ -26,7 +25,7 @@ export function CardsOffice({ agents, selectedId, onSelect }: CardsOfficeProps) 
           >
             <div className="dc-h">
               <div className="av">
-                <PixelSprite agent={a} size={40} action={isWorking ? "typing" : "idle"} animate={false} />
+                <UnitSprite unit={a.unitChoice} size={40} action="idle" animate={false} />
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div className="dc-name">{a.name}</div>

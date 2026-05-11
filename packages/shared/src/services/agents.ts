@@ -62,6 +62,7 @@ export function readAgent(name: string): { info: ApiAgent; body: string } | null
     defaultEffort: asString(fm["default-effort"] ?? fm.effort),
     permissionMode: asString(fm["permission-mode"]),
     room: asString(fm.room),
+    unit: asString(fm.unit),
   };
   return { info, body: body.trim() };
 }
@@ -89,6 +90,7 @@ export function writeAgent(b: AgentBody): string {
     "permission-mode": b.pm,
   };
   if (b.room) fm.room = b.room;
+  if (b.unit && b.unit.trim()) fm.unit = b.unit.trim();
   const content = `---\n${stringifyYaml(fm).trim()}\n---\n\n${b.body}\n`;
   writeFileAtomic(file, content);
   return id;

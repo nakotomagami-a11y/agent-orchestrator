@@ -13,6 +13,8 @@ import { useOfficeAgents, type OfficeAgent } from "@/modules/office/hooks/use-of
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
+import { useProcessesStore } from "@/lib/processes-store";
+import { usePaletteStore } from "@/lib/palette-store";
 import { useProject, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
 import { useAgentFilter } from "@/modules/agents/hooks/use-agent-filter";
 import type { AgentInstance } from "@agent-office/shared/types";
@@ -78,6 +80,7 @@ export function Sidebar() {
   }, [agents, project]);
 
   const [filter, setFilter] = useState("");
+  const [filterFocused, setFilterFocused] = useState(false);
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
     if (!q) return rosterRows;
@@ -135,52 +138,32 @@ export function Sidebar() {
           active={isActiveRoute(pathname, PAGE_ROUTES.agents)}
         />
         <LimitsNavButton spendToday={spendToday} />
+        <ProcessesNavButton />
+        <CommandPaletteNavButton />
       </nav>
 
-      <div style={{ display: "grid", gridTemplateRows: "auto 1fr", minHeight: 0 }}>
-        <div className="section-h" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="sidebar-roster-section">
+        <div className="section-h section-h-row">
           <span>{t("sidebar.roster_label", { count: rosterRows.length })}</span>
           <input
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
+            onFocus={() => setFilterFocused(true)}
+            onBlur={() => setFilterFocused(false)}
             placeholder={t("common.search_placeholder")}
             aria-label={t("sidebar.filter_aria")}
-            style={{
-              marginLeft: "auto",
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              borderRadius: 6,
-              padding: "3px 8px",
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-              color: "var(--txt)",
-              width: 110,
-              outline: "none",
-            }}
+            className="roster-filter"
+            style={{ width: filterFocused ? 160 : 88 }}
           />
         </div>
         <div className="roster-list">
           {project && rosterRows.length === 0 ? (
-            <div
-              style={{
-                padding: "12px 14px",
-                fontSize: 12,
-                color: "var(--txt-3)",
-                lineHeight: 1.4,
-              }}
-            >
+            <div className="roster-empty">
               {t("sidebar.no_agents_in_project", { project: project.meta.name })}
             </div>
           ) : !project && rosterRows.length === 0 ? (
-            <div
-              style={{
-                padding: "12px 14px",
-                fontSize: 12,
-                color: "var(--txt-3)",
-                lineHeight: 1.4,
-              }}
-            >
+            <div className="roster-empty">
               {t("sidebar.no_agent_definitions")}
             </div>
           ) : (
@@ -205,7 +188,7 @@ export function Sidebar() {
             })
           )}
           {filtered.length === 0 && rosterRows.length > 0 ? (
-            <div style={{ padding: "8px 14px", fontSize: 11, color: "var(--txt-3)" }}>
+            <div className="roster-no-match">
               {t("common.no_matches", { query: filter })}
             </div>
           ) : null}
@@ -222,9 +205,8 @@ function SidebarFoot({ spendToday }: { spendToday: number }) {
   return (
     <Link
       href={PAGE_ROUTES.settings}
-      className="sidebar-foot"
+      className="sidebar-foot sidebar-foot-link"
       aria-label={t("common.open_settings")}
-      style={{ textDecoration: "none", color: "var(--txt)" }}
     >
       <div className="me" aria-hidden>
         P
@@ -274,61 +256,30 @@ function RosterEntry({
 
   return (
     <div
-      className={"roster-row" + (selected ? " on" : "")}
-      style={{ position: "relative", cursor: "grab" }}
+      className={"roster-row roster-row-grab" + (selected ? " on" : "")}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       title={t("sidebar.row_open_chat_title")}
     >
+      {/* Span the parent `.roster-row` grid so name + status get
+          room instead of being squashed into the 32px avatar slot.
+          Reset the button's own visual chrome, then build a 3-col
+          grid inside that mirrors the original layout. */}
       <button
         type="button"
         onClick={onSelect}
         title={t("sidebar.row_open_chat_title")}
-        style={{
-          // Span the parent `.roster-row` grid so name + status get
-          // room instead of being squashed into the 32px avatar slot.
-          gridColumn: "1 / -1",
-          // Reset the button's own visual chrome, then build a 3-col
-          // grid inside that mirrors the original layout.
-          background: "transparent",
-          border: "none",
-          color: "inherit",
-          font: "inherit",
-          padding: 0,
-          margin: 0,
-          textAlign: "left",
-          cursor: "pointer",
-          display: "grid",
-          gridTemplateColumns: "32px 1fr auto",
-          alignItems: "center",
-          gap: 10,
-          width: "100%",
-          minWidth: 0,
-        }}
+        className="roster-select-btn"
       >
         <div className="av">
           <AgentAvatar unit={agent.unitChoice} size={32} />
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div
-            className="nm"
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+        <div className="roster-name-cell">
+          <div className="nm roster-truncate">
             {displayName}
           </div>
-          <div
-            className="ml"
-            style={{
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+          <div className="ml roster-truncate">
             {agent.status === "idle"
               ? t("sidebar.status_ready")
               : agent.status === "done"
@@ -351,25 +302,7 @@ function RosterEntry({
           }}
           aria-label={t("sidebar.remove_from_project_aria", { name: displayName })}
           title={t("sidebar.remove_from_project_title")}
-          className="roster-row-remove"
-          style={{
-            position: "absolute",
-            right: 6,
-            top: "50%",
-            transform: "translateY(-50%)",
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 999,
-            width: 22,
-            height: 22,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--txt-3)",
-            cursor: "pointer",
-            opacity: 0,
-            transition: "opacity 120ms",
-          }}
+          className="roster-row-remove roster-row-remove-btn"
         >
           <Icon name="x" size={11} />
         </button>
@@ -378,24 +311,60 @@ function RosterEntry({
   );
 }
 
+function CommandPaletteNavButton() {
+  const setOpen = usePaletteStore((s) => s.setOpen);
+  const isMac =
+    typeof navigator !== "undefined" && navigator.platform.includes("Mac");
+  return (
+    <button
+      type="button"
+      className="nav-item nav-item-btn"
+      onClick={() => setOpen(true)}
+      aria-label="Open command palette"
+      style={{ color: "var(--txt-3)" }}
+    >
+      <Icon name="search" />
+      <span className="nav-item-label">Command palette</span>
+      <span className="nav-item-kbd">
+        {isMac ? "⌘K" : "Ctrl+K"}
+      </span>
+    </button>
+  );
+}
+
 function LimitsNavButton({ spendToday }: { spendToday: number }) {
   const t = useTranslations();
   const openLimits = useClaudeLimitsStore((s) => s.setOpen);
+  const quotaUsd = useClaudeLimitsStore((s) => s.quotaUsd);
+  const badge = quotaUsd > 0
+    ? `${Math.min(100, (spendToday / quotaUsd) * 100).toFixed(0)}%`
+    : `$${spendToday.toFixed(2)}`;
   return (
     <button
       type="button"
       onClick={() => openLimits(true)}
-      className="nav-item"
+      className="nav-item nav-item-btn"
       aria-label={t("sidebar.limits_aria")}
-      style={{
-        font: "inherit",
-        width: "100%",
-        cursor: "pointer",
-      }}
     >
       <Icon name="gauge" />
       <span>{t("nav.limits")}</span>
-      <span className="badge">${spendToday.toFixed(2)}</span>
+      <span className="badge">{badge}</span>
+    </button>
+  );
+}
+
+function ProcessesNavButton() {
+  const t = useTranslations();
+  const setOpen = useProcessesStore((s) => s.setOpen);
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="nav-item nav-item-btn"
+      aria-label={t("processes.title")}
+    >
+      <Icon name="server" />
+      <span>{t("nav.processes")}</span>
     </button>
   );
 }

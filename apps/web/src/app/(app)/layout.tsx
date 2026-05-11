@@ -4,7 +4,10 @@ import { Titlebar } from "@/components/layout/titlebar";
 import { MainShell } from "@/components/layout/main-shell";
 import { AgentDetailsModal } from "@/modules/office/components/agent-details";
 import { ClaudeLimitsModal } from "@/modules/limits/components/claude-limits-modal";
+import { ProcessesModal } from "@/modules/processes/components/processes-modal";
 import { FirstRunGate } from "@/modules/onboarding/components/first-run-gate";
+import { CommandPalette } from "@/components/command-palette/command-palette";
+import { CompareModal } from "@/modules/runs/components/compare-modal";
 
 /**
  * Group layout for in-app pages (everything except auth, if/when added).
@@ -18,6 +21,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <MainShell>{children}</MainShell>
       <AgentDetailsModal />
       <ClaudeLimitsModal />
+      <ProcessesModal />
+      <CommandPalette />
+      <CompareModal />
       <FirstRunGate />
     </GnomeWindow>
   );

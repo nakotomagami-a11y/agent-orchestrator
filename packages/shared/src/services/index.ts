@@ -8,3 +8,4 @@ export * as health from "./health";
 export * as settings from "./settings";
 export * as store from "./store";
 export * as paths from "./paths";
+export * as pipeline from "./pipeline";

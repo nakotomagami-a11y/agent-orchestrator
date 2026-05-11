@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@agent-office/shared/hooks/api";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
-import type { AppSettings, ScannedEntry, Project } from "@agent-office/shared/types";
+import type { AppSettings, ScannedEntry, Project, HealthInfo } from "@agent-office/shared/types";
 import { Icon } from "@/components/ui/icon";
 import { TextInput } from "@/components/ui/text-input";
 import { useActiveProjectStore } from "@/lib/active-project-store";
@@ -53,15 +53,15 @@ interface StarterAgent {
   description: string;
 }
 
-type Step = "root" | "excluded" | "agents" | "project";
-const STEP_ORDER: Step[] = ["root", "excluded", "agents", "project"];
+type Step = "requirements" | "root" | "excluded" | "agents" | "project";
+const STEP_ORDER: Step[] = ["requirements", "root", "excluded", "agents", "project"];
 
 export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const t = useTranslations();
   const qc = useQueryClient();
   const setActiveProjectId = useActiveProjectStore((s) => s.setId);
 
-  const [step, setStep] = useState<Step>("root");
+  const [step, setStep] = useState<Step>("requirements");
   const [root, setRoot] = useState(HOME_FALLBACK);
   const [excluded, setExcluded] = useState<string[]>(DEFAULT_EXCLUDED);
   const [excludedInput, setExcludedInput] = useState("");
@@ -78,6 +78,12 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   // local flag lets us close ourselves the instant the mutation
   // succeeds, independently of whether the gate's query has caught up.
   const [dismissed, setDismissed] = useState(false);
+
+  const healthQ = useQuery({
+    queryKey: ["wizard-health"],
+    queryFn: () => apiFetch<HealthInfo>(API_ROUTES.health),
+    refetchInterval: (q) => (q.state.data?.available ? false : 5000),
+  });
 
   const starterQ = useQuery({
     queryKey: ["starter-agents"],
@@ -173,6 +179,10 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const isLast = stepIdx === STEP_ORDER.length - 1;
 
   const goNext = () => {
+    if (step === "requirements" && !healthQ.data?.available) {
+      setError(t("first_run.req_block"));
+      return;
+    }
     if (step === "root" && !root.trim()) {
       setError(t("first_run.error_root_required"));
       return;
@@ -231,6 +241,34 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
         </header>
 
         <div className="first-run-body">
+          {step === "requirements" ? (
+            <section>
+              <h3>{t("first_run.requirements_title")}</h3>
+              <p className="first-run-hint">{t("first_run.requirements_hint")}</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+                <ReqRow
+                  label={t("first_run.req_claude_label")}
+                  status={
+                    healthQ.isLoading
+                      ? "checking"
+                      : healthQ.data?.available
+                        ? "ok"
+                        : "error"
+                  }
+                  okText={t("first_run.req_claude_ok", { version: healthQ.data?.version ?? "" })}
+                  checkingText={t("first_run.req_claude_checking")}
+                  errorText={t("first_run.req_claude_missing")}
+                />
+                {!healthQ.isLoading && !healthQ.data?.available ? (
+                  <div className="first-run-hint small" style={{ paddingLeft: 28 }}>
+                    <div>{t("first_run.req_claude_install")}</div>
+                    <div style={{ marginTop: 4 }}>{t("first_run.req_claude_auth_note")}</div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
+
           {step === "root" ? (
             <section>
               <h3>{t("first_run.root_title")}</h3>
@@ -396,6 +434,44 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
           )}
         </footer>
       </div>
+    </div>
+  );
+}
+
+function ReqRow({
+  label,
+  status,
+  okText,
+  checkingText,
+  errorText,
+}: {
+  label: string;
+  status: "checking" | "ok" | "error";
+  okText: string;
+  checkingText: string;
+  errorText: string;
+}) {
+  const badge =
+    status === "ok" ? "✓" : status === "error" ? "✗" : "…";
+  const badgeColor =
+    status === "ok"
+      ? "var(--success, #22c55e)"
+      : status === "error"
+        ? "var(--error)"
+        : "var(--txt-3)";
+  const detail = status === "ok" ? okText : status === "error" ? errorText : checkingText;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+      <span
+        aria-hidden
+        style={{ color: badgeColor, fontWeight: 700, fontSize: 15, width: 16, textAlign: "center", flexShrink: 0 }}
+      >
+        {badge}
+      </span>
+      <span style={{ fontWeight: 600, minWidth: 90 }}>{label}</span>
+      <span style={{ color: "var(--txt-2)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+        {detail}
+      </span>
     </div>
   );
 }

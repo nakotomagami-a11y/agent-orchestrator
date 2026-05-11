@@ -14,6 +14,7 @@
     "settings": "Settings",
     "agents": "Agents",
     "limits": "Limits",
+    "processes": "Servers",
     "primary_label": "Primary",
     "live_badge": "{count} live"
   },
@@ -33,7 +34,9 @@
     "no_project_selected": "No project selected",
     "no_project_hint": "Pick a project from the top-left switcher to scope the floor.",
     "empty_roster_title": "No agents in this project yet",
-    "empty_roster_hint": "Click \"Add agent\" to drop one onto the floor."
+    "empty_roster_hint": "Click \"Add agent\" to drop one onto the floor.",
+    "error_filter_banner": "Showing agents needing attention",
+    "error_filter_clear": "Clear filter"
   },
   "office_toolbar": {
     "view_group_aria": "Office view",
@@ -93,7 +96,17 @@
     "project_skip_hint": "Skip by clicking Finish without picking a folder.",
     "finish": "Finish",
     "finishing": "Setting things up…",
-    "error_root_required": "Projects root is required."
+    "error_root_required": "Projects root is required.",
+    "step_requirements": "Requirements",
+    "requirements_title": "Before you begin",
+    "requirements_hint": "Agent Office runs agents by shelling out to the Claude CLI. It must be installed and authenticated on this machine.",
+    "req_claude_label": "Claude CLI",
+    "req_claude_ok": "Found — {version}",
+    "req_claude_missing": "Not found in PATH",
+    "req_claude_checking": "Checking…",
+    "req_claude_install": "Install instructions: run `npm install -g @anthropic-ai/claude-code` then re-open this app.",
+    "req_claude_auth_note": "After installing, run `claude` once in a terminal to log in.",
+    "req_block": "Claude CLI must be installed before you can continue."
   },
   "sidebar": {
     "roster_label": "Roster · {count}",
@@ -183,7 +196,11 @@
     "placeholder_tools": "Read, Write, Edit, Bash",
     "placeholder_body": "# Agent name\n\nYou are a...",
     "cancel": "Cancel",
-    "delete_confirm": "Delete {id}? This removes ~/.claude/agents/{id}.md and its memory file."
+    "delete_confirm": "Delete {id}? This removes ~/.claude/agents/{id}.md and its memory file.",
+    "history_tab": "History",
+    "history_empty": "No saved versions yet",
+    "history_restore": "Restore",
+    "history_saved_at": "Saved {date}"
   },
   "agent_list": {
     "search_placeholder": "Search by name, description, skill, or tool…",
@@ -305,6 +322,7 @@
     "chat_button": "Chat",
     "remove_title": "Remove from project",
     "remove_confirm": "Remove {label} from {project}? Their conversation stays archived so you can still read it.",
+    "remove_inline_confirm": "Remove {label}?",
     "tag_model": "model: {model}",
     "tag_effort": "effort: {effort}"
   },
@@ -360,6 +378,12 @@
     "empty_title": "No runs yet",
     "runs_count_sub": "{count, plural, one {# run} other {# runs}}"
   },
+  "activity_feed": {
+    "search_placeholder": "Search prompts…",
+    "filter_all": "All",
+    "filter_done": "Done",
+    "filter_error": "Error"
+  },
   "run_detail": {
     "prompt_card_title": "Prompt",
     "output_card_title": "Output",
@@ -398,7 +422,10 @@
     "send_label": "Send",
     "shortcut_send": "send",
     "shortcut_newline": "newline",
-    "attachments_intro": "Attachments (read these with your tools):"
+    "attachments_intro": "Attachments (read these with your tools):",
+    "drop_to_attach": "Drop file to attach",
+    "saved_prompts_aria": "Saved prompts",
+    "saved_prompts_empty": "No saved prompts yet. Type more to filter."
   },
   "chat_head": {
     "open_chat_aria": "Open chat with {name}",
@@ -468,6 +495,37 @@
     "caveat_claude": "claude",
     "caveat_tail": "outside the dashboard isn't included."
   },
+  "processes": {
+    "title": "Running Servers",
+    "empty": "No listening servers found",
+    "scanning": "Scanning ports…",
+    "kill_aria": "Stop process {pid}",
+    "started_ago": "{duration} ago",
+    "port_label": ":{port}",
+    "close": "Done"
+  },
+  "search_page": {
+    "title": "Search Runs",
+    "placeholder": "Search prompts and outputs…",
+    "no_results_title": "No results",
+    "no_results_desc": "Try a different search term",
+    "results_count": "{count, plural, one {# result} other {# results}}"
+  },
+  "spend_page": {
+    "title": "Spend",
+    "no_data": "No runs in this period.",
+    "col_agent": "Agent",
+    "col_runs": "Runs",
+    "col_tokens": "Tokens",
+    "col_cost": "Cost"
+  },
+  "compare": {
+    "title": "Compare Runs",
+    "base_run": "Base run",
+    "compare_with": "Compare with…",
+    "pick_run": "Pick a run",
+    "close": "Done"
+  },
   "errors": {
     "claude_unavailable": "Claude CLI is not available.",
     "rate_limited": "Too many requests — try again in a moment.",
@@ -478,5 +536,19 @@
     "internal_error": "Something went wrong on the server.",
     "bad_request": "Bad request.",
     "missing_file": "Choose a file first."
+  },
+  "memory_page": {
+    "title": "Memory",
+    "global_label": "Global memory",
+    "projects_heading": "Projects",
+    "agents_heading": "Agents",
+    "save_button": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "save_error": "Save failed",
+    "empty_select": "Select a scope to edit its memory.",
+    "no_content": "Empty — start typing to add memory.",
+    "no_projects": "No projects defined yet.",
+    "no_agents": "No agents defined yet."
   }
 }

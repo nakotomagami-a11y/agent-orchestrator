@@ -6,10 +6,46 @@ export type OfficeHudProps = {
   errorCount: number;
   spendToday: number;
   budgetDaily?: number;
+  onErrorFilter?: () => void;
 };
 
-export function OfficeHud({ workingCount, idleCount, errorCount, spendToday, budgetDaily = 50 }: OfficeHudProps) {
+function spendStyle(spendToday: number, budgetDaily: number): React.CSSProperties {
+  const ratio = budgetDaily > 0 ? spendToday / budgetDaily : 0;
+  if (ratio >= 1) {
+    return {
+      background: "color-mix(in srgb, var(--error) 15%, transparent)",
+      borderColor: "color-mix(in srgb, var(--error) 40%, transparent)",
+    };
+  }
+  if (ratio >= 0.8) {
+    return {
+      background: "color-mix(in srgb, var(--queued) 15%, transparent)",
+      borderColor: "color-mix(in srgb, var(--queued) 40%, transparent)",
+    };
+  }
+  return {};
+}
+
+export function OfficeHud({
+  workingCount,
+  idleCount,
+  errorCount,
+  spendToday,
+  budgetDaily,
+  onErrorFilter,
+}: OfficeHudProps) {
   const t = useTranslations();
+
+  const errorCard = (
+    <>
+      <span
+        aria-hidden
+        style={{ width: 8, height: 8, borderRadius: 50, background: "var(--error)", display: "inline-block" }}
+      />{" "}
+      <b>{errorCount}</b> {t("office.needs_attention_label")}
+    </>
+  );
+
   return (
     <div className="office-hud">
       <div className="hud-card">
@@ -27,21 +63,29 @@ export function OfficeHud({ workingCount, idleCount, errorCount, spendToday, bud
         <b>{idleCount}</b> {t("office.idle_label")}
       </div>
       {errorCount > 0 ? (
-        <div className="hud-card">
-          <span
-            aria-hidden
-            style={{ width: 8, height: 8, borderRadius: 50, background: "var(--error)", display: "inline-block" }}
-          />{" "}
-          <b>{errorCount}</b> {t("office.needs_attention_label")}
-        </div>
+        onErrorFilter ? (
+          <button
+            type="button"
+            className="hud-card"
+            onClick={onErrorFilter}
+            title="Show agents needing attention"
+            style={{ cursor: "pointer" }}
+          >
+            {errorCard}
+          </button>
+        ) : (
+          <div className="hud-card">{errorCard}</div>
+        )
       ) : null}
       <div style={{ flex: 1 }} />
-      <div className="hud-card">
+      <div className="hud-card" style={budgetDaily ? spendStyle(spendToday, budgetDaily) : {}}>
         {t("office.spend_today")} <b className="accent">${spendToday.toFixed(2)}</b>
       </div>
-      <div className="hud-card">
-        {t("office.budget_daily")} <b>${budgetDaily.toFixed(2)}</b>
-      </div>
+      {budgetDaily ? (
+        <div className="hud-card">
+          {t("office.budget_daily")} <b>${budgetDaily.toFixed(2)}/day</b>
+        </div>
+      ) : null}
     </div>
   );
 }

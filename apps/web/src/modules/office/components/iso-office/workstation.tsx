@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { UnitSprite } from "@/components/ui/unit-sprite";
 import type { OfficeAgent } from "../../hooks/use-office-agents";
 import {
   ROOM_W,
@@ -9,63 +10,13 @@ import {
   type Rect,
   type Side,
 } from "./constants";
-import { PixChair, TopDownAgent } from "./sprites";
+import { PixChair } from "./sprites";
 
-const TOPDOWN_AGENT_WRAP_BASE = {
-  position: "absolute" as const,
-  width: 22,
-  height: 22,
-  pointerEvents: "none" as const,
-};
-
-const BUBBLE_BASE: React.CSSProperties = {
-  position: "absolute",
-  background: "var(--bg-1)",
-  padding: "3px 7px",
-  borderRadius: 8,
-  fontSize: 10,
-  fontFamily: "var(--font-mono)",
-  whiteSpace: "nowrap",
-  boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
-  display: "flex",
-  alignItems: "center",
-  gap: 4,
-  pointerEvents: "none",
-  maxWidth: 180,
-  textOverflow: "ellipsis",
-  overflow: "hidden",
-  zIndex: 10,
-};
-
-const BUBBLE_DOT_BASE: React.CSSProperties = {
-  width: 5,
-  height: 5,
-  borderRadius: 50,
-};
-
-const NAME_PILL_BASE: React.CSSProperties = {
-  position: "absolute",
-  transform: "translate(-50%, 0)",
-  padding: "1px 6px",
-  borderRadius: 999,
-  fontSize: 9.5,
-  fontWeight: 600,
-  fontFamily: "var(--font-sans)",
-  whiteSpace: "nowrap",
-  boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-  pointerEvents: "none",
-  zIndex: 5,
-};
-
-const HIT_BUTTON_BASE: React.CSSProperties = {
-  position: "absolute",
-  background: "transparent",
-  border: "none",
-  padding: 0,
-  cursor: "pointer",
-  pointerEvents: "auto",
-  borderRadius: 4,
-};
+// Avatar footprint on the floor. The Tiny Swords characters need real room
+// to be legible — at the legacy 22×22 they were specks; 48 gives the bbox
+// (~64–128 native px) something to scale into. The wrap is centred on
+// `agentPos` so offsets below stay relative to the seat.
+const AVATAR_SIZE = 48;
 
 function WorkstationImpl({
   agent,
@@ -282,19 +233,28 @@ function WorkstationImpl({
       </svg>
 
       <div
+        className="ws-agent-wrap"
         style={{
-          ...TOPDOWN_AGENT_WRAP_BASE,
-          left: agentPos.x,
-          top: agentPos.y,
+          // agentPos is the seat centre; offset by half the avatar so the
+          // sprite sits centred on the chair instead of anchored from its
+          // top-left corner.
+          left: agentPos.x - AVATAR_SIZE / 2,
+          top: agentPos.y - AVATAR_SIZE / 2,
         }}
       >
-        <TopDownAgent agent={agent} dir={agentPos.dir} working={isWorking} />
+        <UnitSprite
+          unit={agent.unitChoice}
+          size={AVATAR_SIZE}
+          action={isWorking ? "working" : "idle"}
+          animate
+        />
       </div>
 
       {showBubble ? (
         <div
+          title={agent.task}
+          className="ws-bubble"
           style={{
-            ...BUBBLE_BASE,
             left: bubbleX,
             top: bubbleY,
             transform:
@@ -310,8 +270,8 @@ function WorkstationImpl({
           }}
         >
           <span
+            className="ws-bubble-dot"
             style={{
-              ...BUBBLE_DOT_BASE,
               background: isError ? "var(--error)" : isDone ? "var(--done)" : "var(--working)",
               animation: isWorking ? "pulseDot 1.6s infinite" : "none",
             }}
@@ -322,8 +282,8 @@ function WorkstationImpl({
       ) : null}
 
       <div
+        className="ws-name-pill"
         style={{
-          ...NAME_PILL_BASE,
           left: chairPos.x,
           top: chairPos.y + 18,
           background: selected ? "var(--acc)" : "var(--bg-1)",
@@ -358,9 +318,8 @@ function WorkstationImpl({
         type="button"
         aria-label={ariaLabel}
         onClick={onClick}
-        className="workstation-hit"
+        className="workstation-hit ws-hit-btn"
         style={{
-          ...HIT_BUTTON_BASE,
           left: hitX,
           top: hitY,
           width: hitW,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import {
   DECORATIONS,
@@ -7,37 +8,68 @@ import {
   type DecoCategory,
   type DecorationKind,
 } from "./decorations";
+import {
+  GRASS_COLOR_LIST,
+  type GrassColor,
+  type GrassColorDef,
+} from "./grass-colors";
 
 export type BuildTool = "grass" | "erase" | DecorationKind;
 
 export type OfficeBuildToolbarProps = {
   active: boolean;
   tool: BuildTool;
+  grassColor: GrassColor;
   onToggle: () => void;
   onSelectTool: (next: BuildTool) => void;
+  /** Single grass color per island — picking one re-skins every existing
+   *  grass tile in place. No mid-island transitions. */
+  onSelectGrassColor: (next: GrassColor) => void;
 };
 
-const CATEGORY_ORDER: { id: DecoCategory; label: string }[] = [
+const CATEGORY_TABS: { id: DecoCategory; label: string }[] = [
   { id: "land", label: "Land" },
   { id: "buildings", label: "Buildings" },
   { id: "water", label: "Water" },
 ];
 
 const SWATCH = 36; // px — icon-only thumbnail button side length
+const COLS = 6;
+// Show at most 5 rows before the panel scrolls. Land has 6 rows → tiny
+// scroll. Buildings (3 rows) and Water (2 rows) fit without scrolling.
+const PANEL_MAX_H = 5 * SWATCH + (5 - 1) * 6; // 204 px
 
 /**
- * Floating builder UI for the office scene. Inactive: a single Build
- * button bottom-right. Active: expands into a palette grouped by
- * category. Terrain tools have text labels; decoration variants are
- * icon-only with tooltips so the palette stays compact even with 20+
- * variants.
+ * Floating builder UI for the office scene.
+ *
+ * Inactive → a single Build button in the bottom-right corner.
+ * Active   → expands into a structured palette:
+ *   • Terrain tools (Grass / Erase) — always visible, primary actions.
+ *   • Island color swatches — always visible, island-level config.
+ *   • Segmented category tabs (Land / Buildings / Water) — shows one
+ *     category at a time so the panel stays a fixed, manageable height
+ *     regardless of how many decoration kinds are added later.
  */
 export function OfficeBuildToolbar({
   active,
   tool,
+  grassColor,
   onToggle,
   onSelectTool,
+  onSelectGrassColor,
 }: OfficeBuildToolbarProps) {
+  const [activeTab, setActiveTab] = useState<DecoCategory>("land");
+
+  // Keep the visible tab in sync when a decoration tool is selected
+  // externally (e.g. undo/redo or a keyboard shortcut that bypasses the
+  // palette).
+  useEffect(() => {
+    const kind = tool as DecorationKind;
+    if (DECORATION_KINDS.includes(kind)) {
+      setActiveTab(DECORATIONS[kind].category);
+    }
+  }, [tool]);
+
   return (
     <div
       style={{
@@ -64,10 +96,9 @@ export function OfficeBuildToolbar({
             boxShadow: "var(--shadow-2)",
             fontFamily: "var(--font-mono)",
             fontSize: 11.5,
-            maxHeight: "70vh",
-            overflowY: "auto",
           }}
         >
+          {/* ── Pinned: Terrain tools ───────────────────────────────────── */}
           <Group label="Terrain">
             <ToolButton
               label="Grass"
@@ -83,25 +114,43 @@ export function OfficeBuildToolbar({
             />
           </Group>
 
-          {CATEGORY_ORDER.map(({ id, label }) => {
-            const kinds = DECORATION_KINDS.filter(
-              (k) => DECORATIONS[k].category === id,
-            );
-            if (kinds.length === 0) return null;
-            return (
-              <Group key={id} label={label}>
-                {kinds.map((kind) => (
-                  <DecoButton
-                    key={kind}
-                    kind={kind}
-                    selected={tool === kind}
-                    onClick={() => onSelectTool(kind)}
-                  />
-                ))}
-              </Group>
-            );
-          })}
+          {/* ── Pinned: Island color ────────────────────────────────────── */}
+          <Group label="Island color">
+            {GRASS_COLOR_LIST.map((c) => (
+              <GrassColorButton
+                key={c.id}
+                def={c}
+                selected={grassColor === c.id}
+                onClick={() => onSelectGrassColor(c.id)}
+              />
+            ))}
+          </Group>
 
+          {/* ── Visual separator before the tabbed section ─────────────── */}
+          <div
+            aria-hidden
+            style={{
+              height: 1,
+              background: "var(--line)",
+              margin: "0 -12px",
+            }}
+          />
+
+          {/* ── Category tab bar ────────────────────────────────────────── */}
+          <CategoryTabBar
+            tabs={CATEGORY_TABS}
+            active={activeTab}
+            onChange={setActiveTab}
+          />
+
+          {/* ── Per-category decoration grid (scrolls independently) ────── */}
+          <DecoPanel
+            category={activeTab}
+            tool={tool}
+            onSelectTool={onSelectTool}
+          />
+
+          {/* ── Done ────────────────────────────────────────────────────── */}
           <button
             type="button"
             onClick={onToggle}
@@ -140,6 +189,121 @@ export function OfficeBuildToolbar({
   );
 }
 
+// ─── Category tab bar ────────────────────────────────────────────────────────
+
+function CategoryTabBar({
+  tabs,
+  active,
+  onChange,
+}: {
+  tabs: { id: DecoCategory; label: string }[];
+  active: DecoCategory;
+  onChange: (next: DecoCategory) => void;
+}) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  // Standard ARIA tabs keyboard pattern: ←/→ moves focus AND selection.
+  const move = (dir: -1 | 1, fromIdx: number) => {
+    const next = (fromIdx + dir + tabs.length) % tabs.length;
+    onChange(tabs[next]!.id);
+    refs.current[next]?.focus();
+  };
+
+  return (
+    <div role="tablist" aria-label="Decoration categories" style={{ display: "flex" }}>
+      {tabs.map(({ id, label }, idx) => {
+        const isActive = active === id;
+        const isFirst = idx === 0;
+        const isLast = idx === tabs.length - 1;
+        return (
+          <button
+            key={id}
+            ref={(el) => {
+              refs.current[idx] = el;
+            }}
+            role="tab"
+            aria-selected={isActive}
+            // Only the active tab is in the natural tab-stop sequence;
+            // the others are reached with arrow keys per the ARIA pattern.
+            tabIndex={isActive ? 0 : -1}
+            type="button"
+            onClick={() => onChange(id)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowRight") { e.preventDefault(); move(1, idx); }
+              if (e.key === "ArrowLeft")  { e.preventDefault(); move(-1, idx); }
+            }}
+            style={{
+              flex: 1,
+              padding: "4px 0",
+              fontFamily: "inherit",
+              fontSize: 11,
+              fontWeight: isActive ? 700 : 400,
+              letterSpacing: "0.04em",
+              background: isActive ? "var(--acc)" : "var(--bg-2)",
+              color: isActive ? "white" : "var(--txt-2)",
+              border: "1px solid",
+              borderColor: isActive ? "var(--acc)" : "var(--line)",
+              // Pill ends on first/last tab; shared border collapse in the middle.
+              borderRadius: isFirst
+                ? "5px 0 0 5px"
+                : isLast
+                  ? "0 5px 5px 0"
+                  : 0,
+              marginLeft: idx > 0 ? -1 : 0,
+              cursor: "pointer",
+            }}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Per-category decoration panel ──────────────────────────────────────────
+
+function DecoPanel({
+  category,
+  tool,
+  onSelectTool,
+}: {
+  category: DecoCategory;
+  tool: BuildTool;
+  onSelectTool: (next: BuildTool) => void;
+}) {
+  const kinds = DECORATION_KINDS.filter(
+    (k) => DECORATIONS[k].category === category,
+  );
+  const tabLabel =
+    CATEGORY_TABS.find((t) => t.id === category)?.label ?? category;
+
+  return (
+    <div
+      role="tabpanel"
+      aria-label={tabLabel}
+      style={{
+        display: "grid",
+        gridTemplateColumns: `repeat(${COLS}, ${SWATCH}px)`,
+        gap: 6,
+        maxHeight: PANEL_MAX_H,
+        overflowY: "auto",
+      }}
+    >
+      {kinds.map((kind) => (
+        <DecoButton
+          key={kind}
+          kind={kind}
+          selected={tool === kind}
+          onClick={() => onSelectTool(kind)}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ─── Shared sub-components ───────────────────────────────────────────────────
+
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
@@ -160,7 +324,7 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
           display: "grid",
           gridTemplateColumns: `repeat(auto-fill, ${SWATCH}px)`,
           gap: 6,
-          maxWidth: `calc(${SWATCH}px * 6 + 30px)`,
+          maxWidth: `calc(${SWATCH}px * ${COLS} + ${(COLS - 1) * 6}px)`,
         }}
       >
         {children}
@@ -245,6 +409,59 @@ function DecoButton({
     </button>
   );
 }
+
+/**
+ * Swatch that previews a single color variant. Renders the interior
+ * grass tile (col 1, row 1 in the 9×6 sheet — `lt_m`) cropped to fit the
+ * swatch square, so the user sees the actual texture and hue, not an
+ * approximated hex chip.
+ */
+function GrassColorButton({
+  def,
+  selected,
+  onClick,
+}: {
+  def: GrassColorDef;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  // Center-tile (col 1, row 1) cropped from the 9×6 tileset, scaled to
+  // fit the swatch. Source tile is 64px; we render it at `inner`.
+  const inner = SWATCH - 4; // 2-px gutter on every side
+  const sheetW = 9 * inner;
+  const sheetH = 6 * inner;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={def.label}
+      style={{
+        ...swatchBase,
+        background: selected ? "var(--acc-faint)" : "var(--bg-2)",
+        borderColor: selected ? "var(--acc)" : "var(--line)",
+        position: "relative",
+      }}
+      aria-pressed={selected}
+      aria-label={`Island color: ${def.label}${selected ? " (selected)" : ""}`}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: inner,
+          height: inner,
+          backgroundImage: `url(${def.src})`,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: `${sheetW}px ${sheetH}px`,
+          backgroundPosition: `-${inner}px -${inner}px`,
+          imageRendering: "pixelated",
+          borderRadius: 4,
+        }}
+      />
+    </button>
+  );
+}
+
+// ─── Shared style tokens ─────────────────────────────────────────────────────
 
 const buttonBase: React.CSSProperties = {
   display: "inline-flex",

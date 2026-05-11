@@ -2,13 +2,13 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { AgentListGhost } from "./agent-list-ghost";
 import { Icon } from "@/components/ui/icon";
-import { PixelSprite } from "@/components/ui/pixel-sprite";
+import { UnitSprite } from "@/components/ui/unit-sprite";
+import { unitForAgent } from "@/components/ui/unit-sprite.utils";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
-import { paletteForAgent } from "@/modules/office/utils/sprite-palette";
 import type { ApiAgent } from "@agent-office/shared/types";
 import { useAgents } from "../hooks/use-agents";
 import { useAgentFilter } from "../hooks/use-agent-filter";
@@ -66,23 +66,7 @@ export function AgentList() {
   };
 
   if (isLoading) {
-    return (
-      <div className="tab-pane" style={{ padding: 18 }}>
-        <Skeleton width={320} height={36} />
-        <div style={{ height: 12 }} />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: 14,
-          }}
-        >
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} width="100%" height={148} />
-          ))}
-        </div>
-      </div>
-    );
+    return <AgentListGhost />;
   }
 
   if (agents.length === 0) {
@@ -346,7 +330,7 @@ function AgentCard({
   onEdit: () => void;
 }) {
   const t = useTranslations();
-  const sprite = paletteForAgent(agent.name);
+  const unit = unitForAgent(agent.name, agent.unit);
   const category = categorize(agent);
   return (
     <div
@@ -362,10 +346,10 @@ function AgentCard({
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <div
           style={{
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             borderRadius: 8,
-            background: "linear-gradient(135deg, var(--yaru-orange), var(--yaru-purple))",
+            background: "var(--bg-2)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -373,7 +357,7 @@ function AgentCard({
             flexShrink: 0,
           }}
         >
-          <PixelSprite agent={sprite} size={32} animate={false} />
+          <UnitSprite unit={unit} size={36} animate />
         </div>
         <button
           type="button"

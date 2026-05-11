@@ -136,10 +136,22 @@ function closeStreaming(thread: ThreadItem[]): ThreadItem[] {
 
 function formatToolArg(input: unknown): string | undefined {
   if (input === undefined || input === null) return undefined;
-  if (typeof input === "string") return input;
+  if (typeof input === "string") {
+    return input.trim().length > 0 ? input : undefined;
+  }
+  if (typeof input === "object") {
+    // Empty objects / arrays carry no information — rendering `{}` next to
+    // every tool name just adds visual noise without helping the user
+    // understand the call. Drop them here so the UI layer doesn't have to.
+    const empty = Array.isArray(input)
+      ? input.length === 0
+      : Object.keys(input as Record<string, unknown>).length === 0;
+    if (empty) return undefined;
+  }
   try {
-    const s = JSON.stringify(input);
-    return s.length > 120 ? s.slice(0, 117) + "…" : s;
+    // Keep the full payload — the tool-card header truncates via CSS ellipsis,
+    // and the expanded body needs the complete value to be useful.
+    return JSON.stringify(input);
   } catch {
     return undefined;
   }

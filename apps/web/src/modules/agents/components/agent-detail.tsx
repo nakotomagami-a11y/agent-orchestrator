@@ -11,9 +11,9 @@ import { Tabs } from "@/components/ui/tabs";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CodeBlock } from "@/components/ui/code-block";
-import { PixelSprite } from "@/components/ui/pixel-sprite";
+import { UnitSprite } from "@/components/ui/unit-sprite";
+import { unitForAgent } from "@/components/ui/unit-sprite.utils";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import { paletteForAgent } from "@/modules/office/utils/sprite-palette";
 import { useAgent, useAgentBody, useAgentMemory, useWriteAgentMemory } from "../hooks/use-agents";
 import { ActivityFeed } from "@/modules/runs/components/activity-feed";
 import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
@@ -29,7 +29,6 @@ export function AgentDetail({ id }: AgentDetailProps) {
   const agentQ = useAgent(id);
   const bodyQ = useAgentBody(id);
 
-  const sprite = paletteForAgent(id);
   const openChat = useSummonStore((s) => s.openChat);
 
   if (agentQ.isLoading) {
@@ -45,13 +44,14 @@ export function AgentDetail({ id }: AgentDetailProps) {
     return <div className="tab-pane">{t("errors.not_found")}</div>;
   }
   const agent = agentQ.data;
+  const unit = unitForAgent(id, agent.unit);
 
   return (
     <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <Card>
         <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16 }}>
           <div style={{ width: 56, height: 56, flex: "none" }}>
-            <PixelSprite agent={sprite} size={56} animate={false} />
+            <UnitSprite unit={unit} size={56} animate />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>{agent.name}</h2>

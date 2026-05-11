@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { match } from "ts-pattern";
 import { ChatHead } from "./chat-head";
 import { ChatThread } from "./chat-thread";
 import { Composer } from "./composer";
 import type { ChatPhase } from "./live-status";
 import { useSummon, useAbortRun } from "../hooks/use-summon";
 import { useRunStream } from "../hooks/use-run-stream";
+import { useRunNotification } from "@/hooks/use-run-notification";
 import {
   clearTranscript,
   loadTranscript,
@@ -15,6 +17,7 @@ import {
   transcriptKey,
 } from "../utils/transcript-store";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
+import { useProject } from "@/modules/projects/hooks/use-projects";
 import type { ThreadItem } from "../utils/thread-types";
 import type { PersistedRun } from "@agent-office/shared/types";
 import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
@@ -50,6 +53,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   const qc = useQueryClient();
   const summon = useSummon();
   const abort = useAbortRun();
+  const projectQ = useProject(projectId ?? null);
+  const projectName = projectQ.data?.meta.name;
 
   // Composite key: each `(agentId, instanceId)` pair gets its own
   // transcript. Removing + re-adding an agent yields a new instanceId and
@@ -104,6 +109,12 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   }, [tKey]);
 
   const stream = useRunStream(activeRunId);
+
+  const runStartTsRef = useRef<number>(0);
+  useEffect(() => {
+    if (activeRunId) runStartTsRef.current = Date.now();
+  }, [activeRunId]);
+  useRunNotification({ agentName: agent.name, phase: stream.phase, startTs: runStartTsRef.current || null });
 
   // ── Probe a stored runId once — drop it if the server has no record ──
   useEffect(() => {
@@ -305,20 +316,14 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   }, [thread]);
 
   const phase: ChatPhase = phaseOverride
-    ? phaseOverride
-    : summon.isPending
-      ? "sending"
-      : stream.phase === "starting"
-        ? "connecting"
-        : stream.phase === "streaming"
-          ? sliceText.length > 0
-            ? "streaming"
-            : "working"
-          : stream.phase === "done"
-            ? "done"
-            : stream.phase === "error"
-              ? "error"
-              : "idle";
+    ?? match({ pending: summon.isPending, streamPhase: stream.phase, hasText: sliceText.length > 0 })
+      .when(({ pending }) => pending, () => "sending" as ChatPhase)
+      .when(({ streamPhase }) => streamPhase === "starting", () => "connecting" as ChatPhase)
+      .when(({ streamPhase, hasText }) => streamPhase === "streaming" && hasText, () => "streaming" as ChatPhase)
+      .when(({ streamPhase }) => streamPhase === "streaming", () => "working" as ChatPhase)
+      .when(({ streamPhase }) => streamPhase === "done", () => "done" as ChatPhase)
+      .when(({ streamPhase }) => streamPhase === "error", () => "error" as ChatPhase)
+      .otherwise(() => "idle" as ChatPhase);
 
   const isStreaming =
     phase === "sending" || phase === "connecting" || phase === "working" || phase === "streaming";
@@ -465,7 +470,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
         agentId={agent.id}
         projectId={projectId}
         modelChip={agent.defaultModel ?? "default"}
-        cwdChip={projectId ? `project: ${projectId}` : undefined}
+        cwdChip={projectName ? `project: ${projectName}` : projectId ? `project: ${projectId}` : undefined}
         seed={pendingSeed}
         onCommand={handleCommand}
       />
