@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -11,6 +11,7 @@ import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { paletteForAgent } from "@/modules/office/utils/sprite-palette";
 import type { ApiAgent } from "@agent-office/shared/types";
 import { useAgents } from "../hooks/use-agents";
+import { useAgentFilter } from "../hooks/use-agent-filter";
 import { categorize, tallyCategories } from "../utils/categorize";
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
@@ -14,6 +14,7 @@ import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProject, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
+import { useAgentFilter } from "@/modules/agents/hooks/use-agent-filter";
 import type { AgentInstance } from "@agent-office/shared/types";
 
 type RosterRow = {

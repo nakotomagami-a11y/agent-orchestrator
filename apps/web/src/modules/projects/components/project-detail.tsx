@@ -1,16 +1,15 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tag } from "@/components/ui/tag";
 import { Icon } from "@/components/ui/icon";
-import { Textarea } from "@/components/ui/textarea";
 import { useProject, useRemoveInstance, useUpdateProject } from "../hooks/use-projects";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { ProjectActivity } from "./project-activity";
+import { MemoryEditor } from "@/modules/memory/components/memory-editor";
 
 export type ProjectDetailProps = { id: string };
 
@@ -20,7 +19,6 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   const updateMut = useUpdateProject();
   const removeMut = useRemoveInstance();
   const openChat = useOfficeStore((s) => s.select);
-  const [memoryDraft, setMemoryDraft] = useState<string | null>(null);
 
   if (projectQ.isLoading) {
     return (
@@ -34,8 +32,6 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   }
 
   const project = projectQ.data;
-  const memoryValue = memoryDraft ?? project.memory;
-  const memoryDirty = memoryDraft !== null && memoryDraft !== project.memory;
 
   return (
     <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -115,28 +111,16 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         <CardHeader
           title="Memory"
           sub={`composes into every roster summon for ${project.meta.name}`}
-          right={
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!memoryDirty || updateMut.isPending}
-              onClick={() =>
-                updateMut.mutate(
-                  { id, patch: { memory: memoryDraft ?? "" } },
-                  { onSuccess: () => setMemoryDraft(null) },
-                )
-              }
-            >
-              {updateMut.isPending ? "Saving…" : t("common.save")}
-            </button>
-          }
         />
         <div style={{ padding: 16 }}>
-          <Textarea
-            value={memoryValue}
-            onChange={(e) => setMemoryDraft(e.target.value)}
+          <MemoryEditor
+            value={project.memory}
+            onSave={(content) =>
+              updateMut.mutateAsync({ id, patch: { memory: content } })
+            }
             rows={12}
             placeholder="Project-wide context that prepends to every agent prompt."
+            saveLabel={t("common.save")}
           />
         </div>
       </Card>

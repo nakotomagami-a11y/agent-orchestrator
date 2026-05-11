@@ -10,7 +10,6 @@ import { Tag } from "@/components/ui/tag";
 import { Tabs } from "@/components/ui/tabs";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { CodeBlock } from "@/components/ui/code-block";
 import { PixelSprite } from "@/components/ui/pixel-sprite";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
@@ -18,6 +17,7 @@ import { paletteForAgent } from "@/modules/office/utils/sprite-palette";
 import { useAgent, useAgentBody, useAgentMemory, useWriteAgentMemory } from "../hooks/use-agents";
 import { ActivityFeed } from "@/modules/runs/components/activity-feed";
 import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
+import { MemoryEditor } from "@/modules/memory/components/memory-editor";
 
 export type AgentDetailProps = { id: string };
 
@@ -103,21 +103,17 @@ export function AgentDetail({ id }: AgentDetailProps) {
             </div>
           </Card>
         ))
-        .with("memory", () => <MemoryEditor id={id} />)
+        .with("memory", () => <AgentMemoryCard id={id} />)
         .with("runs", () => <ActivityFeed agentId={id} />)
         .exhaustive()}
     </div>
   );
 }
 
-function MemoryEditor({ id }: { id: string }) {
+function AgentMemoryCard({ id }: { id: string }) {
   const t = useTranslations();
   const memoryQ = useAgentMemory(id);
   const writeMut = useWriteAgentMemory();
-  const [draft, setDraft] = useState<string | null>(null);
-
-  const value = draft ?? memoryQ.data ?? "";
-  const dirty = draft !== null && draft !== (memoryQ.data ?? "");
 
   if (memoryQ.isLoading) return <Skeleton width="100%" height={200} />;
 
@@ -126,23 +122,14 @@ function MemoryEditor({ id }: { id: string }) {
       <CardHeader
         title="Memory"
         sub={`~/.claude/agents/${id}.memory.md`}
-        right={
-          <button
-            type="button"
-            className="btn primary"
-            disabled={!dirty || writeMut.isPending}
-            onClick={() => writeMut.mutate({ id, content: draft ?? "" }, { onSuccess: () => setDraft(null) })}
-          >
-            {writeMut.isPending ? "Saving…" : t("common.save")}
-          </button>
-        }
       />
       <div style={{ padding: 16 }}>
-        <Textarea
-          value={value}
-          onChange={(e) => setDraft(e.target.value)}
+        <MemoryEditor
+          value={memoryQ.data ?? ""}
+          onSave={(content) => writeMut.mutateAsync({ id, content })}
           rows={14}
           placeholder="# Notes for this agent that compose into its system prompt at summon time."
+          saveLabel={t("common.save")}
         />
       </div>
     </Card>
