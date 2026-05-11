@@ -10,6 +10,7 @@ import { Icon } from "@/components/ui/icon";
 import { Textarea } from "@/components/ui/textarea";
 import { useProject, useRemoveInstance, useUpdateProject } from "../hooks/use-projects";
 import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
+import { ProjectActivity } from "./project-activity";
 
 export type ProjectDetailProps = { id: string };
 
@@ -44,6 +45,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           {project.meta.description || "(no description)"}
         </div>
       </Card>
+
+      <ProjectActivity projectId={id} />
 
       <Card>
         <CardHeader

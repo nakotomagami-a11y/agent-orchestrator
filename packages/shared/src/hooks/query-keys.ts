@@ -41,7 +41,7 @@ export const queryKeys = {
 
   runs: {
     all: ["runs"] as const,
-    list: (filters?: { agentId?: string; limit?: number }) =>
+    list: (filters?: { agentId?: string; projectId?: string; limit?: number }) =>
       [...queryKeys.runs.all, "list", filters ?? {}] as const,
     detail: (id: string) => [...queryKeys.runs.all, "detail", id] as const,
   },
