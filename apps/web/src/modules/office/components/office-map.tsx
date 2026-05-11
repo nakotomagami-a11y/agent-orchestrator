@@ -430,20 +430,26 @@ export function OfficeMap({
           const SIZE = 48;
           const left = x * TILE + (TILE - SIZE) / 2;
           const top = (y + 1) * TILE - SIZE;
-          // Contextual action: chop only when a tree is to the immediate
-          // left or right. Trees above/below don't count — the sprite has
-          // no vertical swing, so triggering the chop there would look
-          // wrong. Right wins when trees are on both sides; left flips
-          // the sprite so the axe swings toward the target.
-          const hasTree = (cx: number, cy: number): boolean => {
-            const stack = decorations[decorationKey(cx, cy)];
-            return !!stack && stack.some((k) => familyOf(k) === "tree");
-          };
-          const treeRight = hasTree(x + 1, y);
-          const treeLeft = hasTree(x - 1, y);
-          const chopping = treeRight || treeLeft;
-          const action: "idle" | "axe" = chopping ? "axe" : "idle";
-          const flip = chopping && !treeRight && treeLeft;
+          // Animation rule: agents idle by default and only switch to a
+          // work animation while they're actively running a task. The work
+          // animation is picked from whatever resource shares their cell —
+          // tree → axe, rock → pickaxe — and falls back to a generic
+          // hammer-build pose when nothing's there. Same-cell only by
+          // design: neighbouring cells no longer count, so an agent has
+          // to be standing on the resource for the matching animation.
+          const isWorking =
+            agent.status === "working" || agent.status === "thinking";
+          let action: "idle" | "axe" | "pickaxe" | "hammer" = "idle";
+          if (isWorking) {
+            const cellStack = decorations[decorationKey(x, y)];
+            const hasTree =
+              !!cellStack && cellStack.some((k) => familyOf(k) === "tree");
+            const hasRock =
+              !!cellStack && cellStack.some((k) => familyOf(k) === "rock");
+            if (hasTree) action = "axe";
+            else if (hasRock) action = "pickaxe";
+            else action = "hammer";
+          }
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
@@ -475,7 +481,6 @@ export function OfficeMap({
                 unit={agent.unitChoice}
                 size={SIZE}
                 action={action}
-                flip={flip}
                 animate
               />
             </div>

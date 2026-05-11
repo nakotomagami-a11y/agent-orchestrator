@@ -11,6 +11,7 @@ import {
   UNIT_DEFS,
   unitSheetSrc,
   type UnitSelection,
+  type UnitSheetState,
 } from "./unit-sprite.utils";
 
 export type UnitSpriteProps = {
@@ -19,9 +20,10 @@ export type UnitSpriteProps = {
   size?: number;
   /** Loop the sprite-sheet animation. Disable in very dense lists. */
   animate?: boolean;
-  /** Which action sheet to play. "axe" requires the kind to have an axe
-   *  sheet declared in UNIT_DEFS (pawn does); otherwise falls back to idle. */
-  action?: "idle" | "working" | "axe";
+  /** Which action sheet to play. "axe" / "hammer" / "pickaxe" each require
+   *  the kind to declare the matching sheet in UNIT_DEFS (pawn does);
+   *  otherwise the sprite gracefully falls back to idle. */
+  action?: "idle" | "working" | "axe" | "hammer" | "pickaxe";
   /** Mirror horizontally — used when the contextual target (e.g. a tree
    *  being chopped) is on the pawn's left rather than its default right. */
   flip?: boolean;
@@ -75,18 +77,25 @@ export function UnitSprite({
       />
     );
   }
-  // Pick the sheet for the requested action. "axe" gracefully falls back
-  // to idle when the kind doesn't have an axe sheet declared (only pawns
-  // do today), so non-pawn units never miss their sprite if a future rule
-  // accidentally routes "axe" to them.
-  const sheet =
-    action === "working"
-      ? def.run
-      : action === "axe" && def.axe
-        ? def.axe
-        : def.idle;
-  const state: "idle" | "run" | "axe" =
-    action === "working" ? "run" : action === "axe" && def.axe ? "axe" : "idle";
+  // Pick the sheet for the requested action. Each named action requires the
+  // unit kind to declare the matching sheet in UNIT_DEFS; if absent we fall
+  // back to idle so non-pawn units never end up with a missing sprite URL
+  // if a future rule routes an unsupported action their way.
+  let sheet = def.idle;
+  let state: UnitSheetState = "idle";
+  if (action === "working") {
+    sheet = def.run;
+    state = "run";
+  } else if (action === "axe" && def.axe) {
+    sheet = def.axe;
+    state = "axe";
+  } else if (action === "hammer" && def.hammer) {
+    sheet = def.hammer;
+    state = "hammer";
+  } else if (action === "pickaxe" && def.pickaxe) {
+    sheet = def.pickaxe;
+    state = "pickaxe";
+  }
   const src = unitSheetSrc(unit.faction, unit.kind, state);
 
   const reducedMotion = usePrefersReducedMotion();

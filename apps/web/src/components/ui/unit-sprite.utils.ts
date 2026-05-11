@@ -32,6 +32,11 @@ interface UnitDef {
   run: SheetSpec;
   /** Chopping-wood animation. Pawn-only for now; absent on other units. */
   axe?: SheetSpec;
+  /** Hammer-build animation. Pawn-only; used as the "generic working"
+   *  sheet when no resource (tree/rock) is co-located with the agent. */
+  hammer?: SheetSpec;
+  /** Mining-rock animation. Pawn-only. */
+  pickaxe?: SheetSpec;
   /**
    * Character bounding box inside one frame, in native sprite pixels. We crop
    * to this region so the avatar shows the character, not the empty padding
@@ -49,6 +54,8 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     idle: { frames: 8 },
     run: { frames: 6 },
     axe: { frames: 6 },
+    hammer: { frames: 3 },
+    pickaxe: { frames: 6 },
     bbox: { x: 64, y: 60, w: 64, h: 104 },
     label: "Pawn",
   },
@@ -117,7 +124,7 @@ export function formatUnit(u: UnitSelection): string {
   return `${u.faction}/${u.kind}`;
 }
 
-export type UnitSheetState = "idle" | "run" | "axe";
+export type UnitSheetState = "idle" | "run" | "axe" | "hammer" | "pickaxe";
 
 export function unitSheetSrc(
   faction: UnitFaction,
