@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_PROMPT_BYTES } from "@agent-office/shared/services/paths";
 
 export const agentBodySchema = z.object({
   name: z.string().min(1),
@@ -87,12 +88,12 @@ export const skillInstallSchema = z.object({
 });
 
 export const promptPostSchema = z.object({
-  prompt: z.string().min(1),
+  prompt: z.string().min(1).max(MAX_PROMPT_BYTES),
 });
 
 export const summonRequestSchema = z.object({
   agentId: z.string().min(1),
-  prompt: z.string().min(1),
+  prompt: z.string().min(1).max(MAX_PROMPT_BYTES),
   model: z.string().optional(),
   effort: z.string().optional(),
   maxBudgetUsd: z.number().positive().optional(),
