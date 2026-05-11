@@ -1,28 +1,33 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-
-const AVATAR_COUNT = 25;
-
-function hashString(s: string): number {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) + h + s.charCodeAt(i)) >>> 0;
-  }
-  return h;
-}
+import {
+  UNIT_FACTIONS,
+  UNIT_KINDS,
+  type UnitSelection,
+} from "./unit-sprite.utils";
 
 /**
- * Stable 1-indexed avatar slot for an agent. An optional explicit override
- * (e.g. "07") wins; otherwise the agent name hashes deterministically into
- * the catalog, so the same name always renders the same avatar.
+ * Map a `(faction, kind)` selection to the corresponding 1-25 portrait slot.
+ *
+ * The avatar set is laid out as 5 factions × 5 kinds in the same order as
+ * the unit sprite catalog:
+ *
+ *   01-05: blue   (pawn, warrior, archer, monk, lancer)
+ *   06-10: red    (same)
+ *   11-15: purple
+ *   16-20: yellow
+ *   21-25: black
+ *
+ * So an agent that resolved to `yellow/archer` for its UnitSprite gets the
+ * yellow/archer portrait here — the iso-office floor character and the
+ * sidebar avatar stay visually consistent for the same agent.
  */
-function avatarSlotFor(name: string, override?: string | null): number {
-  if (override) {
-    const n = Number.parseInt(override, 10);
-    if (Number.isFinite(n) && n >= 1 && n <= AVATAR_COUNT) return n;
-  }
-  return (hashString(name) % AVATAR_COUNT) + 1;
+function slotFor(unit: UnitSelection): number {
+  const factionIdx = UNIT_FACTIONS.indexOf(unit.faction);
+  const kindIdx = UNIT_KINDS.indexOf(unit.kind);
+  if (factionIdx < 0 || kindIdx < 0) return 1;
+  return factionIdx * UNIT_KINDS.length + kindIdx + 1;
 }
 
 function avatarSrc(slot: number): string {
@@ -30,10 +35,8 @@ function avatarSrc(slot: number): string {
 }
 
 export type AgentAvatarProps = {
-  /** Agent display name — used to deterministically pick an avatar. */
-  name: string;
-  /** Optional override slot (1–25 as a string). Honored if valid; else hash. */
-  override?: string | null;
+  /** Same unit selection used by `UnitSprite` so the avatar matches the sprite. */
+  unit: UnitSelection;
   /** Square size in CSS pixels. Defaults to 32. */
   size?: number;
   /** Optional accessible label. Decorative by default. */
@@ -42,12 +45,13 @@ export type AgentAvatarProps = {
 };
 
 /**
- * Static portrait-style avatar from the Tiny Swords Human Avatars set. Used
- * where we want a clean character bust (sidebar roster, chat-row labels)
- * instead of the full-body UnitSprite.
+ * Static portrait-style avatar from the Tiny Swords Human Avatars set. Picks
+ * the portrait that matches the agent's chosen unit faction+kind, so the
+ * sidebar bust and the office-floor full-body sprite are always the same
+ * character.
  */
-export function AgentAvatar({ name, override, size = 32, label, className }: AgentAvatarProps) {
-  const slot = avatarSlotFor(name, override);
+export function AgentAvatar({ unit, size = 32, label, className }: AgentAvatarProps) {
+  const slot = slotFor(unit);
   const ariaProps = label
     ? { role: "img" as const, "aria-label": label }
     : { "aria-hidden": true };
