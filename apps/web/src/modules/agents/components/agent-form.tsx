@@ -17,13 +17,21 @@ export type AgentFormProps = {
   initial?: AgentFormValues;
   /** Locks the id input (edit mode). */
   mode: "new" | "edit";
+  /** When provided, fires after a successful save instead of navigating. */
+  onSaved?: (id: string) => void;
+  /** When provided, fires on Cancel instead of `router.back()`. */
+  onCancel?: () => void;
+  /** When provided, fires after a successful delete instead of navigating. */
+  onDeleted?: () => void;
+  /** Hide the Cancel button (useful inside modals with their own close UI). */
+  hideCancel?: boolean;
 };
 
 const MODELS = ["haiku", "sonnet", "opus"] as const;
 const EFFORTS = ["low", "medium", "high"] as const;
 const PERMS = ["ask", "plan", "auto"] as const;
 
-export function AgentForm({ initial, mode }: AgentFormProps) {
+export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCancel = false }: AgentFormProps) {
   const t = useTranslations();
   const router = useRouter();
   const [values, setValues] = useState<AgentFormValues>(initial ?? EMPTY_FORM);
@@ -46,7 +54,10 @@ export function AgentForm({ initial, mode }: AgentFormProps) {
     if (errs.length > 0) return;
 
     const body = toBody(values);
-    const onSuccess = ({ id }: { id: string }) => router.push(PAGE_ROUTES.agent(id));
+    const onSuccess = ({ id }: { id: string }) => {
+      if (onSaved) onSaved(id);
+      else router.push(PAGE_ROUTES.agent(id));
+    };
     const onError = (err: unknown) => setServerError(err instanceof Error ? err.message : String(err));
 
     if (mode === "new") createMut.mutate(body, { onSuccess, onError });
@@ -57,7 +68,10 @@ export function AgentForm({ initial, mode }: AgentFormProps) {
     if (mode !== "edit") return;
     if (!window.confirm(`Delete ${values.id}? This removes ~/.claude/agents/${values.id}.md and its memory file.`)) return;
     deleteMut.mutate(values.id, {
-      onSuccess: () => router.push(PAGE_ROUTES.agents),
+      onSuccess: () => {
+        if (onDeleted) onDeleted();
+        else router.push(PAGE_ROUTES.agents);
+      },
       onError: (err) => setServerError(err instanceof Error ? err.message : String(err)),
     });
   };
@@ -156,14 +170,16 @@ export function AgentForm({ initial, mode }: AgentFormProps) {
           </button>
         ) : <span />}
         <div style={{ display: "flex", gap: 8 }}>
-          <button
-            type="button"
-            className="btn ghost"
-            onClick={() => router.back()}
-            disabled={isPending}
-          >
-            Cancel
-          </button>
+          {hideCancel ? null : (
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() => (onCancel ? onCancel() : router.back())}
+              disabled={isPending}
+            >
+              Cancel
+            </button>
+          )}
           <button type="submit" className="btn primary" disabled={isPending}>
             {isPending ? "Saving…" : t("common.save")}
           </button>

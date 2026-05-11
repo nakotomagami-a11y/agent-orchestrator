@@ -486,20 +486,18 @@ function Workstation({
 
   const ariaLabel = `${agent.name} (${agent.status})`;
 
+  // Bounding box that covers desk + chair + name label, used as the
+  // click/focus target. Without this each workstation div would span the
+  // entire 1040×720 stage and only the top-most would receive clicks.
+  const hitX = Math.min(desk.x, chairPos.x - 14) - 4;
+  const hitY = Math.min(desk.y, chairPos.y - 14) - 4;
+  const hitW = Math.max(desk.w, 28) + Math.abs(chairPos.x - desk.x) + 8;
+  const hitH = Math.max(desk.h, 28) + Math.abs(chairPos.y - desk.y) + 8 + 20;
+
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={ariaLabel}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
       className={"workstation" + (selected ? " selected" : "")}
-      style={{ position: "absolute", inset: 0, cursor: "pointer" }}
+      style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
     >
       <svg
         width={ROOM_W}
@@ -690,10 +688,10 @@ function Workstation({
           style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
         >
           <rect
-            x={Math.min(desk.x, chairPos.x - 14) - 4}
-            y={Math.min(desk.y, chairPos.y - 14) - 4}
-            width={Math.max(desk.w, 28) + Math.abs(chairPos.x - desk.x) + 8}
-            height={Math.max(desk.h, 28) + Math.abs(chairPos.y - desk.y) + 8}
+            x={hitX}
+            y={hitY}
+            width={hitW}
+            height={hitH - 20}
             fill="none"
             stroke="var(--acc)"
             strokeWidth="2"
@@ -702,6 +700,26 @@ function Workstation({
           />
         </svg>
       ) : null}
+
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        onClick={onClick}
+        className="workstation-hit"
+        style={{
+          position: "absolute",
+          left: hitX,
+          top: hitY,
+          width: hitW,
+          height: hitH,
+          background: "transparent",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
+          pointerEvents: "auto",
+          borderRadius: 4,
+        }}
+      />
     </div>
   );
 }

@@ -16,6 +16,8 @@ export type ModalShellProps = {
   children: ReactNode;
   className?: string;
   closeLabel?: string;
+  /** Drop the default 16px content padding (for tabbed/chat layouts). */
+  bareContent?: boolean;
 };
 
 const SIZE_PX: Record<NonNullable<ModalShellProps["size"]>, number> = {
@@ -33,6 +35,7 @@ export function ModalShell({
   children,
   className,
   closeLabel = "Close",
+  bareContent = false,
 }: ModalShellProps) {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -108,7 +111,15 @@ export function ModalShell({
               </button>
             </div>
           ) : null}
-          <div style={{ padding: 16, overflow: "auto" }}>{children}</div>
+          <div
+            style={
+              bareContent
+                ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }
+                : { padding: 16, overflow: "auto" }
+            }
+          >
+            {children}
+          </div>
           {footer ? (
             <div
               style={{

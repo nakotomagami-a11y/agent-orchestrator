@@ -417,7 +417,7 @@ body {
 .inspector .ibtns { padding: 12px 14px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
 
 /* ── Chat ── */
-.chat { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; background: var(--bg-1); }
+.chat { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; height: 100%; flex: 1; background: var(--bg-1); }
 .chat-head {
   display: flex; align-items: center; gap: 12px;
   padding: 12px 18px;
