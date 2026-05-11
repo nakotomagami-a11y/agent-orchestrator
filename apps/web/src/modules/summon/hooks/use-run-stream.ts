@@ -14,11 +14,23 @@ const EVENT_NAMES: readonly SseEventName[] = [
   "error",
 ] as const;
 
+/**
+ * Connection lifecycle, tracked separately from `phase` so the UI can show
+ * "still reconnecting…" or "connection lost" even when the logical run phase
+ * would otherwise look fine. EventSource auto-retries on its own, so we only
+ * mark `lost` after the browser gave up — at which point the user has to
+ * trigger a manual reconnect.
+ */
+export type ConnectionState = "idle" | "connecting" | "open" | "retrying" | "lost";
+
 export interface RunStreamState {
   thread: ThreadItem[];
   usage: UsageMeter;
   phase: RunPhase;
   error: string | null;
+  connection: ConnectionState;
+  /** Epoch ms when we last received any SSE event. Null until first event. */
+  lastEventAt: number | null;
 }
 
 const INITIAL: RunStreamState = {
@@ -26,32 +38,52 @@ const INITIAL: RunStreamState = {
   usage: { tokensIn: 0, tokensOut: 0, cost: 0 },
   phase: "idle",
   error: null,
+  connection: "idle",
+  lastEventAt: null,
 };
 
 type SseHandler = (e: MessageEvent) => void;
 
-/**
- * Subscribes to `/api/runs/[id]/stream`. Returns the live thread + usage +
- * phase. Pass `runId = null` to detach (idle).
- */
-export function useRunStream(runId: string | null): RunStreamState {
+const MAX_RETRY_ATTEMPTS = 3;
+
+export interface UseRunStreamResult extends RunStreamState {
+  /** Force-close the current EventSource and start a new one. No-op when idle. */
+  reconnect: () => void;
+}
+
+export function useRunStream(runId: string | null): UseRunStreamResult {
   const [state, setState] = useState<RunStreamState>(INITIAL);
+  // Bumped to force the effect below to re-run and open a new EventSource.
+  const [reconnectNonce, setReconnectNonce] = useState(0);
   const ref = useRef<EventSource | null>(null);
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
     if (!runId) {
       setState(INITIAL);
       ref.current?.close();
       ref.current = null;
+      retryCountRef.current = 0;
       return;
     }
 
-    setState({ ...INITIAL, phase: "starting" });
+    retryCountRef.current = 0;
+    setState({ ...INITIAL, phase: "starting", connection: "connecting" });
     const url = API_ROUTES.runStream(runId);
     const source = new EventSource(url);
     ref.current = source;
 
     const handlers = new Map<SseEventName, SseHandler>();
+
+    // EventSource fires an `open` event whenever the underlying connection
+    // (re)opens — covers both the first connect and any automatic reconnect
+    // after a transient drop. Reset the retry counter so a healthy reconnect
+    // doesn't carry old failures into the next disconnect.
+    const onOpen = () => {
+      retryCountRef.current = 0;
+      setState((prev) => ({ ...prev, connection: "open" }));
+    };
+    source.addEventListener("open", onOpen);
 
     for (const name of EVENT_NAMES) {
       const handler: SseHandler = (e) => {
@@ -63,6 +95,7 @@ export function useRunStream(runId: string | null): RunStreamState {
         }
         const event = parseSseEvent(name, raw);
         if (!event) return;
+        const now = Date.now();
         setState((prev) => {
           const next = applySseEvent({ thread: prev.thread, usage: prev.usage }, event);
           const phase: RunPhase = next.error
@@ -77,6 +110,8 @@ export function useRunStream(runId: string | null): RunStreamState {
             usage: next.usage,
             phase,
             error: next.error ?? prev.error,
+            connection: "open",
+            lastEventAt: now,
           };
         });
         if (name === "done") source.close();
@@ -86,15 +121,36 @@ export function useRunStream(runId: string | null): RunStreamState {
     }
 
     source.onerror = () => {
-      setState((prev) => (prev.phase === "done" ? prev : { ...prev, error: "stream interrupted" }));
+      // EventSource readyState: 0=connecting, 1=open, 2=closed. The browser
+      // auto-retries while readyState===0, so distinguish "still trying" from
+      // "browser gave up" (readyState===2).
+      const givenUp = source.readyState === 2;
+      retryCountRef.current += 1;
+
+      if (givenUp || retryCountRef.current >= MAX_RETRY_ATTEMPTS) {
+        try {
+          source.close();
+        } catch {
+          /* already closed */
+        }
+        setState((prev) => ({
+          ...prev,
+          connection: "lost",
+          error: prev.error ?? "stream connection lost",
+        }));
+        return;
+      }
+
+      setState((prev) => ({ ...prev, connection: "retrying" }));
     };
 
     return () => {
+      source.removeEventListener("open", onOpen);
       for (const [name, handler] of handlers) source.removeEventListener(name, handler);
       source.close();
       ref.current = null;
     };
-  }, [runId]);
+  }, [runId, reconnectNonce]);
 
-  return state;
+  return { ...state, reconnect: () => setReconnectNonce((n) => n + 1) };
 }

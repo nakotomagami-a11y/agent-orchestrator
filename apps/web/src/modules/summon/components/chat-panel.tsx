@@ -65,8 +65,17 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     () => loadTranscript(tKey)?.activeRunId ?? null,
   );
   const [resumeProbed, setResumeProbed] = useState(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const [pendingSeed, setPendingSeed] = useState<string | undefined>();
   const [phaseOverride, setPhaseOverride] = useState<ChatPhase | null>(null);
+  // Bumped to retry the resume probe after a failure. Lets the user recover
+  // from a transient 500 (server hot-reloaded, network blip) without losing
+  // the run reference.
+  const [resumeAttempt, setResumeAttempt] = useState(0);
+  // Local "wall clock" tick that re-renders every second while a run is in
+  // flight. Used purely to compute "Xs since last token" against
+  // stream.lastEventAt — without this, the staleness display would freeze.
+  const [, setTick] = useState(0);
   const runStartIndexRef = useRef<number | null>(null);
   const fallbackAttemptedRef = useRef<string | null>(null);
 
@@ -76,6 +85,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     setThread(t?.items ?? []);
     setActiveRunId(t?.activeRunId ?? null);
     setResumeProbed(false);
+    setResumeError(null);
     setPhaseOverride(null);
     runStartIndexRef.current = null;
     fallbackAttemptedRef.current = null;
@@ -91,6 +101,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
       return;
     }
     let cancelled = false;
+    setResumeError(null);
     apiFetch<PersistedRun>(API_ROUTES.run(activeRunId))
       .then((run) => {
         if (cancelled) return;
@@ -110,20 +121,33 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
           // stream splice has somewhere to land. Use *current* thread length.
           runStartIndexRef.current = thread.length;
         }
+        setResumeProbed(true);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         if (cancelled) return;
-        setActiveRunId(null);
-      })
-      .finally(() => {
-        if (!cancelled) setResumeProbed(true);
+        // Surface the failure instead of silently dropping activeRunId. The
+        // user can Retry (re-runs this probe) or Dismiss (clears the runId
+        // so the UI moves on without the run's output).
+        const msg = err instanceof Error ? err.message : String(err);
+        setResumeError(msg || "couldn't reach server");
+        setResumeProbed(true);
       });
     return () => {
       cancelled = true;
     };
-    // We intentionally don't include `thread` — only fire once per runId.
+    // We intentionally don't include `thread` — only fire once per runId
+    // (resumeAttempt bumps when the user clicks Retry, resetting probed).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRunId, resumeProbed]);
+  }, [activeRunId, resumeProbed, resumeAttempt]);
+
+  // ── While a run is in flight, tick once per second so the
+  //    "Xs since last token" display updates without waiting for events. ──
+  useEffect(() => {
+    if (!activeRunId) return;
+    if (stream.phase === "done" || stream.phase === "error") return;
+    const id = setInterval(() => setTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [activeRunId, stream.phase]);
 
   // ── Splice live stream items into the canonical thread ──
   useEffect(() => {
@@ -269,6 +293,28 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   const isStreaming =
     phase === "sending" || phase === "connecting" || phase === "working" || phase === "streaming";
 
+  // ── Staleness detector: tokens are arriving from the SSE but we haven't
+  //    seen one in a while. Surfaces "still working… 42s since last token"
+  //    so the user can tell the difference between "the agent is thinking"
+  //    and "the stream is silently dead". ──
+  const STALE_THRESHOLD_MS = 30_000;
+  const sinceLastEventMs =
+    stream.lastEventAt && isStreaming ? Date.now() - stream.lastEventAt : null;
+  const isStale =
+    sinceLastEventMs !== null && sinceLastEventMs > STALE_THRESHOLD_MS;
+
+  const retryResume = () => {
+    setResumeError(null);
+    setResumeProbed(false);
+    setResumeAttempt((n) => n + 1);
+  };
+
+  const dismissResume = () => {
+    setResumeError(null);
+    setActiveRunId(null);
+    setResumeProbed(true);
+  };
+
   return (
     <div className="chat" role="region" aria-label={`Chat with ${agent.name}`}>
       <ChatHead
@@ -279,6 +325,47 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
         onNew={newThread}
         onEdit={onEdit}
       />
+
+      {/* Diagnostic banners — only one shown at a time, ordered by severity.
+          Resume probe failure > lost stream > retrying stream > stale stream. */}
+      {resumeError ? (
+        <StreamBanner
+          kind="error"
+          title="Couldn't reach the server to resume this run."
+          detail={`Run ${activeRunId} · ${resumeError}`}
+          primary={{ label: "Retry", onClick: retryResume }}
+          secondary={{ label: "Drop run", onClick: dismissResume }}
+        />
+      ) : stream.connection === "lost" ? (
+        <StreamBanner
+          kind="error"
+          title="Stream connection lost."
+          detail={
+            stream.error ??
+            "The browser gave up on the EventSource. The run may still be in flight on the server."
+          }
+          primary={{ label: "Reconnect", onClick: stream.reconnect }}
+        />
+      ) : stream.connection === "retrying" ? (
+        <StreamBanner
+          kind="warn"
+          title="Stream connection interrupted — reconnecting…"
+          detail="Browser is retrying automatically. Click Reconnect if it doesn't recover."
+          primary={{ label: "Reconnect now", onClick: stream.reconnect }}
+        />
+      ) : isStale && sinceLastEventMs !== null ? (
+        <StreamBanner
+          kind="warn"
+          title={`No new output for ${Math.floor(sinceLastEventMs / 1000)}s — still waiting.`}
+          detail={
+            stream.lastEventAt
+              ? `Last event at ${new Date(stream.lastEventAt).toLocaleTimeString()}. The agent may be thinking, or the stream may be silently stuck.`
+              : "No events received yet."
+          }
+          primary={{ label: "Reconnect", onClick: stream.reconnect }}
+        />
+      ) : null}
+
       <ChatThread
         items={thread}
         agent={agent}
@@ -313,4 +400,83 @@ function phaseHint(
     return `${(usage.tokensIn + usage.tokensOut).toLocaleString()} tok · $${usage.cost.toFixed(3)}`;
   }
   return undefined;
+}
+
+type BannerAction = { label: string; onClick: () => void };
+
+/**
+ * Inline alert strip rendered between the chat head and thread. Verbose by
+ * design — this app is for developers, so the user sees the actual error
+ * string, the run id, and a primary action they can take.
+ */
+function StreamBanner({
+  kind,
+  title,
+  detail,
+  primary,
+  secondary,
+}: {
+  kind: "warn" | "error";
+  title: string;
+  detail?: string;
+  primary?: BannerAction;
+  secondary?: BannerAction;
+}) {
+  const colour = kind === "error" ? "var(--error)" : "var(--queued)";
+  return (
+    <div
+      role="alert"
+      style={{
+        margin: "8px 24px 0",
+        padding: "10px 12px",
+        borderRadius: 8,
+        border: `1px solid ${colour}`,
+        background:
+          kind === "error"
+            ? "color-mix(in oklch, var(--error) 10%, transparent)"
+            : "color-mix(in oklch, var(--queued) 12%, transparent)",
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+      }}
+    >
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: colour }}>{title}</div>
+        {detail ? (
+          <div
+            style={{
+              marginTop: 3,
+              fontSize: 11.5,
+              color: "var(--txt-2)",
+              fontFamily: "var(--font-mono)",
+              wordBreak: "break-word",
+            }}
+          >
+            {detail}
+          </div>
+        ) : null}
+      </div>
+      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+        {secondary ? (
+          <button
+            type="button"
+            className="btn sm ghost"
+            onClick={secondary.onClick}
+          >
+            {secondary.label}
+          </button>
+        ) : null}
+        {primary ? (
+          <button
+            type="button"
+            className="btn sm"
+            onClick={primary.onClick}
+            style={{ borderColor: colour, color: colour }}
+          >
+            {primary.label}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
 }
