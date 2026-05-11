@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Tabs } from "@/components/ui/tabs";
 import { Icon } from "@/components/ui/icon";
@@ -22,6 +23,7 @@ type Tab = AgentTab;
  * facts file), System Prompt (markdown body).
  */
 export function AgentDetailsModal() {
+  const t = useTranslations();
   const selectedId = useOfficeStore((s) => s.selectedId);
   const selectedInstanceId = useOfficeStore((s) => s.selectedInstanceId);
   const inspectorOpen = useOfficeStore((s) => s.inspectorOpen);
@@ -40,15 +42,15 @@ export function AgentDetailsModal() {
 
   const runsQ = useRuns({ agentId: agent?.id, limit: 30 });
   const tabItems = [
-    { value: "conversation" as const, label: "Conversation" },
-    { value: "configuration" as const, label: "Configuration" },
+    { value: "conversation" as const, label: t("agent_details.tab_conversation") },
+    { value: "configuration" as const, label: t("agent_details.tab_configuration") },
     {
       value: "history" as const,
-      label: "History",
+      label: t("agent_details.tab_history"),
       count: runsQ.data?.length,
     },
-    { value: "memory" as const, label: "Memory" },
-    { value: "settings" as const, label: "Settings" },
+    { value: "memory" as const, label: t("agent_details.tab_memory") },
+    { value: "settings" as const, label: t("agent_details.tab_settings") },
   ];
 
   return (
@@ -61,11 +63,11 @@ export function AgentDetailsModal() {
       {agent ? (
         <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 8px 0 0" }}>
-            <Tabs items={tabItems} value={tab} onChange={setTab} ariaLabel="Agent sections" />
+            <Tabs items={tabItems} value={tab} onChange={setTab} ariaLabel={t("agent_details.tabs_aria")} />
             <button
               type="button"
               onClick={closeInspector}
-              aria-label="Close"
+              aria-label={t("agent_details.modal_close_aria")}
               style={{
                 background: "transparent",
                 border: "none",

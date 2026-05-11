@@ -36,11 +36,18 @@
     "empty_roster_hint": "Click \"Add agent\" to drop one onto the floor."
   },
   "office_toolbar": {
+    "view_group_aria": "Office view",
     "view_iso_aria": "Iso office view",
     "view_cards_aria": "Cards office view",
+    "zoom_group_aria": "Office zoom",
     "zoom_in_aria": "Zoom in",
     "zoom_out_aria": "Zoom out",
-    "zoom_reset_aria": "Reset zoom"
+    "zoom_reset_aria": "Reset zoom",
+    "add_to_project_title": "Add an agent instance to {project}",
+    "add_no_project_title": "Pick a project, then add an agent",
+    "no_project_selected": "no project selected",
+    "agents_available": "{count} available",
+    "in_project_label": "in {project}"
   },
   "common": {
     "search_placeholder": "Filter…",
@@ -140,13 +147,16 @@
     "description_empty": "—"
   },
   "agent_details": {
+    "tab_conversation": "Conversation",
     "tab_configuration": "Configuration",
     "tab_history": "History",
     "tab_memory": "Memory",
     "tab_settings": "Settings",
     "tab_prompt": "System prompt",
     "tab_runs": "Recent runs",
-    "tabs_aria": "Agent detail sections",
+    "tabs_aria": "Agent sections",
+    "tabs_aria_detail": "Agent detail sections",
+    "modal_close_aria": "Close",
     "no_skills": "no skills",
     "tag_model": "model: {model}",
     "tag_effort": "effort: {effort}",
