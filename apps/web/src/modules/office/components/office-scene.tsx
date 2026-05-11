@@ -1,19 +1,19 @@
 "use client";
 
+import { OfficeMap } from "./office-map";
+
 /**
- * Blank canvas for the new game-asset-based office view. Renders nothing
- * yet beyond a backdrop — tile renderer, decorations, and agent placement
- * land on top in subsequent iterations.
- *
- * Replaces (does not delete) the legacy IsoOffice — that component and its
- * SVG floor/walls/chairs/plants stay on disk under iso-office/ for reuse
- * or removal once the new view stabilises.
+ * Canvas for the new game-asset-based office view. The backdrop is the
+ * itch.zone scene image (cover-fitted); on top of it sits a hand-authored
+ * two-tier grass island built from the Tiny Swords tileset. Decorations
+ * (trees, bushes, water foam) and agent placement come in later passes.
  */
 export function OfficeScene() {
   return (
     <div
       className="office-scene"
       style={{
+        position: "relative",
         width: "100%",
         height: "100%",
         backgroundImage:
@@ -23,7 +23,10 @@ export function OfficeScene() {
         backgroundRepeat: "no-repeat",
         // Pixel art looks bad with the browser's default scaling filter.
         imageRendering: "pixelated",
+        overflow: "hidden",
       }}
-    />
+    >
+      <OfficeMap />
+    </div>
   );
 }
