@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { match } from "ts-pattern";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,6 +47,20 @@ export function OfficeView() {
 
   const chatAgent = agents.find((a) => a.id === chatAgentId) ?? null;
 
+  // Office floor click → resolve to the first instance of this agent in the
+  // active project's roster so the chat opens against the same instanceId
+  // the sidebar uses. Without this, clicking the floor produces a different
+  // tKey than clicking the sidebar row, and transcripts split between them.
+  // Limitation: agents with multiple instances are only reachable here as
+  // their first instance; secondary ones still need the sidebar.
+  const selectFromFloor = useCallback(
+    (id: string) => {
+      const instance = project?.meta.roster.find((i) => i.agentId === id);
+      select(id, { instanceId: instance?.instanceId ?? null });
+    },
+    [project, select],
+  );
+
   if (chatOpen && chatAgent) {
     return <ChatPanel agent={chatAgent} projectId={projectId} instanceId={instanceId} onClose={closeChat} />;
   }
@@ -91,9 +105,9 @@ export function OfficeView() {
           ))
           .otherwise(() =>
             view === "iso" ? (
-              <IsoOffice agents={scopedAgents} selectedId={selectedId} onSelect={select} zoom={zoom} />
+              <IsoOffice agents={scopedAgents} selectedId={selectedId} onSelect={selectFromFloor} zoom={zoom} />
             ) : (
-              <CardsOffice agents={scopedAgents} selectedId={selectedId} onSelect={select} />
+              <CardsOffice agents={scopedAgents} selectedId={selectedId} onSelect={selectFromFloor} />
             ),
           )}
 
