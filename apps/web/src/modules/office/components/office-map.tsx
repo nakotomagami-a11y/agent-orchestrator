@@ -426,11 +426,16 @@ export function OfficeMap({
       ))}
       {decoList.map((d) => {
         const def = DECORATIONS[d.kind];
-        // Anchor at bottom-centre of the cell: the decoration's bottom
-        // edge aligns with the cell's bottom edge, horizontally centred.
-        // Tall sprites (trees) extend upward into adjacent cells.
+        // Anchoring is per-decoration. Default "bottom" keeps trees,
+        // houses and other rooted sprites where they were. "center"
+        // (sheep) places the sprite's centre on the cell's centre so
+        // free-standing creatures don't appear to hang from the tile's
+        // top edge.
         const left = d.x * TILE + (TILE - def.frameW) / 2;
-        const top = (d.y + 1) * TILE - def.frameH;
+        const top =
+          def.anchor === "center"
+            ? d.y * TILE + (TILE - def.frameH) / 2
+            : (d.y + 1) * TILE - def.frameH;
         return (
           <div
             key={`deco-${decorationKey(d.x, d.y)}-${d.layer}`}
@@ -588,7 +593,10 @@ export function OfficeMap({
           ? (() => {
               const def = DECORATIONS[previewKind];
               const left = hover.x * TILE + (TILE - def.frameW) / 2;
-              const top = (hover.y + 1) * TILE - def.frameH;
+              const top =
+                def.anchor === "center"
+                  ? hover.y * TILE + (TILE - def.frameH) / 2
+                  : (hover.y + 1) * TILE - def.frameH;
               const tint = hoverValid ? "#22c55e" : "#ef4444";
               return (
                 <div

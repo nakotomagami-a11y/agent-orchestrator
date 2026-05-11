@@ -117,6 +117,16 @@ export interface DecorationDef {
    *  stacking two bushes. */
   family: DecoFamily;
   animClass?: string;
+  /** How the sprite is positioned inside its owning cell.
+   *
+   *   - "bottom" (default): the sprite's bottom-centre aligns with the
+   *     cell's bottom-centre. Tall sprites (trees, houses, towers) hang
+   *     upward from the cell — they look rooted to the ground.
+   *   - "center": the sprite's centre aligns with the cell's centre.
+   *     Used for free-standing creatures (sheep) so they read as
+   *     standing on the tile rather than hanging from its top edge.
+   */
+  anchor?: "bottom" | "center";
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -461,6 +471,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/sheep.png",
     frameW: 128, frameH: 128, frames: 8,
     terrain: "land", category: "land", family: "sheep", animClass: "deco-bush",
+    anchor: "center",
   },
 
   // ─ Bridges (static 64×64, water-only). Only the middle plank is
