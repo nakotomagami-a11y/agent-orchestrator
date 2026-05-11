@@ -167,6 +167,16 @@ const ICON_PATHS = {
       </>
     ),
   },
+  gauge: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M3.5 17a9 9 0 1 1 17 0" />
+        <path d="m12 12 4-2" />
+        <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      </>
+    ),
+  },
   x: {
     ...STROKE_BASE,
     strokeWidth: 2,

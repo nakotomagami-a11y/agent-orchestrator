@@ -8,9 +8,11 @@ import { NavItem } from "./nav-item";
 import { PixelSprite } from "@/components/ui/pixel-sprite";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { isActiveRoute } from "./sidebar.utils";
+import { Icon } from "@/components/ui/icon";
 import { useOfficeAgents, type OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
+import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 
 export function Sidebar() {
@@ -191,23 +193,53 @@ export function Sidebar() {
         </div>
       </div>
 
+      <SidebarFoot spendToday={spendToday} />
+    </aside>
+  );
+}
+
+function SidebarFoot({ spendToday }: { spendToday: number }) {
+  const openLimits = useClaudeLimitsStore((s) => s.setOpen);
+  return (
+    <div className="sidebar-foot">
       <Link
         href={PAGE_ROUTES.settings}
-        className="sidebar-foot"
         aria-label="Open settings"
-        style={{ textDecoration: "none", color: "var(--txt)" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          textDecoration: "none",
+          color: "var(--txt)",
+          flex: 1,
+          minWidth: 0,
+        }}
       >
         <div className="me" aria-hidden>
           P
         </div>
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div className="me-name">Local</div>
           <div className="me-sub">single-user</div>
         </div>
-        <div className="foot-spend" aria-label={`Spend today $${spendToday.toFixed(2)}`}>
-          ${spendToday.toFixed(2)} today
-        </div>
       </Link>
-    </aside>
+      <button
+        type="button"
+        onClick={() => openLimits(true)}
+        className="foot-spend"
+        title="Claude limits & usage"
+        aria-label={`Claude limits — spend today $${spendToday.toFixed(2)}`}
+        style={{
+          font: "inherit",
+          cursor: "pointer",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+        }}
+      >
+        <Icon name="gauge" size={12} />
+        ${spendToday.toFixed(2)} today
+      </button>
+    </div>
   );
 }
