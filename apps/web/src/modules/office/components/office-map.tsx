@@ -486,11 +486,14 @@ export function OfficeMap({
         .map(({ x, y, ref }) => {
           const agent = agentsById.get(ref.agentId);
           if (!agent) return null;
-          // Sit the character centred on the cell, anchored at the
-          // bottom so taller frames extend upward.
+          // Sit the character symmetrically centred on the cell. With
+          // SIZE > TILE the sprite overflows by (SIZE-TILE)/2 on every
+          // side, so the head sits above the cell and the feet just
+          // below — the character looks anchored to the middle of the
+          // tile rather than its bottom edge.
           const SIZE = AGENT_SIZE;
           const left = x * TILE + (TILE - SIZE) / 2;
-          const top = (y + 1) * TILE - SIZE;
+          const top = y * TILE + (TILE - SIZE) / 2;
           // Animation rule: agents idle by default and only switch to a
           // work animation while they're actively running a task. The work
           // animation is picked from whatever resource shares their cell —
@@ -557,7 +560,7 @@ export function OfficeMap({
             const tint = valid ? "#22c55e" : "#ef4444";
             const SIZE = AGENT_SIZE;
             const left = hover.x * TILE + (TILE - SIZE) / 2;
-            const top = (hover.y + 1) * TILE - SIZE;
+            const top = hover.y * TILE + (TILE - SIZE) / 2;
             return (
               <div
                 aria-hidden
