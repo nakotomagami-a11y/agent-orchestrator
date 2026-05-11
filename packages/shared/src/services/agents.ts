@@ -1,0 +1,157 @@
+// Agent definitions: ~/.claude/agents/<id>.md (YAML frontmatter + markdown body).
+// Sibling memory file at ~/.claude/agents/<id>.memory.md.
+//
+// `buildAppendedPrompt` composes the per-summon system prompt from skills +
+// global memory + project memory + per-agent memory.
+
+import { readdirSync, readFileSync, existsSync, writeFileSync, mkdirSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import type { ApiAgent, AgentBody, Project } from "../types/index";
+import { AGENTS_DIR, GLOBAL_MEMORY_PATH } from "./paths";
+import { parseYaml, stringifyYaml, type YamlValue } from "./yaml";
+import { buildSkillsPrompt } from "./skills";
+
+interface ParsedFile {
+  fm: Record<string, unknown>;
+  body: string;
+}
+
+function parseFrontmatter(content: string): ParsedFile {
+  const m = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (!m) return { fm: {}, body: content };
+  let fm: Record<string, unknown> = {};
+  try {
+    const parsed = parseYaml(m[1]!);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      fm = parsed as Record<string, unknown>;
+    }
+  } catch {
+    fm = {};
+  }
+  return { fm, body: m[2]! };
+}
+
+function asStringList(v: unknown): string[] {
+  if (Array.isArray(v)) {
+    return v.map((x) => String(x).trim()).filter(Boolean);
+  }
+  if (typeof v === "string") {
+    return v
+      .replace(/^\[|\]$/g, "")
+      .split(",")
+      .map((s) => s.trim().replace(/^["']|["']$/g, ""))
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function asString(v: unknown): string | undefined {
+  return typeof v === "string" && v.trim() ? v.trim() : undefined;
+}
+
+export function readAgent(name: string): { info: ApiAgent; body: string } | null {
+  const path = join(AGENTS_DIR, `${name}.md`);
+  if (!existsSync(path)) return null;
+  const content = readFileSync(path, "utf8");
+  const { fm, body } = parseFrontmatter(content);
+  const info: ApiAgent = {
+    name: asString(fm.name) ?? name,
+    description: asString(fm.description) ?? "",
+    skills: asStringList(fm.skills),
+    tools: asStringList(fm.tools ?? fm["allowed-tools"]),
+    defaultModel: asString(fm["default-model"] ?? fm.model),
+    defaultEffort: asString(fm["default-effort"] ?? fm.effort),
+    permissionMode: asString(fm["permission-mode"]),
+    room: asString(fm.room),
+  };
+  return { info, body: body.trim() };
+}
+
+export function listAgents(): ApiAgent[] {
+  if (!existsSync(AGENTS_DIR)) return [];
+  return readdirSync(AGENTS_DIR)
+    .filter((f) => f.endsWith(".md") && !f.endsWith(".memory.md") && !f.startsWith("_"))
+    .map((f) => readAgent(f.replace(/\.md$/, ""))?.info)
+    .filter((a): a is ApiAgent => a !== undefined);
+}
+
+export function writeAgent(b: AgentBody): string {
+  if (!existsSync(AGENTS_DIR)) mkdirSync(AGENTS_DIR, { recursive: true });
+  const id = b.id.replace(/[^a-z0-9-]/gi, "").toLowerCase();
+  if (!id) throw new Error("invalid id");
+  const file = join(AGENTS_DIR, `${id}.md`);
+  const fm: Record<string, YamlValue> = {
+    name: id,
+    description: b.desc.replace(/\n/g, " "),
+    "default-model": b.model,
+    "default-effort": b.effort,
+    skills: b.skills,
+    tools: b.tools,
+    "permission-mode": b.pm,
+  };
+  if (b.room) fm.room = b.room;
+  const content = `---\n${stringifyYaml(fm).trim()}\n---\n\n${b.body}\n`;
+  writeFileSync(file, content);
+  return id;
+}
+
+export function deleteAgent(id: string): boolean {
+  const mdPath = join(AGENTS_DIR, `${id}.md`);
+  if (!existsSync(mdPath)) return false;
+  rmSync(mdPath);
+  const memPath = memoryPathFor(id);
+  if (existsSync(memPath)) rmSync(memPath);
+  return true;
+}
+
+// ─── Memory files ────────────────────────────────────────────────────────
+
+export function memoryPathFor(agent: string): string {
+  return join(AGENTS_DIR, `${agent}.memory.md`);
+}
+
+export function readMemory(path: string): string {
+  if (!existsSync(path)) return "";
+  return readFileSync(path, "utf8");
+}
+
+export function writeMemoryFile(path: string, content: string): void {
+  if (!existsSync(AGENTS_DIR)) mkdirSync(AGENTS_DIR, { recursive: true });
+  writeFileSync(path, content);
+}
+
+export function readGlobalMemory(): string {
+  return readMemory(GLOBAL_MEMORY_PATH);
+}
+
+export function writeGlobalMemory(content: string): void {
+  writeMemoryFile(GLOBAL_MEMORY_PATH, content);
+}
+
+export function readAgentMemory(agentId: string): string {
+  return readMemory(memoryPathFor(agentId));
+}
+
+export function writeAgentMemory(agentId: string, content: string): void {
+  writeMemoryFile(memoryPathFor(agentId), content);
+}
+
+/**
+ * Composition order: skills → global → project → per-agent.
+ * Caller passes a pre-resolved `Project` (or null) — we don't import the
+ * projects service here to avoid a cycle.
+ */
+export function buildAppendedPrompt(agentName: string, project: Project | null): string {
+  const agent = readAgent(agentName);
+  const skillFragment = agent ? buildSkillsPrompt(agent.info.skills).trim() : "";
+  const global = readGlobalMemory().trim();
+  const projectMemory = project?.memory.trim() ?? "";
+  const perAgent = readAgentMemory(agentName).trim();
+
+  const parts: string[] = [];
+  if (skillFragment) parts.push("## Capabilities (from selected skills)\n\n" + skillFragment);
+  if (global) parts.push("## Global memory (applies to every agent)\n" + global);
+  if (projectMemory) parts.push(`## Project memory (${project!.meta.name})\n` + projectMemory);
+  if (perAgent) parts.push(`## Memory specific to ${agentName}\n` + perAgent);
+  return parts.join("\n\n");
+}

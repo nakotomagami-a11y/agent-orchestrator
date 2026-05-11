@@ -1,0 +1,28 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@agent-office/shared/hooks/api";
+import { queryKeys } from "@agent-office/shared/hooks/query-keys";
+import { API_ROUTES } from "@agent-office/shared/config/routes";
+import type { PersistedRun } from "@agent-office/shared/types";
+import { POLL } from "@/lib/polling";
+
+export function useRuns(filters?: { agentId?: string; limit?: number }) {
+  const limit = filters?.limit ?? 100;
+  const params = new URLSearchParams();
+  params.set("limit", String(limit));
+  if (filters?.agentId) params.set("agent", filters.agentId);
+  return useQuery({
+    queryKey: queryKeys.runs.list(filters),
+    queryFn: () => apiFetch<PersistedRun[]>(`${API_ROUTES.runs}?${params.toString()}`),
+    refetchInterval: POLL.RUNS,
+  });
+}
+
+export function useRun(runId: string | null) {
+  return useQuery({
+    queryKey: runId ? queryKeys.runs.detail(runId) : ["__noop"],
+    queryFn: () => apiFetch<PersistedRun>(API_ROUTES.run(runId!)),
+    enabled: !!runId,
+  });
+}

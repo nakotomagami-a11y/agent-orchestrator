@@ -1,0 +1,51 @@
+{
+  "app": {
+    "name": "Agent Office",
+    "tagline": "Personal fleet manager for Claude Code subagents."
+  },
+  "nav": {
+    "office": "Office",
+    "activity": "Activity",
+    "templates": "Templates",
+    "projects": "Projects",
+    "skills": "Skills",
+    "settings": "Settings",
+    "agents": "Agents"
+  },
+  "office": {
+    "title": "The office",
+    "agents_count": "{count, plural, one {# agent} other {# agents}}",
+    "working_count": "{count} working",
+    "live_label": "live",
+    "idle_label": "idle",
+    "needs_attention_label": "need attention",
+    "spend_today": "Spend today",
+    "budget_daily": "Budget",
+    "view_iso": "Iso",
+    "view_cards": "Cards",
+    "new_agent": "New agent",
+    "add_agent": "Add agent"
+  },
+  "common": {
+    "search_placeholder": "Filter…",
+    "abort": "Abort",
+    "close": "Close",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "loading": "Loading…",
+    "empty": "Nothing here yet."
+  },
+  "summon": {
+    "open_chat": "Open chat",
+    "send": "Send",
+    "model": "Model",
+    "effort": "Effort",
+    "max_budget": "Max budget"
+  },
+  "errors": {
+    "claude_unavailable": "Claude CLI is not available.",
+    "rate_limited": "Too many requests — try again in a moment.",
+    "not_found": "Not found."
+  }
+}

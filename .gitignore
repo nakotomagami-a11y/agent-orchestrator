@@ -1,0 +1,16 @@
+node_modules
+.next
+dist
+out
+.turbo
+.DS_Store
+*.log
+.env*.local
+.pnpm-store
+coverage
+next-env.d.ts
+*.tsbuildinfo
+
+# legacy archive — code is in _legacy/ unzipped already
+_legacy/Orchestrator.zip
+_legacy/**/dist
