@@ -20,3 +20,8 @@ _legacy/**/dist
 # you'd pull from to regenerate sheets or add new units — too large
 # (~5 MB of raw assets) to keep in git.
 PIXEL/
+
+# Tauri Rust build output (only the source + config under src-tauri/
+# are tracked; target/ is reproducible from cargo).
+apps/web/src-tauri/target/
+apps/web/src-tauri/gen/
