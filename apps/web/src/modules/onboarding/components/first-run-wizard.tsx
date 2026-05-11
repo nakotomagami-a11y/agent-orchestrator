@@ -70,6 +70,14 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const [projectName, setProjectName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Belt-and-braces dismissal flag. The gate normally unmounts the
+  // wizard once `/api/settings` refetches and reports
+  // `firstRunComplete: true`, but if the invalidate/refetch is slow or
+  // dropped (e.g. transient network blip in the embedded webview) the
+  // user would be stranded staring at "Setting things up…". This
+  // local flag lets us close ourselves the instant the mutation
+  // succeeds, independently of whether the gate's query has caught up.
+  const [dismissed, setDismissed] = useState(false);
 
   const starterQ = useQuery({
     queryKey: ["starter-agents"],
@@ -130,10 +138,17 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
       return { createdId };
     },
     onSuccess: ({ createdId }) => {
+      // Important: close ourselves first via the local dismiss flag,
+      // BEFORE waiting on any refetches. The gate's invalidate-based
+      // unmount still runs, but we don't depend on it any more — if
+      // it succeeds the gate also returns null, and our null
+      // short-circuit makes the wizard disappear immediately.
+      if (createdId) setActiveProjectId(createdId);
+      setBusy(false);
+      setDismissed(true);
       qc.invalidateQueries({ queryKey: queryKeys.settings.all });
       qc.invalidateQueries({ queryKey: queryKeys.projects.all });
       qc.invalidateQueries({ queryKey: queryKeys.agents.all });
-      if (createdId) setActiveProjectId(createdId);
       onDone();
     },
     onError: (err) => {
@@ -196,6 +211,8 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     if (selectedAgents.size === starter.length) setSelectedAgents(new Set());
     else setSelectedAgents(new Set(starter.map((a) => a.id)));
   };
+
+  if (dismissed) return null;
 
   return (
     <div className="first-run-overlay" role="dialog" aria-modal="true" aria-labelledby="fr-title">
