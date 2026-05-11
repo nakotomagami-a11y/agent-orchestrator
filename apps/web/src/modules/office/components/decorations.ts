@@ -37,7 +37,15 @@ export type DecoFamily =
   | "tower"
   | "castle"
   | "water_rock"
-  | "duck";
+  | "duck"
+  | "mushroom"
+  | "shrub"
+  | "pumpkin"
+  | "bones"
+  | "sign"
+  | "grave"
+  | "scarecrow"
+  | "bridge";
 
 export type DecorationKind =
   | "bush"
@@ -65,7 +73,28 @@ export type DecorationKind =
   | "water_rock2"
   | "water_rock3"
   | "water_rock4"
-  | "duck";
+  | "duck"
+  | "mushroom1"
+  | "mushroom2"
+  | "mushroom3"
+  | "shrub1"
+  | "shrub2"
+  | "shrub3"
+  | "shrub4"
+  | "shrub5"
+  | "pumpkin1"
+  | "pumpkin2"
+  | "bones1"
+  | "bones2"
+  | "bone_sign"
+  | "gravestone"
+  | "scarecrow"
+  | "bridge_h_l"
+  | "bridge_h_m"
+  | "bridge_h_r"
+  | "bridge_v_t"
+  | "bridge_v_m"
+  | "bridge_v_b";
 
 export interface DecorationDef {
   label: string;
@@ -256,6 +285,150 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/duck.png",
     frameW: 32, frameH: 32, frames: 3,
     terrain: "water", category: "water", family: "duck", animClass: "deco-duck",
+  },
+
+  // ─ Mushrooms (static 64×64, three sizes) ────────────────────────────
+  mushroom1: {
+    label: "Mushroom (small)",
+    src: "/decorations/mushroom1.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "mushroom",
+  },
+  mushroom2: {
+    label: "Mushroom (medium)",
+    src: "/decorations/mushroom2.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "mushroom",
+  },
+  mushroom3: {
+    label: "Mushroom (large)",
+    src: "/decorations/mushroom3.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "mushroom",
+  },
+
+  // ─ Shrubs / dark foliage (static 64×64) ─────────────────────────────
+  shrub1: {
+    label: "Shrub 1",
+    src: "/decorations/shrub1.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "shrub",
+  },
+  shrub2: {
+    label: "Shrub 2",
+    src: "/decorations/shrub2.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "shrub",
+  },
+  shrub3: {
+    label: "Shrub 3",
+    src: "/decorations/shrub3.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "shrub",
+  },
+  shrub4: {
+    label: "Shrub 4",
+    src: "/decorations/shrub4.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "shrub",
+  },
+  shrub5: {
+    label: "Shrub 5",
+    src: "/decorations/shrub5.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "shrub",
+  },
+
+  // ─ Pumpkins (static 64×64) ──────────────────────────────────────────
+  pumpkin1: {
+    label: "Pumpkin (small)",
+    src: "/decorations/pumpkin1.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "pumpkin",
+  },
+  pumpkin2: {
+    label: "Pumpkin (large)",
+    src: "/decorations/pumpkin2.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "pumpkin",
+  },
+
+  // ─ Bones (static 64×64) ─────────────────────────────────────────────
+  bones1: {
+    label: "Bones 1",
+    src: "/decorations/bones1.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "bones",
+  },
+  bones2: {
+    label: "Bones 2",
+    src: "/decorations/bones2.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "bones",
+  },
+
+  // ─ Tall props (64×128, extend upward into the cell above) ───────────
+  bone_sign: {
+    label: "Bone sign",
+    src: "/decorations/bone-sign.png",
+    frameW: 64, frameH: 128, frames: 1,
+    terrain: "land", category: "land", family: "sign",
+  },
+  gravestone: {
+    label: "Gravestone",
+    src: "/decorations/gravestone.png",
+    frameW: 64, frameH: 128, frames: 1,
+    terrain: "land", category: "land", family: "grave",
+  },
+
+  // ─ Scarecrow (large 192×192, spans 3×3 visually) ────────────────────
+  scarecrow: {
+    label: "Scarecrow",
+    src: "/decorations/scarecrow.png",
+    frameW: 192, frameH: 192, frames: 1,
+    terrain: "land", category: "land", family: "scarecrow",
+  },
+
+  // ─ Bridges (static 64×64, water-only). Six variants compose
+  //   horizontal and vertical bridges across water. End caps + middle
+  //   pieces — players tile them end-to-end on water cells to bridge
+  //   across to land. All share the "bridge" family so a cell can hold
+  //   at most one bridge tile. ─────────────────────────────────────────
+  bridge_h_l: {
+    label: "Bridge — horizontal (left)",
+    src: "/decorations/bridge-h-l.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "water", category: "water", family: "bridge",
+  },
+  bridge_h_m: {
+    label: "Bridge — horizontal (middle)",
+    src: "/decorations/bridge-h-m.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "water", category: "water", family: "bridge",
+  },
+  bridge_h_r: {
+    label: "Bridge — horizontal (right)",
+    src: "/decorations/bridge-h-r.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "water", category: "water", family: "bridge",
+  },
+  bridge_v_t: {
+    label: "Bridge — vertical (top)",
+    src: "/decorations/bridge-v-t.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "water", category: "water", family: "bridge",
+  },
+  bridge_v_m: {
+    label: "Bridge — vertical (middle)",
+    src: "/decorations/bridge-v-m.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "water", category: "water", family: "bridge",
+  },
+  bridge_v_b: {
+    label: "Bridge — vertical (bottom)",
+    src: "/decorations/bridge-v-b.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "water", category: "water", family: "bridge",
   },
 };
 
