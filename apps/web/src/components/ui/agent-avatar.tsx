@@ -1,33 +1,17 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import {
-  UNIT_FACTIONS,
-  UNIT_KINDS,
-  type UnitSelection,
-} from "./unit-sprite.utils";
+import { type UnitSelection } from "./unit-sprite.utils";
 
 /**
- * Map a `(faction, kind)` selection to the corresponding 1-25 portrait slot.
- *
- * The avatar set is laid out as 5 factions × 5 kinds in the same order as
- * the unit sprite catalog:
- *
- *   01-05: blue   (pawn, warrior, archer, monk, lancer)
- *   06-10: red    (same)
- *   11-15: purple
- *   16-20: yellow
- *   21-25: black
- *
- * So an agent that resolved to `yellow/archer` for its UnitSprite gets the
- * yellow/archer portrait here — the iso-office floor character and the
- * sidebar avatar stay visually consistent for the same agent.
+ * Currently every agent uses 10.png — the user identified this portrait
+ * as the canonical "black faction pawn" bust. Kept as a function (rather
+ * than inlining the constant) so re-enabling per-agent variants later
+ * is a one-line change: drop the constant and recompute slot from
+ * `unit.faction` / `unit.kind`.
  */
-function slotFor(unit: UnitSelection): number {
-  const factionIdx = UNIT_FACTIONS.indexOf(unit.faction);
-  const kindIdx = UNIT_KINDS.indexOf(unit.kind);
-  if (factionIdx < 0 || kindIdx < 0) return 1;
-  return factionIdx * UNIT_KINDS.length + kindIdx + 1;
+function slotFor(_unit: UnitSelection): number {
+  return 10;
 }
 
 function avatarSrc(slot: number): string {

@@ -12,6 +12,9 @@ import { Icon } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { EMPTY_FORM, type AgentFormValues, type FormError, slugifyId, toBody, validateForm } from "../utils/agent-form";
 import { useCreateAgent, useDeleteAgent, useWriteAgent } from "../hooks/use-agents";
+// UnitPicker removed — every agent now uses the black-faction pawn
+// avatar by default. Component file kept on disk for now in case we
+// re-enable per-agent customisation later.
 
 export type AgentFormProps = {
   initial?: AgentFormValues;
