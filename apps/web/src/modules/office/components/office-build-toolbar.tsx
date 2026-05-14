@@ -14,6 +14,7 @@ import {
   type GrassColor,
   type GrassColorDef,
 } from "./grass-colors";
+import { useFilter } from "@/hooks/use-filter";
 
 export type BuildTool = "grass" | "erase" | DecorationKind;
 
@@ -41,7 +42,6 @@ export function OfficeBuildToolbar({
   onSelectGrassColor,
 }: OfficeBuildToolbarProps) {
   const [activeTab, setActiveTab] = useState<DecoCategory>("land");
-  const [q, setQ] = useState("");
 
   // Keep tab in sync when a deco tool is selected externally
   useEffect(() => {
@@ -53,29 +53,29 @@ export function OfficeBuildToolbar({
 
   const grassColorDef = GRASS_COLOR_LIST.find((c) => c.id === grassColor);
 
-  const filteredKinds = useMemo(() => {
-    if (q.trim()) {
-      const s = q.toLowerCase();
-      return DECORATION_KINDS.filter(
-        (k) =>
-          DECORATIONS[k].label.toLowerCase().includes(s) ||
-          DECORATIONS[k].category.includes(s) ||
-          DECORATIONS[k].family.includes(s),
-      );
-    }
-    return DECORATION_KINDS.filter((k) => DECORATIONS[k].category === activeTab);
-  }, [q, activeTab]);
+  // Search across all categories; fall back to active-tab filter when empty
+  const { query: q, setQuery: setQ, filtered: searchResults } = useFilter(
+    DECORATION_KINDS,
+    (k, s) =>
+      DECORATIONS[k].label.toLowerCase().includes(s) ||
+      DECORATIONS[k].category.includes(s) ||
+      DECORATIONS[k].family.includes(s),
+  );
+
+  const filteredKinds = q.trim()
+    ? searchResults
+    : DECORATION_KINDS.filter((k) => DECORATIONS[k].category === activeTab);
 
   const searchGroups = useMemo(() => {
     if (!q.trim()) return null;
     const map = new Map<string, DecorationKind[]>();
-    for (const k of filteredKinds) {
+    for (const k of searchResults) {
       const cat = DECORATIONS[k].category;
       if (!map.has(cat)) map.set(cat, []);
       map.get(cat)!.push(k);
     }
     return [...map.entries()] as [string, DecorationKind[]][];
-  }, [q, filteredKinds]);
+  }, [q, searchResults]);
 
   const selectedKind = DECORATION_KINDS.includes(tool as DecorationKind)
     ? (tool as DecorationKind)

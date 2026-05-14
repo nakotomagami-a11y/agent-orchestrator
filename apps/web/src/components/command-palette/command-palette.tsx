@@ -7,6 +7,7 @@ import {
   useCallback,
   type KeyboardEvent,
 } from "react";
+import { useFilter } from "@/hooks/use-filter";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
@@ -89,7 +90,10 @@ export function CommandPalette() {
   const setOpen = usePaletteStore((s) => s.setOpen);
   const router = useRouter();
 
-  const [query, setQuery] = useState("");
+  const { query, setQuery, filtered } = useFilter(
+    COMMANDS,
+    (c, q) => c.label.toLowerCase().includes(q.toLowerCase()),
+  );
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -130,13 +134,6 @@ export function CommandPalette() {
     );
     active?.scrollIntoView({ block: "nearest" });
   }, [activeIndex]);
-
-  const filtered =
-    query.trim() === ""
-      ? COMMANDS
-      : COMMANDS.filter((c) =>
-          c.label.toLowerCase().includes(query.toLowerCase()),
-        );
 
   const close = useCallback(() => setOpen(false), [setOpen]);
 

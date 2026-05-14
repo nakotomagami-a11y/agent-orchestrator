@@ -11,7 +11,6 @@ import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import type { ApiAgent } from "@agent-office/shared/types";
 import { useAgents } from "../hooks/use-agents";
-import { useAgentFilter } from "../hooks/use-agent-filter";
 import { categorize, tallyCategories } from "../utils/categorize";
 
 /**

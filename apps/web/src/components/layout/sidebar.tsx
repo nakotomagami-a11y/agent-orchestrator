@@ -16,7 +16,7 @@ import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
 import { usePaletteStore } from "@/lib/palette-store";
 import { useProject, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
-import { useAgentFilter } from "@/modules/agents/hooks/use-agent-filter";
+import { useFilter } from "@/hooks/use-filter";
 import type { AgentInstance } from "@agent-office/shared/types";
 import {
   AGENT_DRAG_MIME,
@@ -79,19 +79,18 @@ export function Sidebar() {
     return rows;
   }, [agents, project]);
 
-  const [filter, setFilter] = useState("");
   const [filterFocused, setFilterFocused] = useState(false);
-  const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return rosterRows;
-    return rosterRows.filter((r) => {
-      if (r.displayName.toLowerCase().includes(q)) return true;
-      if (r.agent.short.toLowerCase().includes(q)) return true;
-      if (r.agent.skills?.some((s) => s.toLowerCase().includes(q))) return true;
-      if (r.agent.task?.toLowerCase().includes(q)) return true;
+  const { query: filter, setQuery: setFilter, filtered } = useFilter(
+    rosterRows,
+    (r, q) => {
+      const lq = q.toLowerCase();
+      if (r.displayName.toLowerCase().includes(lq)) return true;
+      if (r.agent.short.toLowerCase().includes(lq)) return true;
+      if (r.agent.skills?.some((s) => s.toLowerCase().includes(lq)) ?? false) return true;
+      if (r.agent.task?.toLowerCase().includes(lq) ?? false) return true;
       return false;
-    });
-  }, [rosterRows, filter]);
+    },
+  );
 
   const onRemove = (row: RosterRow) => {
     if (!activeProjectId || !row.instance) return;
