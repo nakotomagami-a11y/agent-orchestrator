@@ -13,6 +13,8 @@ export type ModalShellProps = {
   footer?: ReactNode;
   /** Width preset. */
   size?: "sm" | "md" | "lg";
+  /** Override the max-width in pixels (takes precedence over size). */
+  maxWidth?: number;
   children: ReactNode;
   className?: string;
   closeLabel?: string;
@@ -32,6 +34,7 @@ export function ModalShell({
   title,
   footer,
   size = "md",
+  maxWidth,
   children,
   className,
   closeLabel = "Close",
@@ -105,7 +108,7 @@ export function ModalShell({
           className={cn("card", className)}
           style={{
             width: "100%",
-            maxWidth: SIZE_PX[size],
+            maxWidth: maxWidth ?? SIZE_PX[size],
             display: "flex",
             flexDirection: "column",
             maxHeight: "calc(100vh - 40px)",

@@ -13,11 +13,23 @@ export interface ProcessInfo {
   cmd: string;
   cwd: string;
   startedAt: number;
+  memMb: number;
   projectId?: string;
   projectName?: string;
 }
 
 const CLOCK_TICKS = 100;
+
+function readProcMem(pid: number): number {
+  try {
+    const status = readFileSync(`/proc/${pid}/status`, "utf8");
+    const match = /^VmRSS:\s+(\d+)\s+kB/m.exec(status);
+    if (!match) return 0;
+    return Math.round(parseInt(match[1]!, 10) / 1024);
+  } catch {
+    return 0;
+  }
+}
 
 function readProcCmdline(pid: number): string {
   try {
@@ -118,8 +130,9 @@ export async function GET(): Promise<NextResponse> {
         const cmd = readProcCmdline(pid);
         const cwd = readProcCwd(pid);
         const startedAt = readProcStartedAt(pid);
+        const memMb = readProcMem(pid);
         const proj = matchProject(cwd);
-        byPid.set(pid, { pid, port, address, name, cmd, cwd, startedAt, ...proj });
+        byPid.set(pid, { pid, port, address, name, cmd, cwd, startedAt, memMb, ...proj });
       }
     }
   }

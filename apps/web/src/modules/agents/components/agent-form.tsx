@@ -30,8 +30,8 @@ export type AgentFormProps = {
   hideCancel?: boolean;
 };
 
-const MODELS = ["haiku", "sonnet", "opus"] as const;
-const EFFORTS = ["low", "medium", "high"] as const;
+const MODEL_SUGGESTIONS = ["haiku", "sonnet", "opus", "claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"] as const;
+const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 const PERMS = ["ask", "plan", "auto"] as const;
 
 export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCancel = false }: AgentFormProps) {
@@ -114,11 +114,17 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
             />
           </Field>
           <Field label={t("agent_form.label_model")}>
-            <Select value={values.model} onChange={update("model")}>
-              {MODELS.map((m) => (
-                <option key={m} value={m}>{m}</option>
+            <TextInput
+              value={values.model}
+              onChange={update("model")}
+              list="model-suggestions"
+              placeholder="sonnet"
+            />
+            <datalist id="model-suggestions">
+              {MODEL_SUGGESTIONS.map((m) => (
+                <option key={m} value={m} />
               ))}
-            </Select>
+            </datalist>
           </Field>
           <Field label={t("agent_form.label_effort")}>
             <Select value={values.effort} onChange={update("effort")}>

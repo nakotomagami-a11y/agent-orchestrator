@@ -1,23 +1,18 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 
-export type ClaudePlan = "pro" | "max-5x" | "max-20x" | "api" | "custom";
-export type LimitsPeriod = "week" | "month";
+export type ClaudePlan = "free" | "pro" | "max" | "api" | "custom";
+export type LimitsPeriod = "daily" | "week" | "month";
 
 export interface ClaudeLimits {
   plan: ClaudePlan;
   /** Dollar cap for the period. 0 means "no quota set — just track usage". */
   quotaUsd: number;
   period: LimitsPeriod;
+  hardCap: "off" | "warn" | "block";
 }
 
-const DEFAULTS: ClaudeLimits = {
-  plan: "pro",
-  quotaUsd: 0,
-  period: "week",
-};
-
-const STORAGE_KEY = "agent-office:claude-limits";
+const DEFAULTS: ClaudeLimits = { plan: "pro", quotaUsd: 0, period: "week", hardCap: "warn" };
 
 type LimitsState = ClaudeLimits & {
   open: boolean;
@@ -27,33 +22,42 @@ type LimitsState = ClaudeLimits & {
   hydrate: () => void;
 };
 
-function readStored(): ClaudeLimits {
-  if (typeof window === "undefined") return DEFAULTS;
+function validPlan(p: unknown): p is ClaudePlan {
+  return p === "free" || p === "pro" || p === "max" || p === "api" || p === "custom";
+}
+
+function validHardCap(v: unknown): v is "off" | "warn" | "block" {
+  return v === "off" || v === "warn" || v === "block";
+}
+
+function parseLimits(raw: string): ClaudeLimits {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return DEFAULTS;
-    const parsed = JSON.parse(raw) as Partial<ClaudeLimits>;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+
+    // Migrate legacy max-5x / max-20x values
+    let plan: ClaudePlan;
+    if (parsed.plan === "max-5x" || parsed.plan === "max-20x") {
+      plan = "max";
+    } else {
+      plan = validPlan(parsed.plan) ? parsed.plan : DEFAULTS.plan;
+    }
+
+    const period: LimitsPeriod =
+      parsed.period === "month" ? "month" :
+      parsed.period === "daily" ? "daily" :
+      "week";
+
+    const hardCap = validHardCap(parsed.hardCap) ? parsed.hardCap : DEFAULTS.hardCap;
+
     return {
-      plan: validPlan(parsed.plan) ? parsed.plan! : DEFAULTS.plan,
+      plan,
       quotaUsd: typeof parsed.quotaUsd === "number" && parsed.quotaUsd >= 0 ? parsed.quotaUsd : DEFAULTS.quotaUsd,
-      period: parsed.period === "month" ? "month" : "week",
+      period,
+      hardCap,
     };
   } catch {
     return DEFAULTS;
   }
-}
-
-function persist(limits: ClaudeLimits) {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(limits));
-  } catch {
-    // ignore (private mode, quota, etc.)
-  }
-}
-
-function validPlan(p: unknown): p is ClaudePlan {
-  return p === "pro" || p === "max-5x" || p === "max-20x" || p === "api" || p === "custom";
 }
 
 export const useClaudeLimitsStore = create<LimitsState>((set, get) => ({
@@ -66,15 +70,26 @@ export const useClaudeLimitsStore = create<LimitsState>((set, get) => ({
       plan: get().plan,
       quotaUsd: get().quotaUsd,
       period: get().period,
+      hardCap: get().hardCap,
     };
     const merged: ClaudeLimits = { ...current, ...patch };
-    persist(merged);
     set(merged);
+    fetch("/api/ui-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ "claude-limits": JSON.stringify(merged) }),
+    }).catch(() => { /* best-effort */ });
   },
   hydrate: () => {
     if (get().hydrated) return;
-    const stored = readStored();
-    set({ ...stored, hydrated: true });
+    set({ hydrated: true });
+    fetch("/api/ui-settings")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        const stored = data["claude-limits"];
+        if (stored) set(parseLimits(stored));
+      })
+      .catch(() => { /* ignore */ });
   },
 }));
 
@@ -87,16 +102,11 @@ export function useClaudeLimitsHydration() {
 
 export function planLabel(plan: ClaudePlan): string {
   switch (plan) {
-    case "pro":
-      return "Pro";
-    case "max-5x":
-      return "Max 5×";
-    case "max-20x":
-      return "Max 20×";
-    case "api":
-      return "API";
-    case "custom":
-      return "Custom";
+    case "free": return "Free";
+    case "pro": return "Pro";
+    case "max": return "Max";
+    case "api": return "API";
+    case "custom": return "Custom";
   }
 }
 
@@ -104,11 +114,10 @@ export function planLabel(plan: ClaudePlan): string {
 export function periodStart(period: LimitsPeriod, now = Date.now()): number {
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);
-  if (period === "month") {
-    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-  }
+  if (period === "month") return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  if (period === "daily") return d.getTime();
   // week — start on Monday (ISO)
-  const dow = d.getDay(); // 0=Sun..6=Sat
+  const dow = d.getDay();
   const daysSinceMonday = (dow + 6) % 7;
   d.setDate(d.getDate() - daysSinceMonday);
   return d.getTime();
@@ -118,9 +127,10 @@ export function periodStart(period: LimitsPeriod, now = Date.now()): number {
 export function periodEnd(period: LimitsPeriod, now = Date.now()): number {
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);
-  if (period === "month") {
-    return new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+  if (period === "month") return new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+  if (period === "daily") {
+    d.setDate(d.getDate() + 1);
+    return d.getTime();
   }
-  const start = periodStart(period, now);
-  return start + 7 * 86_400_000;
+  return periodStart(period, now) + 7 * 86_400_000;
 }

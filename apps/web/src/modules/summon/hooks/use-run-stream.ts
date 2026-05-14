@@ -31,6 +31,8 @@ export interface RunStreamState {
   connection: ConnectionState;
   /** Epoch ms when we last received any SSE event. Null until first event. */
   lastEventAt: number | null;
+  /** Session ID from the completed run — available once phase is "done". */
+  sessionId: string | null;
 }
 
 const INITIAL: RunStreamState = {
@@ -40,6 +42,7 @@ const INITIAL: RunStreamState = {
   error: null,
   connection: "idle",
   lastEventAt: null,
+  sessionId: null,
 };
 
 type SseHandler = (e: MessageEvent) => void;
@@ -112,6 +115,7 @@ export function useRunStream(runId: string | null): UseRunStreamResult {
             error: next.error ?? prev.error,
             connection: "open",
             lastEventAt: now,
+            sessionId: next.sessionId !== undefined ? next.sessionId : prev.sessionId,
           };
         });
         if (name === "done") source.close();

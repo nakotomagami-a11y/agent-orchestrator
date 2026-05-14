@@ -9,7 +9,10 @@ import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
 import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseToolEvent, SseUsageEvent } from "../types/index";
 import { log } from "./log";
+import { buildAugmentedPath } from "./paths";
 import { pushRun } from "./store";
+import { appendRun as appendHistory } from "./history";
+import * as db from "./db";
 
 export type SseEvent =
   | { name: "attached"; data: SseAttachedEvent }
@@ -39,6 +42,7 @@ interface LiveRun {
   cost: number;
   status: "running" | "done" | "error";
   exitCode?: number;
+  sessionId?: string;
   proc: ChildProcessByStdio<null, Readable, Readable>;
   subscribers: Set<SseEmit>;
   finishedAt?: number;
@@ -95,6 +99,32 @@ export function getLiveRun(runId: string): LiveRun | undefined {
   return liveRuns.get(runId);
 }
 
+export function getLiveRunAsPersistedRun(runId: string): PersistedRun | undefined {
+  const r = liveRuns.get(runId);
+  if (!r) return undefined;
+  return {
+    id: r.id,
+    agentId: r.agentId,
+    agentName: r.agentName,
+    ts: r.startTs,
+    prompt: r.prompt,
+    status: r.status,
+    exitCode: r.exitCode,
+    output: r.output,
+    tokensIn: r.tokensIn,
+    tokensOut: r.tokensOut,
+    cost: r.cost,
+    durMs: Date.now() - r.startTs,
+    model: r.model,
+    effort: r.effort,
+    cwd: r.cwd,
+    projectId: r.projectId,
+    instanceId: r.instanceId,
+    instanceLabel: r.instanceLabel,
+    sessionId: r.sessionId,
+  };
+}
+
 export function getRunningRuns(): PersistedRun[] {
   return Array.from(liveRuns.values())
     .filter((r) => r.status === "running")
@@ -137,6 +167,7 @@ export function startRun(opts: StartRunOpts): { runId: string } {
   const proc = spawn("claude", opts.args, {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: opts.cwd,
+    env: { ...process.env, PATH: buildAugmentedPath() },
   });
   const run: LiveRun = {
     id: runId,
@@ -162,11 +193,30 @@ export function startRun(opts: StartRunOpts): { runId: string } {
   };
   liveRuns.set(runId, run);
 
+  db.insertRun({
+    id: runId,
+    agentId: opts.agentId,
+    agentName: opts.agentName,
+    instanceId: opts.instanceId,
+    instanceLabel: opts.instanceLabel,
+    projectId: opts.projectId,
+    sessionId: undefined,
+    status: "running",
+    prompt: opts.prompt,
+    model: opts.model,
+    effort: opts.effort,
+    cwd: opts.cwd,
+    startedAt: run.startTs,
+  });
+
   log.info("run.start", { runId, agent: opts.agentId, cwd: opts.cwd });
 
   pumpStdout(run);
   pumpStderr(run);
-  proc.on("exit", (code) => finalizeRun(run, code ?? 1));
+  // Use 'close' not 'exit': 'exit' fires before stdout finishes draining,
+  // so the final 'result' line (which carries session_id) may not be
+  // processed yet. 'close' guarantees all stdio streams have ended first.
+  proc.on("close", (code) => finalizeRun(run, code ?? 1));
   proc.on("error", (err) => {
     broadcast(run, { name: "error", data: { runId: run.id, message: String(err) } });
     if (run.status === "running") {
@@ -194,7 +244,7 @@ export function attachEmit(runId: string, emit: SseEmit): boolean {
     },
   });
   if (run.status !== "running") {
-    void emit({ name: "done", data: { runId, exitCode: run.exitCode ?? 0 } });
+    void emit({ name: "done", data: { runId, exitCode: run.exitCode ?? 0, sessionId: run.sessionId } });
   }
   return true;
 }
@@ -270,6 +320,7 @@ interface StreamEvent {
   message?: { content?: Array<{ type: string; text?: string; name?: string; input?: unknown }>; usage?: { input_tokens?: number; output_tokens?: number } };
   usage?: { input_tokens?: number; output_tokens?: number };
   total_cost_usd?: number;
+  session_id?: string;
   is_error?: boolean;
   error?: string;
   rate_limit_info?: { status?: string; resetsAt?: number; rateLimitType?: string };
@@ -304,6 +355,7 @@ function handleStreamLine(run: LiveRun, line: string): void {
         name: "tool",
         data: { runId: run.id, name: ev.content_block.name ?? "tool", input: ev.content_block.input },
       });
+      db.insertToolCall(run.id, ev.content_block.name ?? "tool", ev.content_block.input, Date.now());
       return;
     }
     return;
@@ -319,6 +371,7 @@ function handleStreamLine(run: LiveRun, line: string): void {
           name: "tool",
           data: { runId: run.id, name: block.name ?? "tool", input: block.input },
         });
+        db.insertToolCall(run.id, block.name ?? "tool", block.input, Date.now());
       }
     }
     if (evt.message.usage) {
@@ -357,6 +410,7 @@ function handleStreamLine(run: LiveRun, line: string): void {
       run.tokensOut = evt.usage.output_tokens ?? run.tokensOut;
     }
     if (typeof evt.total_cost_usd === "number") run.cost = evt.total_cost_usd;
+    if (typeof evt.session_id === "string") run.sessionId = evt.session_id;
     broadcast(run, {
       name: "usage",
       data: { runId: run.id, tokensIn: run.tokensIn, tokensOut: run.tokensOut, cost: run.cost },
@@ -394,8 +448,27 @@ function finalizeRun(run: LiveRun, exitCode: number): void {
     projectId: run.projectId,
     instanceId: run.instanceId,
     instanceLabel: run.instanceLabel,
+    sessionId: run.sessionId,
   };
-  pushRun(persisted);
 
-  broadcast(run, { name: "done", data: { runId: run.id, exitCode } });
+  // Persist best-effort — a DB failure must never swallow the broadcast below.
+  try {
+    pushRun(persisted);
+  } catch (err) {
+    log.warn("run.persist_failed", { runId: run.id, err: String(err) });
+  }
+
+  try {
+    appendHistory({
+      key: `${run.agentId}::${run.instanceId ?? "default"}`,
+      userContent: run.prompt,
+      assistantContent: run.output,
+      runId: run.id,
+      ts: run.startTs,
+    });
+  } catch {
+    // history write is best-effort — never block finalization
+  }
+
+  broadcast(run, { name: "done", data: { runId: run.id, exitCode, sessionId: run.sessionId } });
 }

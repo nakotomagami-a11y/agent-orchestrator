@@ -1,158 +1,171 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import type { OfficeAgent } from "../../../hooks/use-office-agents";
+import {
+  AoIdentity, AoCpu, AoSparkle, AoWrench, AoShield,
+  AoCheck, AoLock, AoQuestion, AoBook,
+  AoFolder, AoSearch, AoTerminal, AoGlobe, AoList, AoPen,
+} from "@/modules/summon/components/ao-icons";
+
+const TOOL_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
+  Read: AoFolder,
+  Write: AoPen,
+  Edit: AoPen,
+  Bash: AoTerminal,
+  WebFetch: AoGlobe,
+  WebSearch: AoSearch,
+  Agent: AoList,
+};
 
 export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
-  const t = useTranslations();
   return (
-    <div className="tab-pane" style={{ padding: 18, overflow: "auto" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-        <ConfigCard title={t("agent_details.config_identity")}>
-          <Row k={t("agent_details.config_row_name")} v={agent.name} />
-          <Row k={t("agent_details.config_row_id")} v={agent.id} mono />
-          <Row k={t("agent_details.config_row_description")} v={agent.description || t("agent_details.config_value_empty")} />
-          <Row k={t("agent_details.config_row_room")} v={agent.room ?? t("agent_details.config_value_empty")} />
-        </ConfigCard>
-        <ConfigCard title={t("agent_details.config_model_runtime")}>
-          <Row k={t("agent_details.config_row_model")} v={agent.defaultModel ?? t("agent_details.config_value_default")} mono />
-          <Row k={t("agent_details.config_row_effort")} v={agent.defaultEffort ?? t("agent_details.config_value_default")} mono />
-          <Row k={t("agent_details.config_row_permission")} v={agent.permissionMode ?? t("agent_details.config_value_ask")} mono />
-        </ConfigCard>
-        <ConfigCard title={t("agent_details.config_skills_card", { count: agent.skills.length })}>
-          {agent.skills.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("agent_details.config_value_none")}</div>
-          ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {agent.skills.map((s) => (
-                <span key={s} className="tag skill">#{s}</span>
-              ))}
-            </div>
-          )}
-        </ConfigCard>
-        <ConfigCard title={t("agent_details.config_tools_card", { count: agent.tools.length })}>
-          {agent.tools.length === 0 ? (
-            <div style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("agent_details.config_value_none")}</div>
-          ) : (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {agent.tools.map((s) => (
-                <span key={s} className="tag">{s}</span>
-              ))}
-            </div>
-          )}
-        </ConfigCard>
-        <div style={{ gridColumn: "1 / -1" }}>
-          <ConfigCard title={t("agent_details.config_permissions")} sub={t("agent_details.config_permissions_sub")}>
-            <PermissionRow label={t("agent_details.perm_read_files")} state="allowed" />
-            <PermissionRow
-              label={t("agent_details.perm_edit_files")}
-              state={agent.tools.includes("Edit") || agent.tools.includes("Write") ? "allowed" : "denied"}
-            />
-            <PermissionRow
-              label={t("agent_details.perm_run_bash")}
-              state={agent.tools.includes("Bash") ? "ask" : "denied"}
-              note={t("agent_details.perm_note_bash")}
-            />
-            <PermissionRow
-              label={t("agent_details.perm_open_urls")}
-              state={
-                agent.tools.includes("WebFetch") || agent.tools.includes("WebSearch")
-                  ? "allowed"
-                  : "denied"
-              }
-            />
-          </ConfigCard>
+    <div className="ao-tab-pane">
+      <div className="ao-grid-2">
+        {/* Identity */}
+        <div className="ao-card">
+          <div className="ao-card-header">
+            <div className="ao-icon"><AoIdentity size={15} /></div>
+            <div className="ao-title">Identity</div>
+            <div className="ao-sub" style={{ marginLeft: "auto" }}>~/.claude/agents/{agent.id}.md</div>
+          </div>
+          <div className="ao-card-body">
+            <KV k="Name" v={agent.name} />
+            <KV k="ID" v={agent.id} mono />
+            <KV k="Description" v={agent.description || <span className="ao-muted">—</span>} />
+            <KV k="Room" v={agent.room || <span className="ao-muted">— unassigned</span>} />
+          </div>
+        </div>
+
+        {/* Model & runtime */}
+        <div className="ao-card">
+          <div className="ao-card-header">
+            <div className="ao-icon"><AoCpu size={15} /></div>
+            <div className="ao-title">Model &amp; runtime</div>
+            <span className="ao-badge ao-ok ao-dot" style={{ marginLeft: "auto" }}>ready</span>
+          </div>
+          <div className="ao-card-body">
+            <KV k="Model" v={agent.defaultModel ?? "default"} mono />
+            <KV k="Effort" v={agent.defaultEffort ?? "default"} mono />
+            <KV k="Permission" v={agent.permissionMode ?? "ask"} mono />
+          </div>
+        </div>
+
+        {/* Skills */}
+        <div className="ao-card">
+          <div className="ao-card-header">
+            <div className="ao-icon"><AoSparkle size={15} /></div>
+            <div className="ao-title">Skills</div>
+            <div className="ao-sub" style={{ marginLeft: "auto" }}>{agent.skills.length} attached</div>
+          </div>
+          <div className="ao-card-body">
+            {agent.skills.length === 0 ? (
+              <span className="ao-muted ao-mono" style={{ fontSize: 12.5 }}>none</span>
+            ) : (
+              <div className="ao-chips-row">
+                {agent.skills.map((s) => (
+                  <span key={s} className="ao-tool-chip">
+                    <span className="ao-icon"><AoBook size={12} /></span>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tools */}
+        <div className="ao-card">
+          <div className="ao-card-header">
+            <div className="ao-icon"><AoWrench size={15} /></div>
+            <div className="ao-title">Tools allowed</div>
+            <div className="ao-sub" style={{ marginLeft: "auto" }}>{agent.tools.length} enabled</div>
+          </div>
+          <div className="ao-card-body">
+            {agent.tools.length === 0 ? (
+              <span className="ao-muted ao-mono" style={{ fontSize: 12.5 }}>none</span>
+            ) : (
+              <div className="ao-chips-row">
+                {agent.tools.map((t) => {
+                  const ToolIcon = TOOL_ICONS[t] ?? AoWrench;
+                  return (
+                    <span key={t} className="ao-tool-chip">
+                      <span className="ao-icon"><ToolIcon size={12} /></span>
+                      {t}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Permissions */}
+      <div className="ao-card" style={{ marginTop: "var(--ao-gap-section)" }}>
+        <div className="ao-card-header">
+          <div className="ao-icon"><AoShield size={15} /></div>
+          <div className="ao-title">Permissions</div>
+          <div className="ao-sub" style={{ marginLeft: "auto" }}>workspace policy applies</div>
+        </div>
+        <div className="ao-card-body ao-flush">
+          <PermRow
+            name="Read files"
+            hint="Access source files and documents"
+            state={agent.tools.includes("Read") ? "allow" : "deny"}
+          />
+          <PermRow
+            name="Edit / write files"
+            hint="Modify and create files on disk"
+            state={agent.tools.includes("Edit") || agent.tools.includes("Write") ? "allow" : "deny"}
+          />
+          <PermRow
+            name="Run shell commands"
+            hint="Execute bash and system commands"
+            state={agent.tools.includes("Bash") ? "ask" : "deny"}
+          />
+          <PermRow
+            name="Open URLs / web search"
+            hint="Fetch web pages and search the internet"
+            state={
+              agent.tools.includes("WebFetch") || agent.tools.includes("WebSearch")
+                ? "allow"
+                : "deny"
+            }
+          />
         </div>
       </div>
     </div>
   );
 }
 
-function ConfigCard({
-  title,
-  sub,
-  children,
-}: {
-  title: string;
-  sub?: string;
-  children: React.ReactNode;
-}) {
+function KV({ k, v, mono }: { k: string; v: React.ReactNode; mono?: boolean }) {
   return (
-    <div className="card">
-      <div className="card-h">
-        <span className="title">{title}</span>
-        {sub ? <span className="sub">{sub}</span> : null}
-      </div>
-      <div style={{ padding: 14, fontSize: 13, lineHeight: 1.6 }}>{children}</div>
+    <div className="ao-kv">
+      <div className="ao-k">{k}</div>
+      <div className={`ao-v${mono ? " ao-mono" : ""}`}>{v}</div>
     </div>
   );
 }
 
-function Row({ k, v, mono = false }: { k: string; v: string; mono?: boolean }) {
+type PermState = "allow" | "ask" | "deny";
+
+function PermRow({ name, hint, state }: { name: string; hint: string; state: PermState }) {
+  const cfg = {
+    allow: { badge: "ao-ok", label: "Allowed", Icon: AoCheck },
+    ask: { badge: "ao-warn", label: "Ask", Icon: AoQuestion },
+    deny: { badge: "ao-bad", label: "Denied", Icon: AoLock },
+  } as const;
+  const { badge, label, Icon } = cfg[state];
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "110px 1fr", gap: 12, padding: "4px 0" }}>
-      <div style={{ color: "var(--txt-3)", fontSize: 12 }}>{k}</div>
-      <div style={{ fontFamily: mono ? "var(--font-mono)" : "inherit", fontSize: mono ? 12 : 13 }}>
-        {v}
+    <div className="ao-perm-row">
+      <div className="ao-left">
+        <div className="ao-icon"><Icon size={12} /></div>
+        <div className="ao-label">
+          <div className="ao-name">{name}</div>
+          <div className="ao-hint">{hint}</div>
+        </div>
       </div>
-    </div>
-  );
-}
-
-type PermissionState = "allowed" | "denied" | "ask" | "restricted";
-
-function PermissionRow({
-  label,
-  state,
-  note,
-}: {
-  label: string;
-  state: PermissionState;
-  note?: string;
-}) {
-  const colors: Record<PermissionState, string> = {
-    allowed: "var(--done)",
-    denied: "var(--error)",
-    ask: "var(--queued)",
-    restricted: "var(--thinking)",
-  };
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        padding: "8px 0",
-        borderBottom: "1px dashed var(--line)",
-        gap: 12,
-      }}
-    >
-      <span style={{ flex: 1, fontSize: 13 }}>{label}</span>
-      {note ? (
-        <span
-          style={{
-            fontSize: 11,
-            color: "var(--txt-3)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
-          {note}
-        </span>
-      ) : null}
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          padding: "2px 8px",
-          borderRadius: 999,
-          color: colors[state],
-          background: "var(--bg-2)",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          fontWeight: 600,
-        }}
-      >
-        {state}
-      </span>
+      <span className={`ao-badge ${badge}`}>{label}</span>
     </div>
   );
 }

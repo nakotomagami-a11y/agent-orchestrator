@@ -587,13 +587,14 @@ export function hasBridgeCap(
  * Apply a single placement to a cell's stack, returning the new stack.
  *
  *   - If the cell already has a decoration of the same family, replace
- *     it in-place (preserves stack order).
- *   - Otherwise append to the end.
- *   - Exact-same-kind placement is a no-op (the returned stack is the
- *     same reference as `existing`).
+ *     it in-place (preserves stack order, does not count toward cap).
+ *   - If the stack is at MAX_STACK and no same-family slot exists, no-op.
+ *   - Exact-same-kind is a no-op (returns same reference).
  *
  * `existing` may be undefined for empty cells.
  */
+const MAX_STACK = 2;
+
 export function applyPlacement(
   existing: DecorationKind[] | undefined,
   next: DecorationKind,
@@ -601,11 +602,16 @@ export function applyPlacement(
   if (!existing || existing.length === 0) return [next];
   const family = familyOf(next);
   const idx = existing.findIndex((k) => familyOf(k) === family);
-  if (idx === -1) return [...existing, next];
-  if (existing[idx] === next) return existing; // no-op — already exactly that
-  const out = [...existing];
-  out[idx] = next;
-  return out;
+  // Same family: replace in-place regardless of cap
+  if (idx !== -1) {
+    if (existing[idx] === next) return existing; // no-op
+    const out = [...existing];
+    out[idx] = next;
+    return out;
+  }
+  // Different family: only append if under the cap
+  if (existing.length >= MAX_STACK) return existing;
+  return [...existing, next];
 }
 
 /**

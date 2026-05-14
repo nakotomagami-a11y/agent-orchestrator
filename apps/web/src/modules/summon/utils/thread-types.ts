@@ -7,6 +7,7 @@ export type ThreadItem =
   | { kind: "agent-text"; id: string; text: string; streaming: boolean }
   | { kind: "agent-tool"; id: string; name: string; arg?: string }
   | { kind: "agent-thinking"; id: string; text: string }
+  | { kind: "agent-subagent"; id: string; name: string; prompt: string; status: "running" | "done" | "error"; startTs: number; durationMs?: number }
   | { kind: "system-error"; id: string; message: string }
   | { kind: "system-done"; id: string; exitCode: number };
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { agents, projects, runs, store, summon } from "@agent-office/shared/services";
+import { agents, history, projects, runs, store, summon } from "@agent-office/shared/services";
 import { health } from "@agent-office/shared/services";
 import { existsSync, statSync } from "node:fs";
 import { paths } from "@agent-office/shared/services";
@@ -36,12 +36,20 @@ export async function POST(request: Request) {
     cwd = expanded;
   }
 
-  const appendedSystemPrompt = agents.buildAppendedPrompt(req.agentId, project);
+  const appendedSystemPrompt = agents.buildAppendedPrompt(req.agentId, project, req.instanceId);
+
+  let priorContext: string | undefined;
+  if (!req.resumeSessionId) {
+    const recentMsgs = history.getRecentMessages(`${req.agentId}::${req.instanceId ?? "default"}`, 8);
+    if (recentMsgs.length > 0) priorContext = history.formatPriorContext(recentMsgs);
+  }
+
   const built = summon.buildClaudeArgs({
     request: req,
     agent: agent.info,
     instance,
     appendedSystemPrompt,
+    priorContext,
   });
 
   store.pushRecentPrompt(req.agentId, req.prompt);

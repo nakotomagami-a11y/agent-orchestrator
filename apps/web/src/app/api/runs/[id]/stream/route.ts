@@ -1,4 +1,4 @@
-import { runs } from "@agent-office/shared/services";
+import { runs, store } from "@agent-office/shared/services";
 import { createSseStream, SSE_HEADERS } from "@/lib/sse";
 import { validateIdParam } from "@/lib/api-helpers";
 
@@ -19,8 +19,22 @@ export async function GET(request: Request, { params }: Params) {
   const attached = runs.attachEmit(id, emit);
 
   if (!attached) {
-    await writer.write("error", { runId: id, message: `unknown run: ${id}` });
-    await writer.write("done", { runId: id, exitCode: 1 });
+    // Run not in live registry — check DB so we can give the correct exit status.
+    const persisted = store.getRun(id);
+    if (persisted) {
+      if (persisted.status === "running") {
+        // Orphaned: server restarted while the run was live. Mark it aborted.
+        store.markRunAborted(id);
+      }
+      const failed = persisted.status === "error" || (persisted.exitCode != null && persisted.exitCode !== 0);
+      if (failed) {
+        await writer.write("error", { runId: id, message: "Run ended with an error" });
+      }
+      await writer.write("done", { runId: id, exitCode: persisted.exitCode ?? (failed ? 1 : 0), sessionId: persisted.sessionId });
+    } else {
+      await writer.write("error", { runId: id, message: `unknown run: ${id}` });
+      await writer.write("done", { runId: id, exitCode: 1 });
+    }
     await writer.close();
     return new Response(stream, { headers: SSE_HEADERS });
   }

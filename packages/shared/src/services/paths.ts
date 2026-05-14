@@ -1,6 +1,7 @@
 // Centralised on-disk paths. Keep these identical to the legacy server's
 // values so existing user data still loads.
 
+import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -16,6 +17,7 @@ export const SETTINGS_FILE = join(CLAUDE_DIR, "agent-office-settings.json");
 export const APP_STATE_DIR = join(CLAUDE_DIR, "agent-office");
 export const RUNS_LOG = join(APP_STATE_DIR, "runs.log");
 export const PROMPTS_FILE = join(APP_STATE_DIR, "recent-prompts.json");
+export const DB_PATH = join(APP_STATE_DIR, "db.sqlite");
 
 // Uploads
 export const AGENT_UPLOADS_DIR = join(AGENTS_DIR, "_uploads");
@@ -51,4 +53,37 @@ export function isValidIdSegment(name: string): boolean {
 
 export function expandTilde(p: string): string {
   return p.replace(/^~(?=\/|$)/, HOME);
+}
+
+/**
+ * Return an augmented PATH string that includes NVM node bin dirs and other
+ * common locations so that `spawn("claude", ...)` works when the server
+ * process inherits a minimal desktop-session environment (no .bashrc sourced).
+ */
+export function buildAugmentedPath(): string {
+  const extra: string[] = [];
+
+  // NVM — add every installed node version's bin dir (newest first via reverse sort)
+  const nvmVersionsDir = join(HOME, ".nvm", "versions", "node");
+  if (existsSync(nvmVersionsDir)) {
+    try {
+      const versions = readdirSync(nvmVersionsDir).sort().reverse();
+      for (const v of versions) {
+        extra.push(join(nvmVersionsDir, v, "bin"));
+      }
+    } catch {
+      // ignore read errors
+    }
+  }
+
+  // Other common global bin locations
+  extra.push(join(HOME, ".local", "bin"));
+  extra.push("/usr/local/bin");
+  extra.push("/usr/bin");
+  extra.push("/bin");
+
+  const existing = process.env.PATH ?? "";
+  const parts = [...extra, ...existing.split(":").filter(Boolean)];
+  // Deduplicate while preserving order
+  return [...new Set(parts)].join(":");
 }

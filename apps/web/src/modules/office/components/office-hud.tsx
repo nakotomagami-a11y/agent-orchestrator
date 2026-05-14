@@ -78,9 +78,6 @@ export function OfficeHud({
         )
       ) : null}
       <div style={{ flex: 1 }} />
-      <div className="hud-card" style={budgetDaily ? spendStyle(spendToday, budgetDaily) : {}}>
-        {t("office.spend_today")} <b className="accent">${spendToday.toFixed(2)}</b>
-      </div>
       {budgetDaily ? (
         <div className="hud-card">
           {t("office.budget_daily")} <b>${budgetDaily.toFixed(2)}/day</b>

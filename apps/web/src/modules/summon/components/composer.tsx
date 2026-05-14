@@ -13,6 +13,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
+import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
 
 type SlashCommand = {
   cmd: string;
@@ -57,6 +58,12 @@ export type ComposerProps = {
   seed?: string;
   /** Triggered when user picks a slash command that maps to a UI action. */
   onCommand?: (cmd: string) => void;
+  /**
+   * Key used to persist the draft server-side via /api/drafts so it survives
+   * modal close/reopen cycles. Pass the same `transcriptKey(agentId, instanceId)`
+   * value used by the chat panel. When omitted, drafts are not persisted.
+   */
+  draftKey?: string;
 };
 
 let attachmentCounter = 0;
@@ -73,8 +80,10 @@ export function Composer({
   cwdChip,
   seed,
   onCommand,
+  draftKey,
 }: ComposerProps) {
   const t = useTranslations();
+  // Initialise empty; the persisted draft loads async in the effect below.
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [slashOpen, setSlashOpen] = useState(false);
@@ -87,12 +96,36 @@ export function Composer({
 
   const { data: savedPrompts = [] } = useAgentPrompts(agentId);
 
+  // Resize the textarea on mount so a restored draft is fully visible
+  // without the user having to interact with it first.
+  useEffect(() => {
+    autosize(textRef.current);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Load the persisted draft async on mount. draftKey is stable for the
+  // lifetime of this Composer instance (key= remount on agent/instance change).
+  useEffect(() => {
+    if (!draftKey) return;
+    loadDraft(draftKey).then((text) => {
+      if (text) {
+        setValue(text);
+        autosize(textRef.current);
+      }
+    }).catch(() => { /* ignore */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (seed !== undefined) {
       setValue(seed);
+      if (draftKey) void saveDraft(draftKey, seed);
       textRef.current?.focus();
       autosize(textRef.current);
     }
+  // draftKey is stable for the lifetime of this Composer instance (it changes
+  // only via key= remount), so it's safe to omit from the array.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed]);
 
   const filteredSlash = useMemo(() => {
@@ -190,6 +223,8 @@ export function Composer({
       const [cmd] = v.split(/\s+/);
       if (cmd && SLASH_COMMANDS.some((s) => s.cmd === cmd) && onCommand) {
         onCommand(cmd);
+        // Slash commands are UI actions — clear the draft too.
+        if (draftKey) void clearDraft(draftKey);
         setValue("");
         setSlashOpen(false);
         setPromptsOpen(false);
@@ -202,6 +237,8 @@ export function Composer({
         ? `${v}\n\n${t("composer.attachments_intro")}\n${ready.map((a) => `- ${a.path}`).join("\n")}`.trimStart()
         : v;
     onSubmit(composed);
+    // Draft has been sent — clear it so it doesn't reappear on reopen.
+    if (draftKey) void clearDraft(draftKey);
     setValue("");
     setAttachments([]);
     setSlashOpen(false);
@@ -210,18 +247,18 @@ export function Composer({
     textRef.current?.focus();
   };
 
+  // Route through onChange so the draft store stays in sync.
   const insertSlash = (cmd: string) => {
-    setValue(cmd + " ");
+    onChange(cmd + " ");
     setSlashOpen(false);
     setPromptsOpen(false);
     textRef.current?.focus();
   };
 
   const selectPrompt = (body: string) => {
-    setValue(body);
+    onChange(body);
     setPromptsOpen(false);
     setSlashOpen(false);
-    autosize(textRef.current);
     textRef.current?.focus();
   };
 
@@ -283,6 +320,7 @@ export function Composer({
 
   const onChange = (next: string) => {
     setValue(next);
+    if (draftKey) void saveDraft(draftKey, next);
     const triggersSlash = next.startsWith("/");
     setSlashOpen(triggersSlash);
     setSlashIdx(0);

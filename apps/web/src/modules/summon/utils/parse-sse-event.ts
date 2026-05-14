@@ -8,6 +8,7 @@ export interface ApplyResult {
   usage: UsageMeter;
   done: boolean;
   error: string | null;
+  sessionId?: string;
 }
 
 const attachedSchema = z.object({
@@ -28,7 +29,7 @@ const usageSchema = z.object({
   tokensOut: z.number(),
   cost: z.number(),
 });
-const doneSchema = z.object({ runId: z.string(), exitCode: z.number() });
+const doneSchema = z.object({ runId: z.string(), exitCode: z.number(), sessionId: z.string().optional() });
 const errorSchema = z.object({ runId: z.string(), message: z.string() });
 
 const eventSchemas = {
@@ -81,39 +82,64 @@ export function applySseEvent(
       done: false,
       error: null,
     }))
-    .with({ name: "tool" }, ({ data }) => ({
-      thread: closeStreaming([
-        ...prev.thread,
-        { kind: "agent-tool", id: newId(), name: data.name, arg: formatToolArg(data.input) },
-      ]),
-      usage: prev.usage,
-      done: false,
-      error: null,
-    }))
+    .with({ name: "tool" }, ({ data }) => {
+      if (data.name === "Task") {
+        const { name, prompt } = extractSubagentInfo(data.input);
+        return {
+          thread: closeStreaming([
+            ...prev.thread,
+            { kind: "agent-subagent" as const, id: newId(), name, prompt, status: "running" as const, startTs: Date.now() },
+          ]),
+          usage: prev.usage,
+          done: false,
+          error: null,
+        };
+      }
+      return {
+        thread: closeStreaming([
+          ...prev.thread,
+          { kind: "agent-tool" as const, id: newId(), name: data.name, arg: formatToolArg(data.input) },
+        ]),
+        usage: prev.usage,
+        done: false,
+        error: null,
+      };
+    })
     .with({ name: "usage" }, ({ data }) => ({
       thread: prev.thread,
       usage: { tokensIn: data.tokensIn, tokensOut: data.tokensOut, cost: data.cost },
       done: false,
       error: null,
     }))
-    .with({ name: "done" }, ({ data }) => ({
-      thread: closeStreaming([
-        ...prev.thread,
-        { kind: "system-done", id: newId(), exitCode: data.exitCode },
-      ]),
-      usage: prev.usage,
-      done: true,
-      error: null,
-    }))
-    .with({ name: "error" }, ({ data }) => ({
-      thread: closeStreaming([
-        ...prev.thread,
-        { kind: "system-error", id: newId(), message: data.message },
-      ]),
-      usage: prev.usage,
-      done: false,
-      error: data.message,
-    }))
+    .with({ name: "done" }, ({ data }) => {
+      const now = Date.now();
+      const finalized = prev.thread.map((it) =>
+        it.kind === "agent-subagent" && it.status === "running"
+          ? { ...it, status: "done" as const, durationMs: now - it.startTs }
+          : it,
+      );
+      return {
+        thread: closeStreaming([...finalized, { kind: "system-done" as const, id: newId(), exitCode: data.exitCode }]),
+        usage: prev.usage,
+        done: true,
+        error: null,
+        sessionId: data.sessionId,
+      };
+    })
+    .with({ name: "error" }, ({ data }) => {
+      const now = Date.now();
+      const finalized = prev.thread.map((it) =>
+        it.kind === "agent-subagent" && it.status === "running"
+          ? { ...it, status: "error" as const, durationMs: now - it.startTs }
+          : it,
+      );
+      return {
+        thread: closeStreaming([...finalized, { kind: "system-error" as const, id: newId(), message: data.message }]),
+        usage: prev.usage,
+        done: false,
+        error: data.message,
+      };
+    })
     .exhaustive();
 }
 
@@ -132,6 +158,18 @@ function closeStreaming(thread: ThreadItem[]): ThreadItem[] {
   return thread.map((it) =>
     it.kind === "agent-text" && it.streaming ? { ...it, streaming: false } : it,
   );
+}
+
+function extractSubagentInfo(input: unknown): { name: string; prompt: string } {
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    const obj = input as Record<string, unknown>;
+    const desc = typeof obj.description === "string" ? obj.description.trim() : undefined;
+    const prompt = typeof obj.prompt === "string" ? obj.prompt.trim() : undefined;
+    const name = desc ?? (prompt ? (prompt.length > 48 ? prompt.slice(0, 45) + "…" : prompt) : "sub-agent");
+    return { name, prompt: prompt ?? desc ?? JSON.stringify(input) };
+  }
+  const str = typeof input === "string" ? input.trim() : JSON.stringify(input);
+  return { name: str.length > 48 ? str.slice(0, 45) + "…" : str, prompt: str };
 }
 
 function formatToolArg(input: unknown): string | undefined {

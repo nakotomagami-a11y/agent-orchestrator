@@ -145,7 +145,12 @@
     "no_projects": "No projects yet — configure a projects root in Settings.",
     "agent_count": "{count, plural, one {# agent} other {# agents}}",
     "manage": "Manage projects…",
-    "cwd_label": "cwd {path}"
+    "cwd_label": "cwd {path}",
+    "new_project": "New project…",
+    "new_project_placeholder": "Project name",
+    "new_project_create": "Create",
+    "new_project_cancel": "Cancel",
+    "new_project_creating": "Creating…"
   },
   "agent": {
     "title_view": "Agent",

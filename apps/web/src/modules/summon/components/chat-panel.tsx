@@ -16,6 +16,7 @@ import {
   saveTranscript,
   transcriptKey,
 } from "../utils/transcript-store";
+import { clearDraft } from "../utils/draft-store";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import type { ThreadItem } from "../utils/thread-types";
@@ -30,13 +31,21 @@ export type ChatPanelProps = {
   instanceId?: string;
   onClose: () => void;
   onEdit?: () => void;
+  /** When true, skip rendering the ChatHead (it's provided by the parent shell). */
+  noHeader?: boolean;
+  /** Incrementing this triggers a new thread. */
+  newThreadSignal?: number;
+  /** Incrementing this triggers a branch (new thread). */
+  branchSignal?: number;
+  /** Called with the current active run id (null when idle). */
+  onActiveRunChange?: (runId: string | null) => void;
 };
 
 /**
  * Top-level chat surface.
  *
- * Persistence: per-agent transcript in localStorage. On agent change /
- * refresh / modal close, the thread is restored.
+ * Persistence: per-agent transcript stored server-side via /api/transcripts.
+ * On agent change / refresh / modal close, the thread is restored.
  *
  * Reliability: a `runStartIndex` ref marks where the *current* run's
  * output begins in `thread`. The SSE stream's incremental items splice
@@ -49,7 +58,7 @@ export type ChatPanelProps = {
  * it's already finished, we fall back to the persisted run's output so
  * the user actually sees the result instead of an empty bubble.
  */
-export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: ChatPanelProps) {
+export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHeader, newThreadSignal, branchSignal, onActiveRunChange }: ChatPanelProps) {
   const qc = useQueryClient();
   const summon = useSummon();
   const abort = useAbortRun();
@@ -65,10 +74,10 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   // ── State ──
   // `thread` is the canonical transcript shown to the user. Stream items
   // get spliced *into* it via runStartIndexRef, not concatenated alongside.
-  const [thread, setThread] = useState<ThreadItem[]>(() => loadTranscript(tKey)?.items ?? []);
-  const [activeRunId, setActiveRunId] = useState<string | null>(
-    () => loadTranscript(tKey)?.activeRunId ?? null,
-  );
+  const [thread, setThread] = useState<ThreadItem[]>([]);
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [transcriptLoaded, setTranscriptLoaded] = useState(false);
   const [resumeProbed, setResumeProbed] = useState(false);
   const [resumeError, setResumeError] = useState<
     | { kind: "missing"; message: string }
@@ -92,20 +101,36 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   // flight. Used purely to compute "Xs since last token" against
   // stream.lastEventAt — without this, the staleness display would freeze.
   const [, setTick] = useState(0);
+  // Message typed while a run is in progress — fired automatically once the
+  // current run finishes. Replacing the value discards the previous queued
+  // message, which is the correct behavior for corrections.
+  const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
   const runStartIndexRef = useRef<number | null>(null);
   const fallbackAttemptedRef = useRef<string | null>(null);
 
   // ── Agent or instance switch: swap the entire thread state ──
   useEffect(() => {
-    const t = loadTranscript(tKey);
-    setThread(t?.items ?? []);
-    setActiveRunId(t?.activeRunId ?? null);
+    setTranscriptLoaded(false);
+    setThread([]);
+    setActiveRunId(null);
+    setSessionId(null);
     setResumeProbed(false);
     setResumeError(null);
     setRecovered(null);
     setPhaseOverride(null);
     runStartIndexRef.current = null;
     fallbackAttemptedRef.current = null;
+    let cancelled = false;
+    loadTranscript(tKey).then((t) => {
+      if (cancelled) return;
+      setThread(t?.items ?? []);
+      setActiveRunId(t?.activeRunId ?? null);
+      setSessionId(t?.sessionId ?? null);
+      setTranscriptLoaded(true);
+    }).catch(() => {
+      if (!cancelled) setTranscriptLoaded(true);
+    });
+    return () => { cancelled = true; };
   }, [tKey]);
 
   const stream = useRunStream(activeRunId);
@@ -113,6 +138,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   const runStartTsRef = useRef<number>(0);
   useEffect(() => {
     if (activeRunId) runStartTsRef.current = Date.now();
+    onActiveRunChange?.(activeRunId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRunId]);
   useRunNotification({ agentName: agent.name, phase: stream.phase, startTs: runStartTsRef.current || null });
 
@@ -220,6 +247,12 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     setActiveRunId(null);
     qc.invalidateQueries({ queryKey: queryKeys.runs.all });
 
+    // Persist the session ID so the next turn can --resume it.
+    if (stream.phase === "done" && stream.sessionId) {
+      setSessionId(stream.sessionId);
+      void saveTranscript(tKey, thread, null, stream.sessionId);
+    }
+
     if (!shouldFallback) return;
     apiFetch<PersistedRun>(API_ROUTES.run(runId))
       .then((run) => {
@@ -242,15 +275,17 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
       .catch(() => {
         // ignore — we already cleared the run, user can retry
       });
-  }, [stream.phase, stream.thread, activeRunId, qc]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream.phase, stream.thread, stream.sessionId, activeRunId, qc, sessionId, transcriptLoaded]);
 
-  // ── Write-through to localStorage ──
+  // ── Write-through to server DB ──
   useEffect(() => {
-    saveTranscript(tKey, thread, activeRunId);
-  }, [tKey, thread, activeRunId]);
+    if (!transcriptLoaded) return;
+    void saveTranscript(tKey, thread, activeRunId, sessionId);
+  }, [tKey, thread, activeRunId, sessionId, transcriptLoaded]);
 
   // ── Submit ──
-  const onSubmit = (text: string) => {
+  const doSubmit = (text: string) => {
     const userItem: ThreadItem = { kind: "you", id: `y_${Date.now()}`, text };
     setThread((prev) => {
       // The run's output will land right after this "you" turn.
@@ -259,7 +294,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     });
     setPhaseOverride("sending");
     summon.mutate(
-      { agentId: agent.id, prompt: text, projectId, instanceId },
+      { agentId: agent.id, prompt: text, projectId, instanceId, resumeSessionId: sessionId ?? undefined },
       {
         onSuccess: ({ runId }) => {
           setActiveRunId(runId);
@@ -281,21 +316,37 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
     );
   };
 
+  const onSubmit = (text: string) => {
+    if (isStreaming) {
+      // Queue for after the current run — replacing any previous queued message
+      // so corrections ("wait, I meant X") work naturally.
+      setQueuedMessage(text);
+      return;
+    }
+    doSubmit(text);
+  };
+
   // ── Abort ──
   const onAbort = () => {
     if (activeRunId) {
       abort.mutate(activeRunId, {
-        onSuccess: () => setPhaseOverride("aborted"),
+        onSuccess: () => {
+          setPhaseOverride("aborted");
+          setQueuedMessage(null);
+        },
       });
     }
   };
 
   // ── New / Branch ──
   const newThread = () => {
-    clearTranscript(tKey);
+    void clearTranscript(tKey);
+    void clearDraft(tKey);
     setThread([]);
     setActiveRunId(null);
+    setSessionId(null);
     setPhaseOverride(null);
+    setQueuedMessage(null);
     runStartIndexRef.current = null;
     fallbackAttemptedRef.current = null;
   };
@@ -303,6 +354,26 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   const handleCommand = (cmd: string) => {
     if (cmd === "/clear" || cmd === "/branch") newThread();
   };
+
+  // External new-thread / branch signals from the parent shell header buttons
+  const prevNewThreadRef = useRef(newThreadSignal ?? 0);
+  const prevBranchRef = useRef(branchSignal ?? 0);
+  useEffect(() => {
+    const cur = newThreadSignal ?? 0;
+    if (cur !== prevNewThreadRef.current) {
+      prevNewThreadRef.current = cur;
+      newThread();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newThreadSignal]);
+  useEffect(() => {
+    const cur = branchSignal ?? 0;
+    if (cur !== prevBranchRef.current) {
+      prevBranchRef.current = cur;
+      newThread();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchSignal]);
 
   // ── Phase ──
   const sliceText = useMemo(() => {
@@ -328,11 +399,36 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
   const isStreaming =
     phase === "sending" || phase === "connecting" || phase === "working" || phase === "streaming";
 
+  // Fire the queued message once the run finishes and all state (session ID,
+  // activeRunId) has settled. Watching `phase === "idle"` guarantees the done
+  // effect has already committed its state updates in a previous render.
+  useEffect(() => {
+    if (phase !== "idle") return;
+    if (!queuedMessage) return;
+    const msg = queuedMessage;
+    setQueuedMessage(null);
+    doSubmit(msg);
+    // doSubmit is defined inline — including it would re-run on every render.
+    // The closure captures the right sessionId because this effect only fires
+    // after phase becomes idle (i.e. the done effect's state updates landed).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, queuedMessage]);
+
+  const elapsedSec =
+    runStartTsRef.current && (phase === "working" || phase === "streaming")
+      ? Math.floor((Date.now() - runStartTsRef.current) / 1000)
+      : 0;
+  const totalTok = stream.usage.tokensIn + stream.usage.tokensOut;
+  const liveStats =
+    elapsedSec > 0
+      ? `${fmtElapsed(elapsedSec)}${totalTok > 0 ? ` · ${totalTok.toLocaleString()} tok` : ""}`
+      : undefined;
+
   // ── Staleness detector: tokens are arriving from the SSE but we haven't
   //    seen one in a while. Surfaces "still working… 42s since last token"
   //    so the user can tell the difference between "the agent is thinking"
   //    and "the stream is silently dead". ──
-  const STALE_THRESHOLD_MS = 30_000;
+  const STALE_THRESHOLD_MS = 90_000;
   const sinceLastEventMs =
     stream.lastEventAt && isStreaming ? Date.now() - stream.lastEventAt : null;
   const isStale =
@@ -374,14 +470,16 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
 
   return (
     <div className="chat" role="region" aria-label={`Chat with ${agent.name}`}>
-      <ChatHead
-        agent={agent}
-        phase={stream.phase}
-        usage={stream.usage}
-        onBranch={newThread}
-        onNew={newThread}
-        onEdit={onEdit}
-      />
+      {!noHeader && (
+        <ChatHead
+          agent={agent}
+          phase={stream.phase}
+          usage={stream.usage}
+          onBranch={newThread}
+          onNew={newThread}
+          onEdit={onEdit}
+        />
+      )}
 
       {/* Diagnostic banners — only one shown at a time, ordered by severity.
           Recovered > resume-missing > resume-transient > lost > retrying > stale. */}
@@ -459,11 +557,18 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
         items={thread}
         agent={agent}
         onPickSuggestion={(text) => setPendingSeed(text)}
+        onSubmit={isStreaming ? undefined : onSubmit}
         phase={phase}
         phaseHint={phaseHint(phase, stream.usage)}
+        phaseStats={liveStats}
+        queuedMessage={queuedMessage}
+        onCancelQueue={() => setQueuedMessage(null)}
       />
+      {/* key=tKey forces a fresh Composer mount whenever the agent or
+          instance changes, ensuring useState re-initialises from the correct
+          draft slot rather than showing the previous agent's text. */}
       <Composer
-        disabled={isStreaming}
+        key={tKey}
         onSubmit={onSubmit}
         abortable={isStreaming && activeRunId !== null}
         onAbort={onAbort}
@@ -473,9 +578,20 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit }: Cha
         cwdChip={projectName ? `project: ${projectName}` : projectId ? `project: ${projectId}` : undefined}
         seed={pendingSeed}
         onCommand={handleCommand}
+        draftKey={tKey}
       />
     </div>
   );
+}
+
+function fmtElapsed(sec: number): string {
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
 }
 
 function phaseHint(

@@ -183,6 +183,11 @@ const ICON_PATHS = {
     strokeLinejoin: undefined,
     body: <path d="M6 6l12 12M18 6 6 18" />,
   },
+  minus: {
+    ...STROKE_BASE,
+    strokeWidth: 2,
+    body: <path d="M5 12h14" />,
+  },
   chevron: {
     ...STROKE_BASE,
     body: <path d="m9 18 6-6-6-6" />,
@@ -255,6 +260,159 @@ const ICON_PATHS = {
         <rect x="2" y="3" width="20" height="6" rx="1" />
         <rect x="2" y="15" width="20" height="6" rx="1" />
         <path d="M6 6h.01M6 18h.01" />
+      </>
+    ),
+  },
+  globe: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" />
+      </>
+    ),
+  },
+  terminal: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <polyline points="4 17 10 11 4 5" />
+        <line x1="12" y1="19" x2="20" y2="19" />
+      </>
+    ),
+  },
+  list: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <line x1="8" y1="6" x2="21" y2="6" />
+        <line x1="8" y1="12" x2="21" y2="12" />
+        <line x1="8" y1="18" x2="21" y2="18" />
+        <line x1="3" y1="6" x2="3.01" y2="6" />
+        <line x1="3" y1="12" x2="3.01" y2="12" />
+        <line x1="3" y1="18" x2="3.01" y2="18" />
+      </>
+    ),
+  },
+  check: {
+    ...STROKE_BASE,
+    strokeWidth: 2.5,
+    body: <polyline points="20 6 9 17 4 12" />,
+  },
+  "external-link": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+        <polyline points="15 3 21 3 21 9" />
+        <line x1="10" y1="14" x2="21" y2="3" />
+      </>
+    ),
+  },
+  layers: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <polygon points="12 2 2 7 12 12 22 7 12 2" />
+        <polyline points="2 17 12 22 22 17" />
+        <polyline points="2 12 12 17 22 12" />
+      </>
+    ),
+  },
+  crosshair: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <line x1="12" y1="1" x2="12" y2="5" />
+        <line x1="12" y1="19" x2="12" y2="23" />
+        <line x1="1" y1="12" x2="5" y2="12" />
+        <line x1="19" y1="12" x2="23" y2="12" />
+      </>
+    ),
+  },
+  hammer: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="m15 12-8.5 8.5a2.12 2.12 0 0 1-3-3L12 9" />
+        <path d="M17.64 15 22 10.64" />
+        <path d="m20.91 11.7-1.25-1.25c.16-.63.2-1.3.1-1.96l1.13-1.12a2.5 2.5 0 0 0 0-3.54l-1.82-1.82a2.5 2.5 0 0 0-3.54 0l-1.12 1.13c-.66-.1-1.33-.06-1.96.1L11.1 2c-.63.63-.63 1.65 0 2.28l1.12 1.12" />
+      </>
+    ),
+  },
+  pen: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <line x1="18" y1="2" x2="22" y2="6" />
+        <path d="M7.5 20.5 19 9l-4-4L3.5 16.5 2 22z" />
+      </>
+    ),
+  },
+  trash: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <polyline points="3 6 5 6 21 6" />
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      </>
+    ),
+  },
+  pin: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <line x1="12" y1="17" x2="12" y2="22" />
+        <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+      </>
+    ),
+  },
+  undo: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M3 7v6h6" />
+        <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+      </>
+    ),
+  },
+  redo: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M21 7v6h-6" />
+        <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+      </>
+    ),
+  },
+  "help-circle": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+      </>
+    ),
+  },
+  "paint-bucket": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="m19 11-8-8-8.5 8.5a5.5 5.5 0 0 0 7.78 7.78L19 11Z" />
+        <path d="m5 2 5 5" />
+        <path d="M17.5 17.5c1.1 1.1 1.5 2 1.5 3a2 2 0 0 1-4 0c0-1 .4-1.9 1.5-3Z" />
+      </>
+    ),
+  },
+  eyedrop: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="m2 22 1-1h3l9-9" />
+        <path d="M3 21v-3l9-9" />
+        <path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z" />
       </>
     ),
   },

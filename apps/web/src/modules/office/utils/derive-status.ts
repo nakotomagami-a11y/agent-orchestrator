@@ -18,7 +18,12 @@ export interface AgentStatusInfo {
 
 export function statusFromRuns(agentId: string, runs: PersistedRun[]): AgentStatusInfo {
   const now = Date.now();
-  const recent = runs.filter((r) => r.agentId === agentId && now - r.ts < STICKY_MS);
+  // Running jobs are always shown regardless of age — a job can run for hours.
+  // Completed jobs stick for 90s so the status doesn't flicker back to idle
+  // the instant a run finishes.
+  const recent = runs.filter(
+    (r) => r.agentId === agentId && (r.status === "running" || now - r.ts < STICKY_MS),
+  );
   if (recent.length === 0) return { status: "idle" };
   recent.sort((a, b) => b.ts - a.ts);
   const latest = recent[0]!;

@@ -98,6 +98,7 @@ export const summonRequestSchema = z.object({
   cwd: z.string().optional(),
   projectId: z.string().optional(),
   instanceId: z.string().optional(),
+  resumeSessionId: z.string().optional(),
 });
 
 export const runsQuerySchema = z.object({

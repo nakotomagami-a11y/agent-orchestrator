@@ -1,8 +1,5 @@
 "use client";
 
-import { useTranslations } from "next-intl";
-import { Icon } from "@/components/ui/icon";
-
 export type ChatPhase =
   | "idle"
   | "sending"
@@ -13,87 +10,61 @@ export type ChatPhase =
   | "error"
   | "aborted";
 
-const TONE: Record<ChatPhase, "info" | "warn" | "ok" | "err" | "ghost"> = {
-  idle: "ghost",
-  sending: "info",
-  connecting: "info",
-  working: "warn",
-  streaming: "info",
-  done: "ok",
-  error: "err",
-  aborted: "ghost",
-};
+export function LiveStatus({ phase, hint }: { phase: ChatPhase; hint?: string }) {
+  if (phase === "idle" || phase === "done" || phase === "aborted") return null;
 
-const TONE_COLOUR: Record<"info" | "warn" | "ok" | "err" | "ghost", string> = {
-  info: "var(--acc)",
-  warn: "var(--queued)",
-  ok: "var(--done)",
-  err: "var(--error)",
-  ghost: "var(--txt-3)",
-};
+  if (phase === "streaming") {
+    return (
+      <div className="ao-live-status" role="status" aria-live="polite">
+        <span className="ao-led" aria-hidden />
+        Typing
+        <span className="ao-typing" aria-hidden>
+          <span /><span /><span />
+        </span>
+      </div>
+    );
+  }
 
-/**
- * In-thread status bubble — sits at the bottom of the chat scroll area and
- * shows what the run is doing right now. Renders nothing when the phase is
- * `done` and there's text in the thread (so the row doesn't linger forever);
- * surfaces `error` and `aborted` so the user knows nothing else is coming.
- */
-export function LiveStatus({
-  phase,
-  hint,
-}: {
-  phase: ChatPhase;
-  hint?: string;
-}) {
-  const t = useTranslations();
-  if (phase === "idle") return null;
-  const tone = TONE[phase];
-  const label = t(`live_status.${phase}`);
-  const colour = TONE_COLOUR[tone];
-  const active = phase === "sending" || phase === "connecting" || phase === "working" || phase === "streaming";
+  if (phase === "working") {
+    return (
+      <div className="ao-live-status" role="status" aria-live="polite">
+        <span className="ao-led" aria-hidden />
+        {hint ? (
+          <>
+            Using
+            <span className="ao-tool-arg">{hint}</span>
+          </>
+        ) : (
+          <>
+            Working
+            <span className="ao-typing" aria-hidden>
+              <span /><span /><span />
+            </span>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  if (phase === "error") {
+    return (
+      <div
+        className="ao-live-status"
+        style={{ borderColor: "rgba(217,83,79,0.3)" }}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="ao-led" style={{ background: "var(--ao-bad)", boxShadow: "none" }} aria-hidden />
+        <span style={{ color: "var(--ao-bad)" }}>{hint ? `Error: ${hint}` : "Run failed"}</span>
+      </div>
+    );
+  }
+
+  // sending / connecting
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        margin: "8px 24px 14px",
-        padding: "6px 10px 6px 8px",
-        borderRadius: 999,
-        background: "var(--bg-2)",
-        border: `1px solid ${active ? "var(--line-2)" : "var(--line)"}`,
-        fontFamily: "var(--font-mono)",
-        fontSize: 11.5,
-        color: "var(--txt-2)",
-        alignSelf: "flex-start",
-        boxShadow: "var(--shadow-1)",
-      }}
-    >
-      <PhaseDot tone={tone} active={active} />
-      <span style={{ color: tone === "err" ? colour : "var(--txt)" }}>{label}</span>
-      {hint ? <span style={{ color: "var(--txt-3)" }}>· {hint}</span> : null}
-      {phase === "error" || phase === "aborted" ? <Icon name="x" size={11} /> : null}
-      {phase === "done" ? <Icon name="copy" size={11} style={{ color: "var(--done)" }} /> : null}
+    <div className="ao-live-status" role="status" aria-live="polite">
+      <span className="ao-led" aria-hidden />
+      {phase === "connecting" ? "Connecting…" : "Sending…"}
     </div>
-  );
-}
-
-function PhaseDot({ tone, active }: { tone: keyof typeof TONE_COLOUR; active: boolean }) {
-  const colour = TONE_COLOUR[tone];
-  return (
-    <span
-      aria-hidden
-      style={{
-        width: 8,
-        height: 8,
-        borderRadius: 999,
-        background: colour,
-        boxShadow: active ? `0 0 0 3px ${colour}33` : "none",
-        animation: active ? "pulseDot 1.4s infinite ease-in-out" : "none",
-        flex: "0 0 8px",
-      }}
-    />
   );
 }

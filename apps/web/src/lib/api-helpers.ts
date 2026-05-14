@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { extname, join } from "node:path";
 import { Buffer } from "node:buffer";
 import { MAX_UPLOAD_BYTES, safeFilename, isValidIdSegment } from "@agent-office/shared/services/paths";
 import { writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
@@ -109,6 +109,36 @@ export async function handleUpload(request: Request, dir: string): Promise<NextR
   const buf = await file.arrayBuffer();
   writeFileAtomic(path, Buffer.from(buf));
   return NextResponse.json({ filename, path, size: file.size });
+}
+
+const IMAGE_MIME: Record<string, string> = {
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".svg": "image/svg+xml",
+  ".bmp": "image/bmp",
+  ".ico": "image/x-icon",
+};
+
+export function handleServeUpload(dir: string, filename: string): Response {
+  const safe = safeFilename(filename);
+  const filePath = join(dir, safe);
+  if (!existsSync(filePath)) return new Response("Not found", { status: 404 });
+  try {
+    const data = readFileSync(filePath);
+    const ext = extname(filePath).toLowerCase();
+    const contentType = IMAGE_MIME[ext] ?? "application/octet-stream";
+    return new Response(data, {
+      headers: {
+        "Content-Type": contentType,
+        "Cache-Control": "private, max-age=86400",
+      },
+    });
+  } catch {
+    return new Response("Not found", { status: 404 });
+  }
 }
 
 export function handleDeleteUpload(dir: string, filename: string): NextResponse {

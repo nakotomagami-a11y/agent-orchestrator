@@ -1,12 +1,33 @@
 # Agent Office
 
-Personal fleet manager for Claude Code subagents — a GNOME-styled desktop app where each subagent gets a cubicle in a pixel-art office. Pick a project, scope a roster of agents to it, summon them with a prompt.
+Personal fleet manager for Claude Code subagents. A GNOME-styled desktop app where agents get cubicles in a pixel-art isometric office. Pick a project, scope a roster of agents to it, summon them with a prompt, watch output stream back in real time.
 
 ## Stack
 
-- **Web app** (`apps/web/`) — Next.js 15 (App Router), React 19, TypeScript. UI styled after Ubuntu Yaru / modern GNOME (Yaru orange + aubergine). State: Zustand for app stores, TanStack Query for server cache. Pixel sprites are pure SVG.
-- **Shared** (`packages/shared/`) — typed config (routes, query keys) and services that read/write `~/.claude/agents/` (agent definitions) and the local project metadata.
-- **Backend** — runs in-process inside the Next.js app. Shells out to `claude -p` per summon and streams stdout back via SSE.
+- **Next.js 15** (App Router), **React 19**, **TypeScript**
+- **Tailwind CSS** for utility classes; custom CSS design system (Ubuntu Yaru / GNOME aesthetic — Yaru orange `#E95420` + aubergine)
+- **Zustand** for client stores (theme, active-project, claude-limits), **TanStack Query** for server cache
+- **better-sqlite3** SQLite at `~/.claude/agent-office/db.sqlite` — stores runs, messages, transcripts, drafts, and UI settings. Replaced localStorage and JSONL flat files.
+- Backend runs in-process inside Next.js; shells out to `claude -p` per summon and streams stdout back over SSE
+
+## Monorepo structure
+
+```
+apps/web/             Next.js app (UI + API routes + SSE runner)
+packages/shared/      Types, route config, services, DB layer
+```
+
+Inside `apps/web/src`:
+
+- `app/(app)/` — protected pages: office, activity, projects, agents, settings, spend
+- `app/api/` — REST endpoints: runs, agents, processes, ui-settings, transcripts, drafts
+- `components/layout/` — titlebar, sidebar, GNOME window chrome
+- `components/ui/` — design-system atoms: Icon, StatusDot, EmptyState, Modal, Skeleton, etc.
+- `modules/office/` — isometric office scene, build toolbar, agent details modal
+- `modules/summon/` — chat panel, transcript store, composer
+- `modules/processes/` — running servers modal
+- `modules/limits/` — Claude usage limits modal
+- `lib/` — Zustand stores (theme, active-project, claude-limits)
 
 ## Run it
 
@@ -14,7 +35,7 @@ Requires **Node 22+** and **pnpm**.
 
 ```sh
 pnpm install
-pnpm dev          # → http://localhost:5173
+pnpm dev          # → http://localhost:3001
 ```
 
 Other scripts:
@@ -26,37 +47,28 @@ pnpm typecheck    # tsc --noEmit across the workspace
 pnpm lint
 ```
 
-## Layout
-
-```
-apps/web/            Next.js app (routes, API, UI)
-packages/shared/     shared types, route config, services
-```
-
-Inside `apps/web/src`:
-
-- `app/(app)/`     — protected pages (office, activity, projects, agents, settings, …)
-- `app/api/`       — REST endpoints backing the React Query hooks
-- `components/`    — `layout/` (titlebar, sidebar, GNOME chrome), `ui/` (atoms)
-- `modules/office/` — iso-office floor, cards view, agent details modal
-- `modules/projects/` — projects list + detail, Add-agent picker
-- `modules/agents/`  — agent definitions (markdown files in `~/.claude/agents/`)
-- `lib/`            — zustand stores (theme, active-project), API helpers
-
 ## How summoning works
 
-Agents are markdown files in `~/.claude/agents/`. The dashboard scans that directory, builds a roster, and shells out to:
+Agent definitions are markdown files in `~/.claude/agents/`. The app scans that directory to build the roster, then shells out to:
 
 ```sh
-claude -p --agent <name> "<prompt>"
+claude -p "<prompt>"
 ```
 
-Output streams back over Server-Sent Events. Cost is tracked per run and aggregated in the office HUD.
+Output streams back over Server-Sent Events. Runs and full transcripts are stored in SQLite.
 
-## Projects
+## Office build mode
 
-Pick a project in the top-left switcher to scope the office floor + the sidebar roster to that project's agents. "Add agent" on the office toolbar adds an agent instance to the active project. The active project persists in `localStorage`.
+The isometric office floor is user-editable. Controls:
+
+- **Arrow keys** to pan, **`-`** / **`=`** to zoom, **scroll wheel** to zoom to cursor
+- **B** (Paint): click or drag to paint grass tiles
+- **E** (Erase): click or drag to erase (removes agents first, then decorations LIFO, then terrain)
+- Click a decoration in the build panel to select it, then click a grass tile to place (max 2 per tile, one per decoration family)
+- Drag agents from the sidebar onto grass tiles; drag them between tiles on the floor
+
+Scene state (grid, decorations, agent positions, grass color) persists to SQLite via `/api/ui-settings`.
 
 ## License
 
-Personal project, no license declared yet.
+Personal project, no license declared.

@@ -40,7 +40,11 @@
     ],
     "linux": {
       "deb": {
-        "depends": []
+        "depends": [],
+        "desktopTemplate": "agent-office.desktop",
+        "files": {
+          "/usr/bin/agent-office": "agent-office-launcher.sh"
+        }
       }
     }
   }

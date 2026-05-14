@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { store, runs as runsService } from "@agent-office/shared/services";
 import { validateQuery } from "@/lib/validation";
 import { runsQuerySchema } from "@/lib/validation-schemas";
+import { z } from "zod";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -23,4 +24,16 @@ export async function GET(request: Request) {
     return true;
   });
   return NextResponse.json(filtered.slice(0, limit));
+}
+
+const deleteSchema = z.object({ agent: z.string().min(1) });
+
+export async function DELETE(request: Request) {
+  const url = new URL(request.url);
+  const parse = deleteSchema.safeParse({ agent: url.searchParams.get("agent") });
+  if (!parse.success) {
+    return NextResponse.json({ error: "agent param required" }, { status: 400 });
+  }
+  const deleted = store.deleteRunsByAgent(parse.data.agent);
+  return NextResponse.json({ deleted });
 }

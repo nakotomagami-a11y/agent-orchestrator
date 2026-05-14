@@ -2,6 +2,7 @@
 
 import { spawn } from "node:child_process";
 import type { HealthInfo } from "../types/index";
+import { buildAugmentedPath } from "./paths";
 
 interface HealthState {
   cached: HealthInfo | null;
@@ -22,7 +23,10 @@ function probe(): Promise<HealthInfo> {
     let stdout = "";
     let stderr = "";
     try {
-      const proc = spawn("claude", ["--version"], { stdio: ["ignore", "pipe", "pipe"] });
+      const proc = spawn("claude", ["--version"], {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, PATH: buildAugmentedPath() },
+      });
       proc.stdout.on("data", (chunk: Buffer) => {
         stdout += chunk.toString();
       });

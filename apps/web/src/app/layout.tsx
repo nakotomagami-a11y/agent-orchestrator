@@ -3,7 +3,7 @@ import { Ubuntu, Ubuntu_Sans_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "./providers";
-import "./globals.css";
+import "./globals.css"; 
 
 const ubuntu = Ubuntu({
   subsets: ["latin"],

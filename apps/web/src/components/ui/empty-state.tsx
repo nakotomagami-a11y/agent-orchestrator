@@ -10,39 +10,15 @@ export type EmptyStateProps = {
 
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
-    <div
-      role="status"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 12,
-        padding: "48px 24px",
-        textAlign: "center",
-        color: "var(--txt-2)",
-      }}
-    >
+    <div role="status" className="empty-state">
       {icon ? (
-        <div
-          aria-hidden
-          style={{
-            width: 48,
-            height: 48,
-            borderRadius: 12,
-            background: "var(--bg-2)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--txt-3)",
-          }}
-        >
+        <div aria-hidden className="empty-state-icon">
           <Icon name={icon} size={22} />
         </div>
       ) : null}
-      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>{title}</div>
-      {description ? <div style={{ fontSize: 12.5, maxWidth: 360 }}>{description}</div> : null}
-      {action ? <div style={{ marginTop: 4 }}>{action}</div> : null}
+      <div className="empty-state-title">{title}</div>
+      {description ? <div className="empty-state-desc">{description}</div> : null}
+      {action ? <div className="empty-state-action">{action}</div> : null}
     </div>
   );
 }

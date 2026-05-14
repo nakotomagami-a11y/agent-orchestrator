@@ -2,10 +2,10 @@
 // Per-project metadata in ~/.claude/projects/<id>/project.md (YAML frontmatter + memory body).
 // Rosters of agent instances live in that frontmatter.
 
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentInstance, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
-import { PROJECTS_DIR } from "./paths";
+import { expandTilde, PROJECTS_DIR } from "./paths";
 import { ensureDir, writeFileAtomic } from "./fs-atomic";
 import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlValue } from "./yaml";
 import { log } from "./log";
@@ -260,12 +260,13 @@ export function createProject(input: CreateProjectInput): Project {
   if (!settings) throw new Error("first-run setup not complete");
   const id = input.id?.trim() || slugify(input.name ?? "");
   if (!id) throw new Error("id or name required");
-  const scanned = scanProjects(settings.projectsRoot, settings.excluded).find((e) => e.id === id);
+  let scanned = scanProjects(settings.projectsRoot, settings.excluded).find((e) => e.id === id);
   if (!scanned) {
-    throw new Error(
-      `no folder matching id '${id}' under ${settings.projectsRoot}. ` +
-        "Create the folder on disk first.",
-    );
+    const newPath = join(expandTilde(settings.projectsRoot), id);
+    mkdirSync(newPath, { recursive: true });
+    log.info("project.folder_created", { path: newPath });
+    scanned = scanProjects(settings.projectsRoot, settings.excluded).find((e) => e.id === id);
+    if (!scanned) throw new Error(`failed to create project folder at ${newPath}`);
   }
   const meta: ProjectMeta = {
     name: input.name ?? scanned.name,

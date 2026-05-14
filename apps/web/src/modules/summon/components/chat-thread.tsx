@@ -2,16 +2,14 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { UnitSprite } from "@/components/ui/unit-sprite";
-import { ToolCard } from "@/components/ui/tool-card";
-import { ToolChainCard } from "@/components/ui/tool-chain-card";
 import { Icon } from "@/components/ui/icon";
-import { MessageBubble } from "./message-bubble";
+import { MessageBubble, ToolGroupRow } from "./message-bubble";
 import { LiveStatus, type ChatPhase } from "./live-status";
 import type { ThreadItem } from "../utils/thread-types";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 
 const LIVE_PHASES = new Set<ChatPhase>(["sending", "connecting", "working", "streaming"]);
+const CONVERSATIONAL_KINDS = new Set<string>(["you", "agent-text", "system-done", "system-error", "agent-subagent"]);
 
 /** How many items to render at first. The transcript may hold thousands;
  *  rendering the whole list on every token would be a frame-drop nightmare. */
@@ -31,6 +29,11 @@ const STICK_THRESHOLD_PX = 80;
 type RenderRow =
   | { kind: "single"; item: ThreadItem }
   | { kind: "tool-chain"; id: string; tools: Array<Extract<ThreadItem, { kind: "agent-tool" }>> };
+
+function looksLikeQuestion(text: string): boolean {
+  const nonEmpty = text.split("\n").filter((l) => l.trim());
+  return nonEmpty.slice(-5).some((l) => l.trimEnd().endsWith("?"));
+}
 
 function groupRows(items: ThreadItem[]): RenderRow[] {
   const rows: RenderRow[] = [];
@@ -53,8 +56,14 @@ export type ChatThreadProps = {
   items: ThreadItem[];
   agent: OfficeAgent;
   onPickSuggestion?: (text: string) => void;
+  /** Direct submit — used by inline clarify reply. */
+  onSubmit?: (text: string) => void;
   phase: ChatPhase;
   phaseHint?: string;
+  phaseStats?: string;
+  /** Message queued while agent is running — rendered as a pending bubble at the bottom. */
+  queuedMessage?: string | null;
+  onCancelQueue?: () => void;
 };
 
 const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
@@ -64,7 +73,7 @@ const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
   { lbl: "Explain", text: "Walk me through how this part of the system handles errors." },
 ];
 
-export function ChatThread({ items, agent, onPickSuggestion, phase, phaseHint }: ChatThreadProps) {
+export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, phaseHint, phaseStats, queuedMessage, onCancelQueue }: ChatThreadProps) {
   const t = useTranslations("chat_thread");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
@@ -111,6 +120,32 @@ export function ChatThread({ items, agent, onPickSuggestion, phase, phaseHint }:
 
   const rows = useMemo(() => groupRows(visibleItems), [visibleItems]);
   const hiddenCount = items.length - visibleItems.length;
+  const hiddenConversationalCount = hiddenCount > 0
+    ? items.slice(0, hiddenCount).filter((it) => CONVERSATIONAL_KINDS.has(it.kind)).length
+    : 0;
+
+  // Detect agent-text items that are asking a question and haven't been
+  // replied to yet. Conditions: any of the last 5 non-empty lines ends with
+  // '?', immediately followed by system-done(exit 0), and no 'you' item
+  // appears after that system-done.
+  const questionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (let i = 0; i < items.length - 1; i++) {
+      const item = items[i]!;
+      const next = items[i + 1]!;
+      if (
+        item.kind === "agent-text" &&
+        !item.streaming &&
+        looksLikeQuestion(item.text) &&
+        next.kind === "system-done" &&
+        next.exitCode === 0 &&
+        !items.slice(i + 2).some((it) => it.kind === "you")
+      ) {
+        ids.add(item.id);
+      }
+    }
+    return ids;
+  }, [items]);
 
   // ── Scroll listener: keep `followTail` in sync with the user's position ──
   useEffect(() => {
@@ -203,12 +238,25 @@ export function ChatThread({ items, agent, onPickSuggestion, phase, phaseHint }:
     <div className="chat-scroll" ref={scrollRef}>
       {items.length === 0 && phase === "idle" ? (
         <div className="thread-empty">
-          <UnitSprite
-            unit={agent.unitChoice}
-            size={72}
-            action={agent.status === "working" ? "working" : "idle"}
-            animate
-          />
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: 16,
+              background: "var(--ao-bg-3)",
+              border: "1px solid var(--ao-line-1)",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 36,
+              fontWeight: 700,
+              color: "var(--ao-fg-1)",
+              boxShadow: "0 8px 30px -12px rgba(0,0,0,0.5)",
+              flexShrink: 0,
+            }}
+            aria-hidden
+          >
+            {agent.short[0]?.toUpperCase() ?? "?"}
+          </div>
           <div className="greet">
             <h2>Hi, I&apos;m {agent.name}.</h2>
             <p>{agent.description || "Ready when you are — pick a starter or ask anything."}</p>
@@ -229,7 +277,7 @@ export function ChatThread({ items, agent, onPickSuggestion, phase, phaseHint }:
         </div>
       ) : (
         <>
-          {hiddenCount > 0 ? (
+          {hiddenConversationalCount > 0 ? (
             <div
               style={{
                 maxWidth: 760,
@@ -243,55 +291,75 @@ export function ChatThread({ items, agent, onPickSuggestion, phase, phaseHint }:
                 type="button"
                 className="btn sm ghost"
                 onClick={loadEarlier}
-                aria-label={t("load_earlier_aria", { count: hiddenCount })}
+                aria-label={t("load_earlier_aria", { count: hiddenConversationalCount })}
               >
                 <span style={{ display: "inline-flex", transform: "rotate(180deg)" }} aria-hidden>
                   <Icon name="chevron-down" size={12} />
                 </span>
-                {t("load_earlier", { count: hiddenCount })}
+                {t("load_earlier", { count: hiddenConversationalCount })}
               </button>
             </div>
           ) : null}
           <div className="chat-thread">
             {rows.map((row, idx) => {
               if (row.kind === "single") {
-                return <MessageBubble key={row.item.id} item={row.item} agent={agent} />;
+                const isQuestion = questionIds.has(row.item.id);
+                return (
+                  <MessageBubble
+                    key={row.item.id}
+                    item={row.item}
+                    agent={agent}
+                    isQuestion={isQuestion}
+                    onReply={isQuestion && onSubmit ? onSubmit : undefined}
+                    onRerun={row.item.kind === "you" && onSubmit ? onSubmit : undefined}
+                  />
+                );
               }
               const isTail = idx === rows.length - 1;
-              const live = isTail && LIVE_PHASES.has(phase);
+              const running = isTail && LIVE_PHASES.has(phase);
               return (
-                <div key={row.id} className="msg">
-                  <div className="tool-chain" style={{ width: "100%" }}>
-                    <div className="mav" aria-hidden>
-                      <UnitSprite unit={agent.unitChoice} size={30} animate action="idle" />
-                    </div>
-                    <div className="tc-list" aria-label={`${row.tools.length} tool calls`}>
-                      {row.tools.length === 1 ? (
-                        // Singletons stay flat — no point wrapping one call in
-                        // a chain disclosure.
-                        <ToolCard name={row.tools[0]!.name} arg={row.tools[0]!.arg} />
-                      ) : (
-                        <ToolChainCard
-                          items={row.tools.map((t) => ({ id: t.id, name: t.name, arg: t.arg }))}
-                          live={live}
-                        />
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <ToolGroupRow
+                  key={row.id}
+                  tools={row.tools.map((t) => ({ id: t.id, name: t.name, arg: t.arg }))}
+                  avatar={agent.short[0]?.toUpperCase() ?? "?"}
+                  running={running}
+                />
               );
             })}
           </div>
+          {queuedMessage ? (
+            <div className="ao-msg ao-user ao-msg-queued">
+              <div className="ao-av ao-you" aria-hidden>P</div>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                <div className="ao-bubble ao-bubble-queued">{queuedMessage}</div>
+                <div className="ao-queued-row">
+                  <span className="ao-queued-pill">queued</span>
+                  <button
+                    type="button"
+                    className="ao-queued-cancel"
+                    onClick={onCancelQueue}
+                    aria-label="Cancel queued message"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <div
             style={{
               maxWidth: 760,
               margin: "0 auto",
-              padding: "0 8px",
+              padding: "0 8px 16px",
               display: "flex",
-              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
             }}
           >
             <LiveStatus phase={phase} hint={phaseHint} />
+            {phaseStats && phase !== "idle" && phase !== "done" && phase !== "aborted" && (
+              <span className="ao-phase-stats">{phaseStats}</span>
+            )}
           </div>
           {/* Sentinel for the stick-to-bottom scroll anchor. Lives at the
               very end of the scroll container so scrollIntoView({block:"end"})

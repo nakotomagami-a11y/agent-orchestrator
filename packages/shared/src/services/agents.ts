@@ -11,6 +11,7 @@ import { AGENTS_DIR, GLOBAL_MEMORY_PATH, isValidIdSegment } from "./paths";
 import { ensureDir, writeFileAtomic } from "./fs-atomic";
 import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlValue } from "./yaml";
 import { buildSkillsPrompt } from "./skills";
+import { historyNote } from "./history";
 
 interface ParsedFile {
   fm: YamlMapping;
@@ -62,6 +63,7 @@ export function readAgent(name: string): { info: ApiAgent; body: string } | null
     defaultEffort: asString(fm["default-effort"] ?? fm.effort),
     permissionMode: asString(fm["permission-mode"]),
     room: asString(fm.room),
+    addDirs: asStringList(fm["add-dirs"] ?? fm["addDirs"]),
     unit: asString(fm.unit),
   };
   return { info, body: body.trim() };
@@ -138,21 +140,33 @@ export function writeAgentMemory(agentId: string, content: string): void {
 }
 
 /**
- * Composition order: skills → global → project → per-agent.
+ * Composition order: skills → global → project → per-agent → history note.
  * Caller passes a pre-resolved `Project` (or null) — we don't import the
  * projects service here to avoid a cycle.
  */
-export function buildAppendedPrompt(agentName: string, project: Project | null): string {
+export function buildAppendedPrompt(agentName: string, project: Project | null, instanceId?: string): string {
   const agent = readAgent(agentName);
   const skillFragment = agent ? buildSkillsPrompt(agent.info.skills).trim() : "";
   const global = readGlobalMemory().trim();
   const projectMemory = project?.memory.trim() ?? "";
   const perAgent = readAgentMemory(agentName).trim();
+  const permissionMode = agent?.info.permissionMode;
 
   const parts: string[] = [];
   if (skillFragment) parts.push("## Capabilities (from selected skills)\n\n" + skillFragment);
   if (global) parts.push("## Global memory (applies to every agent)\n" + global);
   if (projectMemory) parts.push(`## Project memory (${project!.meta.name})\n` + projectMemory);
   if (perAgent) parts.push(`## Memory specific to ${agentName}\n` + perAgent);
+
+  if (permissionMode !== "plan") {
+    const effectiveInstanceId = instanceId ?? "default";
+    const hNote = historyNote(agentName, effectiveInstanceId);
+    parts.push(
+      `## Conversation history\n` +
+      `Your past runs are stored in SQLite: ${hNote}\n` +
+      `Use the sqlite3 command shown above to read past context when you need to recall previous sessions.`
+    );
+  }
+
   return parts.join("\n\n");
 }

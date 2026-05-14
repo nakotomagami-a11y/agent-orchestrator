@@ -1,16 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { useState, useEffect, useMemo } from "react";
 import { ModalShell } from "@/components/ui/modal-shell";
-import { TextInput } from "@/components/ui/text-input";
-import { Select } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Icon } from "@/components/ui/icon";
 import {
   useClaudeLimitsHydration,
   useClaudeLimitsStore,
-  planLabel,
   periodStart,
   periodEnd,
   type ClaudePlan,
@@ -18,383 +12,12 @@ import {
 } from "@/lib/claude-limits-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 
-const PLAN_OPTIONS: ClaudePlan[] = ["pro", "max-5x", "max-20x", "api", "custom"];
+/* ------------------------------------------------------------------ */
+/* Helpers                                                              */
+/* ------------------------------------------------------------------ */
 
-/**
- * Manually-configured Claude plan + locally-measured usage. The numbers come
- * from `runs.log` (everything summoned from this app), so they undercount
- * anything the user runs through plain `claude` outside the dashboard — that
- * caveat is shown explicitly.
- */
-export function ClaudeLimitsModal() {
-  const t = useTranslations();
-  useClaudeLimitsHydration();
-  const open = useClaudeLimitsStore((s) => s.open);
-  const setOpen = useClaudeLimitsStore((s) => s.setOpen);
-  const plan = useClaudeLimitsStore((s) => s.plan);
-  const quotaUsd = useClaudeLimitsStore((s) => s.quotaUsd);
-  const period = useClaudeLimitsStore((s) => s.period);
-  const update = useClaudeLimitsStore((s) => s.update);
-
-  const runsQ = useRuns({ limit: 500 });
-  const runs = runsQ.data ?? [];
-
-  const start = periodStart(period);
-  const end = periodEnd(period);
-  const inPeriod = useMemo(
-    () => runs.filter((r) => r.ts >= start && r.ts < end),
-    [runs, start, end],
-  );
-
-  const usedPeriod = inPeriod.reduce((s, r) => s + (r.cost || 0), 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const usedToday = runs
-    .filter((r) => r.ts >= today.getTime())
-    .reduce((s, r) => s + (r.cost || 0), 0);
-
-  const byModel: Record<string, { runs: number; cost: number; tokensIn: number; tokensOut: number }> = {};
-  for (const r of inPeriod) {
-    const k = r.model || "unknown";
-    const bucket = byModel[k] ?? { runs: 0, cost: 0, tokensIn: 0, tokensOut: 0 };
-    bucket.runs += 1;
-    bucket.cost += r.cost || 0;
-    bucket.tokensIn += r.tokensIn || 0;
-    bucket.tokensOut += r.tokensOut || 0;
-    byModel[k] = bucket;
-  }
-  const modelRows = Object.entries(byModel).sort((a, b) => b[1].cost - a[1].cost);
-
-  const resetIn = formatResetCountdown(end);
-  const usedPct = quotaUsd > 0 ? Math.min(100, (usedPeriod / quotaUsd) * 100) : null;
-
-  return (
-    <ModalShell
-      open={open}
-      onClose={() => setOpen(false)}
-      title={t("limits.title")}
-      size="md"
-      footer={
-        <button type="button" className="btn" onClick={() => setOpen(false)}>
-          {t("limits.done_button")}
-        </button>
-      }
-    >
-      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-        <Section title={t("limits.section_plan")}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            <Field label={t("limits.label_plan")}>
-              <Select
-                value={plan}
-                onChange={(e) => update({ plan: e.target.value as ClaudePlan })}
-              >
-                {PLAN_OPTIONS.map((p) => (
-                  <option key={p} value={p}>{planLabel(p)}</option>
-                ))}
-              </Select>
-            </Field>
-            <Field label={t("limits.label_period")}>
-              <Select
-                value={period}
-                onChange={(e) => update({ period: e.target.value as LimitsPeriod })}
-              >
-                <option value="week">{t("limits.period_week")}</option>
-                <option value="month">{t("limits.period_month")}</option>
-              </Select>
-            </Field>
-            <Field
-              label={t("limits.label_quota_cap")}
-              span={2}
-              hint={t("limits.quota_hint")}
-            >
-              <TextInput
-                type="number"
-                min="0"
-                step="0.01"
-                inputMode="decimal"
-                value={String(quotaUsd)}
-                onChange={(e) => {
-                  const v = Number(e.target.value);
-                  update({ quotaUsd: Number.isFinite(v) && v >= 0 ? v : 0 });
-                }}
-                placeholder={t("limits.quota_placeholder")}
-              />
-            </Field>
-          </div>
-        </Section>
-
-        <Section title={t("limits.section_usage")}>
-          {runsQ.isLoading ? (
-            <Skeleton width="100%" height={70} />
-          ) : (
-            <>
-              <UsageBar
-                used={usedPeriod}
-                quota={quotaUsd}
-                pct={usedPct}
-                resetIn={resetIn}
-                period={period}
-              />
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: 10,
-                  marginTop: 12,
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 12,
-                }}
-              >
-                <Metric label={t("limits.metric_today")} value={`$${usedToday.toFixed(2)}`} />
-                <Metric
-                  label={period === "week" ? t("limits.metric_this_week") : t("limits.metric_this_month")}
-                  value={`$${usedPeriod.toFixed(2)}`}
-                />
-                <Metric
-                  label={t("limits.metric_runs_in_period")}
-                  value={inPeriod.length.toLocaleString()}
-                />
-              </div>
-            </>
-          )}
-        </Section>
-
-        {modelRows.length > 0 ? (
-          <Section title={t("limits.section_by_model")}>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {modelRows.map(([m, b]) => (
-                <ModelRow
-                  key={m}
-                  model={m}
-                  runs={b.runs}
-                  cost={b.cost}
-                  tokens={b.tokensIn + b.tokensOut}
-                  totalCost={usedPeriod}
-                />
-              ))}
-            </div>
-          </Section>
-        ) : null}
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            gap: 8,
-            fontSize: 11.5,
-            color: "var(--txt-3)",
-            lineHeight: 1.5,
-          }}
-        >
-          <Icon name="memory" size={13} />
-          <span>
-            Counts only what Agent Office summoned (saved in
-            <code style={{ marginLeft: 4 }}>~/.claude/agent-office/runs.log</code>). Anything you
-            ran through plain <code>claude</code> outside the dashboard isn&apos;t included.
-          </span>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div
-        style={{
-          fontSize: 11,
-          color: "var(--txt-3)",
-          fontFamily: "var(--font-mono)",
-          textTransform: "uppercase",
-          letterSpacing: "0.06em",
-          marginBottom: 8,
-        }}
-      >
-        {title}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  hint,
-  span = 1,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  span?: 1 | 2;
-  children: React.ReactNode;
-}) {
-  return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 4, gridColumn: `span ${span}` }}>
-      <span
-        style={{
-          fontSize: 11,
-          color: "var(--txt-3)",
-          fontFamily: "var(--font-mono)",
-        }}
-      >
-        {label}
-      </span>
-      {children}
-      {hint ? (
-        <span style={{ fontSize: 11, color: "var(--txt-4)" }}>{hint}</span>
-      ) : null}
-    </label>
-  );
-}
-
-function UsageBar({
-  used,
-  quota,
-  pct,
-  resetIn,
-  period,
-}: {
-  used: number;
-  quota: number;
-  pct: number | null;
-  resetIn: string;
-  period: LimitsPeriod;
-}) {
-  const colour = pct === null ? "var(--acc)" : pct >= 90 ? "var(--error)" : pct >= 70 ? "var(--queued)" : "var(--acc)";
-  return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          marginBottom: 6,
-        }}
-      >
-        <span style={{ fontSize: 13 }}>
-          {quota > 0 ? (
-            <>
-              <b style={{ fontFamily: "var(--font-mono)" }}>${used.toFixed(2)}</b> of{" "}
-              <b style={{ fontFamily: "var(--font-mono)" }}>${quota.toFixed(2)}</b> used
-            </>
-          ) : (
-            <>
-              <b style={{ fontFamily: "var(--font-mono)" }}>${used.toFixed(2)}</b> used this{" "}
-              {period}
-            </>
-          )}
-        </span>
-        <span style={{ fontSize: 11, color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>
-          resets in {resetIn}
-        </span>
-      </div>
-      <div
-        style={{
-          height: 10,
-          borderRadius: 999,
-          background: "var(--bg-2)",
-          overflow: "hidden",
-          border: "1px solid var(--line)",
-        }}
-        aria-label={pct === null ? "No quota set" : `${pct.toFixed(0)}% used`}
-      >
-        {pct !== null ? (
-          <div
-            style={{
-              width: `${pct}%`,
-              height: "100%",
-              background: colour,
-              transition: "width 200ms ease",
-            }}
-          />
-        ) : null}
-      </div>
-      {pct !== null ? (
-        <div
-          style={{
-            marginTop: 4,
-            fontSize: 11,
-            color: "var(--txt-3)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
-          {pct.toFixed(1)}% of cap
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      style={{
-        background: "var(--bg-2)",
-        border: "1px solid var(--line)",
-        borderRadius: "var(--r-md)",
-        padding: "8px 10px",
-      }}
-    >
-      <div style={{ fontSize: 10.5, color: "var(--txt-3)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 14, fontWeight: 600 }}>{value}</div>
-    </div>
-  );
-}
-
-function ModelRow({
-  model,
-  runs,
-  cost,
-  tokens,
-  totalCost,
-}: {
-  model: string;
-  runs: number;
-  cost: number;
-  tokens: number;
-  totalCost: number;
-}) {
-  const pct = totalCost > 0 ? (cost / totalCost) * 100 : 0;
-  return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "120px 1fr auto",
-        gap: 10,
-        alignItems: "center",
-        fontSize: 12.5,
-      }}
-    >
-      <span style={{ fontFamily: "var(--font-mono)", fontWeight: 600 }}>{model}</span>
-      <div
-        style={{
-          height: 6,
-          borderRadius: 999,
-          background: "var(--bg-2)",
-          overflow: "hidden",
-          border: "1px solid var(--line)",
-        }}
-        aria-label={`${pct.toFixed(0)}% of period cost`}
-      >
-        <div style={{ width: `${pct}%`, height: "100%", background: "var(--acc)" }} />
-      </div>
-      <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 11.5,
-          color: "var(--txt-3)",
-          textAlign: "right",
-          minWidth: 140,
-        }}
-      >
-        {runs} run{runs === 1 ? "" : "s"} · {tokens.toLocaleString()} tok · ${cost.toFixed(2)}
-      </span>
-    </div>
-  );
-}
+const fmtUSD = (n: number, dec = 2): string => `$${n.toFixed(dec)}`;
+const fmtTok = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
 function formatResetCountdown(endTs: number): string {
   const ms = Math.max(0, endTs - Date.now());
@@ -403,4 +26,684 @@ function formatResetCountdown(endTs: number): string {
   if (days >= 1) return `${days}d ${hours}h`;
   const minutes = Math.floor((ms % 3_600_000) / 60_000);
   return `${hours}h ${minutes}m`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Plan config                                                          */
+/* ------------------------------------------------------------------ */
+
+const PLAN_DEFS: { id: ClaudePlan; name: string; price: string; feat: string; icon: string }[] = [
+  { id: "free",  name: "Free",  price: "$0/mo",    feat: "haiku · 100 runs/wk · no team",               icon: "F" },
+  { id: "pro",   name: "Pro",   price: "$20/mo",   feat: "sonnet + opus · 2,000 runs/wk · 5 agents",    icon: "P" },
+  { id: "max",   name: "Max",   price: "$200/mo",  feat: "unlimited · priority queue · team seats",      icon: "M" },
+];
+
+/* ------------------------------------------------------------------ */
+/* Sub-components                                                       */
+/* ------------------------------------------------------------------ */
+
+function SectionHead({
+  title,
+  sub,
+  right,
+}: {
+  title: string;
+  sub?: string;
+  right?: React.ReactNode;
+}) {
+  return (
+    <div className="lim-section-head">
+      <span className="marker" />
+      <h3>{title}</h3>
+      {sub && <span className="sub">{sub}</span>}
+      {right && <span className="right">{right}</span>}
+    </div>
+  );
+}
+
+function LimHeader({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="limits-head">
+      <div className="icon" aria-hidden="true">⚡</div>
+      <div className="titles">
+        <div className="title">Usage &amp; limits</div>
+        <div className="sub">spend caps, plan, and per-model breakdown · workspace local</div>
+      </div>
+      <button className="close" aria-label="Close" onClick={onClose}>×</button>
+    </div>
+  );
+}
+
+function Gauge({ pct, status }: { pct: number; status: "ok" | "warn" | "bad" }) {
+  const r = 56;
+  const circumference = 2 * Math.PI * r;
+  const dash = Math.max(0, Math.min(1, pct)) * circumference;
+  const color =
+    status === "bad"  ? "var(--ao-bad)"  :
+    status === "warn" ? "var(--ao-warn)" :
+    "var(--ao-accent)";
+  const glowColor =
+    status === "bad"  ? "var(--ao-bad)"  :
+    status === "warn" ? "var(--ao-warn)" :
+    "var(--ao-accent-soft)";
+  return (
+    <div className="gauge">
+      <svg viewBox="0 0 140 140" aria-hidden="true">
+        <circle cx={70} cy={70} r={r} fill="none" stroke="var(--ao-bg-3)" strokeWidth={10} />
+        <circle
+          cx={70} cy={70} r={r} fill="none"
+          stroke={color} strokeWidth={10}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference}`}
+          style={{
+            transformOrigin: "70px 70px",
+            transform: "rotate(-90deg)",
+            filter: `drop-shadow(0 0 6px ${glowColor})`,
+          }}
+        />
+      </svg>
+      <div className="label">
+        <div className="pct">{Math.round(pct * 100)}%</div>
+        <div className="lbl">used</div>
+      </div>
+    </div>
+  );
+}
+
+function BudgetHero({
+  spentPeriod,
+  spentToday,
+  quotaUsd,
+  period,
+  forecast,
+  resetIn,
+}: {
+  spentPeriod: number;
+  spentToday: number;
+  quotaUsd: number;
+  period: LimitsPeriod;
+  forecast: number;
+  resetIn: string;
+}) {
+  const tracked = quotaUsd > 0;
+  const pct = tracked ? spentPeriod / quotaUsd : 0;
+  const status: "ok" | "warn" | "bad" = pct >= 1 ? "bad" : pct >= 0.8 ? "warn" : "ok";
+  const forecastPct = tracked ? forecast / quotaUsd : 0;
+
+  const periodLabel =
+    period === "daily" ? "Today" :
+    period === "month" ? "This month" :
+    "This week";
+
+  // Burn rate: today's spend as a daily rate
+  const burnRate = spentToday;
+
+  const forecastDelta = tracked ? forecast - quotaUsd : 0;
+
+  return (
+    <div className="budget-hero">
+      <div className="left">
+        <div className="kicker">
+          <span className="pulse" aria-hidden="true" />
+          {periodLabel}
+          <span style={{ color: "var(--ao-fg-3)", marginLeft: 4 }}>· resets in {resetIn}</span>
+        </div>
+
+        <div className="big">
+          {fmtUSD(spentPeriod)}
+          {tracked ? (
+            <span className="cap">/ {fmtUSD(quotaUsd, 0)} cap</span>
+          ) : (
+            <span className="untracked">no cap · track-only</span>
+          )}
+        </div>
+
+        {tracked && (
+          <div className="progress" role="progressbar" aria-valuenow={Math.round(pct * 100)} aria-valuemin={0} aria-valuemax={100}>
+            <div
+              className={`fill${status === "ok" ? "" : ` ${status}`}`}
+              style={{ width: `${Math.min(100, pct * 100)}%` }}
+            />
+            {forecastPct > 0 && forecastPct < 1.02 && forecastPct > pct && (
+              <div
+                className="marker"
+                title="Forecast"
+                style={{ left: `${Math.min(98, forecastPct * 100)}%` }}
+              />
+            )}
+          </div>
+        )}
+
+        <div className="stats-row">
+          <div className="item">
+            <span className="l">Today</span>
+            <span className="v">{fmtUSD(spentToday)}</span>
+          </div>
+          <div className="item">
+            <span className="l">Burn rate</span>
+            <span className="v">
+              {fmtUSD(burnRate)}
+              <span className="muted" style={{ fontSize: 10, marginLeft: 4 }}>/day</span>
+            </span>
+          </div>
+          <div className="item">
+            <span className="l">Forecast end</span>
+            <span className="v">
+              {fmtUSD(forecast)}
+              {tracked && (
+                <span className={`delta${forecastDelta > 0 ? " bad" : ""}`}>
+                  {forecastDelta > 0 ? "↑" : "↓"} {fmtUSD(Math.abs(forecastDelta))}
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="item">
+            <span className="l">Status</span>
+            <span className="v">
+              {!tracked ? (
+                <span className="badge neutral">tracking</span>
+              ) : status === "ok" ? (
+                <span className="badge ok">on track</span>
+              ) : status === "warn" ? (
+                <span className="badge warn">approaching</span>
+              ) : (
+                <span className="badge bad">over cap</span>
+              )}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <Gauge pct={tracked ? pct || 0.001 : 0.001} status={status} />
+    </div>
+  );
+}
+
+function PlanGrid({
+  value,
+  onChange,
+}: {
+  value: ClaudePlan;
+  onChange: (p: ClaudePlan) => void;
+}) {
+  return (
+    <div className="plan-grid">
+      {PLAN_DEFS.map((p) => (
+        <button
+          key={p.id}
+          className={`plan-tile${value === p.id ? " active" : ""}`}
+          onClick={() => onChange(p.id)}
+          aria-pressed={value === p.id}
+        >
+          <div className="n">
+            <span
+              style={{
+                width: 22, height: 22,
+                background: "var(--ao-bg-3)",
+                border: "1px solid var(--ao-line-1)",
+                borderRadius: 6,
+                display: "inline-grid",
+                placeItems: "center",
+                fontSize: 11,
+                fontFamily: "var(--ao-font-mono)",
+                flexShrink: 0,
+              }}
+            >
+              {p.icon}
+            </span>
+            {p.name}
+            <span className="pick" aria-hidden="true">{value === p.id ? "✓" : ""}</span>
+          </div>
+          <div className="price">{p.price}</div>
+          <div className="feat">{p.feat}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function PeriodSeg({
+  value,
+  onChange,
+}: {
+  value: LimitsPeriod;
+  onChange: (p: LimitsPeriod) => void;
+}) {
+  const opts: { id: LimitsPeriod; label: string }[] = [
+    { id: "daily",  label: "Daily"   },
+    { id: "week",   label: "Weekly"  },
+    { id: "month",  label: "Monthly" },
+  ];
+  return (
+    <div className="period-seg" role="group" aria-label="Reset period">
+      {opts.map((o) => (
+        <button
+          key={o.id}
+          className={value === o.id ? "active" : ""}
+          onClick={() => onChange(o.id)}
+          aria-pressed={value === o.id}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const CAP_PRESETS = [0, 20, 50, 100, 250];
+
+function QuotaCap({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const isPreset = CAP_PRESETS.includes(value);
+  return (
+    <div className="cap-row">
+      {CAP_PRESETS.map((p) => (
+        <button
+          key={p}
+          className={`cap-chip${value === p ? " active" : ""}`}
+          onClick={() => onChange(p)}
+          aria-pressed={value === p}
+        >
+          {p === 0 ? (
+            <>Off <span className="lbl">· track only</span></>
+          ) : (
+            <><span className="lbl">$</span>{p}</>
+          )}
+        </button>
+      ))}
+      <span className="cap-custom">
+        <span className="pfx" aria-hidden="true">$</span>
+        <input
+          type="number"
+          placeholder="custom"
+          aria-label="Custom cap amount in USD"
+          value={isPreset ? "" : value || ""}
+          min="0"
+          step="1"
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            onChange(Number.isFinite(v) && v >= 0 ? v : 0);
+          }}
+        />
+      </span>
+    </div>
+  );
+}
+
+function BehaviorButtons({
+  value,
+  onChange,
+}: {
+  value: "off" | "warn" | "block";
+  onChange: (v: "off" | "warn" | "block") => void;
+}) {
+  const opts: { id: "off" | "warn" | "block"; icon: string; title: string; desc: string }[] = [
+    { id: "off",   icon: "👁",  title: "Track only",  desc: "Record usage, never block. Good for visibility." },
+    { id: "warn",  icon: "⚠",  title: "Warn at cap",  desc: "Notify when usage crosses 80% and 100%." },
+    { id: "block", icon: "🔒", title: "Hard block",   desc: "Refuse new runs after the cap is hit." },
+  ];
+  return (
+    <div className="behavior" role="group" aria-label="Behavior on cap">
+      {opts.map((o) => (
+        <button
+          key={o.id}
+          className={value === o.id ? "active" : ""}
+          onClick={() => onChange(o.id)}
+          aria-pressed={value === o.id}
+        >
+          <div className="t"><span aria-hidden="true">{o.icon}</span> {o.title}</div>
+          <div className="d">{o.desc}</div>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function DailyBars({ last14 }: { last14: { label: string; spend: number }[] }) {
+  const max = Math.max(...last14.map((d) => d.spend), 0.01);
+  return (
+    <div className="daily-bars">
+      <div className="row" role="img" aria-label="Last 14 days of spend">
+        {last14.map((d, i) => {
+          const isToday = i === last14.length - 1;
+          const hPct = Math.max(3, (d.spend / max) * 100);
+          return (
+            <div key={i} className={`bar${isToday ? " today" : ""}`}>
+              <div className="tip">{fmtUSD(d.spend)} · {d.label}</div>
+              <div className="fill" style={{ height: `${hPct}%` }} />
+            </div>
+          );
+        })}
+      </div>
+      <div className="axis" aria-hidden="true">
+        {last14.map((d, i) => (
+          <div key={i} className={i === last14.length - 1 ? "today" : ""}>
+            {i % 2 === 0 || i === last14.length - 1 ? d.label : ""}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ByModel({
+  modelRows,
+  totalCost,
+}: {
+  modelRows: [string, { runs: number; tokens: number; cost: number; sub: string }][];
+  totalCost: number;
+}) {
+  if (modelRows.length === 0) {
+    return <div style={{ fontSize: 12, color: "var(--ao-fg-3)", padding: "8px 0" }}>No runs in this period.</div>;
+  }
+  return (
+    <div className="model-rows">
+      {modelRows.map(([id, m]) => {
+        const pct = totalCost > 0 ? (m.cost / totalCost) * 100 : 0;
+        const avg = m.runs > 0 ? m.cost / m.runs : 0;
+        return (
+          <div key={id} className="model-row">
+            <div className="name">
+              {id}
+              <span className="sub">{m.sub}</span>
+            </div>
+            <div className="bar-wrap">
+              <div className="bar" aria-label={`${pct.toFixed(0)}% of cost`}>
+                <div className="fill" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="pct">{pct.toFixed(0)}%</span>
+            </div>
+            <div className="group">
+              <span className="cell">{m.runs} runs</span>
+              <span className="cell muted">{fmtTok(m.tokens)} tok</span>
+            </div>
+            <div className="group">
+              <span className="cell">{fmtUSD(m.cost)}</span>
+              <span className="cell muted">{fmtUSD(avg, 3)}/run</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TopAgents({
+  agentRows,
+  totalCost,
+}: {
+  agentRows: [string, { runs: number; cost: number; name: string }][];
+  totalCost: number;
+}) {
+  if (agentRows.length === 0) {
+    return <div style={{ fontSize: 12, color: "var(--ao-fg-3)", padding: "8px 0" }}>No runs in this period.</div>;
+  }
+  return (
+    <div className="spend-rows">
+      {agentRows.map(([id, a], i) => {
+        const pct = totalCost > 0 ? (a.cost / totalCost) * 100 : 0;
+        const initial = (a.name || id).charAt(0).toUpperCase();
+        return (
+          <div key={id} className="spend-row">
+            <div className="rank">#{i + 1}</div>
+            <div className="agent-info">
+              <div className="av" aria-hidden="true">{initial}</div>
+              <div className="meta">
+                <div className="id">{id}</div>
+                <div className="runs">{a.runs} runs</div>
+              </div>
+            </div>
+            <div className="right">
+              <div className="bar" aria-label={`${pct.toFixed(0)}% of agent spend`}>
+                <div className="fill" style={{ width: `${pct}%` }} />
+              </div>
+              <span className="pct">{pct.toFixed(0)}%</span>
+              <span className="cost">{fmtUSD(a.cost)}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Main modal                                                           */
+/* ------------------------------------------------------------------ */
+
+export function ClaudeLimitsModal() {
+  useClaudeLimitsHydration();
+
+  const open      = useClaudeLimitsStore((s) => s.open);
+  const setOpen   = useClaudeLimitsStore((s) => s.setOpen);
+  const plan      = useClaudeLimitsStore((s) => s.plan);
+  const quotaUsd  = useClaudeLimitsStore((s) => s.quotaUsd);
+  const period    = useClaudeLimitsStore((s) => s.period);
+  const hardCap   = useClaudeLimitsStore((s) => s.hardCap);
+  const update    = useClaudeLimitsStore((s) => s.update);
+
+  // Local editable state — only written to store on Save
+  const [localPlan,     setLocalPlan]     = useState<ClaudePlan>(plan);
+  const [localQuota,    setLocalQuota]    = useState(quotaUsd);
+  const [localPeriod,   setLocalPeriod]   = useState<LimitsPeriod>(period);
+  const [localHardCap,  setLocalHardCap]  = useState<"off" | "warn" | "block">(hardCap);
+
+  // Sync local state whenever the modal opens
+  useEffect(() => {
+    if (open) {
+      setLocalPlan(plan);
+      setLocalQuota(quotaUsd);
+      setLocalPeriod(period);
+      setLocalHardCap(hardCap);
+    }
+  }, [open, plan, quotaUsd, period, hardCap]);
+
+  const onSave = () => {
+    update({ plan: localPlan, quotaUsd: localQuota, period: localPeriod, hardCap: localHardCap });
+    setOpen(false);
+  };
+
+  // ---- Data computation ----
+  const runsQ = useRuns({ limit: 1000 });
+  const allRuns = runsQ.data ?? [];
+
+  const start = periodStart(localPeriod);
+  const end   = periodEnd(localPeriod);
+
+  const inPeriod = useMemo(
+    () => allRuns.filter((r) => r.ts >= start && r.ts < end),
+    [allRuns, start, end],
+  );
+
+  const spentPeriod = inPeriod.reduce((s, r) => s + (r.cost || 0), 0);
+
+  const todayStart = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }, []);
+
+  const spentToday = useMemo(
+    () => allRuns.filter((r) => r.ts >= todayStart).reduce((s, r) => s + (r.cost || 0), 0),
+    [allRuns, todayStart],
+  );
+
+  // Last 14 days bars
+  const last14 = useMemo<{ label: string; spend: number }[]>(() =>
+    Array.from({ length: 14 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (13 - i));
+      d.setHours(0, 0, 0, 0);
+      const next = new Date(d);
+      next.setDate(d.getDate() + 1);
+      const spend = allRuns
+        .filter((r) => r.ts >= d.getTime() && r.ts < next.getTime())
+        .reduce((s, r) => s + (r.cost || 0), 0);
+      const label =
+        i === 13
+          ? "Today"
+          : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return { label, spend };
+    }),
+  [allRuns]);
+
+  // By model (current period)
+  const { modelRows, totalModelCost } = useMemo(() => {
+    const byModel = new Map<string, { runs: number; tokens: number; cost: number; sub: string }>();
+    for (const r of inPeriod) {
+      const k = r.model || "unknown";
+      const cur = byModel.get(k) ?? { runs: 0, tokens: 0, cost: 0, sub: k };
+      byModel.set(k, {
+        runs:   cur.runs + 1,
+        tokens: cur.tokens + (r.tokensIn || 0) + (r.tokensOut || 0),
+        cost:   cur.cost + (r.cost || 0),
+        sub:    cur.sub,
+      });
+    }
+    const rows = [...byModel.entries()].sort((a, b) => b[1].cost - a[1].cost);
+    const total = rows.reduce((s, [, v]) => s + v.cost, 0);
+    return { modelRows: rows, totalModelCost: total };
+  }, [inPeriod]);
+
+  // By agent (current period, top 6)
+  const { agentRows, totalAgentCost } = useMemo(() => {
+    const byAgent = new Map<string, { runs: number; cost: number; name: string }>();
+    for (const r of inPeriod) {
+      const k = r.agentId;
+      const cur = byAgent.get(k) ?? { runs: 0, cost: 0, name: r.agentName || k };
+      byAgent.set(k, { runs: cur.runs + 1, cost: cur.cost + (r.cost || 0), name: cur.name });
+    }
+    const rows = [...byAgent.entries()]
+      .sort((a, b) => b[1].cost - a[1].cost)
+      .slice(0, 6);
+    const total = rows.reduce((s, [, v]) => s + v.cost, 0);
+    return { agentRows: rows, totalAgentCost: total };
+  }, [inPeriod]);
+
+  // Forecast (linear projection to end of period)
+  const forecast = useMemo(() => {
+    const periodMs  = end - start;
+    const elapsedMs = Math.max(1, Date.now() - start);
+    return spentPeriod * (periodMs / elapsedMs);
+  }, [spentPeriod, start, end]);
+
+  const resetIn = formatResetCountdown(end);
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={() => setOpen(false)}
+      bareContent
+      maxWidth={680}
+      className="ao-modal"
+      closeLabel="Close usage &amp; limits"
+    >
+          {/* Header */}
+          <LimHeader onClose={() => setOpen(false)} />
+
+          {/* Body */}
+          <div className="limits-body">
+            {/* Budget hero */}
+            <BudgetHero
+              spentPeriod={spentPeriod}
+              spentToday={spentToday}
+              quotaUsd={localQuota}
+              period={localPeriod}
+              forecast={forecast}
+              resetIn={resetIn}
+            />
+
+            {/* Plan */}
+            <section className="lim-section">
+              <SectionHead title="Plan" sub="determines model access and rate limits" />
+              <PlanGrid value={localPlan} onChange={setLocalPlan} />
+            </section>
+
+            {/* Quota cap + period */}
+            <section className="lim-section">
+              <SectionHead
+                title="Quota cap"
+                sub="hard limit on spend for the current period"
+                right={<PeriodSeg value={localPeriod} onChange={setLocalPeriod} />}
+              />
+              <QuotaCap value={localQuota} onChange={setLocalQuota} />
+            </section>
+
+            {/* Behavior on cap */}
+            <section className="lim-section">
+              <SectionHead title="Behavior on cap" sub="what happens when usage hits the cap" />
+              <BehaviorButtons value={localHardCap} onChange={setLocalHardCap} />
+            </section>
+
+            {/* Daily spend bars */}
+            <section className="lim-section">
+              <SectionHead title="Daily spend" sub="last 14 days" />
+              <DailyBars last14={last14} />
+            </section>
+
+            {/* By model + top agents */}
+            <div className="lim-two-col">
+              <section className="lim-section">
+                <SectionHead
+                  title="By model"
+                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                />
+                <ByModel modelRows={modelRows} totalCost={totalModelCost} />
+              </section>
+              <section className="lim-section">
+                <SectionHead
+                  title="Top agents"
+                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                />
+                <TopAgents agentRows={agentRows} totalCost={totalAgentCost} />
+              </section>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="limits-foot">
+            <div className="disclaimer">
+              <span className="icon" aria-hidden="true">ℹ</span>
+              <span>
+                Counts only what Agent Office summoned (saved in{" "}
+                <code
+                  style={{
+                    color: "var(--ao-fg-1)",
+                    background: "rgba(255,255,255,0.04)",
+                    padding: "1px 4px",
+                    borderRadius: 3,
+                  }}
+                >
+                  ~/.claude/agent-office/db.sqlite
+                </code>
+                ). Anything you ran through plain{" "}
+                <code
+                  style={{
+                    color: "var(--ao-fg-1)",
+                    background: "rgba(255,255,255,0.04)",
+                    padding: "1px 4px",
+                    borderRadius: 3,
+                  }}
+                >
+                  claude
+                </code>{" "}
+                outside the dashboard isn&apos;t included.
+              </span>
+            </div>
+            <div className="actions">
+              <button className="lim-btn ghost" onClick={() => setOpen(false)}>
+                Cancel
+              </button>
+              <button className="lim-btn primary" onClick={onSave}>
+                <span aria-hidden="true">✓</span> Save limits
+              </button>
+            </div>
+          </div>
+    </ModalShell>
+  );
 }

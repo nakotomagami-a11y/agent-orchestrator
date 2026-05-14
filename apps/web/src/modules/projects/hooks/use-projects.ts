@@ -60,3 +60,14 @@ export function useRemoveInstance() {
   });
 }
 
+export function useCreateProject() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { name?: string; description?: string }) =>
+      apiFetch<Project>(API_ROUTES.projects, { method: "POST", body }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all });
+    },
+  });
+}
+

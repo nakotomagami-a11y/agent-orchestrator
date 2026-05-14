@@ -1,29 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
-import { ModalShell } from "@/components/ui/modal-shell";
-import { Tabs } from "@/components/ui/tabs";
-import { Icon } from "@/components/ui/icon";
+import { useEffect, useRef, useState } from "react";
+import { Portal } from "@/components/ui/portal";
 import { useOfficeAgents } from "../../hooks/use-office-agents";
 import { useOfficeStore, type AgentTab } from "../../hooks/use-office-store";
 import { ChatPanel } from "@/modules/summon/components/chat-panel";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
+import { useRunStream } from "@/modules/summon/hooks/use-run-stream";
 import { ConfigurationTab } from "./tabs/configuration-tab";
 import { HistoryTab } from "./tabs/history-tab";
 import { MemoryTab } from "./tabs/memory-tab";
 import { SettingsTab } from "./tabs/settings-tab";
+import {
+  AoClose,
+  AoBranch,
+  AoPlus,
+  AoPen,
+  AoReset,
+} from "@/modules/summon/components/ao-icons";
+import "@/modules/summon/styles/agent-modal.css";
 
 type Tab = AgentTab;
 
-/**
- * Global agent inspector — mounted once at the app shell. Tabs are modelled
- * after the v3 design: Conversation (chat surface), Configuration (read-only
- * identity + runtime + permissions), History (recent runs), Memory (editable
- * facts file), System Prompt (markdown body).
- */
+const TABS: { id: Tab; label: string }[] = [
+  { id: "conversation", label: "Conversation" },
+  { id: "configuration", label: "Configuration" },
+  { id: "history", label: "History" },
+  { id: "memory", label: "Memory" },
+  { id: "settings", label: "Settings" },
+];
+
 export function AgentDetailsModal() {
-  const t = useTranslations();
   const selectedId = useOfficeStore((s) => s.selectedId);
   const selectedInstanceId = useOfficeStore((s) => s.selectedInstanceId);
   const inspectorOpen = useOfficeStore((s) => s.inspectorOpen);
@@ -32,6 +39,18 @@ export function AgentDetailsModal() {
   const { agents } = useOfficeAgents();
   const agent = selectedId ? agents.find((a) => a.id === selectedId) ?? null : null;
   const [tab, setTab] = useState<Tab>("conversation");
+  const [newThreadSignal, setNewThreadSignal] = useState(0);
+  const [branchSignal, setBranchSignal] = useState(0);
+
+  const runsQ = useRuns({
+    agentId: agent?.id,
+    instanceId: selectedInstanceId ?? undefined,
+    limit: 50,
+  });
+
+  // Track active run id to show live usage in header
+  const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const stream = useRunStream(activeRunId);
 
   useEffect(() => {
     if (inspectorOpen) {
@@ -40,76 +59,185 @@ export function AgentDetailsModal() {
     }
   }, [inspectorOpen, selectedId, consumePendingTab]);
 
-  const runsQ = useRuns({
-    agentId: agent?.id,
-    instanceId: selectedInstanceId ?? undefined,
-    limit: 30,
-  });
-  const tabItems = [
-    { value: "conversation" as const, label: t("agent_details.tab_conversation") },
-    { value: "configuration" as const, label: t("agent_details.tab_configuration") },
-    {
-      value: "history" as const,
-      label: t("agent_details.tab_history"),
-      count: runsQ.data?.length,
-    },
-    { value: "memory" as const, label: t("agent_details.tab_memory") },
-    { value: "settings" as const, label: t("agent_details.tab_settings") },
-  ];
+  // Close on Escape
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!inspectorOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeInspector();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [inspectorOpen, closeInspector]);
+
+  if (!inspectorOpen || !agent) return null;
+
+  const runCount = runsQ.data?.length ?? 0;
+
+  const isStreamActive =
+    stream.phase === "starting" ||
+    stream.phase === "streaming";
+  const effectiveStatus = isStreamActive ? "working" : agent.status;
+
+  const statusDotClass = effectiveStatus === "working" || effectiveStatus === "thinking" ? "ao-working" : "ao-idle";
+  const ledClass = effectiveStatus === "working" || effectiveStatus === "thinking" ? "ao-working" : "ao-idle";
+
+  const usage = stream.usage;
 
   return (
-    <ModalShell
-      open={inspectorOpen && !!agent}
-      onClose={closeInspector}
-      size="lg"
-      bareContent
-    >
-      {agent ? (
-        <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 8px 0 0" }}>
-            <Tabs items={tabItems} value={tab} onChange={setTab} ariaLabel={t("agent_details.tabs_aria")} />
+    <Portal>
+      <div
+        className="ao-backdrop"
+        role="presentation"
+        onClick={closeInspector}
+        style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 32, zIndex: 100 }}
+      >
+        <div
+          ref={ref}
+          className="ao-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Agent: ${agent.name}`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* ── Tab bar ── */}
+          <div className="ao-tabbar" role="tablist">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={tab === t.id}
+                className={`ao-tab${tab === t.id ? " ao-active" : ""}`}
+                onClick={() => setTab(t.id)}
+                type="button"
+              >
+                <span>{t.label}</span>
+                {t.id === "history" && runCount > 0 && (
+                  <span className="ao-pip">{runCount}</span>
+                )}
+              </button>
+            ))}
+            <div className="ao-spacer" />
             <button
-              type="button"
+              className="ao-close"
+              aria-label="Close"
               onClick={closeInspector}
-              aria-label={t("agent_details.modal_close_aria")}
-              style={{
-                background: "transparent",
-                border: "none",
-                width: 28,
-                height: 28,
-                borderRadius: 999,
-                cursor: "pointer",
-                color: "var(--txt-3)",
-                marginRight: 8,
-              }}
+              type="button"
             >
-              <Icon name="x" />
+              <AoClose size={18} />
             </button>
           </div>
-          <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-            {tab === "conversation" ? (
+
+          {/* ── Agent header ── */}
+          <div className="ao-agent-header">
+            <div className="ao-avatar">
+              <span style={{ fontSize: 22 }}>{agent.short[0]?.toUpperCase() ?? "?"}</span>
+              <span className={`ao-status-dot ${statusDotClass}`} />
+            </div>
+            <div className="ao-titles">
+              <div className="ao-name">{agent.name}</div>
+              <div className="ao-meta">
+                <span>{agent.id}</span>
+                <span className="ao-dot" />
+                <span>{agent.defaultModel ?? "default"}</span>
+                <span className="ao-dot" />
+                <span>effort {agent.defaultEffort ?? "default"}</span>
+              </div>
+            </div>
+            <div className="ao-right">
+              <span className={`ao-chip-pill ${ledClass}`}>
+                <span className="ao-led" />
+                {effectiveStatus}
+              </span>
+              {tab === "conversation" && (
+                <>
+                  <span className="ao-cost-chip">
+                    <span className="ao-tok">{(usage.tokensIn + usage.tokensOut).toLocaleString()} tok</span>
+                    <span className="ao-price">${usage.cost.toFixed(4)}</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="ao-btn-mini"
+                    onClick={() => setBranchSignal((n) => n + 1)}
+                  >
+                    <AoBranch size={13} /> Branch
+                  </button>
+                  <button
+                    type="button"
+                    className="ao-btn-mini"
+                    onClick={() => setNewThreadSignal((n) => n + 1)}
+                  >
+                    <AoPlus size={13} /> New
+                  </button>
+                  <button
+                    type="button"
+                    className="ao-btn-mini ao-ghost"
+                    aria-label="Edit agent"
+                    onClick={() => setTab("settings")}
+                  >
+                    <AoPen size={13} />
+                  </button>
+                </>
+              )}
+              {tab === "configuration" && (
+                <button
+                  type="button"
+                  className="ao-btn-mini"
+                  onClick={() => setTab("settings")}
+                >
+                  <AoPen size={13} /> Edit
+                </button>
+              )}
+              {tab === "memory" && (
+                <button
+                  type="button"
+                  className="ao-btn-mini"
+                  onClick={() => {/* discard handled by MemoryTab */ }}
+                >
+                  <AoReset size={13} /> Discard
+                </button>
+              )}
+              {tab === "settings" && (
+                <button
+                  type="button"
+                  className="ao-btn-mini"
+                  onClick={() => {/* reset handled by SettingsTab */ }}
+                >
+                  <AoReset size={13} /> Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* ── Tab content ── */}
+          <div className="ao-modal-body">
+            {tab === "conversation" && (
               <ChatPanel
                 agent={agent}
                 instanceId={selectedInstanceId ?? undefined}
                 onClose={closeInspector}
                 onEdit={() => setTab("settings")}
+                noHeader
+                newThreadSignal={newThreadSignal}
+                branchSignal={branchSignal}
+                onActiveRunChange={setActiveRunId}
               />
-            ) : null}
-            {tab === "configuration" ? <ConfigurationTab agent={agent} /> : null}
-            {tab === "history" ? (
-              <HistoryTab agentId={agent.id} instanceId={selectedInstanceId ?? undefined} />
-            ) : null}
-            {tab === "memory" ? <MemoryTab agentId={agent.id} /> : null}
-            {tab === "settings" ? (
+            )}
+            {tab === "configuration" && <ConfigurationTab agent={agent} />}
+            {tab === "history" && (
+              <HistoryTab agentId={agent.id} />
+            )}
+            {tab === "memory" && <MemoryTab agentId={agent.id} />}
+            {tab === "settings" && (
               <SettingsTab
                 agentId={agent.id}
                 onAfterSave={() => setTab("configuration")}
                 onAfterDelete={closeInspector}
               />
-            ) : null}
+            )}
           </div>
         </div>
-      ) : null}
-    </ModalShell>
+      </div>
+    </Portal>
   );
 }

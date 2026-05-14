@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import { useProjects } from "@/modules/projects/hooks/use-projects";
+import { useCreateProject, useProjects } from "@/modules/projects/hooks/use-projects";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import {
   useActiveProjectHydration,
@@ -31,10 +31,15 @@ export function ProjectSwitcher() {
   const activeId = useActiveProjectStore((s) => s.id);
   const setActiveId = useActiveProjectStore((s) => s.setId);
 
+  const createProject = useCreateProject();
+
   const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const menuId = useId();
 
   const pathProjectId = currentProjectIdFromPath(pathname);
@@ -84,15 +89,41 @@ export function ProjectSwitcher() {
   }, [open]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setCreating(false);
+      setNewName("");
+      return;
+    }
     setActiveIndex(0);
   }, [open]);
 
   const navigate = (href: string, projectId: string | null) => {
     setActiveId(projectId);
     setOpen(false);
+    setCreating(false);
+    setNewName("");
     router.push(href);
   };
+
+  const openCreate = () => {
+    setCreating(true);
+    setNewName("");
+  };
+
+  const cancelCreate = () => {
+    setCreating(false);
+    setNewName("");
+  };
+
+  const submitCreate = async () => {
+    const name = newName.trim();
+    const project = await createProject.mutateAsync(name ? { name } : {});
+    navigate(PAGE_ROUTES.project(project.id), project.id);
+  };
+
+  useEffect(() => {
+    if (creating) nameInputRef.current?.focus();
+  }, [creating]);
 
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -223,30 +254,129 @@ export function ProjectSwitcher() {
           )}
 
           <Separator />
-          <button
-            type="button"
-            role="menuitem"
-            onMouseEnter={() => setActiveIndex(rows.length - 1)}
-            onClick={() => navigate(PAGE_ROUTES.projects, currentId)}
-            className={activeIndex === rows.length - 1 ? "nav-item on" : "nav-item"}
-            style={{
-              width: "100%",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "6px 10px",
-              fontSize: 13,
-              background: activeIndex === rows.length - 1 ? "var(--bg-2)" : "transparent",
-              border: 0,
-              borderRadius: 4,
-              color: "var(--txt)",
-              textAlign: "left",
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            <Icon name="settings" size={13} /> {t("project_switcher.manage")}
-          </button>
+
+          {creating ? (
+            <div style={{ padding: "6px 8px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder={t("project_switcher.new_project_placeholder")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); submitCreate(); }
+                  if (e.key === "Escape") { e.preventDefault(); cancelCreate(); }
+                }}
+                style={{
+                  width: "100%",
+                  padding: "5px 8px",
+                  fontSize: 13,
+                  background: "var(--bg-2)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 4,
+                  color: "var(--txt)",
+                  fontFamily: "inherit",
+                  outline: "none",
+                  boxSizing: "border-box",
+                }}
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  type="button"
+                  disabled={createProject.isPending}
+                  onClick={submitCreate}
+                  style={{
+                    flex: 1,
+                    padding: "4px 8px",
+                    fontSize: 12,
+                    background: "var(--acc)",
+                    color: "var(--acc-fg, #fff)",
+                    border: 0,
+                    borderRadius: 4,
+                    cursor: createProject.isPending ? "default" : "pointer",
+                    fontFamily: "inherit",
+                    opacity: createProject.isPending ? 0.6 : 1,
+                  }}
+                >
+                  {createProject.isPending
+                    ? t("project_switcher.new_project_creating")
+                    : t("project_switcher.new_project_create")}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelCreate}
+                  style={{
+                    padding: "4px 8px",
+                    fontSize: 12,
+                    background: "transparent",
+                    color: "var(--txt-2)",
+                    border: "1px solid var(--line)",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {t("project_switcher.new_project_cancel")}
+                </button>
+              </div>
+              {createProject.isError ? (
+                <div style={{ fontSize: 11, color: "var(--error)" }}>
+                  {createProject.error instanceof Error
+                    ? createProject.error.message
+                    : String(createProject.error)}
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div style={{ display: "flex", gap: 4 }}>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={openCreate}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 10px",
+                  fontSize: 13,
+                  background: "transparent",
+                  border: 0,
+                  borderRadius: 4,
+                  color: "var(--txt)",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                <Icon name="plus" size={13} /> {t("project_switcher.new_project")}
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onMouseEnter={() => setActiveIndex(rows.length - 1)}
+                onClick={() => navigate(PAGE_ROUTES.projects, currentId)}
+                className={activeIndex === rows.length - 1 ? "nav-item on" : "nav-item"}
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "6px 10px",
+                  fontSize: 13,
+                  background: activeIndex === rows.length - 1 ? "var(--bg-2)" : "transparent",
+                  border: 0,
+                  borderRadius: 4,
+                  color: "var(--txt)",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                <Icon name="settings" size={13} /> {t("project_switcher.manage")}
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
     </div>

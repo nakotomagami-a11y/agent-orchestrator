@@ -43,6 +43,8 @@ export interface ApiAgent {
   defaultEffort?: string;
   permissionMode?: string;
   room?: string;
+  /** Extra directories the agent is allowed to read/write beyond the cwd. Passed as --add-dir. */
+  addDirs?: string[];
   /**
    * Optional avatar override in the form `"<faction>/<kind>"` (e.g.
    * `"blue/pawn"`). When unset the UI hashes the agent name to pick a
@@ -86,6 +88,8 @@ export interface PersistedRun {
   projectId?: string;
   instanceId?: string;
   instanceLabel?: string;
+  /** Claude CLI session ID — pass as --resume on the next turn. */
+  sessionId?: string;
 }
 
 export interface AgentInstance {
@@ -147,6 +151,8 @@ export interface SummonRequest {
   cwd?: string;
   projectId?: string;
   instanceId?: string;
+  /** Session ID from the previous turn — passed as --resume to continue the conversation. */
+  resumeSessionId?: string;
 }
 
 export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "attached";
@@ -154,7 +160,7 @@ export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "atta
 export interface SseChunkEvent { runId: string; text: string }
 export interface SseToolEvent { runId: string; name: string; input?: unknown }
 export interface SseUsageEvent { runId: string; tokensIn: number; tokensOut: number; cost: number }
-export interface SseDoneEvent { runId: string; exitCode: number }
+export interface SseDoneEvent { runId: string; exitCode: number; sessionId?: string }
 export interface SseErrorEvent { runId: string; message: string }
 export interface SseAttachedEvent {
   runId: string;

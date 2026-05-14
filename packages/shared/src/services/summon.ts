@@ -1,5 +1,6 @@
 // Build the `claude -p` arg list for a summon, applying instance + agent defaults.
 
+import { homedir } from "node:os";
 import type { AgentInstance, ApiAgent, SummonRequest } from "../types/index";
 
 export interface BuiltCommand {
@@ -14,8 +15,9 @@ export function buildClaudeArgs(opts: {
   agent: ApiAgent;
   instance: AgentInstance | null;
   appendedSystemPrompt: string;
+  priorContext?: string;
 }): BuiltCommand {
-  const { request, agent, instance, appendedSystemPrompt } = opts;
+  const { request, agent, instance, appendedSystemPrompt, priorContext } = opts;
 
   const args = [
     "-p",
@@ -37,9 +39,13 @@ export function buildClaudeArgs(opts: {
     args.push("--max-budget-usd", String(request.maxBudgetUsd));
   }
   if (permissionMode) args.push("--permission-mode", permissionMode);
+  for (const dir of agent.addDirs ?? []) {
+    args.push("--add-dir", dir.replace(/^~/, homedir()));
+  }
   if (appendedSystemPrompt) args.push("--append-system-prompt", appendedSystemPrompt);
+  if (request.resumeSessionId) args.push("--resume", request.resumeSessionId);
 
-  args.push(request.prompt);
+  args.push(priorContext ? priorContext + request.prompt : request.prompt);
 
   return { args, model, effort, permissionMode };
 }
