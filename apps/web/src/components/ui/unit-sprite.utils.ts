@@ -138,15 +138,13 @@ export function unitSheetSrc(
   return `/units/${faction}/${kind}-${state}.png`;
 }
 
-/**
- * Default unit selection for every agent. Per the latest design call,
- * we no longer randomise (or accept frontmatter overrides for) per-agent
- * faction/kind — everyone is the black-faction pawn. Both arguments are
- * kept on the signature so existing callsites compile without a rewrite;
- * they're intentionally ignored. The function still returns a value for
- * the same reason — easier to remove later if we re-enable variants
- * than to inline the constant everywhere.
- */
-export function unitForAgent(_name: string, _override?: string | null): UnitSelection {
-  return { faction: "black", kind: "pawn" };
+export function unitForAgent(name: string, override?: string | null): UnitSelection {
+  const parsed = parseUnit(override);
+  if (parsed) return parsed;
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return {
+    faction: UNIT_FACTIONS[h % UNIT_FACTIONS.length] as UnitFaction,
+    kind: UNIT_KINDS[(h >>> 8) % UNIT_KINDS.length] as UnitKind,
+  };
 }

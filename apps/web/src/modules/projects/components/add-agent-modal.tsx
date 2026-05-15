@@ -1,52 +1,71 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
-import { ModalShell } from "@/components/ui/modal-shell";
-import { TextInput } from "@/components/ui/text-input";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { unitForAgent } from "@/components/ui/unit-sprite.utils";
 import { useAgents } from "@/modules/agents/hooks/use-agents";
+import { categorize } from "@/modules/agents/utils/categorize";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useAddInstance, useProject, useProjects } from "../hooks/use-projects";
 
 export type AddAgentModalProps = {
   open: boolean;
-  /** Active project from the switcher; if null we show a project picker step first. */
   projectId: string | null;
   onClose: () => void;
-  /** Called when the user picks a project inside the modal — syncs the switcher. */
   onProjectChange?: (id: string) => void;
 };
 
-export function AddAgentModal({
-  open,
-  projectId,
-  onClose,
-  onProjectChange,
-}: AddAgentModalProps) {
-  const t = useTranslations();
+/* ── Category metadata ─────────────────────────────────────────── */
+
+const CAT_META: Record<string, { color: string; bg: string; border: string; fg: string }> = {
+  Engineering: { color: "#2A6FDB", bg: "rgba(42,111,219,0.10)",   border: "rgba(42,111,219,0.30)",   fg: "#74a8f0" },
+  QA:          { color: "#4eb96f", bg: "rgba(78,185,111,0.10)",   border: "rgba(78,185,111,0.30)",   fg: "#80d29c" },
+  Design:      { color: "#ec4899", bg: "rgba(236,72,153,0.10)",   border: "rgba(236,72,153,0.30)",   fg: "#f09ec4" },
+  "AI & Data": { color: "#8b5cf6", bg: "rgba(139,92,246,0.10)",   border: "rgba(139,92,246,0.30)",   fg: "#b39dfa" },
+  Security:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",    border: "rgba(239,68,68,0.30)",    fg: "#f48080" },
+  Docs:        { color: "#f59e0b", bg: "rgba(245,158,11,0.10)",   border: "rgba(245,158,11,0.30)",   fg: "#fbbf55" },
+  Marketing:   { color: "#f97316", bg: "rgba(249,115,22,0.10)",   border: "rgba(249,115,22,0.30)",   fg: "#fb9a55" },
+  Research:    { color: "#06b6d4", bg: "rgba(6,182,212,0.10)",    border: "rgba(6,182,212,0.30)",    fg: "#4fd9ea" },
+  Strategy:    { color: "#8b5cf6", bg: "rgba(139,92,246,0.10)",   border: "rgba(139,92,246,0.30)",   fg: "#b39dfa" },
+  Build:       { color: "#e95420", bg: "rgba(233,84,32,0.10)",    border: "rgba(233,84,32,0.30)",    fg: "#f07a52" },
+  Other:       { color: "#9b9089", bg: "rgba(155,144,137,0.08)",  border: "rgba(155,144,137,0.30)",  fg: "#cdc4bd" },
+};
+
+function catStyle(cat: string): React.CSSProperties {
+  const c = CAT_META[cat] ?? CAT_META.Other!;
+  return {
+    "--cat-color": c.color,
+    "--cat-bg": c.bg,
+    "--cat-border": c.border,
+    "--cat-fg": c.fg,
+  } as React.CSSProperties;
+}
+
+function modelColor(m: string | undefined): string {
+  if (!m) return "var(--txt-4)";
+  if (m.includes("haiku"))  return "var(--working)";
+  if (m.includes("opus"))   return "#ffcb6b";
+  return "#c792ea";
+}
+
+/* ── Main modal ─────────────────────────────────────────────────── */
+
+export function AddAgentModal({ open, projectId, onClose, onProjectChange }: AddAgentModalProps) {
   const [targetId, setTargetId] = useState<string | null>(projectId);
   const projectsQ = useProjects();
   const projects = projectsQ.data;
   const autoPickedRef = useRef(false);
 
-  // When the modal opens, snap to whatever the parent says is active.
   useEffect(() => {
-    if (open) {
-      setTargetId(projectId);
-      autoPickedRef.current = false;
-    }
+    if (open) { setTargetId(projectId); autoPickedRef.current = false; }
   }, [open, projectId]);
 
-  // If the modal is open with no active project but exactly one project
-  // exists, skip the picker step. Pure UX shortcut for the single-project
-  // case — without this, every Add agent click is a two-step flow.
   useEffect(() => {
-    if (!open) return;
-    if (targetId) return;
-    if (autoPickedRef.current) return;
+    if (!open || targetId || autoPickedRef.current) return;
     if (!projects || projects.length !== 1) return;
     const only = projects[0]!.id;
     autoPickedRef.current = true;
@@ -54,149 +73,126 @@ export function AddAgentModal({
     onProjectChange?.(only);
   }, [open, targetId, projects, onProjectChange]);
 
-  const handleClose = () => {
-    setTargetId(projectId);
-    onClose();
-  };
+  const handleClose = () => { setTargetId(projectId); onClose(); };
 
-  const handlePickProject = (id: string) => {
-    setTargetId(id);
-    onProjectChange?.(id);
-  };
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open]);
 
-  return (
-    <ModalShell
-      open={open}
-      onClose={handleClose}
-      title={targetId ? t("add_agent_modal.title") : t("add_agent_modal.title_pick_project")}
-      size="lg"
-      footer={
-        <button type="button" className="btn" onClick={handleClose}>
-          {t("add_agent_modal.done_button")}
-        </button>
-      }
-    >
-      {targetId ? (
-        <AgentPickerStep
-          projectId={targetId}
-          onChangeProject={() => setTargetId(null)}
-        />
-      ) : (
-        <ProjectPickerStep onPick={handlePickProject} onClose={handleClose} />
-      )}
-    </ModalShell>
+  if (!open) return null;
+
+  const content = (
+    <div className="aa-backdrop" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="aa-modal" role="dialog" aria-modal="true">
+        {targetId ? (
+          <AgentPickerStep
+            projectId={targetId}
+            onChangeProject={() => setTargetId(null)}
+            onClose={handleClose}
+          />
+        ) : (
+          <ProjectPickerStep
+            onPick={(id) => { setTargetId(id); onProjectChange?.(id); }}
+            onClose={handleClose}
+          />
+        )}
+      </div>
+    </div>
   );
+
+  if (typeof document === "undefined") return null;
+  return createPortal(content, document.body);
 }
 
-function ProjectPickerStep({
-  onPick,
-  onClose,
-}: {
-  onPick: (id: string) => void;
-  onClose: () => void;
-}) {
-  const t = useTranslations();
+/* ── Project picker step ────────────────────────────────────────── */
+
+function ProjectPickerStep({ onPick, onClose }: { onPick: (id: string) => void; onClose: () => void }) {
   const projectsQ = useProjects();
   const projects = projectsQ.data ?? [];
 
-  if (projectsQ.isLoading) {
-    return <Skeleton width="100%" height={120} />;
-  }
-
-  if (projects.length === 0) {
-    return (
-      <div style={{ padding: 24, textAlign: "center", color: "var(--txt-3)", fontSize: 13 }}>
-        <p style={{ marginBottom: 12 }}>
-          {t("add_agent_modal.no_projects_hint")}
-        </p>
-        <Link
-          href={PAGE_ROUTES.settings}
-          className="btn primary"
-          onClick={onClose}
-        >
-          {t("add_agent_modal.configure_root_button")}
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <span style={{ fontSize: 12, color: "var(--txt-3)" }}>
-        {t("add_agent_modal.pick_project_prompt")}
-      </span>
-      {projects.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          onClick={() => onPick(p.id)}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "auto 1fr auto",
-            gap: 12,
-            alignItems: "center",
-            padding: "10px 14px",
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: 6,
-            cursor: "pointer",
-            textAlign: "left",
-            fontFamily: "inherit",
-            color: "var(--txt)",
-          }}
-        >
-          <Icon name="folder" />
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</div>
-            {p.cwd ? (
-              <div
+    <>
+      <div className="aa-head">
+        <div className="crest"><Icon name="folder" size={15} /></div>
+        <div className="titles">
+          <div className="title">Choose a project</div>
+          <div className="sub">Select which project to add agents to</div>
+        </div>
+        <button type="button" className="close" onClick={onClose} aria-label="Close">
+          <Icon name="x" size={16} />
+        </button>
+      </div>
+      <div className="aa-body" style={{ padding: "16px 22px" }}>
+        {projectsQ.isLoading ? (
+          <Skeleton width="100%" height={120} />
+        ) : projects.length === 0 ? (
+          <div style={{ padding: 24, textAlign: "center", color: "var(--txt-3)", fontSize: 13 }}>
+            <p style={{ marginBottom: 12 }}>No projects configured yet.</p>
+            <Link href={PAGE_ROUTES.settings} className="btn primary" onClick={onClose}>
+              Configure root directory
+            </Link>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {projects.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => onPick(p.id)}
                 style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  color: "var(--txt-3)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  display: "grid", gridTemplateColumns: "auto 1fr auto",
+                  gap: 12, alignItems: "center", padding: "10px 14px",
+                  background: "var(--bg-2)", border: "1px solid var(--line)",
+                  borderRadius: 10, cursor: "pointer", textAlign: "left",
+                  fontFamily: "inherit", color: "var(--txt)",
                 }}
               >
-                {p.cwd}
-              </div>
-            ) : null}
+                <Icon name="folder" size={16} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</div>
+                  {p.cwd && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {p.cwd}
+                    </div>
+                  )}
+                </div>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>
+                  {p.instanceCount} agent{p.instanceCount !== 1 ? "s" : ""}
+                </span>
+              </button>
+            ))}
           </div>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>
-            {t("projects.instances_count", { count: p.instanceCount })}
-          </span>
-        </button>
-      ))}
-    </div>
+        )}
+      </div>
+    </>
   );
 }
+
+/* ── Agent picker step ──────────────────────────────────────────── */
 
 function AgentPickerStep({
   projectId,
   onChangeProject,
+  onClose,
 }: {
   projectId: string;
   onChangeProject: () => void;
+  onClose: () => void;
 }) {
-  const t = useTranslations();
   const projectQ = useProject(projectId);
   const agentsQ = useAgents();
   const addMut = useAddInstance();
-  const [filter, setFilter] = useState("");
+
+  const [q, setQ] = useState("");
+  const [catFilter, setCatFilter] = useState("all");
+  const [view, setView] = useState<"all" | "available">("all");
+  const [staged, setStaged] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
 
   const agents = agentsQ.data ?? [];
-  const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return agents;
-    return agents.filter((a) => {
-      if (a.name.toLowerCase().includes(q)) return true;
-      if (a.description?.toLowerCase().includes(q)) return true;
-      if (a.skills?.some((s) => s.toLowerCase().includes(q))) return true;
-      return false;
-    });
-  }, [agents, filter]);
 
   const rosterCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -206,170 +202,295 @@ function AgentPickerStep({
     return counts;
   }, [projectQ.data]);
 
+  // All unique categories present in the agent list
+  const categories = useMemo(() => {
+    const seen = new Set<string>();
+    for (const a of agents) seen.add(categorize(a));
+    return [
+      { id: "all", label: "All", color: null, count: agents.length },
+      ...Array.from(seen).map((cat) => ({
+        id: cat, label: cat, color: CAT_META[cat]?.color ?? null,
+        count: agents.filter((a) => categorize(a) === cat).length,
+      })).sort((a, b) => b.count - a.count),
+    ];
+  }, [agents]);
+
+  const filtered = useMemo(() => {
+    const ql = q.trim().toLowerCase();
+    return agents.filter((a) => {
+      if (catFilter !== "all" && categorize(a) !== catFilter) return false;
+      if (view === "available" && rosterCounts[a.name]) return false;
+      if (!ql) return true;
+      const blob = `${a.name} ${a.description ?? ""} ${(a.skills ?? []).join(" ")} ${(a.tools ?? []).join(" ")}`.toLowerCase();
+      return blob.includes(ql);
+    });
+  }, [agents, q, catFilter, view, rosterCounts]);
+
+  const inRoster = filtered.filter((a) => rosterCounts[a.name]);
+  const notInRoster = filtered.filter((a) => !rosterCounts[a.name]);
+
+  const totalStaged = Object.values(staged).reduce((s, n) => s + n, 0);
+  const stagedEntries = Object.entries(staged).map(([id, n]) => ({ agent: agents.find((a) => a.name === id), n })).filter((x) => x.agent);
+
+  const handleSummon = useCallback(async () => {
+    if (totalStaged === 0) { onClose(); return; }
+    setError(null);
+    const entries = Object.entries(staged);
+    try {
+      for (const [agentId, count] of entries) {
+        for (let i = 0; i < count; i++) {
+          await new Promise<void>((resolve, reject) => {
+            addMut.mutate({ projectId, agentId }, { onSuccess: () => resolve(), onError: reject });
+          });
+        }
+      }
+      onClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [staged, projectId, addMut, onClose, totalStaged]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); handleSummon(); }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [handleSummon]);
+
   const projectLabel = projectQ.data?.meta.name ?? projectId;
 
-  const handleAdd = (agentName: string) => {
-    setError(null);
-    addMut.mutate(
-      { projectId, agentId: agentName },
-      {
-        onError: (err) => setError(err instanceof Error ? err.message : String(err)),
-      },
-    );
-  };
-
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 13, color: "var(--txt-2)" }}>
-          {t("add_agent_modal.adding_to_label")}{" "}
-          <strong style={{ color: "var(--txt)" }}>{projectLabel}</strong>
-        </span>
-        <button
-          type="button"
-          onClick={onChangeProject}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "var(--acc)",
-            fontFamily: "inherit",
-            fontSize: 12,
-            cursor: "pointer",
-            padding: 0,
-          }}
-        >
-          {t("add_agent_modal.change_project_button")}
+    <>
+      <div className="aa-head">
+        <div className="crest"><Icon name="plus" size={16} /></div>
+        <div className="titles">
+          <div className="title">Add agent to office</div>
+          <div className="sub">
+            Adding to <span className="b">{projectLabel}</span>
+            <span style={{ color: "var(--txt-4)" }}>·</span>
+            <button type="button" className="switch-proj" onClick={onChangeProject}>Change project</button>
+            <span style={{ color: "var(--txt-4)" }}>·</span>
+            <span>click to stage, summon to commit</span>
+          </div>
+        </div>
+        <button type="button" className="close" onClick={onClose} aria-label="Close">
+          <Icon name="x" size={16} />
         </button>
-        <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--txt-3)" }}>
-          {t("add_agent_modal.click_to_add_hint")}
-        </span>
       </div>
 
-      <TextInput
-        placeholder={t("add_agent_modal.filter_placeholder")}
-        value={filter}
-        onChange={(e) => setFilter(e.target.value)}
-        autoFocus
-      />
-
-      {error ? (
-        <div
-          style={{
-            color: "var(--error)",
-            fontSize: 12,
-            fontFamily: "var(--font-mono)",
-            padding: "8px 12px",
-            background: "color-mix(in oklch, var(--error) 12%, transparent)",
-            borderRadius: 6,
-          }}
-        >
-          {error}
+      <div className="aa-toolbar">
+        <div className="search">
+          <Icon name="search" size={13} />
+          <input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Filter by name, description, or skill…"
+          />
         </div>
-      ) : null}
-
-      {agentsQ.isLoading ? (
-        <Skeleton width="100%" height={120} />
-      ) : agents.length === 0 ? (
-        <div style={{ padding: 24, textAlign: "center", color: "var(--txt-3)", fontSize: 13 }}>
-          {t("add_agent_modal.no_definitions")}
+        <div className="seg">
+          <button type="button" className={view === "all" ? "active" : ""} onClick={() => setView("all")}>All</button>
+          <button type="button" className={view === "available" ? "active" : ""} onClick={() => setView("available")}>Not in office</button>
         </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {filtered.map((a) => {
-            const count = rosterCounts[a.name] ?? 0;
-            const busy = addMut.isPending && addMut.variables?.agentId === a.name;
-            return (
-              <button
-                key={a.name}
-                type="button"
-                onClick={() => handleAdd(a.name)}
-                disabled={addMut.isPending}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  gap: 10,
-                  alignItems: "center",
-                  padding: "10px 14px",
-                  background: busy ? "var(--bg-3)" : "var(--bg-1)",
-                  border: "1px solid var(--line)",
-                  borderRadius: 6,
-                  cursor: addMut.isPending ? "wait" : "pointer",
-                  textAlign: "left",
-                  fontFamily: "inherit",
-                  opacity: addMut.isPending && !busy ? 0.55 : 1,
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{a.name}</span>
-                    {a.defaultModel ? (
-                      <span
-                        style={{
-                          fontFamily: "var(--font-mono)",
-                          fontSize: 11,
-                          color: "var(--txt-3)",
-                        }}
-                      >
-                        {a.defaultModel}
-                      </span>
-                    ) : null}
-                  </div>
-                  {a.description ? (
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "var(--txt-2)",
-                        marginTop: 3,
-                        lineHeight: 1.35,
-                      }}
-                    >
-                      {a.description}
-                    </div>
-                  ) : null}
-                  {count > 0 ? (
-                    <div
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 10.5,
-                        color: "var(--txt-3)",
-                        marginTop: 4,
-                      }}
-                    >
-                      {t("add_agent_modal.already_in_roster", { count })}
-                    </div>
-                  ) : null}
-                </div>
-                <span
-                  style={{
-                    padding: "5px 10px",
-                    borderRadius: 4,
-                    background: busy ? "var(--bg-2)" : "var(--acc)",
-                    color: busy ? "var(--txt-2)" : "var(--acc-ink)",
-                    fontSize: 11.5,
-                    fontWeight: 600,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                  }}
-                >
-                  {busy ? (
-                    t("add_agent_modal.adding_label")
-                  ) : (
-                    <>
-                      <Icon name="plus" size={12} /> {t("add_agent_modal.add_button")}
-                    </>
-                  )}
-                </span>
-              </button>
-            );
-          })}
-          {filtered.length === 0 ? (
-            <div style={{ padding: 16, fontSize: 12, color: "var(--txt-3)" }}>
-              {t("common.no_matches", { query: filter })}
+      </div>
+
+      <div className="aa-cat-row">
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            className={`aa-cat${catFilter === c.id ? " active" : ""}`}
+            onClick={() => setCatFilter(c.id)}
+          >
+            {c.color && <span className="dot" style={{ background: c.color }} />}
+            {c.label}
+            <span className="pip">{c.count}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="aa-body">
+        {error && (
+          <div style={{ marginBottom: 10, color: "var(--error)", fontSize: 12, fontFamily: "var(--font-mono)", padding: "8px 12px", background: "color-mix(in oklch, var(--error) 12%, transparent)", borderRadius: 6 }}>
+            {error}
+          </div>
+        )}
+        {agentsQ.isLoading ? (
+          <Skeleton width="100%" height={200} />
+        ) : filtered.length === 0 ? (
+          <div className="aa-empty">
+            <div className="glyph"><Icon name="search" size={20} /></div>
+            <div style={{ fontSize: 14, color: "var(--txt-2)" }}>
+              {q ? `No agents match "${q}"` : "No agents in this category"}
             </div>
-          ) : null}
+          </div>
+        ) : (
+          <>
+            {view === "all" && notInRoster.length > 0 && (
+              <>
+                <div className="aa-section-head">
+                  <span className="label">Available</span>
+                  <span className="pip">{notInRoster.length}</span>
+                  <span className="line" />
+                </div>
+                {notInRoster.map((a) => (
+                  <AgentRow
+                    key={a.name}
+                    name={a.name}
+                    description={a.description}
+                    defaultModel={a.defaultModel}
+                    unit={a.unit}
+                    category={categorize(a)}
+                    rosterCount={rosterCounts[a.name] ?? 0}
+                    stagedCount={staged[a.name] ?? 0}
+                    onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
+                  />
+                ))}
+              </>
+            )}
+            {view === "all" && inRoster.length > 0 && (
+              <>
+                <div className="aa-section-head">
+                  <span className="label">Already in office</span>
+                  <span className="pip">{inRoster.length}</span>
+                  <span className="line" />
+                </div>
+                {inRoster.map((a) => (
+                  <AgentRow
+                    key={a.name}
+                    name={a.name}
+                    description={a.description}
+                    defaultModel={a.defaultModel}
+                    unit={a.unit}
+                    category={categorize(a)}
+                    rosterCount={rosterCounts[a.name] ?? 0}
+                    stagedCount={staged[a.name] ?? 0}
+                    onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
+                  />
+                ))}
+              </>
+            )}
+            {view === "available" && notInRoster.map((a) => (
+              <AgentRow
+                key={a.name}
+                name={a.name}
+                description={a.description}
+                defaultModel={a.defaultModel}
+                unit={a.unit}
+                category={categorize(a)}
+                rosterCount={0}
+                stagedCount={staged[a.name] ?? 0}
+                onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
+              />
+            ))}
+          </>
+        )}
+      </div>
+
+      <div className="aa-foot">
+        <div className="summary">
+          {stagedEntries.length === 0 ? (
+            <div className="text"><span className="empty">No agents staged yet</span></div>
+          ) : (
+            <>
+              <div className="avs">
+                {stagedEntries.slice(0, 5).map(({ agent }) => (
+                  <div key={agent!.name} className="av" title={agent!.name}>
+                    <AgentAvatar unit={unitForAgent(agent!.name, agent!.unit)} size={22} />
+                  </div>
+                ))}
+                {stagedEntries.length > 5 && <div className="more">+{stagedEntries.length - 5}</div>}
+              </div>
+              <div className="text">
+                <span className="b">{totalStaged}</span> agent{totalStaged !== 1 ? "s" : ""} to summon
+                {totalStaged !== stagedEntries.length && (
+                  <span style={{ color: "var(--txt-4)" }}> · {stagedEntries.length} distinct</span>
+                )}
+              </div>
+            </>
+          )}
         </div>
-      )}
+        <div className="actions">
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button
+            type="button"
+            className={`btn-done${totalStaged === 0 ? " empty" : ""}`}
+            onClick={handleSummon}
+            disabled={addMut.isPending}
+          >
+            <Icon name="check" size={12} />
+            {addMut.isPending ? "Adding…" : totalStaged === 0 ? "Done" : `Summon ${totalStaged}`}
+            <span className="kbd">⌘ ↵</span>
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ── Agent row ──────────────────────────────────────────────────── */
+
+function AgentRow({
+  name, description, defaultModel, unit, category,
+  rosterCount, stagedCount, onAdd,
+}: {
+  name: string;
+  description?: string | null;
+  defaultModel?: string | null;
+  unit?: string | null;
+  category: string;
+  rosterCount: number;
+  stagedCount: number;
+  onAdd: () => void;
+}) {
+  const inOffice = rosterCount > 0;
+  const added = stagedCount > 0 || inOffice;
+  const unitSel = unitForAgent(name, unit);
+
+  return (
+    <div className={`aa-row${added ? " added" : ""}`} style={catStyle(category)}>
+      <div className="av">
+        <AgentAvatar unit={unitSel} size={36} />
+      </div>
+      <div className="info">
+        <div className="row1">
+          <span className="name">{name}</span>
+          {defaultModel && (
+            <span className="model-tag">
+              <span className="d" style={{ background: modelColor(defaultModel) }} />
+              {defaultModel.replace("claude-", "").replace(/-\d+(-\d+)?$/, "")}
+            </span>
+          )}
+          <span className="cat-tag">
+            <span className="dot" />
+            {category.toLowerCase()}
+          </span>
+        </div>
+        {description && <div className="desc">{description}</div>}
+        {inOffice && (
+          <div className="in-roster">
+            <span className="pip"><Icon name="check" size={9} /> in office</span>
+            <span>· already summoned {rosterCount}×</span>
+          </div>
+        )}
+      </div>
+      <div className="aa-add-wrap">
+        <button
+          type="button"
+          className={`aa-add${added ? " added" : ""}`}
+          onClick={onAdd}
+        >
+          {added ? (
+            <>
+              <Icon name="check" size={12} /> Added
+              <span className="badge">{inOffice ? rosterCount + stagedCount : stagedCount}</span>
+            </>
+          ) : (
+            <><Icon name="plus" size={12} /> Add</>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

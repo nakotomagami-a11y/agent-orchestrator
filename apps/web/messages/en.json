@@ -329,7 +329,13 @@
     "remove_confirm": "Remove {label} from {project}? Their conversation stays archived so you can still read it.",
     "remove_inline_confirm": "Remove {label}?",
     "tag_model": "model: {model}",
-    "tag_effort": "effort: {effort}"
+    "tag_effort": "effort: {effort}",
+    "save_card_title": "Save file",
+    "save_card_sub": "export this project as a portable JSON save file",
+    "save_include_history": "Include conversation history",
+    "save_export_button": "Export",
+    "save_import_button": "Import",
+    "import_success": "Imported {count, plural, one {# agent} other {# agents}} successfully. Refresh to see changes."
   },
   "project_activity": {
     "card_title": "Activity",
@@ -450,7 +456,8 @@
     "load_earlier": "Load {count, plural, one {# earlier message} other {# earlier messages}}",
     "load_earlier_aria": "Load {count, plural, one {# earlier message} other {# earlier messages}}",
     "jump_to_latest": "Jump to latest",
-    "jump_to_latest_aria": "Scroll to the most recent message"
+    "jump_to_latest_aria": "Scroll to the most recent message",
+    "scroll_to_bottom": "Scroll to bottom"
   },
   "live_status": {
     "idle": "Idle",

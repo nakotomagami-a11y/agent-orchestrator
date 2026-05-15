@@ -3188,7 +3188,7 @@
 .ao-modal .kv .v { color: var(--ao-fg-1); font-family: var(--ao-font-mono); word-break: break-all; }
 
 /* Memory bar in detail */
-.ao-modal .srv-meter { display: flex; flex-direction: column; gap: 4px; }
+.ao-modal .srv-meter { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; }
 .ao-modal .srv-meter .head {
   display: flex; align-items: center; gap: 5px;
   font-size: 11px; color: var(--ao-fg-3); font-family: var(--ao-font-mono);

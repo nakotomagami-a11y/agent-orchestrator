@@ -20,7 +20,10 @@ export function getDb(): Database.Database {
   createSchema(db);
   migrateFromJsonl(db);
   // Any run still "running" at open time is orphaned from a previous crash/kill.
-  db.prepare("UPDATE runs SET status='error', exit_code=-1, ended_at=? WHERE status='running'").run(Date.now());
+  const now = Date.now();
+  db.prepare(
+    "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=@now-started_at WHERE status='running'"
+  ).run({ now });
   globalThis.__agentOfficeDb = db;
   return db;
 }
@@ -267,9 +270,10 @@ export function updateRun(id: string, u: RunUpdate): void {
 }
 
 export function markRunAborted(id: string): void {
+  const now = Date.now();
   getDb().prepare(
-    "UPDATE runs SET status='error', exit_code=-1, ended_at=? WHERE id=? AND status='running'"
-  ).run(Date.now(), id);
+    "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=@now-started_at WHERE id=@id AND status='running'"
+  ).run({ now, id });
 }
 
 interface RunRow {
@@ -289,7 +293,7 @@ function rowToRun(row: RunRow): PersistedRun {
     status: row.status as "running" | "done" | "error",
     exitCode: row.exit_code ?? undefined, prompt: row.prompt, output: row.output,
     tokensIn: row.tokens_in, tokensOut: row.tokens_out, cost: row.cost_usd,
-    durMs: row.dur_ms ?? 0, model: row.model, effort: row.effort,
+    durMs: row.dur_ms ?? (row.ended_at != null ? row.ended_at - row.started_at : 0), model: row.model, effort: row.effort,
     cwd: row.cwd ?? undefined, ts: row.started_at,
   };
 }

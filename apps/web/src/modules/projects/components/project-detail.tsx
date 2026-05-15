@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
@@ -11,6 +11,92 @@ import { useProject, useRemoveInstance, useUpdateProject } from "../hooks/use-pr
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { ProjectActivity } from "./project-activity";
 import { MemoryEditor } from "@/modules/memory/components/memory-editor";
+
+function ProjectSaveCard({ id }: { id: string }) {
+  const t = useTranslations();
+  const [includeHistory, setIncludeHistory] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importStatus, setImportStatus] = useState<{ ok: boolean; msg: string } | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onExport = () => {
+    const url = `/api/save/export?projectId=${encodeURIComponent(id)}${includeHistory ? "&history=1" : ""}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.click();
+  };
+
+  const onImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    setImportStatus(null);
+    try {
+      const text = await file.text();
+      const json = JSON.parse(text);
+      const res = await fetch("/api/save/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(json),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setImportStatus({ ok: true, msg: t("project_detail.import_success", { count: data.agentCount }) });
+      } else {
+        setImportStatus({ ok: false, msg: data.detail ?? data.error ?? "Import failed" });
+      }
+    } catch (err) {
+      setImportStatus({ ok: false, msg: String(err) });
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader
+        title={t("project_detail.save_card_title")}
+        sub={t("project_detail.save_card_sub")}
+      />
+      <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={includeHistory}
+            onChange={(e) => setIncludeHistory(e.target.checked)}
+          />
+          {t("project_detail.save_include_history")}
+        </label>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button type="button" className="btn primary" onClick={onExport}>
+            {t("project_detail.save_export_button")}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={importing}
+            onClick={() => fileRef.current?.click()}
+          >
+            {importing ? t("common.loading") : t("project_detail.save_import_button")}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: "none" }}
+            onChange={onImport}
+          />
+        </div>
+        {importStatus && (
+          <span style={{ fontSize: 12, color: importStatus.ok ? "var(--done)" : "var(--error)" }}>
+            {importStatus.msg}
+          </span>
+        )}
+      </div>
+    </Card>
+  );
+}
 
 export type ProjectDetailProps = { id: string };
 
@@ -44,7 +130,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         </div>
       </Card>
 
-      <ProjectActivity projectId={id} />
+<ProjectActivity projectId={id} />
 
       <Card>
         <CardHeader
@@ -147,6 +233,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           />
         </div>
       </Card>
+
+      <ProjectSaveCard id={id} />
     </div>
   );
 }

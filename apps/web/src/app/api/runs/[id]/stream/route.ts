@@ -28,7 +28,10 @@ export async function GET(request: Request, { params }: Params) {
       }
       const failed = persisted.status === "error" || (persisted.exitCode != null && persisted.exitCode !== 0);
       if (failed) {
-        await writer.write("error", { runId: id, message: "Run ended with an error" });
+        const message = persisted.exitCode === -1
+          ? "Run was interrupted — the server restarted while this run was in progress"
+          : "Run ended with an error";
+        await writer.write("error", { runId: id, message });
       }
       await writer.write("done", { runId: id, exitCode: persisted.exitCode ?? (failed ? 1 : 0), sessionId: persisted.sessionId });
     } else {

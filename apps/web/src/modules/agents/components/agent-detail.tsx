@@ -17,6 +17,7 @@ import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useAgent, useAgentBody, useAgentMemory, useWriteAgentMemory } from "../hooks/use-agents";
 import { ActivityFeed } from "@/modules/runs/components/activity-feed";
 import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
+import { useActiveProjectStore } from "@/lib/active-project-store";
 import { MemoryEditor } from "@/modules/memory/components/memory-editor";
 
 export type AgentDetailProps = { id: string };
@@ -30,6 +31,7 @@ export function AgentDetail({ id }: AgentDetailProps) {
   const bodyQ = useAgentBody(id);
 
   const openChat = useSummonStore((s) => s.openChat);
+  const activeProjectId = useActiveProjectStore((s) => s.id);
 
   if (agentQ.isLoading) {
     return (
@@ -59,7 +61,7 @@ export function AgentDetail({ id }: AgentDetailProps) {
             <div style={{ fontSize: 13, color: "var(--txt-2)", marginTop: 4 }}>{agent.description || t("agent_list.description_empty")}</div>
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button type="button" className="btn primary" onClick={() => openChat(id)}>
+            <button type="button" className="btn primary" onClick={() => openChat(id, { projectId: activeProjectId ?? undefined })}>
               <Icon name="send" /> {t("summon.open_chat")}
             </button>
             <Link href={PAGE_ROUTES.agentEdit(id)} className="btn">

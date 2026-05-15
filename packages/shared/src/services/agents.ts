@@ -155,6 +155,12 @@ export function buildAppendedPrompt(agentName: string, project: Project | null, 
   const parts: string[] = [];
   if (skillFragment) parts.push("## Capabilities (from selected skills)\n\n" + skillFragment);
   if (global) parts.push("## Global memory (applies to every agent)\n" + global);
+  if (project) {
+    const projectLines = [`**Project:** ${project.meta.name}`];
+    if (project.meta.cwd) projectLines.push(`**Working directory:** ${project.meta.cwd}`);
+    if (project.meta.description) projectLines.push(`**Description:** ${project.meta.description}`);
+    parts.push(`## Active project\n` + projectLines.join("\n"));
+  }
   if (projectMemory) parts.push(`## Project memory (${project!.meta.name})\n` + projectMemory);
   if (perAgent) parts.push(`## Memory specific to ${agentName}\n` + perAgent);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 export type OfficeView = "iso" | "cards";
 
@@ -22,6 +23,8 @@ type OfficeState = {
   inspectorOpen: boolean;
   /** When set, the modal opens on this tab once and then clears it. */
   pendingTab: AgentTab | null;
+  /** Currently visible tab — kept in sync by AgentDetailsModal. */
+  activeTab: AgentTab;
   setView: (next: OfficeView) => void;
   setZoom: (next: number) => void;
   zoomIn: () => void;
@@ -30,6 +33,7 @@ type OfficeState = {
   select: (id: string | null, opts?: SelectOptions) => void;
   consumePendingTab: () => AgentTab | null;
   closeInspector: () => void;
+  setActiveTab: (tab: AgentTab) => void;
 };
 
 const ZOOM_MIN = 0.6;
@@ -38,13 +42,14 @@ const ZOOM_STEP = 0.1;
 
 const clamp = (v: number, min: number, max: number): number => Math.max(min, Math.min(max, v));
 
-export const useOfficeStore = create<OfficeState>((set, get) => ({
+export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   view: "iso",
   zoom: 1,
   selectedId: null,
   selectedInstanceId: null,
   inspectorOpen: false,
   pendingTab: null,
+  activeTab: "conversation",
   setView: (next) => set({ view: next }),
   setZoom: (next) => set({ zoom: clamp(next, ZOOM_MIN, ZOOM_MAX) }),
   zoomIn: () => set({ zoom: clamp(get().zoom + ZOOM_STEP, ZOOM_MIN, ZOOM_MAX) }),
@@ -63,4 +68,8 @@ export const useOfficeStore = create<OfficeState>((set, get) => ({
     return t;
   },
   closeInspector: () => set({ inspectorOpen: false, pendingTab: null, selectedInstanceId: null }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
+}), {
+  name: "office-view",
+  partialize: (s) => ({ view: s.view }),
 }));

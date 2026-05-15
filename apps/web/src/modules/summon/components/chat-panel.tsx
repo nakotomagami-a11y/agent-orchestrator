@@ -88,7 +88,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
   // partial output is spliced into the thread and we surface a recovery
   // banner so the user knows what happened and can pick up where it stopped.
   const [recovered, setRecovered] = useState<
-    | { runId: string; partialChars: number; tokensOut: number; cost: number }
+    | { runId: string; partialChars: number; tokensOut: number; cost: number; exitCode: number }
     | null
   >(null);
   const [pendingSeed, setPendingSeed] = useState<string | undefined>();
@@ -165,17 +165,15 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
               { kind: "agent-text", id: `r_${activeRunId}`, text: run.output, streaming: false },
             ]);
           }
-          // Server-restart kill (SIGINT/SIGTERM → exit code 130): the run
-          // didn't complete naturally, but everything streamed up to the
-          // moment of death is recoverable. Surface a recovery banner so
-          // the user knows they can continue the work instead of starting
-          // from scratch.
-          if (run.status === "error" && run.exitCode === 130) {
+          // Server-restart kill (SIGINT/SIGTERM → exit 130, or hard kill → exit -1):
+          // surface a recovery banner so the user can continue the work.
+          if (run.status === "error" && (run.exitCode === 130 || run.exitCode === -1)) {
             setRecovered({
               runId: run.id,
               partialChars: run.output?.length ?? 0,
               tokensOut: run.tokensOut,
               cost: run.cost,
+              exitCode: run.exitCode ?? -1,
             });
           }
           setActiveRunId(null);
@@ -487,7 +485,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
         <StreamBanner
           kind="warn"
           title="Recovered partial output from the previous run."
-          detail={`Run ${recovered.runId} was interrupted by a server restart (exit 130). ${recovered.partialChars.toLocaleString()} chars · ${recovered.tokensOut.toLocaleString()} tok · $${recovered.cost.toFixed(3)} streamed before the kill — appended to the thread above. Click Continue to pick up where it stopped.`}
+          detail={`Run ${recovered.runId} was interrupted — ${recovered.exitCode === -1 ? "server was killed mid-run (no clean shutdown)" : `server restarted (exit ${recovered.exitCode})`}. ${recovered.partialChars.toLocaleString()} chars · ${recovered.tokensOut.toLocaleString()} tok · $${recovered.cost.toFixed(3)} streamed before the kill — appended to the thread above. Click Continue to pick up where it stopped.`}
           primary={{ label: "Continue", onClick: continueRecovered }}
           secondary={{ label: "Dismiss", onClick: () => setRecovered(null) }}
         />

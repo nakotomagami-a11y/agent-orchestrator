@@ -5,8 +5,9 @@ import { useTranslations } from "next-intl";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AgentListGhost } from "./agent-list-ghost";
 import { Icon } from "@/components/ui/icon";
-import { UnitSprite } from "@/components/ui/unit-sprite";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { unitForAgent } from "@/components/ui/unit-sprite.utils";
+import { cn } from "@/lib/cn";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import type { ApiAgent } from "@agent-office/shared/types";
@@ -112,14 +113,7 @@ export function AgentList() {
           {t("agent_list.no_matches")}
         </div>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-            gap: 14,
-            alignContent: "start",
-          }}
-        >
+        <div className="of-grid">
           {visible.map((a) => (
             <AgentCard
               key={a.name}
@@ -331,130 +325,84 @@ function AgentCard({
   const t = useTranslations();
   const unit = unitForAgent(agent.name, agent.unit);
   const category = categorize(agent);
+  const catColor = categoryColor(category);
+  const modelColor =
+    (agent.defaultModel ?? "").includes("haiku") ? "var(--done)" :
+    (agent.defaultModel ?? "").includes("opus") ? "#ffcb6b" :
+    "#c792ea";
+
   return (
     <div
-      className="card"
-      style={{
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        position: "relative",
-      }}
+      className="of-card"
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={e => e.key === "Enter" && onOpen()}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            background: "var(--bg-2)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            flexShrink: 0,
-          }}
-        >
-          <UnitSprite unit={unit} size={36} animate />
+      <div className="head-row">
+        <div className="av">
+          <AgentAvatar unit={unit} size={42} />
         </div>
-        <button
-          type="button"
-          onClick={onOpen}
-          aria-label={t("agent_list.open_aria", { name: agent.name })}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            background: "transparent",
-            border: "none",
-            padding: 0,
-            font: "inherit",
-            color: "inherit",
-            textAlign: "left",
-            cursor: "pointer",
-          }}
-        >
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--txt)" }}>{agent.name}</div>
-          <div
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10.5,
-              color: "var(--txt-3)",
-            }}
-          >
-            {category}
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          aria-label={t("agent_list.edit_aria", { name: agent.name })}
-          title={t("agent_list.edit_title")}
-          style={{
-            background: "transparent",
-            border: "none",
-            color: "var(--txt-3)",
-            cursor: "pointer",
-            padding: 4,
-            borderRadius: 6,
-            display: "inline-flex",
-          }}
-        >
-          <Icon name="edit" size={14} />
-        </button>
-      </div>
-
-      <div
-        style={{
-          fontSize: 12.5,
-          color: "var(--txt-2)",
-          lineHeight: 1.5,
-          minHeight: 38,
-          display: "-webkit-box",
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
-      >
-        {agent.description || t("agent_list.description_empty")}
-      </div>
-
-      {agent.skills.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-          {agent.skills.slice(0, 3).map((s) => (
-            <span key={s} className="tag skill">#{s}</span>
-          ))}
-          {agent.skills.length > 3 ? (
-            <span className="tag">+{agent.skills.length - 3}</span>
-          ) : null}
+        <div className="name-blk">
+          <div className="name">{agent.name}</div>
+          <div className="slug">{agent.name}</div>
         </div>
-      ) : null}
-
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginTop: "auto",
-        }}
-      >
-        <span className="tag">{agent.defaultModel ?? t("agent_list.model_default")}</span>
         <span
+          className="status-chip"
           style={{
-            fontSize: 11,
-            color: "var(--txt-3)",
-            fontFamily: "var(--font-mono)",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
+            background: `color-mix(in srgb, ${catColor} 12%, var(--bg-2))`,
+            border: `1px solid color-mix(in srgb, ${catColor} 30%, transparent)`,
+            color: catColor,
           }}
         >
-          <Icon name="activity" size={11} /> {t("agent_list.uses_count", { count: uses })}
+          {category}
         </span>
+      </div>
+
+      <div className="state-box">
+        <div className="label">about</div>
+        <div className={cn("text", !agent.description && "muted")}>
+          {agent.description || t("agent_list.description_empty")}
+        </div>
+      </div>
+
+      <div className="foot-row">
+        <span className="meta-pill">
+          <span className="d" style={{ background: modelColor }} />
+          {agent.defaultModel ?? t("agent_list.model_default")}
+        </span>
+        <span className="last" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+          <Icon name="activity" size={10} /> {t("agent_list.uses_count", { count: uses })}
+        </span>
+      </div>
+
+      <div className="of-card-actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={e => { e.stopPropagation(); onOpen(); }}
+        >
+          <Icon name="send" size={11} /> Open
+        </button>
+        <button
+          type="button"
+          title={t("agent_list.edit_title")}
+          aria-label={t("agent_list.edit_aria", { name: agent.name })}
+          onClick={e => { e.stopPropagation(); onEdit(); }}
+        >
+          <Icon name="edit" size={13} />
+        </button>
       </div>
     </div>
   );
+}
+
+function categoryColor(cat: string): string {
+  const m: Record<string, string> = {
+    Engineering: "#3b82f6", QA: "#10b981", Design: "#ec4899",
+    "AI & Data": "#8b5cf6", Security: "#ef4444", Docs: "#f59e0b",
+    Marketing: "#f97316", Research: "#06b6d4", Strategy: "#8b5cf6",
+    Build: "#e95420",
+  };
+  return m[cat] ?? "#8A8079";
 }

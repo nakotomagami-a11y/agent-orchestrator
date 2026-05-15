@@ -8,6 +8,7 @@ import {
   DECORATIONS,
   applyPlacement,
   decorationKey,
+  familyOf,
   hasBridgeCap,
   isPlacementValid,
   popDecoration,
@@ -79,6 +80,7 @@ export function OfficeScene() {
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
   const [pendingChanges, setPendingChanges] = useState(0);
+  const [agentSearch, setAgentSearch] = useState("");
 
   const {
     zoom, panX, panY,
@@ -186,6 +188,18 @@ export function OfficeScene() {
     return m;
   }, [agents]);
 
+  // Prune agentPositions entries whose agent no longer exists.
+  useEffect(() => {
+    if (!sceneLoaded) return;
+    setAgentPositions((prev) => {
+      const stale = Object.keys(prev).filter((k) => !agentsById.has(prev[k]!.agentId));
+      if (stale.length === 0) return prev;
+      const next = { ...prev };
+      for (const k of stale) delete next[k];
+      return next;
+    });
+  }, [agentsById, sceneLoaded]);
+
   useEffect(() => {
     if (!sceneLoaded) return;
     fetch("/api/ui-settings", {
@@ -270,6 +284,17 @@ export function OfficeScene() {
               else next[key] = popped.stack;
               return next;
             });
+            // If a bridge was removed from a water cell, evict any agent
+            // standing on it — they can't stand on water.
+            const isWater = grid[y]?.[x] !== true;
+            const bridgeGone = isWater && !popped.stack.some((k) => familyOf(k) === "bridge");
+            if (bridgeGone && agentPositions[key]) {
+              setAgentPositions((prev) => {
+                const next = { ...prev };
+                delete next[key];
+                return next;
+              });
+            }
             setPendingChanges((n) => n + 1);
           }
           return;
@@ -402,6 +427,7 @@ export function OfficeScene() {
           grassColor={grassColor}
           editable={buildMode}
           tool={tool}
+          agentSearch={agentSearch}
           onCellClick={onCellClick}
           onAgentDrop={onAgentDrop}
           onAgentClick={onAgentClick}
@@ -442,6 +468,19 @@ export function OfficeScene() {
         >
           <Icon name="crosshair" size={13} />
         </button>
+        {!buildMode && (
+          <>
+            <div className="sep" />
+            <input
+              className="agent-search"
+              type="search"
+              placeholder="Find agent…"
+              value={agentSearch}
+              onChange={(e) => setAgentSearch(e.target.value)}
+              aria-label="Search agents"
+            />
+          </>
+        )}
       </div>
 
       {/* Canvas info — bottom-left: tile coords + map stats */}
@@ -494,7 +533,7 @@ export function OfficeScene() {
         active={buildMode}
         tool={tool}
         grassColor={grassColor}
-        onToggle={() => { setBuildMode((m) => !m); setPendingChanges(0); }}
+        onToggle={() => { setBuildMode((m) => { if (!m) setAgentSearch(""); return !m; }); setPendingChanges(0); }}
         onSelectTool={setTool}
         onSelectGrassColor={setGrassColor}
       />

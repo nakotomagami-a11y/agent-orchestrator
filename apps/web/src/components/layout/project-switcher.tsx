@@ -19,6 +19,17 @@ function currentProjectIdFromPath(pathname: string | null): string | null {
   return match && match[1] ? decodeURIComponent(match[1]) : null;
 }
 
+function projectGradient(id: string): string {
+  const colors = [
+    ["#d63a14","#b1280c"], ["#5a8b6f","#2f5a3e"], ["#2A6FDB","#1b4fa8"],
+    ["#c792ea","#7a4fa8"], ["#e6b35a","#a87a20"], ["#4eb96f","#2a7a40"],
+  ];
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xffff;
+  const [a, b] = colors[hash % colors.length]!;
+  return `linear-gradient(135deg, ${a}, ${b})`;
+}
+
 export function ProjectSwitcher() {
   const t = useTranslations();
   const router = useRouter();
@@ -147,14 +158,20 @@ export function ProjectSwitcher() {
       <button
         ref={triggerRef}
         type="button"
-        className="tb-btn"
+        className="ps-trigger"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
         title={t("project_switcher.switch_title")}
         onClick={() => setOpen((v) => !v)}
       >
-        <Icon name="folder" size={13} />
+        {currentId ? (
+          <span className="ps-trigger-av" style={{ background: projectGradient(currentId) }}>
+            {triggerLabel.slice(0, 1).toUpperCase()}
+          </span>
+        ) : (
+          <Icon name="folder" size={13} />
+        )}
         <span
           style={{
             maxWidth: 160,
@@ -174,89 +191,82 @@ export function ProjectSwitcher() {
           role="menu"
           aria-label={t("project_switcher.menu_label")}
           onKeyDown={onKey}
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            left: 0,
-            minWidth: 260,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: "var(--r-md)",
-            boxShadow: "var(--shadow-2)",
-            padding: 4,
-            zIndex: 50,
-          }}
+          className="ps-menu"
         >
-          <ProjectRow
-            href={PAGE_ROUTES.projects}
-            primary={t("project_switcher.all_projects")}
-            secondary={t("project_switcher.all_projects_subtitle")}
-            italic
-            selected={currentId == null}
-            highlighted={activeIndex === 0}
-            onHover={() => setActiveIndex(0)}
-            onSelect={() => navigate(PAGE_ROUTES.projects, null)}
-          />
+          <div style={{ padding: 4 }}>
+            <ProjectRow
+              href={PAGE_ROUTES.projects}
+              primary={t("project_switcher.all_projects")}
+              secondary={t("project_switcher.all_projects_subtitle")}
+              italic
+              selected={currentId == null}
+              highlighted={activeIndex === 0}
+              projectId={null}
+              onHover={() => setActiveIndex(0)}
+              onSelect={() => navigate(PAGE_ROUTES.projects, null)}
+            />
 
-          <Separator />
-          <SectionLabel>
-            {isLoading
-              ? t("project_switcher.section_loading")
-              : t("project_switcher.section_count", { count: projects.length })}
-          </SectionLabel>
+            <Separator />
+            <SectionLabel>
+              {isLoading
+                ? t("project_switcher.section_loading")
+                : t("project_switcher.section_count", { count: projects.length })}
+            </SectionLabel>
 
-          {!isLoading && projects.length === 0 ? (
-            <div
-              style={{
-                padding: "8px 10px 10px",
-                fontSize: 12,
-                color: "var(--txt-3)",
-                fontStyle: "italic",
-              }}
-            >
-              {t("project_switcher.no_projects")}
-            </div>
-          ) : (
-            projects.map((p, i) => {
-              const rowIndex = i + 1;
-              const isCurrent = p.id === currentId;
-              const sub = [
-                t("project_switcher.agent_count", { count: p.instanceCount }),
-                p.cwd ? t("project_switcher.cwd_label", { path: p.cwd }) : null,
-              ]
-                .filter(Boolean)
-                .join(" · ");
-              const projectRuns = (runs ?? []).filter((r) => r.projectId === p.id);
-              const fiveMinAgo = Date.now() - 5 * 60 * 1000;
-              const hasRunning = projectRuns.some((r) => r.status === "running");
-              const hasRecentError = projectRuns.some(
-                (r) => r.status === "error" && r.ts > fiveMinAgo,
-              );
-              const healthDot: "working" | "error" | undefined = hasRunning
-                ? "working"
-                : hasRecentError
-                  ? "error"
-                  : undefined;
-              return (
-                <ProjectRow
-                  key={p.id}
-                  href={PAGE_ROUTES.project(p.id)}
-                  primary={p.name}
-                  secondary={sub}
-                  selected={isCurrent}
-                  highlighted={activeIndex === rowIndex}
-                  healthDot={healthDot}
-                  onHover={() => setActiveIndex(rowIndex)}
-                  onSelect={() => navigate(PAGE_ROUTES.project(p.id), p.id)}
-                />
-              );
-            })
-          )}
+            {!isLoading && projects.length === 0 ? (
+              <div
+                style={{
+                  padding: "8px 10px 10px",
+                  fontSize: 12,
+                  color: "var(--txt-3)",
+                  fontStyle: "italic",
+                }}
+              >
+                {t("project_switcher.no_projects")}
+              </div>
+            ) : (
+              projects.map((p, i) => {
+                const rowIndex = i + 1;
+                const isCurrent = p.id === currentId;
+                const sub = [
+                  t("project_switcher.agent_count", { count: p.instanceCount }),
+                  p.cwd ? t("project_switcher.cwd_label", { path: p.cwd }) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ");
+                const projectRuns = (runs ?? []).filter((r) => r.projectId === p.id);
+                const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+                const hasRunning = projectRuns.some((r) => r.status === "running");
+                const hasRecentError = projectRuns.some(
+                  (r) => r.status === "error" && r.ts > fiveMinAgo,
+                );
+                const healthDot: "working" | "error" | undefined = hasRunning
+                  ? "working"
+                  : hasRecentError
+                    ? "error"
+                    : undefined;
+                return (
+                  <ProjectRow
+                    key={p.id}
+                    href={PAGE_ROUTES.project(p.id)}
+                    primary={p.name}
+                    secondary={sub}
+                    selected={isCurrent}
+                    highlighted={activeIndex === rowIndex}
+                    healthDot={healthDot}
+                    projectId={p.id}
+                    onHover={() => setActiveIndex(rowIndex)}
+                    onSelect={() => navigate(PAGE_ROUTES.project(p.id), p.id)}
+                  />
+                );
+              })
+            )}
 
-          <Separator />
+            <Separator />
+          </div>
 
           {creating ? (
-            <div style={{ padding: "6px 8px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ padding: "0 10px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
               <input
                 ref={nameInputRef}
                 type="text"
@@ -328,26 +338,11 @@ export function ProjectSwitcher() {
               ) : null}
             </div>
           ) : (
-            <div style={{ display: "flex", gap: 4 }}>
+            <div className="ps-foot">
               <button
                 type="button"
                 role="menuitem"
                 onClick={openCreate}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 10px",
-                  fontSize: 13,
-                  background: "transparent",
-                  border: 0,
-                  borderRadius: 4,
-                  color: "var(--txt)",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
               >
                 <Icon name="plus" size={13} /> {t("project_switcher.new_project")}
               </button>
@@ -356,22 +351,6 @@ export function ProjectSwitcher() {
                 role="menuitem"
                 onMouseEnter={() => setActiveIndex(rows.length - 1)}
                 onClick={() => navigate(PAGE_ROUTES.projects, currentId)}
-                className={activeIndex === rows.length - 1 ? "nav-item on" : "nav-item"}
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 10px",
-                  fontSize: 13,
-                  background: activeIndex === rows.length - 1 ? "var(--bg-2)" : "transparent",
-                  border: 0,
-                  borderRadius: 4,
-                  color: "var(--txt)",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
               >
                 <Icon name="settings" size={13} /> {t("project_switcher.manage")}
               </button>
@@ -384,21 +363,12 @@ export function ProjectSwitcher() {
 }
 
 function Separator() {
-  return <div style={{ height: 1, background: "var(--line)", margin: "4px 0" }} />;
+  return <div className="ps-sep" />;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        padding: "6px 10px 4px",
-        fontSize: 10,
-        color: "var(--txt-3)",
-        fontFamily: "var(--font-mono)",
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-      }}
-    >
+    <div className="ps-section-label">
       {children}
     </div>
   );
@@ -414,6 +384,7 @@ type RowProps = {
   healthDot?: "working" | "error";
   onHover: () => void;
   onSelect: () => void;
+  projectId?: string | null;
 };
 
 function ProjectRow({
@@ -426,78 +397,38 @@ function ProjectRow({
   healthDot,
   onHover,
   onSelect,
+  projectId,
 }: RowProps) {
   return (
     <Link
       href={href}
       role="menuitem"
       onMouseEnter={onHover}
-      onClick={(e) => {
-        e.preventDefault();
-        onSelect();
-      }}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "16px 1fr auto",
-        gap: 10,
-        alignItems: "center",
-        width: "100%",
-        padding: "6px 10px",
-        background: highlighted
-          ? "var(--bg-2)"
-          : selected
-            ? "var(--acc-faint)"
-            : "transparent",
-        borderRadius: 4,
-        color: "var(--txt)",
-        textDecoration: "none",
-      }}
+      onClick={e => { e.preventDefault(); onSelect(); }}
+      className={`ps-item${selected ? " active" : ""}${highlighted ? " highlighted" : ""}`}
     >
-      <span aria-hidden style={{ color: "var(--acc)", display: "inline-flex" }}>
-        {selected ? "✓" : ""}
-      </span>
-      <span style={{ minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 13,
-            fontWeight: 500,
-            fontStyle: italic ? "italic" : undefined,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
+      {projectId ? (
+        <span className="ps-item-av" style={{ background: projectGradient(projectId) }}>
+          {primary.slice(0, 1).toUpperCase()}
+        </span>
+      ) : (
+        <span className="ps-item-av" style={{ background: "var(--bg-3)" }}>
+          <Icon name="folder" size={13} style={{ color: "var(--txt-3)" }} />
+        </span>
+      )}
+      <span style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: projectId ? 600 : 500, fontStyle: italic ? "italic" : undefined, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
           {primary}
+          {selected && <Icon name="check" size={11} style={{ color: "var(--acc)", flexShrink: 0 }} />}
         </div>
-        {secondary ? (
-          <div
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 10.5,
-              color: "var(--txt-3)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
+        {secondary && (
+          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--txt-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {secondary}
           </div>
-        ) : null}
+        )}
       </span>
-      {healthDot ? (
-        <span
-          aria-hidden
-          style={{
-            display: "inline-block",
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            flexShrink: 0,
-            background: healthDot === "working" ? "var(--working)" : "var(--error)",
-          }}
-        />
-      ) : (
-        <span style={{ width: 6 }} />
+      {healthDot && (
+        <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: healthDot === "working" ? "var(--working)" : "var(--error)", boxShadow: healthDot === "working" ? "0 0 5px var(--working)" : "none" }} />
       )}
     </Link>
   );

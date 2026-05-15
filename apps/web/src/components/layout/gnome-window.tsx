@@ -1,5 +1,8 @@
-import type { ReactNode } from "react";
+"use client";
+
+import { useEffect, useState, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { isTauri } from "@/lib/tauri-window";
 
 export type GnomeWindowProps = {
   titlebar: ReactNode;
@@ -7,14 +10,36 @@ export type GnomeWindowProps = {
   className?: string;
 };
 
-/**
- * Outer GNOME window chrome. The whole app lives inside it. Renders the
- * `.gnome-window` grid (38px titlebar row + 1fr body row). Expects a single
- * `children` body — the inner sidebar/main split is the layout's responsibility.
- */
+function useIsMaximized(): boolean {
+  const [maximized, setMaximized] = useState(false);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    let unlisten: (() => void) | undefined;
+
+    async function init() {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      const win = getCurrentWindow();
+      setMaximized(await win.isMaximized());
+      unlisten = await win.onResized(async () => {
+        setMaximized(await win.isMaximized());
+      });
+    }
+
+    void init();
+    return () => { unlisten?.(); };
+  }, []);
+
+  return maximized;
+}
+
 export function GnomeWindow({ titlebar, children, className }: GnomeWindowProps) {
+  const maximized = useIsMaximized();
+
   return (
-    <div className={cn("gnome-window", className)}>
+    <div
+      className={cn("gnome-window", maximized && "maximized", className)}
+    >
       {titlebar}
       {children}
     </div>

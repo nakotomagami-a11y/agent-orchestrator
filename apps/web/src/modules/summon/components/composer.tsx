@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/icon";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
 import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
+import { isTauri } from "@/lib/tauri-window";
 
 type SlashCommand = {
   cmd: string;
@@ -198,19 +199,44 @@ export function Composer({
   };
 
   const onPaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    if (isTauri()) {
+      const items = Array.from(e.clipboardData.items);
+      const hasText = items.some((item) => item.kind === "string");
+      if (!hasText) {
+        // Image paste in Tauri: clipboardData is empty due to WebKit2GTK's clipboard
+        // isolation. Read the image directly from the Wayland compositor via wl-paste.
+        e.preventDefault();
+        void fetch("/api/clipboard-image", { method: "POST" })
+          .then(async (res) => {
+            if (!res.ok) return;
+            const blob = await res.blob();
+            if (blob.size > 100) {
+              const ext = (blob.type || "image/png").split("/")[1] ?? "png";
+              void uploadOne(new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type || "image/png" }));
+            }
+          })
+          .catch(() => {});
+      }
+      // Text paste: let default textarea behaviour handle it.
+      return;
+    }
+    // Browser (Chromium): clipboardData is populated normally.
     const files: File[] = [];
     for (const item of Array.from(e.clipboardData.items)) {
       if (item.kind === "file") {
         const f = item.getAsFile();
-        if (f) files.push(f);
+        if (f) {
+          const ext = f.type.split("/")[1] ?? "png";
+          files.push(new File([f], `pasted-${Date.now()}.${ext}`, { type: f.type }));
+        }
       }
     }
-    if (files.length === 0) return;
-    e.preventDefault();
-    for (const file of files) {
-      void uploadOne(file);
+    if (files.length > 0) {
+      e.preventDefault();
+      for (const file of files) void uploadOne(file);
     }
   };
+
 
   const send = () => {
     const v = value.trim();

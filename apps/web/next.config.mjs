@@ -6,17 +6,14 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ["@agent-office/shared"],
-  output: "standalone",
-  // better-sqlite3 is a native addon — exclude from webpack so Node.js
-  // resolves it at runtime (finds the .node file correctly via bindings).
   serverExternalPackages: ["better-sqlite3"],
-  outputFileTracingIncludes: {
-    "/api/**": ["../../node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3/**"],
-  },
   webpack: (config, { isServer }) => {
     if (isServer) {
-      const ext = config.externals ?? [];
-      config.externals = [...(Array.isArray(ext) ? ext : [ext]), "better-sqlite3"];
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : [config.externals].filter(Boolean)),
+        "better-sqlite3",
+        "bindings",
+      ];
     }
     return config;
   },

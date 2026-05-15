@@ -33,9 +33,9 @@ function formatResetCountdown(endTs: number): string {
 /* ------------------------------------------------------------------ */
 
 const PLAN_DEFS: { id: ClaudePlan; name: string; price: string; feat: string; icon: string }[] = [
-  { id: "free",  name: "Free",  price: "$0/mo",    feat: "haiku · 100 runs/wk · no team",               icon: "F" },
-  { id: "pro",   name: "Pro",   price: "$20/mo",   feat: "sonnet + opus · 2,000 runs/wk · 5 agents",    icon: "P" },
-  { id: "max",   name: "Max",   price: "$200/mo",  feat: "unlimited · priority queue · team seats",      icon: "M" },
+  { id: "free",  name: "Free",  price: "$0/mo",    feat: "standard usage · web + mobile · all integrations",      icon: "F" },
+  { id: "pro",   name: "Pro",   price: "$20/mo",   feat: "more usage than free · all models · Claude Code",       icon: "P" },
+  { id: "max",   name: "Max",   price: "$100/mo+", feat: "5× or 20× Pro usage · priority access · early features", icon: "M" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -219,21 +219,14 @@ function BudgetHero({
   );
 }
 
-function PlanGrid({
-  value,
-  onChange,
-}: {
-  value: ClaudePlan;
-  onChange: (p: ClaudePlan) => void;
-}) {
+function PlanGrid({ value }: { value: ClaudePlan }) {
   return (
     <div className="plan-grid">
       {PLAN_DEFS.map((p) => (
-        <button
+        <div
           key={p.id}
           className={`plan-tile${value === p.id ? " active" : ""}`}
-          onClick={() => onChange(p.id)}
-          aria-pressed={value === p.id}
+          style={{ cursor: "default", pointerEvents: "none" }}
         >
           <div className="n">
             <span
@@ -252,11 +245,11 @@ function PlanGrid({
               {p.icon}
             </span>
             {p.name}
-            <span className="pick" aria-hidden="true">{value === p.id ? "✓" : ""}</span>
+            {value === p.id && <span className="pick" aria-hidden="true">✓</span>}
           </div>
           <div className="price">{p.price}</div>
           <div className="feat">{p.feat}</div>
-        </button>
+        </div>
       ))}
     </div>
   );
@@ -621,7 +614,7 @@ export function ClaudeLimitsModal() {
             {/* Plan */}
             <section className="lim-section">
               <SectionHead title="Plan" sub="determines model access and rate limits" />
-              <PlanGrid value={localPlan} onChange={setLocalPlan} />
+              <PlanGrid value={localPlan} />
             </section>
 
             {/* Quota cap + period */}

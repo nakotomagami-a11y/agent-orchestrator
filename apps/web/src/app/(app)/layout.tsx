@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import { GnomeWindow } from "@/components/layout/gnome-window";
 import { Titlebar } from "@/components/layout/titlebar";
 import { MainShell } from "@/components/layout/main-shell";
@@ -8,6 +8,7 @@ import { ProcessesModal } from "@/modules/processes/components/processes-modal";
 import { FirstRunGate } from "@/modules/onboarding/components/first-run-gate";
 import { CommandPalette } from "@/components/command-palette/command-palette";
 import { CompareModal } from "@/modules/runs/components/compare-modal";
+import { ModalUrlSync } from "@/components/modal-url-sync";
 
 /**
  * Group layout for in-app pages (everything except auth, if/when added).
@@ -25,6 +26,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <CommandPalette />
       <CompareModal />
       <FirstRunGate />
+      <Suspense><ModalUrlSync /></Suspense>
     </GnomeWindow>
   );
 }

@@ -49,7 +49,12 @@ interface LiveRun {
   parseFailures: number;
   sawStreamDelta: boolean;
   rateLimitResetsAt?: number;
+  args: string[];
+  stderrBuf: string;
+  lastActivityAt: number;
 }
+
+const IDLE_TIMEOUT_MS = 10 * 60_000; // kill runs with no stdout for 10 min
 
 declare global {
   // eslint-disable-next-line no-var
@@ -71,10 +76,17 @@ const liveRuns: Map<string, LiveRun> =
 const RUN_RETENTION_MS = 5 * 60_000;
 
 function gc(): void {
-  const cutoff = Date.now() - RUN_RETENTION_MS;
+  const now = Date.now();
+  const cutoff = now - RUN_RETENTION_MS;
   for (const [id, run] of liveRuns) {
     if (run.status !== "running" && (run.finishedAt ?? 0) < cutoff) {
       liveRuns.delete(id);
+      continue;
+    }
+    if (run.status === "running" && now - run.lastActivityAt > IDLE_TIMEOUT_MS) {
+      log.warn("run.idle_timeout", { runId: id, idleMs: now - run.lastActivityAt });
+      broadcast(run, { name: "error", data: { runId: id, message: "Run timed out after 10 minutes of inactivity." } });
+      try { run.proc.kill(); } catch { /* already gone */ }
     }
   }
 }
@@ -190,6 +202,9 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     subscribers: new Set(),
     parseFailures: 0,
     sawStreamDelta: false,
+    args: opts.args,
+    stderrBuf: "",
+    lastActivityAt: Date.now(),
   };
   liveRuns.set(runId, run);
 
@@ -216,7 +231,39 @@ export function startRun(opts: StartRunOpts): { runId: string } {
   // Use 'close' not 'exit': 'exit' fires before stdout finishes draining,
   // so the final 'result' line (which carries session_id) may not be
   // processed yet. 'close' guarantees all stdio streams have ended first.
-  proc.on("close", (code) => finalizeRun(run, code ?? 1));
+  proc.on("close", (code) => {
+    // If --resume failed because the session no longer exists (different cwd,
+    // server restart, etc.), retry once without the --resume flag so the agent
+    // starts a fresh session instead of erroring out.
+    if (
+      code === 1 &&
+      run.stderrBuf.includes("No conversation found with session ID") &&
+      run.args.includes("--resume")
+    ) {
+      const resumeIdx = run.args.indexOf("--resume");
+      const retryArgs = resumeIdx === -1 ? run.args : [
+        ...run.args.slice(0, resumeIdx),
+        ...run.args.slice(resumeIdx + 2), // drop "--resume" and the session ID value after it
+      ];
+      log.info("run.retry_no_resume", { runId: run.id });
+      const retryProc = spawn("claude", retryArgs, {
+        stdio: ["ignore", "pipe", "pipe"],
+        cwd: run.cwd,
+        env: { ...process.env, PATH: buildAugmentedPath() },
+      });
+      run.proc = retryProc;
+      run.stderrBuf = "";
+      pumpStdout(run);
+      pumpStderr(run);
+      retryProc.on("close", (retryCode) => finalizeRun(run, retryCode ?? 1));
+      retryProc.on("error", (err) => {
+        broadcast(run, { name: "error", data: { runId: run.id, message: String(err) } });
+        if (run.status === "running") finalizeRun(run, 1);
+      });
+      return;
+    }
+    finalizeRun(run, code ?? 1);
+  });
   proc.on("error", (err) => {
     broadcast(run, { name: "error", data: { runId: run.id, message: String(err) } });
     if (run.status === "running") {
@@ -295,6 +342,7 @@ function broadcast(run: LiveRun, event: SseEvent): void {
 function pumpStdout(run: LiveRun): void {
   let buf = "";
   run.proc.stdout.on("data", (chunk: Buffer) => {
+    run.lastActivityAt = Date.now();
     buf += chunk.toString("utf8");
     let nl;
     while ((nl = buf.indexOf("\n")) !== -1) {
@@ -310,7 +358,9 @@ function pumpStdout(run: LiveRun): void {
 
 function pumpStderr(run: LiveRun): void {
   run.proc.stderr.on("data", (chunk: Buffer) => {
-    log.debug("run.stderr", { runId: run.id, text: chunk.toString("utf8").slice(0, 200) });
+    const text = chunk.toString("utf8");
+    run.stderrBuf += text;
+    log.debug("run.stderr", { runId: run.id, text: text.slice(0, 200) });
   });
 }
 

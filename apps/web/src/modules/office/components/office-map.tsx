@@ -287,6 +287,8 @@ export type OfficeMapProps = {
    *  routes this to either the inspector modal (normal click) or the
    *  erase logic (build mode + erase tool selected). */
   onAgentClick?: (x: number, y: number, ref: DragRef) => void;
+  /** When non-empty, dims agents whose name doesn't include this string. */
+  agentSearch?: string;
 };
 
 /**
@@ -325,6 +327,7 @@ export function OfficeMap({
   grassColor = DEFAULT_GRASS_COLOR,
   editable = false,
   tool,
+  agentSearch = "",
   onCellClick,
   onAgentDrop,
   onAgentClick,
@@ -339,10 +342,18 @@ export function OfficeMap({
   const setDragging = useOfficeDragStore((s) => s.setDragging);
 
   // Whether placing the currently-dragged agent at (x, y) would succeed:
-  // cell must be grass and not already occupied by a *different* agent
-  // (moving the same agent onto its own cell is a no-op but allowed).
+  // Agents can stand on grass cells or on water cells that have a bridge
+  // decoration. Bridge cap cells (land ramps) are excluded — they're
+  // reserved for the bridge art and are too narrow for an agent to stand on.
+  const isBridgeCell = (x: number, y: number): boolean => {
+    if (grid[y]?.[x] === true) return false; // land, not a bridge water cell
+    const stack = decorations[decorationKey(x, y)];
+    return !!stack && stack.some((k) => familyOf(k) === "bridge");
+  };
+
   const isAgentDropValid = (x: number, y: number, ref: DragRef): boolean => {
-    if (!(grid[y]?.[x] === true)) return false;
+    const isGrass = grid[y]?.[x] === true;
+    if (!isGrass && !isBridgeCell(x, y)) return false;
     const existing = agentPositions[decorationKey(x, y)];
     if (!existing) return true;
     return dragRefKey(existing) === dragRefKey(ref);
@@ -508,7 +519,8 @@ export function OfficeMap({
           // tile rather than its bottom edge.
           const SIZE = AGENT_SIZE;
           const left = x * TILE + (TILE - SIZE) / 2;
-          const top = y * TILE + (TILE - SIZE) / 2;
+          const onBridge = isBridgeCell(x, y) || hasBridgeCap(x, y, grid, decorations);
+          const top = y * TILE + (TILE - SIZE) / 2 - (onBridge ? Math.round(TILE * 0.35) : 0);
           // Animation rule: agents idle by default and only switch to a
           // work animation while they're actively running a task. The
           // work animation is picked from nearby resources:
@@ -548,6 +560,7 @@ export function OfficeMap({
               flip = !sheepRight && sheepLeft;
             } else action = "hammer";
           }
+          const searchMatch = !agentSearch || agent.name.toLowerCase().includes(agentSearch.toLowerCase());
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
@@ -568,9 +581,8 @@ export function OfficeMap({
                 width: SIZE,
                 height: SIZE,
                 pointerEvents: "auto",
-                // The element being dragged needs to be opaque enough to
-                // host pointer events but not block the drop targets
-                // behind it — they handle their own dragOver detection.
+                opacity: searchMatch ? 1 : 0.2,
+                transition: "opacity 0.15s",
               }}
               aria-label={`${agent.name} — click to open, drag to move`}
               title={agent.name}

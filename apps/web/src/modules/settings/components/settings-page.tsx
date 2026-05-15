@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { useScanProjects, useSettings, useWriteSettings } from "../hooks/use-settings";
 
+
 export function SettingsPage() {
   const t = useTranslations();
   const settingsQ = useSettings();
@@ -174,6 +175,7 @@ export function SettingsPage() {
           )}
         </div>
       </Card>
+
     </div>
   );
 }

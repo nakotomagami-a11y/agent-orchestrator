@@ -365,7 +365,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
               very end of the scroll container so scrollIntoView({block:"end"})
               lands precisely where we want, regardless of LiveStatus height. */}
           <div ref={bottomAnchorRef} aria-hidden style={{ height: 1 }} />
-          {hasNewBelow && !followTail ? (
+          {!followTail ? (
             <div className="chat-jump-latest-wrap" aria-live="polite">
               <button
                 type="button"
@@ -374,7 +374,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                 aria-label={t("jump_to_latest_aria")}
               >
                 <Icon name="chevron-down" size={12} />
-                {t("jump_to_latest")}
+                {hasNewBelow ? t("jump_to_latest") : t("scroll_to_bottom")}
               </button>
             </div>
           ) : null}

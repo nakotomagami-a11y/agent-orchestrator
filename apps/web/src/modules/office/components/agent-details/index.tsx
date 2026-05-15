@@ -18,6 +18,7 @@ import {
   AoPen,
   AoReset,
 } from "@/modules/summon/components/ao-icons";
+import { useActiveProjectStore } from "@/lib/active-project-store";
 import "@/modules/summon/styles/agent-modal.css";
 
 type Tab = AgentTab;
@@ -35,10 +36,13 @@ export function AgentDetailsModal() {
   const selectedInstanceId = useOfficeStore((s) => s.selectedInstanceId);
   const inspectorOpen = useOfficeStore((s) => s.inspectorOpen);
   const closeInspector = useOfficeStore((s) => s.closeInspector);
+  const setActiveTab = useOfficeStore((s) => s.setActiveTab);
+  const activeProjectId = useActiveProjectStore((s) => s.id);
   const consumePendingTab = useOfficeStore((s) => s.consumePendingTab);
   const { agents } = useOfficeAgents();
   const agent = selectedId ? agents.find((a) => a.id === selectedId) ?? null : null;
   const [tab, setTab] = useState<Tab>("conversation");
+  const changeTab = (t: Tab) => { setTab(t); setActiveTab(t); };
   const [newThreadSignal, setNewThreadSignal] = useState(0);
   const [branchSignal, setBranchSignal] = useState(0);
 
@@ -55,7 +59,7 @@ export function AgentDetailsModal() {
   useEffect(() => {
     if (inspectorOpen) {
       const pending = consumePendingTab();
-      setTab(pending ?? "conversation");
+      changeTab(pending ?? "conversation");
     }
   }, [inspectorOpen, selectedId, consumePendingTab]);
 
@@ -108,7 +112,7 @@ export function AgentDetailsModal() {
                 role="tab"
                 aria-selected={tab === t.id}
                 className={`ao-tab${tab === t.id ? " ao-active" : ""}`}
-                onClick={() => setTab(t.id)}
+                onClick={() => changeTab(t.id)}
                 type="button"
               >
                 <span>{t.label}</span>
@@ -173,7 +177,7 @@ export function AgentDetailsModal() {
                     type="button"
                     className="ao-btn-mini ao-ghost"
                     aria-label="Edit agent"
-                    onClick={() => setTab("settings")}
+                    onClick={() => changeTab("settings")}
                   >
                     <AoPen size={13} />
                   </button>
@@ -183,7 +187,7 @@ export function AgentDetailsModal() {
                 <button
                   type="button"
                   className="ao-btn-mini"
-                  onClick={() => setTab("settings")}
+                  onClick={() => changeTab("settings")}
                 >
                   <AoPen size={13} /> Edit
                 </button>
@@ -214,9 +218,10 @@ export function AgentDetailsModal() {
             {tab === "conversation" && (
               <ChatPanel
                 agent={agent}
+                projectId={activeProjectId ?? undefined}
                 instanceId={selectedInstanceId ?? undefined}
                 onClose={closeInspector}
-                onEdit={() => setTab("settings")}
+                onEdit={() => changeTab("settings")}
                 noHeader
                 newThreadSignal={newThreadSignal}
                 branchSignal={branchSignal}
@@ -231,7 +236,7 @@ export function AgentDetailsModal() {
             {tab === "settings" && (
               <SettingsTab
                 agentId={agent.id}
-                onAfterSave={() => setTab("configuration")}
+                onAfterSave={() => changeTab("configuration")}
                 onAfterDelete={closeInspector}
               />
             )}

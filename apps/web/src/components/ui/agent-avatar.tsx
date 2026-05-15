@@ -1,17 +1,13 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { type UnitSelection } from "./unit-sprite.utils";
+import { UNIT_FACTIONS, UNIT_KINDS, type UnitSelection } from "./unit-sprite.utils";
 
-/**
- * Currently every agent uses 10.png — the user identified this portrait
- * as the canonical "black faction pawn" bust. Kept as a function (rather
- * than inlining the constant) so re-enabling per-agent variants later
- * is a one-line change: drop the constant and recompute slot from
- * `unit.faction` / `unit.kind`.
- */
-function slotFor(_unit: UnitSelection): number {
-  return 10;
+function slotFor(unit: UnitSelection): number {
+  const fi = UNIT_FACTIONS.indexOf(unit.faction);
+  const ki = UNIT_KINDS.indexOf(unit.kind);
+  if (fi === -1 || ki === -1) return 1;
+  return fi * UNIT_KINDS.length + ki + 1;
 }
 
 function avatarSrc(slot: number): string {

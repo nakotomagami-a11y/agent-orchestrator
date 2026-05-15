@@ -113,6 +113,7 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
               placeholder={t("agent_form.placeholder_desc")}
             />
           </Field>
+          <SectionDivider label="Runtime" />
           <Field label={t("agent_form.label_model")}>
             <TextInput
               value={values.model}
@@ -143,6 +144,7 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
           <Field label={t("agent_form.label_room")}>
             <TextInput value={values.room} onChange={update("room")} placeholder={t("agent_form.placeholder_room")} />
           </Field>
+          <SectionDivider label="Capabilities" />
           <Field label={t("agent_form.label_skills")} span={2}>
             <TextInput value={values.skills} onChange={update("skills")} placeholder={t("agent_form.placeholder_skills")} />
           </Field>
@@ -195,6 +197,24 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
         </div>
       </div>
     </form>
+  );
+}
+
+function SectionDivider({ label }: { label: string }) {
+  return (
+    <div style={{
+      gridColumn: "span 2", display: "flex", alignItems: "center", gap: 10,
+      marginTop: 6, marginBottom: -4,
+    }}>
+      <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
+      <span style={{
+        fontSize: 9.5, fontFamily: "var(--font-mono)", textTransform: "uppercase",
+        letterSpacing: "0.1em", color: "var(--txt-4)", whiteSpace: "nowrap",
+      }}>
+        {label}
+      </span>
+      <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
+    </div>
   );
 }
 

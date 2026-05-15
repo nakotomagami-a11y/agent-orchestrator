@@ -35,7 +35,9 @@ export async function DELETE(_request: Request, { params }: Params): Promise<Nex
   }
 
   try {
-    process.kill(pid, "SIGTERM");
+    // SIGKILL: cannot be caught or ignored — the process dies immediately.
+    // Using SIGTERM here left processes alive when they ignored the signal.
+    process.kill(pid, "SIGKILL");
     return NextResponse.json({ ok: true });
   } catch (e) {
     const err = e as NodeJS.ErrnoException;

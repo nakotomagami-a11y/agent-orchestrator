@@ -84,9 +84,11 @@ function groupByProject(processes: ProcessInfo[]): Group[] {
 function ServerCard({
   process: p,
   onKill,
+  killing,
 }: {
   process: ProcessInfo;
   onKill: () => void;
+  killing: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const framework = detectFramework(p.name, p.cmd);
@@ -148,8 +150,8 @@ function ServerCard({
               <Icon name="globe" size={13} />
             </a>
           )}
-          <button title="Stop process" className="stop" onClick={onKill}>
-            <Icon name="x" size={14} />
+          <button title="Stop process" className="stop" onClick={onKill} disabled={killing}>
+            <Icon name={killing ? "refresh" : "x"} size={14} />
           </button>
         </div>
         <span className="chev-trigger">
@@ -188,8 +190,8 @@ function ServerCard({
                 <Icon name="globe" size={12} /> Open localhost:{p.port}
               </a>
             )}
-            <button className="btn btn-danger" onClick={onKill}>
-              <Icon name="x" size={12} /> Kill process
+            <button className="btn btn-danger" onClick={onKill} disabled={killing}>
+              <Icon name={killing ? "refresh" : "x"} size={12} /> {killing ? "Killing…" : "Kill process"}
             </button>
           </div>
         </div>
@@ -224,14 +226,25 @@ export function ProcessesModal() {
 
   const totalMem = processes.reduce((s, p) => s + p.memMb, 0);
   const projectCount = processes.filter((p) => !!p.projectId).length;
+  const [killing, setKilling] = useState<Set<number>>(new Set());
+  const [killError, setKillError] = useState<string | null>(null);
 
   async function handleKill(pid: number) {
+    setKilling((prev) => new Set(prev).add(pid));
+    setKillError(null);
     try {
       await apiFetch(`/api/processes/${pid}`, { method: "DELETE" });
-    } catch {
-      // process may already be gone
+      // Optimistically remove from cache so the card disappears immediately
+      queryClient.setQueryData<ProcessInfo[]>(["processes"], (old) =>
+        old ? old.filter((p) => p.pid !== pid) : old
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Kill failed";
+      setKillError(`PID ${pid}: ${msg}`);
+    } finally {
+      setKilling((prev) => { const s = new Set(prev); s.delete(pid); return s; });
+      void queryClient.invalidateQueries({ queryKey: ["processes"] });
     }
-    queryClient.invalidateQueries({ queryKey: ["processes"] });
   }
 
   return (
@@ -309,6 +322,13 @@ export function ProcessesModal() {
             </div>
           </div>
 
+          {killError && (
+            <div style={{ padding: "6px 16px", background: "var(--ao-danger-bg, #3a1a1a)", color: "var(--ao-danger, #f87171)", fontSize: 12, fontFamily: "var(--ao-font-mono)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+              <span>{killError}</span>
+              <button onClick={() => setKillError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0, lineHeight: 1 }}>✕</button>
+            </div>
+          )}
+
           {/* Body */}
           <div className="srv-body">
             {processesQ.isLoading ? (
@@ -341,6 +361,7 @@ export function ProcessesModal() {
                       key={p.pid}
                       process={p}
                       onKill={() => handleKill(p.pid)}
+                      killing={killing.has(p.pid)}
                     />
                   ))}
                 </div>
