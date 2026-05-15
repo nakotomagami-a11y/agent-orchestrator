@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgent, useAgentBody, useWriteAgent, useDeleteAgent } from "@/modules/agents/hooks/use-agents";
@@ -14,6 +15,7 @@ import {
   AoFolder, AoSearch, AoTerminal, AoGlobe, AoList, AoPen,
 } from "@/modules/summon/components/ao-icons";
 import { UnitPicker } from "@/components/ui/unit-picker";
+import { BodyHistoryPanel } from "@/modules/agents/components/body-history-panel";
 
 
 const TOOL_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
@@ -30,10 +32,12 @@ export function SettingsTab({
   agentId,
   onAfterSave,
   onAfterDelete,
+  resetRef,
 }: {
   agentId: string;
   onAfterSave: () => void;
   onAfterDelete: () => void;
+  resetRef?: React.MutableRefObject<(() => void) | null>;
 }) {
   const agentQ = useAgent(agentId);
   const bodyQ = useAgentBody(agentId);
@@ -65,6 +69,7 @@ export function SettingsTab({
       key={formKey}
       initial={initialValues}
       agentId={agentId}
+      resetRef={resetRef}
       onSave={async (values) => {
         const body = toBody(values);
         await writeMut.mutateAsync(body);
@@ -93,6 +98,7 @@ function SettingsForm({
   onDelete,
   saving,
   deleting,
+  resetRef,
 }: {
   initial: AgentFormValues;
   agentId: string;
@@ -100,6 +106,7 @@ function SettingsForm({
   onDelete: () => Promise<void>;
   saving: boolean;
   deleting: boolean;
+  resetRef?: React.MutableRefObject<(() => void) | null>;
 }) {
   const {
     v, setV,
@@ -119,6 +126,12 @@ function SettingsForm({
     handleSave,
     handleDiscard,
   } = useAgentForm(initial, onSave);
+
+  const [historyOpen, setHistoryOpen] = useState(false);
+
+  useEffect(() => {
+    if (resetRef) resetRef.current = handleDiscard;
+  }, [resetRef, handleDiscard]);
 
   const promptLines = v.body.split("\n");
 
@@ -347,7 +360,28 @@ function SettingsForm({
               <button type="button" aria-label="link" onClick={() => setV((p) => ({ ...p, body: p.body + "[](url)" }))}><AoLink size={13} /></button>
               <button type="button" aria-label="code" onClick={() => setV((p) => ({ ...p, body: p.body + "``" }))}><AoCode size={13} /></button>
             </div>
+            <button
+              type="button"
+              className={`ml-auto text-[11px] px-[8px] py-[3px] rounded-[4px] border transition-colors ${historyOpen ? "border-[var(--ao-accent)] text-[var(--ao-accent)]" : "border-[var(--ao-line)] text-[var(--ao-fg-3)] hover:text-[var(--ao-fg-2)]"}`}
+              onClick={() => setHistoryOpen((o) => !o)}
+              aria-expanded={historyOpen}
+              aria-label="Toggle prompt version history"
+            >
+              History
+            </button>
           </div>
+
+          {historyOpen && (
+            <div className="border-b border-[var(--ao-line)] bg-[var(--ao-bg-2)]">
+              <BodyHistoryPanel
+                agentId={agentId}
+                onRestore={(restored) => {
+                  setV((prev) => ({ ...prev, body: restored }));
+                  setHistoryOpen(false);
+                }}
+              />
+            </div>
+          )}
 
           {view === "write" ? (
             <div className="ao-editor">
@@ -396,7 +430,7 @@ function SettingsForm({
           >
             <AoTrash size={12} /> Delete
           </button>
-          <button type="button" className="ao-btn ao-ghost">
+          <button type="button" className="ao-btn ao-ghost" onClick={handleDiscard} disabled={!dirty}>
             <AoReset size={12} /> Revert
           </button>
           <button type="button" className="ao-btn ao-primary" onClick={handleSave} disabled={saving || !dirty}>

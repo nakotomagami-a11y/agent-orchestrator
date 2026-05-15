@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { useProject, useRemoveInstance, useUpdateProject } from "../hooks/use-projects";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
+import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { ProjectActivity } from "./project-activity";
 import { apiFetch } from "@agent-office/shared/hooks/api";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
@@ -136,6 +137,11 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   const memValue = memoryOverride ?? project.memory;
   const rosterCount = project.meta.roster.length;
   const initials = project.meta.name.slice(0, 2).toUpperCase();
+  const { agents: allAgents } = useOfficeAgents();
+  const rosterIds = new Set(project.meta.roster.map((r) => r.agentId));
+  const projectWorkingCount = allAgents.filter(
+    (a) => rosterIds.has(a.id) && (a.status === "working" || a.status === "thinking"),
+  ).length;
 
   const handleCopyPath = () => {
     void navigator.clipboard.writeText(project.meta.cwd ?? project.meta.name);
@@ -229,7 +235,9 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           <div className="titles">
             <h2>
               {project.meta.name}
-              <span className="live-badge"><span className="d" /> active</span>
+              {projectWorkingCount > 0 && (
+                <span className="live-badge"><span className="d" /> {projectWorkingCount} active</span>
+              )}
             </h2>
             {project.meta.cwd && (
               <div className="path">

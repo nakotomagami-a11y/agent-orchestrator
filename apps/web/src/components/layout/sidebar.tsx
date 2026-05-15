@@ -132,6 +132,12 @@ export function Sidebar() {
           label={t("nav.agents")}
           active={isActiveRoute(pathname, PAGE_ROUTES.agents)}
         />
+        <NavItem
+          href={PAGE_ROUTES.memory}
+          icon="memory"
+          label={t("nav.memory")}
+          active={isActiveRoute(pathname, PAGE_ROUTES.memory)}
+        />
         <LimitsNavButton spendToday={spendToday} />
         <ProcessesNavButton />
         <CommandPaletteNavButton />

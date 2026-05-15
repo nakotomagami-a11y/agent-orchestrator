@@ -32,6 +32,7 @@ export type ChatPanelProps = {
   instanceId?: string;
   onClose: () => void;
   onEdit?: () => void;
+  onNavigateTab?: (tab: "memory" | "history") => void;
   /** When true, skip rendering the ChatHead (it's provided by the parent shell). */
   noHeader?: boolean;
   /** Incrementing this triggers a new thread. */
@@ -59,7 +60,7 @@ export type ChatPanelProps = {
  * it's already finished, we fall back to the persisted run's output so
  * the user actually sees the result instead of an empty bubble.
  */
-export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHeader, newThreadSignal, branchSignal, onActiveRunChange }: ChatPanelProps) {
+export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNavigateTab, noHeader, newThreadSignal, branchSignal, onActiveRunChange }: ChatPanelProps) {
   const qc = useQueryClient();
   const summon = useSummon();
   const abort = useAbortRun();
@@ -106,6 +107,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
   // current run finishes. Replacing the value discards the previous queued
   // message, which is the correct behavior for corrections.
   const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
+  const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
   const runStartIndexRef = useRef<number | null>(null);
   const fallbackAttemptedRef = useRef<string | null>(null);
 
@@ -304,9 +306,10 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
     summon.mutate(
       { agentId: agent.id, prompt: text, projectId, instanceId, resumeSessionId: sessionId ?? undefined },
       {
-        onSuccess: ({ runId }) => {
+        onSuccess: ({ runId, warning }) => {
           setActiveRunId(runId);
           setPhaseOverride(null);
+          if (warning) setQuotaWarning(warning);
         },
         onError: (err) => {
           runStartIndexRef.current = null;
@@ -360,7 +363,9 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
   };
 
   const handleCommand = (cmd: string) => {
-    if (cmd === "/clear" || cmd === "/branch") newThread();
+    if (cmd === "/clear" || cmd === "/branch") { newThread(); return; }
+    if (cmd === "/memory") { onNavigateTab?.("memory"); return; }
+    if (cmd === "/history") { onNavigateTab?.("history"); return; }
   };
 
   // External new-thread / branch signals from the parent shell header buttons
@@ -560,6 +565,14 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
           primary={{ label: "Reconnect", onClick: stream.reconnect }}
         />
       ) : null}
+      {quotaWarning && (
+        <StreamBanner
+          kind="warn"
+          title="Budget notice"
+          detail={quotaWarning}
+          primary={{ label: "Dismiss", onClick: () => setQuotaWarning(null) }}
+        />
+      )}
 
       <ChatThread
         items={thread}

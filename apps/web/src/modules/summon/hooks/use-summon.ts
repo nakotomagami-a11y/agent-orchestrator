@@ -8,6 +8,7 @@ import type { SummonRequest } from "@agent-office/shared/types";
 
 export interface SummonResponse {
   runId: string;
+  warning?: string;
 }
 
 export function useSummon() {

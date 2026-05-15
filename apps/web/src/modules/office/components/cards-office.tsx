@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
@@ -111,9 +112,9 @@ export function CardsOffice({
               {" — open one to follow along, or jump to the activity feed."}
             </div>
             <div className="actions">
-              <button type="button" className="btn-mini">
+              <Link href={PAGE_ROUTES.activity} className="btn-mini">
                 <Icon name="activity" size={12} /> Activity
-              </button>
+              </Link>
             </div>
           </div>
         )}
@@ -311,6 +312,7 @@ function OfficeCard({
   onSelect: (id: string) => void;
   onPin: (id: string) => void;
 }) {
+  const router = useRouter();
   const isLive = agent.status === "working" || agent.status === "thinking";
   const isError = agent.status === "error";
 
@@ -415,7 +417,7 @@ function OfficeCard({
         <button
           type="button"
           title="Settings"
-          onClick={e => e.stopPropagation()}
+          onClick={e => { e.stopPropagation(); router.push(PAGE_ROUTES.agentEdit(agent.id)); }}
         >
           <Icon name="edit" size={13} />
         </button>

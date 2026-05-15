@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MutableRefObject } from "react";
 import { Portal } from "@/components/ui/portal";
 import { useOfficeAgents } from "../../hooks/use-office-agents";
 import { useOfficeStore, type AgentTab } from "../../hooks/use-office-store";
@@ -76,6 +76,9 @@ export function AgentDetailsModal() {
       changeTab(pending ?? "conversation");
     }
   }, [inspectorOpen, selectedId, consumePendingTab]);
+
+  const memoryDiscardRef = useRef<(() => void) | null>(null);
+  const settingsResetRef = useRef<(() => void) | null>(null);
 
   // Close on Escape
   const ref = useRef<HTMLDivElement>(null);
@@ -236,7 +239,7 @@ export function AgentDetailsModal() {
                 <button
                   type="button"
                   className="ao-btn-mini"
-                  onClick={() => {/* discard handled by MemoryTab */ }}
+                  onClick={() => memoryDiscardRef.current?.()}
                 >
                   <AoReset size={13} /> Discard
                 </button>
@@ -245,7 +248,7 @@ export function AgentDetailsModal() {
                 <button
                   type="button"
                   className="ao-btn-mini"
-                  onClick={() => {/* reset handled by SettingsTab */ }}
+                  onClick={() => settingsResetRef.current?.()}
                 >
                   <AoReset size={13} /> Reset
                 </button>
@@ -262,6 +265,7 @@ export function AgentDetailsModal() {
                 instanceId={selectedInstanceId ?? undefined}
                 onClose={closeInspector}
                 onEdit={() => changeTab("settings")}
+                onNavigateTab={(tab) => changeTab(tab)}
                 noHeader
                 newThreadSignal={newThreadSignal}
                 branchSignal={branchSignal}
@@ -272,12 +276,13 @@ export function AgentDetailsModal() {
             {tab === "history" && (
               <HistoryTab agentId={agent.id} />
             )}
-            {tab === "memory" && <MemoryTab agentId={agent.id} />}
+            {tab === "memory" && <MemoryTab agentId={agent.id} discardRef={memoryDiscardRef} />}
             {tab === "settings" && (
               <SettingsTab
                 agentId={agent.id}
                 onAfterSave={() => changeTab("configuration")}
                 onAfterDelete={closeInspector}
+                resetRef={settingsResetRef}
               />
             )}
           </div>

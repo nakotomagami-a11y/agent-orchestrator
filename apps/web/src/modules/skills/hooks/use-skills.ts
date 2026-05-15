@@ -23,13 +23,6 @@ export function useInstalledSkills() {
   });
 }
 
-export function useSkillUpdates() {
-  return useQuery({
-    queryKey: queryKeys.skills.updates(),
-    queryFn: () => apiFetch<SkillUpdate[]>(API_ROUTES.skillsUpdates),
-    refetchInterval: POLL.SKILLS_UPDATES,
-  });
-}
 
 export interface InstallSkillInput {
   source: string;

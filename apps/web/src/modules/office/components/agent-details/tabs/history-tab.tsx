@@ -143,9 +143,6 @@ export function HistoryTab({ agentId }: { agentId: string }) {
         <button type="button" className={`ao-filter-btn${filter === "bad" ? " ao-active" : ""}`} onClick={() => setFilter("bad")}>
           <span className="ao-badge ao-bad ao-dot text-[9px] px-[6px] py-px">failed</span>
         </button>
-        <button type="button" className="ao-filter-btn">
-          <AoFilter size={13} /> More
-        </button>
         <div className="flex-1" />
         {confirmWipe ? (
           <div className="flex items-center gap-[6px]">

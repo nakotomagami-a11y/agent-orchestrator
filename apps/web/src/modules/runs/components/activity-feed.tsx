@@ -120,7 +120,6 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
         <div
           key={r.id}
           className="act-live-run"
-          style={{ "--progress": "60%" } as React.CSSProperties}
         >
           <div className="agent-av">{agentInitial(r.agentName)}</div>
           <div className="info">

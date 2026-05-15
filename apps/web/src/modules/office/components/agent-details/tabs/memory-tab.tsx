@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgentMemory, useWriteAgentMemory } from "@/modules/agents/hooks/use-agents";
 import {
@@ -43,7 +44,7 @@ function serializeMemory(groups: Group[]): string {
   }).join("\n\n");
 }
 
-export function MemoryTab({ agentId }: { agentId: string }) {
+export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef?: React.MutableRefObject<(() => void) | null> }) {
   const memQ = useAgentMemory(agentId);
   const writeMem = useWriteAgentMemory();
   const [groups, setGroups] = useState<Group[]>([]);
@@ -116,6 +117,10 @@ export function MemoryTab({ agentId }: { agentId: string }) {
       setDirty(false);
     }
   };
+
+  useEffect(() => {
+    if (discardRef) discardRef.current = handleDiscard;
+  });
 
   const matches = (g: Group, f: Fact) => {
     if (!q) return true;

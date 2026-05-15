@@ -15,11 +15,10 @@ export const PAGE_ROUTES = {
   projects: "/projects",
   project: (id: string) => `/projects/${encodeURIComponent(id)}`,
   skills: "/skills",
-  runs: "/runs",
+  memory: "/memory",
   run: (id: string) => `/runs/${encodeURIComponent(id)}`,
   settings: "/settings",
   activity: "/activity",
-  templates: "/templates",
 } as const;
 
 export const API_ROUTES = {
