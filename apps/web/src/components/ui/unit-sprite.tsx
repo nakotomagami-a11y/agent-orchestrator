@@ -63,15 +63,8 @@ export function UnitSprite({
     }
     return (
       <div
-        className={cn("unit-sprite", className)}
-        style={{
-          width: size,
-          height: size,
-          flexShrink: 0,
-          background: "var(--bg-2)",
-          border: "1px dashed var(--line)",
-          borderRadius: 4,
-        }}
+        className={cn("unit-sprite shrink-0 bg-bg-2 border border-dashed border-line rounded-[4px]", className)}
+        style={{ width: size, height: size }}
         aria-hidden
         title={`Unknown unit: ${JSON.stringify(unit ?? null)}`}
       />
@@ -125,28 +118,20 @@ export function UnitSprite({
 
   return (
     <div
-      className={cn("unit-sprite", className)}
+      className={cn("unit-sprite overflow-hidden relative shrink-0", className)}
       style={{
         width: size,
         height: size,
-        overflow: "hidden",
-        position: "relative",
-        flexShrink: 0,
-        // Mirroring is applied to the wrapper so the background-position
-        // math below stays in the source sheet's coordinate space.
         transform: flip ? "scaleX(-1)" : undefined,
       }}
       {...ariaProps}
     >
       <div
+        className="absolute inset-0 bg-no-repeat [image-rendering:pixelated]"
         style={{
-          position: "absolute",
-          inset: 0,
           backgroundImage: `url(${src})`,
-          backgroundRepeat: "no-repeat",
           backgroundSize: `${sheetW}px ${sheetH}px`,
           backgroundPosition: `${offX}px ${offY}px`,
-          imageRendering: "pixelated",
         }}
       />
     </div>

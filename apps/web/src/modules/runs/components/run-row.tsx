@@ -24,76 +24,40 @@ export function RunRow({ run }: RunRowProps) {
 
   return (
     <div
-      className="run-row"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        borderBottom: "1px solid var(--line)",
-      }}
+      className="run-row flex items-center border-b border-line"
     >
       {/* The link carries the primary run content */}
       <Link
         href={PAGE_ROUTES.run(run.id)}
-        style={{
-          flex: 1,
-          display: "grid",
-          gridTemplateColumns: "auto 1fr auto auto",
-          gap: 12,
-          padding: "10px 14px",
-          textDecoration: "none",
-          color: "var(--txt)",
-          alignItems: "center",
-          minWidth: 0,
-        }}
+        className="flex-1 grid gap-3 px-[14px] py-[10px] no-underline text-txt items-center min-w-0"
+        style={{ gridTemplateColumns: "auto 1fr auto auto" }}
       >
         <StatusDot status={status} hideLabel />
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 500 }}>{run.agentName}</div>
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium">{run.agentName}</div>
           <div
-            style={{
-              fontSize: 11.5,
-              color: "var(--txt-3)",
-              fontFamily: "var(--font-mono)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
+            className="text-[11.5px] text-txt-3 font-[var(--font-mono)] overflow-hidden text-ellipsis whitespace-nowrap"
             title={run.prompt}
           >
             {run.prompt}
           </div>
         </div>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--txt-3)",
-          }}
-        >
+        <span className="font-[var(--font-mono)] text-[11px] text-txt-3">
           {formatDuration(run.durMs)} · {formatCost(run.cost)}
         </span>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--txt-3)",
-            minWidth: 56,
-            textAlign: "right",
-          }}
-        >
+        <span className="font-[var(--font-mono)] text-[11px] text-txt-3 min-w-[56px] text-right">
           {formatRelative(run.ts)}
         </span>
       </Link>
 
       {/* Fork button — outside the link so click doesn't navigate */}
-      <div style={{ padding: "0 12px 0 0", flexShrink: 0 }}>
+      <div className="pr-3 shrink-0">
         <button
           type="button"
-          className="btn sm ghost run-row-fork"
+          className="btn sm ghost run-row-fork opacity-0 transition-opacity duration-[120ms]"
           title="Fork run"
           aria-label={`Fork run ${run.id}`}
           onClick={() => openCompare(run.id)}
-          style={{ opacity: 0, transition: "opacity 120ms" }}
         >
           <Icon name="branch" />
         </button>

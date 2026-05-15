@@ -28,23 +28,18 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: `repeat(${UNIT_KINDS.length}, 1fr)`,
-        gap: 4,
-      }}>
+    <div className="flex flex-col gap-[6px]">
+      <div
+        className="grid gap-1"
+        style={{ gridTemplateColumns: `repeat(${UNIT_KINDS.length}, 1fr)` }}
+      >
         {/* Column headers (kind labels) */}
-        <div style={{ gridColumn: `span ${UNIT_KINDS.length}`, display: "grid", gridTemplateColumns: `repeat(${UNIT_KINDS.length}, 1fr)`, gap: 4, paddingLeft: 0 }}>
+        <div
+          className="grid gap-1 pl-0"
+          style={{ gridColumn: `span ${UNIT_KINDS.length}`, gridTemplateColumns: `repeat(${UNIT_KINDS.length}, 1fr)` }}
+        >
           {UNIT_KINDS.map((kind) => (
-            <div key={kind} style={{
-              fontSize: 9,
-              fontFamily: "var(--font-mono)",
-              textTransform: "uppercase",
-              color: "var(--txt-4)",
-              textAlign: "center",
-              letterSpacing: "0.05em",
-            }}>
+            <div key={kind} className="text-[9px] font-[var(--font-mono)] uppercase text-[var(--txt-4)] text-center tracking-[0.05em]">
               {UNIT_DEFS[kind].label}
             </div>
           ))}
@@ -61,16 +56,10 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
                 title={`${FACTION_LABELS[faction]} ${UNIT_DEFS[kind].label}`}
                 onClick={() => toggle(sel)}
                 style={{
-                  padding: 3,
                   border: isActive ? "2px solid var(--accent)" : "2px solid transparent",
-                  borderRadius: 6,
                   background: isActive ? "var(--bg-2)" : "transparent",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  transition: "border-color 100ms, background 100ms",
                 }}
+                className="p-[3px] rounded-[6px] cursor-pointer flex items-center justify-center transition-[border-color,background] duration-100"
               >
                 <AgentAvatar unit={sel} size={26} />
               </button>
@@ -80,7 +69,7 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
       </div>
 
       {/* Row labels on the left would need a more complex grid; instead show selected state as text */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>
+      <div className="flex items-center gap-[6px] text-[11px] text-[var(--txt-3)] font-[var(--font-mono)]">
         {current ? (
           <>
             <AgentAvatar unit={current} size={16} />
@@ -88,13 +77,13 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
             <button
               type="button"
               onClick={() => onChange("")}
-              style={{ fontSize: 10, color: "var(--txt-4)", background: "none", border: "none", cursor: "pointer", padding: "0 2px" }}
+              className="text-[10px] text-[var(--txt-4)] bg-none border-none cursor-pointer px-[2px]"
             >
               × auto
             </button>
           </>
         ) : (
-          <span style={{ color: "var(--txt-4)" }}>auto (derived from name)</span>
+          <span className="text-[var(--txt-4)]">auto (derived from name)</span>
         )}
       </div>
     </div>

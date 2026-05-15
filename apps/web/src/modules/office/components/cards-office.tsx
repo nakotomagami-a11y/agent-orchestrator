@@ -165,8 +165,8 @@ export function CardsOffice({
               <button type="button" className="of-card add-card" onClick={() => setAddOpen(true)}>
                 <div>
                   <div className="ico"><Icon name="plus" size={18} /></div>
-                  <div style={{ fontWeight: 600, color: "var(--txt)", fontSize: 14 }}>Add an agent</div>
-                  <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)", marginTop: 4 }}>
+                  <div className="font-semibold text-txt text-[14px]">Add an agent</div>
+                  <div className="font-mono text-[11px] text-txt-3 mt-1">
                     summon from your roster
                   </div>
                 </div>
@@ -276,21 +276,21 @@ function CardsOfficeGhostBody() {
   return (
     <div className="of-grid">
       {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="of-card" style={{ opacity: 0.5 }}>
+        <div key={i} className="of-card opacity-50">
           <div className="head-row">
-            <div className="av" style={{ background: "var(--bg-3)" }} />
+            <div className="av bg-bg-3" />
             <div className="name-blk">
-              <div style={{ height: 14, width: "60%", background: "var(--bg-3)", borderRadius: 4, marginBottom: 6 }} />
-              <div style={{ height: 10, width: "40%", background: "var(--bg-3)", borderRadius: 4 }} />
+              <div className="h-[14px] w-[60%] bg-bg-3 rounded mb-[6px]" />
+              <div className="h-[10px] w-[40%] bg-bg-3 rounded" />
             </div>
           </div>
           <div className="state-box">
-            <div style={{ height: 10, width: "30%", background: "var(--bg-3)", borderRadius: 4, marginBottom: 6 }} />
-            <div style={{ height: 12, width: "80%", background: "var(--bg-3)", borderRadius: 4 }} />
+            <div className="h-[10px] w-[30%] bg-bg-3 rounded mb-[6px]" />
+            <div className="h-3 w-[80%] bg-bg-3 rounded" />
           </div>
           <div className="foot-row">
-            <div style={{ height: 22, width: 70, background: "var(--bg-3)", borderRadius: 6 }} />
-            <div style={{ height: 22, width: 50, background: "var(--bg-3)", borderRadius: 6 }} />
+            <div className="h-[22px] w-[70px] bg-bg-3 rounded-md" />
+            <div className="h-[22px] w-[50px] bg-bg-3 rounded-md" />
           </div>
         </div>
       ))}
@@ -362,7 +362,7 @@ function OfficeCard({
         </div>
         <div className="name-blk">
           <div className="name">
-            {pinned && <Icon name="pin" size={11} style={{ color: "var(--acc)", flexShrink: 0 }} />}
+            {pinned && <Icon name="pin" size={11} className="text-acc shrink-0" />}
             {agent.name}
           </div>
           <div className="slug">{agent.id}</div>

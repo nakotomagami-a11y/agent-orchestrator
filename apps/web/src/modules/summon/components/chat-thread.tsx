@@ -239,20 +239,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
       {items.length === 0 && phase === "idle" ? (
         <div className="thread-empty">
           <div
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: 16,
-              background: "var(--ao-bg-3)",
-              border: "1px solid var(--ao-line-1)",
-              display: "grid",
-              placeItems: "center",
-              fontSize: 36,
-              fontWeight: 700,
-              color: "var(--ao-fg-1)",
-              boxShadow: "0 8px 30px -12px rgba(0,0,0,0.5)",
-              flexShrink: 0,
-            }}
+            className="w-[72px] h-[72px] rounded-[16px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] grid place-items-center text-[36px] font-bold text-[var(--ao-fg-1)] shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] shrink-0"
             aria-hidden
           >
             {agent.short[0]?.toUpperCase() ?? "?"}
@@ -278,22 +265,14 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
       ) : (
         <>
           {hiddenConversationalCount > 0 ? (
-            <div
-              style={{
-                maxWidth: 760,
-                margin: "0 auto 12px",
-                padding: "0 8px",
-                display: "flex",
-                justifyContent: "center",
-              }}
-            >
+            <div className="max-w-[760px] mx-auto mb-3 px-2 flex justify-center">
               <button
                 type="button"
                 className="btn sm ghost"
                 onClick={loadEarlier}
                 aria-label={t("load_earlier_aria", { count: hiddenConversationalCount })}
               >
-                <span style={{ display: "inline-flex", transform: "rotate(180deg)" }} aria-hidden>
+                <span className="inline-flex rotate-180" aria-hidden>
                   <Icon name="chevron-down" size={12} />
                 </span>
                 {t("load_earlier", { count: hiddenConversationalCount })}
@@ -330,7 +309,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
           {queuedMessage ? (
             <div className="ao-msg ao-user ao-msg-queued">
               <div className="ao-av ao-you" aria-hidden>P</div>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+              <div className="flex flex-col items-end gap-[6px]">
                 <div className="ao-bubble ao-bubble-queued">{queuedMessage}</div>
                 <div className="ao-queued-row">
                   <span className="ao-queued-pill">queued</span>
@@ -346,16 +325,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
               </div>
             </div>
           ) : null}
-          <div
-            style={{
-              maxWidth: 760,
-              margin: "0 auto",
-              padding: "0 8px 16px",
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-            }}
-          >
+          <div className="max-w-[760px] mx-auto px-2 pb-4 flex items-center gap-3">
             <LiveStatus phase={phase} hint={phaseHint} />
             {phaseStats && phase !== "idle" && phase !== "done" && phase !== "aborted" && (
               <span className="ao-phase-stats">{phaseStats}</span>
@@ -364,7 +334,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
           {/* Sentinel for the stick-to-bottom scroll anchor. Lives at the
               very end of the scroll container so scrollIntoView({block:"end"})
               lands precisely where we want, regardless of LiveStatus height. */}
-          <div ref={bottomAnchorRef} aria-hidden style={{ height: 1 }} />
+          <div ref={bottomAnchorRef} aria-hidden className="h-px" />
           {!followTail ? (
             <div className="chat-jump-latest-wrap" aria-live="polite">
               <button

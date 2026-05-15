@@ -167,7 +167,7 @@ export function OfficeBuildToolbar({
             <button
               type="button"
               onClick={() => setQ("")}
-              style={{ display: "flex", alignItems: "center", background: "none", border: "none", cursor: "pointer", color: "var(--txt-3)", padding: 0 }}
+              className="flex items-center bg-transparent border-0 cursor-pointer text-txt-3 !p-0"
             >
               <Icon name="x" size={11} />
             </button>
@@ -203,7 +203,7 @@ export function OfficeBuildToolbar({
           searchGroups && searchGroups.length > 0 ? (
             searchGroups.map(([cat, kinds]) => (
               <div key={cat} style={{ display: "contents" }}>
-                <div className="bp-section-head" style={{ textTransform: "capitalize" }}>
+                <div className="bp-section-head capitalize">
                   {cat}<span className="line" />
                 </div>
                 {kinds.map((kind) => (
@@ -238,7 +238,7 @@ export function OfficeBuildToolbar({
             {selectedDef ? (
               <DecoSprite def={selectedDef} size={28} />
             ) : (
-              <span style={{ color: "var(--txt-4)", fontSize: 18 }}>·</span>
+              <span className="text-txt-4 text-[18px]">·</span>
             )}
           </div>
           <div className="bp-foot-info">

@@ -79,7 +79,7 @@ function Spark({
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ overflow: "visible" }}
+      className="overflow-visible"
       aria-hidden
     >
       <defs>
@@ -112,7 +112,7 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
         Live now
         <span className="count-pill">{runs.length}</span>
         <span className="line" />
-        <span style={{ textTransform: "none", letterSpacing: 0 }}>
+        <span className="normal-case tracking-normal">
           updating live
         </span>
       </div>
@@ -430,7 +430,7 @@ function FilterBar({
         onClick={() => toggleStatus("done")}
         type="button"
       >
-        <span className="dot" style={{ color: "#22c55e" }} />
+        <span className="dot text-[#22c55e]" />
         done
       </button>
       <button
@@ -438,7 +438,7 @@ function FilterBar({
         onClick={() => toggleStatus("error")}
         type="button"
       >
-        <span className="dot" style={{ color: "#ef4444" }} />
+        <span className="dot text-[#ef4444]" />
         error
       </button>
       <button
@@ -446,7 +446,7 @@ function FilterBar({
         onClick={() => toggleStatus("running")}
         type="button"
       >
-        <span className="dot" style={{ color: "#E95420" }} />
+        <span className="dot text-[#E95420]" />
         live
       </button>
     </div>
@@ -713,39 +713,16 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
         <FilterBar filters={filters} setFilters={setFilters} />
 
         {isLoading ? (
-          <div
-            style={{
-              padding: 32,
-              textAlign: "center",
-              color: "var(--txt-3)",
-              fontFamily: "var(--font-mono)",
-              fontSize: 13,
-            }}
-          >
+          <div className="p-8 text-center text-txt-3 font-mono text-[13px]">
             loading runs…
           </div>
         ) : groups.length === 0 ? (
-          <div
-            style={{
-              padding: "32px",
-              textAlign: "center",
-              color: "var(--txt-3)",
-              background: "var(--bg-1)",
-              border: "1px solid var(--line)",
-              borderRadius: 12,
-            }}
-          >
+          <div className="p-8 text-center text-txt-3 bg-bg-1 border border-line rounded-xl">
             <Icon name="search" size={24} />
-            <div style={{ marginTop: 10, fontSize: 14, color: "var(--txt-2)" }}>
+            <div className="mt-2.5 text-[14px] text-txt-2">
               Nothing matches your filter.
             </div>
-            <div
-              style={{
-                marginTop: 4,
-                fontSize: 12,
-                fontFamily: "var(--font-mono)",
-              }}
-            >
+            <div className="mt-1 text-[12px] font-mono">
               Try widening the agent or status filter.
             </div>
           </div>

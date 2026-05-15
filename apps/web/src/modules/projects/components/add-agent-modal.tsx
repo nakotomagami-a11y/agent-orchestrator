@@ -125,41 +125,36 @@ function ProjectPickerStep({ onPick, onClose }: { onPick: (id: string) => void; 
           <Icon name="x" size={16} />
         </button>
       </div>
-      <div className="aa-body" style={{ padding: "16px 22px" }}>
+      <div className="aa-body px-[22px] py-4">
         {projectsQ.isLoading ? (
           <Skeleton width="100%" height={120} />
         ) : projects.length === 0 ? (
-          <div style={{ padding: 24, textAlign: "center", color: "var(--txt-3)", fontSize: 13 }}>
-            <p style={{ marginBottom: 12 }}>No projects configured yet.</p>
+          <div className="p-6 text-center text-txt-3 text-[13px]">
+            <p className="mb-3">No projects configured yet.</p>
             <Link href={PAGE_ROUTES.settings} className="btn primary" onClick={onClose}>
               Configure root directory
             </Link>
           </div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-2">
             {projects.map((p) => (
               <button
                 key={p.id}
                 type="button"
                 onClick={() => onPick(p.id)}
-                style={{
-                  display: "grid", gridTemplateColumns: "auto 1fr auto",
-                  gap: 12, alignItems: "center", padding: "10px 14px",
-                  background: "var(--bg-2)", border: "1px solid var(--line)",
-                  borderRadius: 10, cursor: "pointer", textAlign: "left",
-                  fontFamily: "inherit", color: "var(--txt)",
-                }}
+                className="grid gap-3 items-center p-[10px_14px] bg-bg-2 border border-line rounded-[10px] cursor-pointer text-left text-txt font-[inherit]"
+                style={{ gridTemplateColumns: "auto 1fr auto" }}
               >
                 <Icon name="folder" size={16} />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{p.name}</div>
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold">{p.name}</div>
                   {p.cwd && (
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div className="font-mono text-[11px] text-txt-3 overflow-hidden text-ellipsis whitespace-nowrap">
                       {p.cwd}
                     </div>
                   )}
                 </div>
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>
+                <span className="font-mono text-[11px] text-txt-3">
                   {p.instanceCount} agent{p.instanceCount !== 1 ? "s" : ""}
                 </span>
               </button>
@@ -268,9 +263,9 @@ function AgentPickerStep({
           <div className="title">Add agent to office</div>
           <div className="sub">
             Adding to <span className="b">{projectLabel}</span>
-            <span style={{ color: "var(--txt-4)" }}>·</span>
+            <span className="text-txt-4">·</span>
             <button type="button" className="switch-proj" onClick={onChangeProject}>Change project</button>
-            <span style={{ color: "var(--txt-4)" }}>·</span>
+            <span className="text-txt-4">·</span>
             <span>click to stage, summon to commit</span>
           </div>
         </div>
@@ -312,7 +307,9 @@ function AgentPickerStep({
 
       <div className="aa-body">
         {error && (
-          <div style={{ marginBottom: 10, color: "var(--error)", fontSize: 12, fontFamily: "var(--font-mono)", padding: "8px 12px", background: "color-mix(in oklch, var(--error) 12%, transparent)", borderRadius: 6 }}>
+          <div
+            className="mb-[10px] text-status-error text-xs font-mono px-3 py-2 rounded-md bg-[color-mix(in_oklch,var(--error)_12%,transparent)]"
+          >
             {error}
           </div>
         )}
@@ -321,7 +318,7 @@ function AgentPickerStep({
         ) : filtered.length === 0 ? (
           <div className="aa-empty">
             <div className="glyph"><Icon name="search" size={20} /></div>
-            <div style={{ fontSize: 14, color: "var(--txt-2)" }}>
+            <div className="text-sm text-txt-2">
               {q ? `No agents match "${q}"` : "No agents in this category"}
             </div>
           </div>
@@ -405,7 +402,7 @@ function AgentPickerStep({
               <div className="text">
                 <span className="b">{totalStaged}</span> agent{totalStaged !== 1 ? "s" : ""} to summon
                 {totalStaged !== stagedEntries.length && (
-                  <span style={{ color: "var(--txt-4)" }}> · {stagedEntries.length} distinct</span>
+                  <span className="text-txt-4"> · {stagedEntries.length} distinct</span>
                 )}
               </div>
             </>

@@ -20,7 +20,7 @@ export function RunDetail({ runId }: RunDetailProps) {
     return (
       <div className="tab-pane">
         <Skeleton width={220} height={20} />
-        <div style={{ height: 16 }} />
+        <div className="h-4" />
         <Skeleton width="100%" height={300} />
       </div>
     );
@@ -28,7 +28,7 @@ export function RunDetail({ runId }: RunDetailProps) {
   if (!run) {
     return (
       <div className="tab-pane">
-        <p style={{ color: "var(--txt-3)" }}>{t("errors.not_found")}</p>
+        <p className="text-txt-3">{t("errors.not_found")}</p>
       </div>
     );
   }
@@ -40,28 +40,28 @@ export function RunDetail({ runId }: RunDetailProps) {
     .exhaustive();
 
   return (
-    <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="tab-pane flex flex-col gap-[14px]">
       <Card>
         <CardHeader
           title={run.agentName}
           sub={`${formatRelative(run.ts)} · ${formatDuration(run.durMs)} · ${formatCost(run.cost)}`}
           right={<StatusDot status={status} />}
         />
-        <div style={{ padding: "12px 16px", display: "grid", gridTemplateColumns: "120px 1fr", rowGap: 8, columnGap: 12, fontSize: 12 }}>
-          <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_model")}</span>
-          <span style={{ fontFamily: "var(--font-mono)" }}>{run.model} · {run.effort}</span>
-          <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_tokens")}</span>
-          <span style={{ fontFamily: "var(--font-mono)" }}>{run.tokensIn}↓ / {run.tokensOut}↑</span>
+        <div className="px-4 py-3 grid text-xs gap-y-2 gap-x-3" style={{ gridTemplateColumns: "120px 1fr" }}>
+          <span className="text-txt-3 font-mono">{t("run_detail.field_model")}</span>
+          <span className="font-mono">{run.model} · {run.effort}</span>
+          <span className="text-txt-3 font-mono">{t("run_detail.field_tokens")}</span>
+          <span className="font-mono">{run.tokensIn}↓ / {run.tokensOut}↑</span>
           {run.cwd ? (
             <>
-              <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_cwd")}</span>
-              <span style={{ fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis" }}>{run.cwd}</span>
+              <span className="text-txt-3 font-mono">{t("run_detail.field_cwd")}</span>
+              <span className="font-mono overflow-hidden text-ellipsis">{run.cwd}</span>
             </>
           ) : null}
           {run.projectId ? (
             <>
-              <span style={{ color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{t("run_detail.field_project")}</span>
-              <span style={{ fontFamily: "var(--font-mono)" }}>{run.projectId} · {run.instanceLabel ?? run.instanceId}</span>
+              <span className="text-txt-3 font-mono">{t("run_detail.field_project")}</span>
+              <span className="font-mono">{run.projectId} · {run.instanceLabel ?? run.instanceId}</span>
             </>
           ) : null}
         </div>
@@ -69,18 +69,18 @@ export function RunDetail({ runId }: RunDetailProps) {
 
       <Card>
         <CardHeader title={t("run_detail.prompt_card_title")} />
-        <div style={{ padding: 16 }}>
+        <div className="p-4">
           <CodeBlock body={run.prompt} lang="prompt" />
         </div>
       </Card>
 
       <Card>
         <CardHeader title={t("run_detail.output_card_title")} />
-        <div style={{ padding: 16 }}>
+        <div className="p-4">
           {run.output ? (
             <CodeBlock body={run.output} lang={run.status === "error" ? "error" : "stdout"} />
           ) : (
-            <p style={{ color: "var(--txt-3)", fontSize: 13 }}>{t("run_detail.output_empty")}</p>
+            <p className="text-txt-3 text-[13px]">{t("run_detail.output_empty")}</p>
           )}
         </div>
       </Card>

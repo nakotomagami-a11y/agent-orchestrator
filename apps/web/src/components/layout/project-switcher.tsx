@@ -154,7 +154,7 @@ export function ProjectSwitcher() {
   };
 
   return (
-    <div style={{ position: "relative", display: "inline-block" }}>
+    <div className="relative inline-block">
       <button
         ref={triggerRef}
         type="button"
@@ -172,14 +172,7 @@ export function ProjectSwitcher() {
         ) : (
           <Icon name="folder" size={13} />
         )}
-        <span
-          style={{
-            maxWidth: 160,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
+        <span className="max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap">
           {triggerLabel}
         </span>
         <Icon name="chevron-down" size={11} />
@@ -193,7 +186,7 @@ export function ProjectSwitcher() {
           onKeyDown={onKey}
           className="ps-menu"
         >
-          <div style={{ padding: 4 }}>
+          <div className="p-1">
             <ProjectRow
               href={PAGE_ROUTES.projects}
               primary={t("project_switcher.all_projects")}
@@ -214,14 +207,7 @@ export function ProjectSwitcher() {
             </SectionLabel>
 
             {!isLoading && projects.length === 0 ? (
-              <div
-                style={{
-                  padding: "8px 10px 10px",
-                  fontSize: 12,
-                  color: "var(--txt-3)",
-                  fontStyle: "italic",
-                }}
-              >
+              <div className="px-[10px] pt-2 pb-[10px] text-xs text-txt-3 italic">
                 {t("project_switcher.no_projects")}
               </div>
             ) : (
@@ -266,7 +252,7 @@ export function ProjectSwitcher() {
           </div>
 
           {creating ? (
-            <div style={{ padding: "0 10px 10px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <div className="px-[10px] pb-[10px] flex flex-col gap-1.5">
               <input
                 ref={nameInputRef}
                 type="text"
@@ -277,34 +263,16 @@ export function ProjectSwitcher() {
                   if (e.key === "Enter") { e.preventDefault(); submitCreate(); }
                   if (e.key === "Escape") { e.preventDefault(); cancelCreate(); }
                 }}
-                style={{
-                  width: "100%",
-                  padding: "5px 8px",
-                  fontSize: 13,
-                  background: "var(--bg-2)",
-                  border: "1px solid var(--line)",
-                  borderRadius: 4,
-                  color: "var(--txt)",
-                  fontFamily: "inherit",
-                  outline: "none",
-                  boxSizing: "border-box",
-                }}
+                className="w-full px-2 py-[5px] text-[13px] bg-bg-2 border border-line rounded text-txt outline-none box-border font-[inherit]"
               />
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="flex gap-1.5">
                 <button
                   type="button"
                   disabled={createProject.isPending}
                   onClick={submitCreate}
+                  className="flex-1 px-2 py-1 text-xs bg-acc border-0 rounded cursor-pointer text-[var(--acc-fg,#fff)] font-[inherit]"
                   style={{
-                    flex: 1,
-                    padding: "4px 8px",
-                    fontSize: 12,
-                    background: "var(--acc)",
-                    color: "var(--acc-fg, #fff)",
-                    border: 0,
-                    borderRadius: 4,
                     cursor: createProject.isPending ? "default" : "pointer",
-                    fontFamily: "inherit",
                     opacity: createProject.isPending ? 0.6 : 1,
                   }}
                 >
@@ -315,22 +283,13 @@ export function ProjectSwitcher() {
                 <button
                   type="button"
                   onClick={cancelCreate}
-                  style={{
-                    padding: "4px 8px",
-                    fontSize: 12,
-                    background: "transparent",
-                    color: "var(--txt-2)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
+                  className="px-2 py-1 text-xs bg-transparent text-txt-2 border border-line rounded cursor-pointer font-[inherit]"
                 >
                   {t("project_switcher.new_project_cancel")}
                 </button>
               </div>
               {createProject.isError ? (
-                <div style={{ fontSize: 11, color: "var(--error)" }}>
+                <div className="text-[11px] text-status-error">
                   {createProject.error instanceof Error
                     ? createProject.error.message
                     : String(createProject.error)}
@@ -412,23 +371,29 @@ function ProjectRow({
           {primary.slice(0, 1).toUpperCase()}
         </span>
       ) : (
-        <span className="ps-item-av" style={{ background: "var(--bg-3)" }}>
-          <Icon name="folder" size={13} style={{ color: "var(--txt-3)" }} />
+        <span className="ps-item-av bg-bg-3">
+          <Icon name="folder" size={13} className="text-txt-3" />
         </span>
       )}
-      <span style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: projectId ? 600 : 500, fontStyle: italic ? "italic" : undefined, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: 6 }}>
+      <span className="min-w-0 flex-1">
+        <div className={`text-[13px] font-${projectId ? "semibold" : "medium"}${italic ? " italic" : ""} overflow-hidden text-ellipsis whitespace-nowrap flex items-center gap-1.5`}>
           {primary}
-          {selected && <Icon name="check" size={11} style={{ color: "var(--acc)", flexShrink: 0 }} />}
+          {selected && <Icon name="check" size={11} className="text-acc shrink-0" />}
         </div>
         {secondary && (
-          <div style={{ fontFamily: "var(--font-mono)", fontSize: 10.5, color: "var(--txt-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <div className="font-mono text-[10.5px] text-txt-3 overflow-hidden text-ellipsis whitespace-nowrap">
             {secondary}
           </div>
         )}
       </span>
       {healthDot && (
-        <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: healthDot === "working" ? "var(--working)" : "var(--error)", boxShadow: healthDot === "working" ? "0 0 5px var(--working)" : "none" }} />
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{
+            background: healthDot === "working" ? "var(--working)" : "var(--error)",
+            boxShadow: healthDot === "working" ? "0 0 5px var(--working)" : "none",
+          }}
+        />
       )}
     </Link>
   );

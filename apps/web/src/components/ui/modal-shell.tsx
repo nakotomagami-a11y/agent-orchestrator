@@ -86,17 +86,7 @@ export function ModalShell({
       <div
         role="presentation"
         onClick={onClose}
-        style={{
-          position: "fixed",
-          inset: 0,
-          background: "rgba(20, 14, 12, 0.45)",
-          backdropFilter: "blur(2px)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 20,
-          zIndex: 100,
-        }}
+        className="fixed inset-0 bg-[rgba(20,14,12,0.45)] backdrop-blur-sm flex items-center justify-center p-5 z-[100]"
       >
         <div
           ref={ref}
@@ -105,14 +95,9 @@ export function ModalShell({
           aria-modal="true"
           aria-label={title}
           onClick={(e) => e.stopPropagation()}
-          className={cn("card", className)}
+          className={cn("card w-full flex flex-col max-h-[calc(100vh-40px)] outline-none", className)}
           style={{
-            width: "100%",
             maxWidth: maxWidth ?? SIZE_PX[size],
-            display: "flex",
-            flexDirection: "column",
-            maxHeight: "calc(100vh - 40px)",
-            outline: "none",
           }}
         >
           {title ? (
@@ -122,16 +107,7 @@ export function ModalShell({
                 type="button"
                 onClick={onClose}
                 aria-label={closeLabel}
-                style={{
-                  marginLeft: "auto",
-                  background: "transparent",
-                  border: "none",
-                  width: 26,
-                  height: 26,
-                  borderRadius: 999,
-                  cursor: "pointer",
-                  color: "var(--txt-3)",
-                }}
+                className="ml-auto bg-transparent border-0 w-[26px] h-[26px] rounded-full cursor-pointer text-[var(--txt-3)]"
               >
                 <Icon name="x" />
               </button>
@@ -147,15 +123,7 @@ export function ModalShell({
             {children}
           </div>
           {footer ? (
-            <div
-              style={{
-                padding: 12,
-                borderTop: "1px solid var(--line)",
-                display: "flex",
-                gap: 8,
-                justifyContent: "flex-end",
-              }}
-            >
+            <div className="p-3 border-t border-line flex gap-2 justify-end">
               {footer}
             </div>
           ) : null}

@@ -639,37 +639,24 @@ function StreamBanner({
   return (
     <div
       role="alert"
+      className="mx-6 mt-2 p-[10px_12px] rounded-lg flex items-start gap-3"
       style={{
-        margin: "8px 24px 0",
-        padding: "10px 12px",
-        borderRadius: 8,
         border: `1px solid ${colour}`,
         background:
           kind === "error"
             ? "color-mix(in oklch, var(--error) 10%, transparent)"
             : "color-mix(in oklch, var(--queued) 12%, transparent)",
-        display: "flex",
-        alignItems: "flex-start",
-        gap: 12,
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: colour }}>{title}</div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] font-semibold" style={{ color: colour }}>{title}</div>
         {detail ? (
-          <div
-            style={{
-              marginTop: 3,
-              fontSize: 11.5,
-              color: "var(--txt-2)",
-              fontFamily: "var(--font-mono)",
-              wordBreak: "break-word",
-            }}
-          >
+          <div className="mt-[3px] text-[11.5px] text-txt-2 font-[var(--font-mono)] break-words">
             {detail}
           </div>
         ) : null}
       </div>
-      <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+      <div className="flex gap-1.5 shrink-0">
         {secondary ? (
           <button
             type="button"

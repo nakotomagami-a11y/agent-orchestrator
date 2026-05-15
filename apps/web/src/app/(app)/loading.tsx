@@ -5,11 +5,11 @@ export default function OfficeLoading() {
     <>
       <div className="toolbar">
         <Skeleton width={140} height={20} />
-        <span style={{ marginLeft: 8 }}>
+        <span className="ml-2">
           <Skeleton width={180} height={12} />
         </span>
       </div>
-      <div className="office" style={{ padding: 24 }}>
+      <div className="office p-6">
         <Skeleton width={420} height={480} />
       </div>
     </>

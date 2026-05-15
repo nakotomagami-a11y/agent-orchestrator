@@ -36,20 +36,20 @@ function BroadcastModal({ projectId, rosterCount, onClose }: { projectId: string
 
   return (
     <div
-      style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)" }}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Broadcast to roster"
-        style={{ background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, padding: 24, width: 520, maxWidth: "calc(100vw - 48px)", display: "flex", flexDirection: "column", gap: 14 }}
+        className="bg-bg-1 border border-line rounded-lg p-6 w-[520px] max-w-[calc(100vw-48px)] flex flex-col gap-3.5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="flex items-center justify-between">
           <div>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>Broadcast to roster</div>
-            <div style={{ fontSize: 12, color: "var(--txt-3)", marginTop: 2 }}>
+            <div className="font-bold text-[15px]">Broadcast to roster</div>
+            <div className="text-xs text-txt-3 mt-0.5">
               Sends the same prompt to all {rosterCount} agents simultaneously
             </div>
           </div>
@@ -58,14 +58,14 @@ function BroadcastModal({ projectId, rosterCount, onClose }: { projectId: string
           </button>
         </div>
         {result ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <div style={{ fontSize: 13, color: "var(--done)", fontWeight: 600 }}>
+          <div className="flex flex-col gap-2">
+            <div className="text-[13px] text-status-done font-semibold">
               Broadcast sent — {result.runIds.length} runs started
             </div>
-            <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)", display: "flex", flexDirection: "column", gap: 3 }}>
+            <div className="font-mono text-[11px] text-txt-3 flex flex-col gap-[3px]">
               {result.runIds.map((rid) => <span key={rid}>{rid.slice(0, 20)}…</span>)}
             </div>
-            <button type="button" className="btn sm" onClick={onClose} style={{ alignSelf: "flex-end" }}>Close</button>
+            <button type="button" className="btn sm self-end" onClick={onClose}>Close</button>
           </div>
         ) : (
           <>
@@ -75,13 +75,13 @@ function BroadcastModal({ projectId, rosterCount, onClose }: { projectId: string
               placeholder="Type the prompt to broadcast to all agents…"
               rows={5}
               autoFocus
-              style={{ width: "100%", resize: "vertical", fontFamily: "var(--font-mono)", fontSize: 12.5, padding: "8px 10px", background: "var(--bg-0)", border: "1px solid var(--line)", borderRadius: 8, color: "var(--txt)", boxSizing: "border-box" }}
+              className="w-full resize-y font-mono text-[12.5px] px-[10px] py-2 bg-bg-0 border border-line rounded-md text-txt box-border"
               onKeyDown={(e) => {
                 if ((e.metaKey || e.ctrlKey) && e.key === "Enter") { e.preventDefault(); void handleSend(); }
               }}
             />
-            {error && <div style={{ fontSize: 12, color: "var(--error)" }}>{error}</div>}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+            {error && <div className="text-xs text-status-error">{error}</div>}
+            <div className="flex gap-2 justify-end">
               <button type="button" className="btn ghost" onClick={onClose} disabled={sending}>Cancel</button>
               <button type="button" className="btn primary" onClick={() => void handleSend()} disabled={sending || !prompt.trim()}>
                 <Icon name="send" size={13} />
@@ -213,7 +213,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   };
 
   return (
-    <div className="tab-pane" style={{ padding: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <div className="tab-pane !p-0 overflow-hidden flex flex-col">
       {broadcastOpen && (
         <BroadcastModal
           projectId={id}
@@ -261,7 +261,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               <div className="sub">recent runs for this project</div>
             </div>
           </div>
-          <div className="ps-section-body" style={{ padding: 0 }}>
+          <div className="ps-section-body !p-0">
             <ProjectActivity projectId={id} />
           </div>
         </section>
@@ -293,34 +293,33 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           </div>
           <div className="ps-section-body">
             {rosterCount === 0 ? (
-              <div style={{ fontSize: 13, color: "var(--txt-3)" }}>
+              <div className="text-[13px] text-txt-3">
                 {t("project_detail.roster_empty")}
               </div>
             ) : (
               <div className="ps-roster">
                 {project.meta.roster.map((inst) => (
                   <div key={inst.instanceId} className="ps-roster-row">
-                    <div className="av" style={{ display: "grid", placeItems: "center", color: "var(--txt-3)" }}>
+                    <div className="av grid place-items-center text-txt-3">
                       <Icon name="users" size={16} />
                     </div>
                     <div className="info">
                       <div className="name">{inst.label ?? inst.agentId}</div>
                       <div className="sub">
-                        {inst.model && <><span style={{ color: "var(--txt-2)" }}>{inst.model}</span><span className="sep">·</span></>}
-                        <span style={{ fontFamily: "var(--font-mono)", fontSize: 10 }}>{inst.instanceId}</span>
+                        {inst.model && <><span className="text-txt-2">{inst.model}</span><span className="sep">·</span></>}
+                        <span className="font-mono text-[10px]">{inst.instanceId}</span>
                       </div>
                     </div>
                     <div className="ps-rr-acts">
                       {pendingRemoveId === inst.instanceId ? (
                         <>
-                          <span style={{ fontSize: 11.5, color: "var(--txt-3)", whiteSpace: "nowrap" }}>Remove?</span>
-                          <button type="button" className="btn sm ghost" style={{ width: "auto", padding: "0 8px" }} onClick={() => setPendingRemoveId(null)}>
+                          <span className="text-[11.5px] text-txt-3 whitespace-nowrap">Remove?</span>
+                          <button type="button" className="btn sm ghost !w-auto !px-2" onClick={() => setPendingRemoveId(null)}>
                             {t("common.cancel")}
                           </button>
                           <button
                             type="button"
-                            className="btn sm danger"
-                            style={{ width: "auto", padding: "0 8px" }}
+                            className="btn sm danger !w-auto !px-2"
                             onClick={() => {
                               removeMut.mutate({ projectId: id, instanceId: inst.instanceId });
                               setPendingRemoveId(null);
@@ -366,7 +365,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               <div className="sub">{t("project_detail.memory_card_sub", { project: project.meta.name })}</div>
             </div>
           </div>
-          <div className="ps-section-body" style={{ padding: 0 }}>
+          <div className="ps-section-body !p-0">
             <div className="ps-memory">
               <div className="ps-memory-toolbar">
                 <span className="tag">markdown</span>
@@ -387,7 +386,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     unsaved changes
                   </span>
                 ) : (
-                  <span style={{ fontSize: 11.5, color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>
+                  <span className="text-[11.5px] text-txt-3 font-mono">
                     {memorySaving ? "Saving…" : "saved"}
                   </span>
                 )}
@@ -431,10 +430,10 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     <div className="sub">→ {project.meta.name}.agent-office.json</div>
                   </div>
                 </div>
-                <label className={`opt-row${includeHistory ? " on" : ""}`} style={{ cursor: "pointer" }}>
+                <label className={`opt-row${includeHistory ? " on" : ""} cursor-pointer`}>
                   <input
                     type="checkbox"
-                    style={{ display: "none" }}
+                    className="hidden"
                     checked={includeHistory}
                     onChange={(e) => setIncludeHistory(e.target.checked)}
                   />
@@ -458,15 +457,14 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   </div>
                 </div>
                 <div
-                  className="drop-zone"
-                  style={{ cursor: "pointer" }}
+                  className="drop-zone cursor-pointer"
                   onClick={() => fileRef.current?.click()}
                 >
                   <Icon name="upload" size={18} />
                   <span>drop a save file here, or click to browse</span>
                 </div>
                 {importStatus && (
-                  <span style={{ fontSize: 12, color: importStatus.ok ? "var(--done)" : "var(--error)" }}>
+                  <span className={`text-xs ${importStatus.ok ? "text-status-done" : "text-status-error"}`}>
                     {importStatus.msg}
                   </span>
                 )}
@@ -484,7 +482,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     ref={fileRef}
                     type="file"
                     accept=".json,application/json"
-                    style={{ display: "none" }}
+                    className="hidden"
                     onChange={(e) => void handleImport(e)}
                   />
                 </div>
@@ -511,8 +509,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                 </div>
               </div>
               {pendingDanger === "reset" ? (
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "var(--txt-3)" }}>Are you sure?</span>
+                <div className="flex gap-1.5 items-center">
+                  <span className="text-xs text-txt-3">Are you sure?</span>
                   <button type="button" className="btn sm ghost" onClick={() => setPendingDanger(null)} disabled={dangerWorking}>
                     Cancel
                   </button>
@@ -541,8 +539,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                 </div>
               </div>
               {pendingDanger === "delete" ? (
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "var(--txt-3)" }}>Are you sure?</span>
+                <div className="flex gap-1.5 items-center">
+                  <span className="text-xs text-txt-3">Are you sure?</span>
                   <button type="button" className="btn sm ghost" onClick={() => setPendingDanger(null)} disabled={dangerWorking}>
                     Cancel
                   </button>

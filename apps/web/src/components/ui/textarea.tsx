@@ -14,20 +14,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
       ref={ref}
       rows={rows}
       aria-invalid={invalid || undefined}
-      className={cn(className)}
+      className={cn("w-full px-[10px] py-2 bg-bg-1 rounded-[var(--r-md)] text-txt text-[13px] leading-[1.5] outline-none resize-y shadow-[var(--shadow-1)] [font:inherit]", className)}
       style={{
-        width: "100%",
-        padding: "8px 10px",
-        background: "var(--bg-1)",
         border: `1px solid ${invalid ? "var(--error)" : "var(--line-2)"}`,
-        borderRadius: "var(--r-md)",
-        color: "var(--txt)",
-        font: "inherit",
-        fontSize: 13,
-        lineHeight: 1.5,
-        outline: "none",
-        resize: "vertical",
-        boxShadow: "var(--shadow-1)",
       }}
       {...rest}
     />

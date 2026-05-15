@@ -105,10 +105,9 @@ export function AgentDetailsModal() {
   return (
     <Portal>
       <div
-        className="ao-backdrop"
+        className="ao-backdrop fixed inset-0 flex items-center justify-center p-8 z-[100]"
         role="presentation"
         onClick={closeInspector}
-        style={{ position: "fixed", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 32, zIndex: 100 }}
       >
         <div
           ref={ref}
@@ -176,7 +175,7 @@ export function AgentDetailsModal() {
           {/* ── Agent header ── */}
           <div className="ao-agent-header">
             <div className="ao-avatar">
-              <span style={{ fontSize: 22 }}>{agent.short[0]?.toUpperCase() ?? "?"}</span>
+              <span className="text-[22px]">{agent.short[0]?.toUpperCase() ?? "?"}</span>
               <span className={`ao-status-dot ${statusDotClass}`} />
             </div>
             <div className="ao-titles">

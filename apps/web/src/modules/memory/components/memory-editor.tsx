@@ -27,7 +27,7 @@ export function MemoryEditor({
   const draft = useMemoryDraft({ initialValue: value, onSave });
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       <Textarea
         value={draft.draft}
         onChange={(e) => draft.setDraft(e.target.value)}
@@ -35,24 +35,11 @@ export function MemoryEditor({
         placeholder={placeholder}
         aria-label={label}
       />
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: 10,
-        }}
-      >
+      <div className="flex items-center justify-end gap-2.5">
         <span
           aria-live="polite"
-          style={{
-            fontSize: 12,
-            color: "var(--done)",
-            fontFamily: "var(--font-mono)",
-            minHeight: 16,
-            opacity: draft.savedRecently ? 1 : 0,
-            transition: "opacity 200ms",
-          }}
+          className="text-[12px] text-[var(--done)] font-mono min-h-[16px] transition-opacity duration-200"
+          style={{ opacity: draft.savedRecently ? 1 : 0 }}
         >
           {savedLabel}
         </span>

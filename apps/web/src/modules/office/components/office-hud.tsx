@@ -40,7 +40,7 @@ export function OfficeHud({
     <>
       <span
         aria-hidden
-        style={{ width: 8, height: 8, borderRadius: 50, background: "var(--error)", display: "inline-block" }}
+        className="w-2 h-2 rounded-full bg-[var(--error)] inline-block"
       />{" "}
       <b>{errorCount}</b> {t("office.needs_attention_label")}
     </>
@@ -51,14 +51,14 @@ export function OfficeHud({
       <div className="hud-card">
         <span
           aria-hidden
-          style={{ width: 8, height: 8, borderRadius: 50, background: "var(--working)", display: "inline-block" }}
+          className="w-2 h-2 rounded-full bg-[var(--working)] inline-block"
         />{" "}
         <b>{workingCount}</b> {t("office.live_label")}
       </div>
       <div className="hud-card">
         <span
           aria-hidden
-          style={{ width: 8, height: 8, borderRadius: 50, background: "var(--idle)", display: "inline-block" }}
+          className="w-2 h-2 rounded-full bg-[var(--idle)] inline-block"
         />{" "}
         <b>{idleCount}</b> {t("office.idle_label")}
       </div>
@@ -66,10 +66,9 @@ export function OfficeHud({
         onErrorFilter ? (
           <button
             type="button"
-            className="hud-card"
+            className="hud-card cursor-pointer"
             onClick={onErrorFilter}
             title="Show agents needing attention"
-            style={{ cursor: "pointer" }}
           >
             {errorCard}
           </button>
@@ -77,7 +76,7 @@ export function OfficeHud({
           <div className="hud-card">{errorCard}</div>
         )
       ) : null}
-      <div style={{ flex: 1 }} />
+      <div className="flex-1" />
       {budgetDaily ? (
         <div className="hud-card">
           {t("office.budget_daily")} <b>${budgetDaily.toFixed(2)}/day</b>

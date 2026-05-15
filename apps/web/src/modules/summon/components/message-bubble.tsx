@@ -279,7 +279,7 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
     <div className="ao-msg-actions">
       <button type="button" aria-label="Copy" title="Copy" onClick={handleCopy}>
         {copied
-          ? <AoCheck size={13} style={{ color: "var(--ao-ok)" }} />
+          ? <AoCheck size={13} className="text-[var(--ao-ok)]" />
           : <AoCode size={13} />}
       </button>
       {onRerun && (
@@ -301,7 +301,7 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
         <span className="ao-name">{name}</span>
         {arg && <span className="ao-arg">{arg}</span>}
         <span className="ao-right">
-          <span className="ao-badge ao-ok ao-dot" style={{ fontSize: 9, padding: "1px 6px" }}>ok</span>
+          <span className="ao-badge ao-ok ao-dot text-[9px] px-[6px] py-[1px]">ok</span>
         </span>
       </div>
       {arg && (
@@ -338,9 +338,9 @@ export function ToolGroupRow({
   return (
     <div className="ao-msg ao-agent">
       <div className="ao-av ao-agent" aria-hidden>
-        <span style={{ fontSize: 16 }}>{avatar}</span>
+        <span className="text-base">{avatar}</span>
       </div>
-      <div className="ao-body" style={{ width: "100%" }}>
+      <div className="ao-body w-full">
         <div className={`ao-tool-group${open ? " ao-open" : ""}`}>
           <div className="ao-head" onClick={() => setOpen(!open)}>
             <span className={`ao-status-dot ${statusClass}`} />
@@ -355,7 +355,7 @@ export function ToolGroupRow({
               ) : (
                 <>
                   {tools.length} tool calls
-                  <span className="ao-muted ao-mono ao-tiny" style={{ marginLeft: 4 }}>
+                  <span className="ao-muted ao-mono ao-tiny ml-1">
                     {[...new Set(tools.map((t) => t.name))].join(" · ")}
                   </span>
                 </>
@@ -383,9 +383,9 @@ function ThinkingRow({ text, avatar }: { text: string; avatar: string }) {
   return (
     <div className="ao-msg ao-agent">
       <div className="ao-av ao-agent" aria-hidden>
-        <span style={{ fontSize: 16 }}>{avatar}</span>
+        <span className="text-base">{avatar}</span>
       </div>
-      <div className="ao-body" style={{ width: "100%" }}>
+      <div className="ao-body w-full">
         <div className={`ao-thinking${open ? " ao-open" : ""}`}>
           <div className="ao-head" onClick={() => setOpen(!open)}>
             <span className="ao-icon"><AoSparkle size={13} /></span>
@@ -414,16 +414,16 @@ function ClarifyInput({ onReply }: { onReply: (text: string) => void }) {
   };
 
   return (
-    <div className="ao-clarify" style={{ marginTop: 12 }}>
+    <div className="ao-clarify mt-3">
       <div className="ao-top">
         <span className="ao-led" aria-hidden />
         Needs your reply
-        <span style={{ marginLeft: "auto", textTransform: "none", letterSpacing: 0 }} className="ao-mono">
+        <span className="ao-mono ml-auto normal-case tracking-normal">
           ↵ send
         </span>
       </div>
       <div className="ao-reply">
-        <AoCornerDown size={13} style={{ color: "var(--ao-fg-3)", flexShrink: 0 }} />
+        <AoCornerDown size={13} className="text-[var(--ao-fg-3)] shrink-0" />
         <input
           ref={inputRef}
           value={val}
@@ -471,7 +471,7 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
         <div className="ao-subagent-av" aria-hidden>
           <AoBot size={13} />
         </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
+        <div className="min-w-0 flex-1">
           <div className="ao-subagent-label">spawned sub-agent</div>
           <div className="ao-subagent-name">
             {item.name}
@@ -515,7 +515,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun }: Mes
       return (
         <div className="ao-msg ao-user">
           <div className="ao-av ao-you" aria-hidden>P</div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+          <div className="flex flex-col items-end">
             <div className="ao-bubble">
               {youText}
               <ImageStrip urls={youImgs} />
@@ -533,13 +533,13 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun }: Mes
       return (
         <div className="ao-msg ao-agent">
           <div className="ao-av ao-agent" aria-hidden>
-            <span style={{ fontSize: 16 }}>{avatar}</span>
+            <span className="text-base">{avatar}</span>
           </div>
           <div className="ao-body">
             <div className="ao-who">
               <span>{agent.name}</span>
               {item.streaming ? (
-                <span className="ao-stamp" style={{ color: "var(--ao-accent)" }}>typing…</span>
+                <span className="ao-stamp text-[var(--ao-accent)]">typing…</span>
               ) : null}
             </div>
             <div className="ao-prose">

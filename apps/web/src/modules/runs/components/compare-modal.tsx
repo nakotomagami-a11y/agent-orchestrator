@@ -42,12 +42,8 @@ export function CompareModal() {
       }
     >
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          minHeight: 200,
-        }}
+        className="grid gap-4 min-h-[200px]"
+        style={{ gridTemplateColumns: "1fr 1fr" }}
       >
         {/* Left pane — base run */}
         <div>
@@ -68,18 +64,7 @@ export function CompareModal() {
             value={compareId ?? ""}
             onChange={(e) => setCompareId(e.target.value || null)}
             aria-label={t("compare_with")}
-            style={{
-              width: "100%",
-              height: 32,
-              padding: "0 8px",
-              marginBottom: 12,
-              border: "1px solid var(--line-2)",
-              borderRadius: "var(--r-md)",
-              background: "var(--bg-1)",
-              color: "var(--txt)",
-              fontFamily: "var(--font-sans)",
-              fontSize: 13,
-            }}
+            className="w-full h-8 px-2 mb-3 border border-line-2 rounded-[var(--r-md)] bg-bg-1 text-txt font-[var(--font-sans)] text-[13px]"
           >
             <option value="">{t("pick_run")}</option>
             {candidateRuns.map((r) => (
@@ -104,15 +89,7 @@ export function CompareModal() {
 function PaneLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
-      style={{
-        fontSize: 11,
-        fontFamily: "var(--font-mono)",
-        color: "var(--txt-3)",
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        fontWeight: 600,
-        marginBottom: 8,
-      }}
+      className="text-[11px] font-[var(--font-mono)] text-txt-3 uppercase tracking-[0.06em] font-semibold mb-2"
     >
       {children}
     </div>
@@ -122,34 +99,18 @@ function PaneLabel({ children }: { children: React.ReactNode }) {
 function RunPane({ run }: { run: PersistedRun }) {
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 10,
-        background: "var(--bg-2)",
-        border: "1px solid var(--line)",
-        borderRadius: "var(--r-md)",
-        padding: 12,
-      }}
+      className="flex flex-col gap-[10px] bg-bg-2 border border-line rounded-[var(--r-md)] p-3"
     >
       {/* Prompt */}
       <p
-        style={{
-          margin: 0,
-          fontSize: 13,
-          fontStyle: "italic",
-          color: "var(--txt-2)",
-          display: "-webkit-box",
-          WebkitLineClamp: 3,
-          WebkitBoxOrient: "vertical",
-          overflow: "hidden",
-        }}
+        className="m-0 text-[13px] italic text-txt-2 overflow-hidden"
+        style={{ display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical" }}
       >
         {run.prompt}
       </p>
 
       {/* Model + cost badge */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      <div className="flex gap-[6px] flex-wrap">
         <Badge>{run.model ?? "default"}</Badge>
         <Badge>{formatCost(run.cost)}</Badge>
         <Badge>{(run.tokensIn + run.tokensOut).toLocaleString()} tok</Badge>
@@ -157,20 +118,7 @@ function RunPane({ run }: { run: PersistedRun }) {
 
       {/* Output */}
       <pre
-        style={{
-          margin: 0,
-          overflow: "auto" as const,
-          maxHeight: 300,
-          fontSize: 12,
-          fontFamily: "var(--font-mono)",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-          color: "var(--txt)",
-          background: "var(--bg-1)",
-          border: "1px solid var(--line)",
-          borderRadius: 6,
-          padding: "8px 10px",
-        }}
+        className="m-0 overflow-auto max-h-[300px] text-[12px] font-[var(--font-mono)] whitespace-pre-wrap break-words text-txt bg-bg-1 border border-line rounded-[6px] px-[10px] py-2"
       >
         {run.output || "(no output)"}
       </pre>
@@ -181,16 +129,7 @@ function RunPane({ run }: { run: PersistedRun }) {
 function Badge({ children }: { children: React.ReactNode }) {
   return (
     <span
-      style={{
-        display: "inline-block",
-        fontFamily: "var(--font-mono)",
-        fontSize: 11,
-        padding: "2px 8px",
-        borderRadius: 999,
-        background: "var(--bg-1)",
-        border: "1px solid var(--line)",
-        color: "var(--txt-2)",
-      }}
+      className="inline-block font-[var(--font-mono)] text-[11px] px-2 py-[2px] rounded-full bg-bg-1 border border-line text-txt-2"
     >
       {children}
     </span>
@@ -200,12 +139,7 @@ function Badge({ children }: { children: React.ReactNode }) {
 function Empty({ message }: { message?: string }) {
   return (
     <div
-      style={{
-        padding: "32px 0",
-        textAlign: "center",
-        fontSize: 13,
-        color: "var(--txt-3)",
-      }}
+      className="py-8 text-center text-[13px] text-txt-3"
     >
       {message ?? "—"}
     </div>

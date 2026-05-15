@@ -184,16 +184,7 @@ export function CommandPalette() {
     <div
       role="presentation"
       onClick={close}
-      style={{
-        position: "fixed",
-        inset: 0,
-        background: "rgba(0,0,0,0.4)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "flex-start",
-        justifyContent: "center",
-        paddingTop: "15vh",
-      }}
+      className="fixed inset-0 bg-black/40 z-[1000] flex items-start justify-center pt-[15vh]"
     >
       {/* Panel */}
       <div
@@ -201,17 +192,7 @@ export function CommandPalette() {
         aria-modal="true"
         aria-label="Command palette"
         onClick={(e) => e.stopPropagation()}
-        style={{
-          width: "min(580px, 92vw)",
-          maxHeight: 480,
-          background: "var(--bg-1)",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--r-lg)",
-          boxShadow: "var(--shadow-window)",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-        }}
+        className="w-[min(580px,92vw)] max-h-[480px] bg-[var(--bg-1)] border border-[var(--line)] rounded-[var(--r-lg)] shadow-[var(--shadow-window)] overflow-hidden flex flex-col"
       >
         {/* Search input */}
         <input
@@ -228,17 +209,7 @@ export function CommandPalette() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder="Search commands…"
-          style={{
-            width: "100%",
-            border: "none",
-            borderBottom: "1px solid var(--line)",
-            padding: "14px 16px",
-            fontSize: 15,
-            background: "transparent",
-            color: "var(--txt)",
-            outline: "none",
-            boxSizing: "border-box",
-          }}
+          className="w-full border-none border-b border-[var(--line)] px-4 py-[14px] text-[15px] bg-transparent text-[var(--txt)] outline-none box-border"
         />
 
         {/* Results */}
@@ -247,21 +218,10 @@ export function CommandPalette() {
           ref={listRef}
           role="listbox"
           aria-label="Commands"
-          style={{
-            overflowY: "auto",
-            maxHeight: 360,
-            padding: 6,
-          }}
+          className="overflow-y-auto max-h-[360px] p-[6px]"
         >
           {filtered.length === 0 ? (
-            <div
-              style={{
-                padding: "12px 10px",
-                fontSize: 13,
-                color: "var(--txt-3)",
-                textAlign: "center",
-              }}
-            >
+            <div className="px-[10px] py-3 text-[13px] text-[var(--txt-3)] text-center">
               No commands found
             </div>
           ) : (
@@ -277,28 +237,16 @@ export function CommandPalette() {
                   onClick={() => execute(cmd)}
                   onMouseEnter={() => setActiveIndex(idx)}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "8px 10px",
-                    borderRadius: "var(--r-md)",
-                    cursor: "pointer",
                     background: isActive ? "var(--bg-2)" : "transparent",
-                    userSelect: "none",
                   }}
+                  className="flex items-center gap-[10px] px-[10px] py-2 rounded-[var(--r-md)] cursor-pointer select-none"
                 >
                   <Icon name={cmd.icon} size={16} aria-hidden />
-                  <span style={{ flex: 1, fontSize: 14, color: "var(--txt)" }}>
+                  <span className="flex-1 text-[14px] text-[var(--txt)]">
                     {cmd.label}
                   </span>
                   {cmd.secondary ? (
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontFamily: "var(--font-mono)",
-                        color: "var(--txt-3)",
-                      }}
-                    >
+                    <span className="text-[11px] font-[var(--font-mono)] text-[var(--txt-3)]">
                       {cmd.secondary}
                     </span>
                   ) : null}

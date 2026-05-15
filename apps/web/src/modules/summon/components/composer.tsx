@@ -375,7 +375,7 @@ export function Composer({
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <div className="composer-inner" style={{ position: "relative" }}>
+      <div className="composer-inner relative">
         {slashOpen && filteredSlash.length > 0 ? (
           <div className="slash-popup" role="listbox" aria-label="Slash commands">
             {filteredSlash.map((s, i) => (
@@ -452,26 +452,18 @@ export function Composer({
                   }
                 >
                   {a.pending ? (
-                    <Icon name="refresh" size={11} style={{ animation: "spin 1s linear infinite" }} />
+                    <Icon name="refresh" size={11} className="[animation:spin_1s_linear_infinite]" />
                   ) : (
                     <Icon name={a.error ? "x" : "folder"} size={11} />
                   )}{" "}
                   {a.pending ? t("composer.uploading_label") : a.name}
                   <button
                     type="button"
-                    className="x"
+                    className="x bg-transparent border-none p-0 text-inherit cursor-pointer inline-flex"
                     aria-label={t("composer.remove_chip_aria", { name: a.name })}
                     onClick={() =>
                       setAttachments((prev) => prev.filter((x) => x.localId !== a.localId))
                     }
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      padding: 0,
-                      color: "inherit",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                    }}
                   >
                     <Icon name="x" size={10} />
                   </button>
@@ -517,11 +509,7 @@ export function Composer({
                 </button>
               ) : (
                 <span
-                  style={{
-                    fontSize: 11,
-                    color: "var(--txt-4)",
-                    fontFamily: "var(--font-mono)",
-                  }}
+                  className="text-[11px] text-[var(--txt-4)] font-mono"
                 >
                   <span className="kbd">⏎</span> {t("composer.shortcut_send")} ·{" "}
                   <span className="kbd">⇧⏎</span> {t("composer.shortcut_newline")}

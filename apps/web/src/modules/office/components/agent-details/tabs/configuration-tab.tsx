@@ -26,7 +26,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
           <div className="ao-card-header">
             <div className="ao-icon"><AoIdentity size={15} /></div>
             <div className="ao-title">Identity</div>
-            <div className="ao-sub" style={{ marginLeft: "auto" }}>~/.claude/agents/{agent.id}.md</div>
+            <div className="ao-sub ml-auto">~/.claude/agents/{agent.id}.md</div>
           </div>
           <div className="ao-card-body">
             <KV k="Name" v={agent.name} />
@@ -41,7 +41,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
           <div className="ao-card-header">
             <div className="ao-icon"><AoCpu size={15} /></div>
             <div className="ao-title">Model &amp; runtime</div>
-            <span className="ao-badge ao-ok ao-dot" style={{ marginLeft: "auto" }}>ready</span>
+            <span className="ao-badge ao-ok ao-dot ml-auto">ready</span>
           </div>
           <div className="ao-card-body">
             <KV k="Model" v={agent.defaultModel ?? "default"} mono />
@@ -55,11 +55,11 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
           <div className="ao-card-header">
             <div className="ao-icon"><AoSparkle size={15} /></div>
             <div className="ao-title">Skills</div>
-            <div className="ao-sub" style={{ marginLeft: "auto" }}>{agent.skills.length} attached</div>
+            <div className="ao-sub ml-auto">{agent.skills.length} attached</div>
           </div>
           <div className="ao-card-body">
             {agent.skills.length === 0 ? (
-              <span className="ao-muted ao-mono" style={{ fontSize: 12.5 }}>none</span>
+              <span className="ao-muted ao-mono text-[12.5px]">none</span>
             ) : (
               <div className="ao-chips-row">
                 {agent.skills.map((s) => (
@@ -78,11 +78,11 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
           <div className="ao-card-header">
             <div className="ao-icon"><AoWrench size={15} /></div>
             <div className="ao-title">Tools allowed</div>
-            <div className="ao-sub" style={{ marginLeft: "auto" }}>{agent.tools.length} enabled</div>
+            <div className="ao-sub ml-auto">{agent.tools.length} enabled</div>
           </div>
           <div className="ao-card-body">
             {agent.tools.length === 0 ? (
-              <span className="ao-muted ao-mono" style={{ fontSize: 12.5 }}>none</span>
+              <span className="ao-muted ao-mono text-[12.5px]">none</span>
             ) : (
               <div className="ao-chips-row">
                 {agent.tools.map((t) => {
@@ -101,11 +101,11 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
       </div>
 
       {/* Permissions */}
-      <div className="ao-card" style={{ marginTop: "var(--ao-gap-section)" }}>
+      <div className="ao-card mt-[var(--ao-gap-section)]">
         <div className="ao-card-header">
           <div className="ao-icon"><AoShield size={15} /></div>
           <div className="ao-title">Permissions</div>
-          <div className="ao-sub" style={{ marginLeft: "auto" }}>workspace policy applies</div>
+          <div className="ao-sub ml-auto">workspace policy applies</div>
         </div>
         <div className="ao-card-body ao-flush">
           <PermRow

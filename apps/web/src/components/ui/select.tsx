@@ -12,25 +12,13 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
   return (
     <select
       ref={ref}
-      className={cn(className)}
+      className={cn(
+        "h-8 py-0 pr-7 pl-[10px] bg-bg-1 border border-line-2 rounded-md text-txt [font:inherit] text-[13px] outline-none cursor-pointer shadow-1 appearance-none bg-no-repeat bg-[right_8px_center] bg-[length:16px]",
+        className,
+      )}
       style={{
-        height: 32,
-        padding: "0 28px 0 10px",
-        background: "var(--bg-1)",
-        border: "1px solid var(--line-2)",
-        borderRadius: "var(--r-md)",
-        color: "var(--txt)",
-        font: "inherit",
-        fontSize: 13,
-        outline: "none",
-        cursor: "pointer",
-        boxShadow: "var(--shadow-1)",
-        appearance: "none",
         backgroundImage:
           "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8079' stroke-width='1.7'><path d='m6 9 6 6 6-6'/></svg>\")",
-        backgroundRepeat: "no-repeat",
-        backgroundPosition: "right 8px center",
-        backgroundSize: "16px",
       }}
       {...rest}
     >

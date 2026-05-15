@@ -93,27 +93,17 @@ export function OfficeView() {
 
             {errorFilter && (
               <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "6px 16px",
-                  fontSize: 12.5,
-                  background: "color-mix(in srgb, var(--error) 10%, transparent)",
-                  borderBottom: "1px solid color-mix(in srgb, var(--error) 20%, transparent)",
-                  color: "var(--txt-2)",
-                }}
+                className="flex items-center gap-2 px-4 py-[6px] text-[12.5px] text-txt-2 bg-[color-mix(in_srgb,var(--error)_10%,transparent)] border-b border-b-[color-mix(in_srgb,var(--error)_20%,transparent)]"
               >
                 <span
                   aria-hidden
-                  style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--error)", display: "inline-block", flexShrink: 0 }}
+                  className="inline-block shrink-0 w-1.5 h-1.5 rounded-full bg-[var(--error)]"
                 />
                 {t("office.error_filter_banner")}
                 <button
                   type="button"
-                  className="btn ghost sm"
+                  className="btn ghost sm ml-auto"
                   onClick={() => setErrorFilter(false)}
-                  style={{ marginLeft: "auto" }}
                 >
                   {t("office.error_filter_clear")}
                 </button>

@@ -50,22 +50,15 @@ export function ProjectActivity({ projectId }: ProjectActivityProps) {
         }
       />
       {isLoading ? (
-        <div style={{ padding: 16 }}>
+        <div className="p-4">
           <Skeleton width="100%" height={48} />
-          <div style={{ height: 6 }} />
+          <div className="h-1.5" />
           <Skeleton width="100%" height={48} />
-          <div style={{ height: 6 }} />
+          <div className="h-1.5" />
           <Skeleton width="100%" height={48} />
         </div>
       ) : runs.length === 0 ? (
-        <div
-          style={{
-            padding: 20,
-            fontSize: 13,
-            color: "var(--txt-3)",
-            textAlign: "center",
-          }}
-        >
+        <div className="p-5 text-[13px] text-txt-3 text-center">
           {t("project_activity.empty")}
         </div>
       ) : (
@@ -97,75 +90,31 @@ function RunRow({ run, onOpen }: { run: PersistedRun; onOpen: () => void }) {
     <button
       type="button"
       onClick={onOpen}
-      style={{
-        width: "100%",
-        background: "transparent",
-        border: "none",
-        textAlign: "left",
-        cursor: "pointer",
-        font: "inherit",
-        color: "inherit",
-        padding: 0,
-      }}
+      className="w-full bg-transparent border-none text-left cursor-pointer font-[inherit] text-[inherit] p-0"
     >
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "32px 1fr auto auto",
-          gap: 12,
-          alignItems: "center",
-          padding: "10px 14px",
-          borderBottom: "1px solid var(--line)",
-        }}
+        className="grid gap-3 items-center px-3.5 py-2.5 border-b border-line"
+        style={{ gridTemplateColumns: "32px 1fr auto auto" }}
       >
-        <div style={{ width: 32, height: 32 }} aria-hidden>
+        <div className="w-8 h-8" aria-hidden>
           <UnitSprite unit={unit} size={32} animate />
         </div>
-        <div style={{ minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: 13,
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-            }}
-          >
+        <div className="min-w-0">
+          <div className="text-[13px] font-semibold flex items-center gap-1.5">
             {run.agentName}
             <StatusDot status={status} hideLabel />
           </div>
           <div
-            style={{
-              fontSize: 11.5,
-              color: "var(--txt-3)",
-              fontFamily: "var(--font-mono)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
+            className="text-[11.5px] text-txt-3 font-mono overflow-hidden text-ellipsis whitespace-nowrap"
             title={run.prompt}
           >
             {run.prompt}
           </div>
         </div>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--txt-3)",
-          }}
-        >
+        <span className="font-mono text-[11px] text-txt-3">
           {formatDuration(run.durMs)} · {formatCost(run.cost)}
         </span>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--txt-3)",
-            minWidth: 60,
-            textAlign: "right",
-          }}
-        >
+        <span className="font-mono text-[11px] text-txt-3 min-w-[60px] text-right">
           {formatRelative(run.ts)}
         </span>
       </div>

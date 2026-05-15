@@ -313,10 +313,9 @@ function CommandPaletteNavButton() {
   return (
     <button
       type="button"
-      className="nav-item nav-item-btn"
+      className="nav-item nav-item-btn text-txt-3"
       onClick={() => setOpen(true)}
       aria-label="Open command palette"
-      style={{ color: "var(--txt-3)" }}
     >
       <Icon name="search" />
       <span className="nav-item-label">Command palette</span>

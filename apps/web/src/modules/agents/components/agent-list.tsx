@@ -80,16 +80,7 @@ export function AgentList() {
   }
 
   return (
-    <div
-      className="tab-pane"
-      style={{
-        padding: 18,
-        overflow: "auto",
-        display: "flex",
-        flexDirection: "column",
-        gap: 14,
-      }}
-    >
+    <div className="tab-pane p-[18px] overflow-auto flex flex-col gap-[14px]">
       <FilterBar
         search={search}
         onSearchChange={setSearch}
@@ -102,14 +93,7 @@ export function AgentList() {
       />
 
       {visible.length === 0 ? (
-        <div
-          style={{
-            padding: 32,
-            textAlign: "center",
-            color: "var(--txt-3)",
-            fontSize: 13,
-          }}
-        >
+        <div className="p-8 text-center text-txt-3 text-[13px]">
           {t("agent_list.no_matches")}
         </div>
       ) : (
@@ -150,22 +134,16 @@ function FilterBar({
 }) {
   const t = useTranslations();
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+    <div className="flex flex-col gap-[10px]">
+      <div className="flex items-center gap-[10px] flex-wrap">
         <SearchInput value={search} onChange={onSearchChange} />
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: 11,
-            color: "var(--txt-3)",
-          }}
-        >
+        <span className="font-mono text-[11px] text-txt-3">
           {t("agent_list.shown_count", { visible, total })}
         </span>
       </div>
 
       {categories.length > 0 ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
+        <div className="flex flex-wrap gap-[6px] items-center">
           <FilterChip
             label={t("agent_list.filter_all")}
             count={total}
@@ -196,33 +174,11 @@ function SearchInput({
 }) {
   const t = useTranslations();
   return (
-    <label
-      style={{
-        position: "relative",
-        flex: "1 1 320px",
-        maxWidth: 480,
-        display: "flex",
-        alignItems: "center",
-        height: 32,
-        background: "var(--bg-1)",
-        border: "1px solid var(--line-2)",
-        borderRadius: "var(--r-md)",
-        boxShadow: "var(--shadow-1)",
-        padding: "0 12px 0 32px",
-        transition: "border-color 120ms",
-      }}
-    >
+    <label className="relative [flex:1_1_320px] max-w-[480px] flex items-center h-8 bg-bg-1 border border-line-2 rounded-md shadow-1 px-3 pl-8 transition-colors duration-[120ms]">
       <Icon
         name="search"
         size={14}
-        style={{
-          position: "absolute",
-          left: 10,
-          top: "50%",
-          transform: "translateY(-50%)",
-          color: "var(--txt-3)",
-          pointerEvents: "none",
-        }}
+        className="absolute left-[10px] top-1/2 -translate-y-1/2 text-txt-3 pointer-events-none"
       />
       <input
         type="search"
@@ -230,31 +186,14 @@ function SearchInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={t("agent_list.search_placeholder")}
         aria-label={t("agent_list.search_aria")}
-        style={{
-          width: "100%",
-          background: "transparent",
-          border: "none",
-          outline: "none",
-          font: "inherit",
-          fontSize: 13,
-          color: "var(--txt)",
-        }}
+        className="w-full bg-transparent border-none outline-none font-[inherit] text-[13px] text-txt"
       />
       {value ? (
         <button
           type="button"
           onClick={() => onChange("")}
           aria-label={t("agent_list.clear_search_aria")}
-          style={{
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            color: "var(--txt-3)",
-            padding: 4,
-            marginRight: -4,
-            display: "inline-flex",
-            borderRadius: 999,
-          }}
+          className="bg-transparent border-none cursor-pointer text-txt-3 p-1 -mr-1 inline-flex rounded-full"
         >
           <Icon name="x" size={12} />
         </button>
@@ -279,31 +218,20 @@ function FilterChip({
       type="button"
       onClick={onClick}
       aria-pressed={on}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 6,
-        padding: "5px 10px",
-        borderRadius: 999,
-        border: `1px solid ${on ? "var(--acc)" : "var(--line)"}`,
-        background: on ? "var(--acc-faint)" : "var(--bg-1)",
-        color: on ? "var(--acc)" : "var(--txt-2)",
-        fontFamily: "inherit",
-        fontSize: 12,
-        fontWeight: 500,
-        cursor: "pointer",
-      }}
+      className={cn(
+        "inline-flex items-center gap-[6px] py-[5px] px-[10px] rounded-full text-xs font-medium cursor-pointer font-[inherit]",
+        on
+          ? "border border-acc bg-acc-faint text-acc"
+          : "border border-line bg-bg-1 text-txt-2",
+      )}
     >
       {label}
       <span
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 10.5,
-          padding: "1px 6px",
-          borderRadius: 999,
-          background: on ? "rgba(233,84,32,0.18)" : "var(--bg-2)",
-          color: on ? "var(--acc)" : "var(--txt-3)",
-        }}
+        className={cn(
+          "font-mono text-[10.5px] px-[6px] py-[1px] rounded-full",
+          on ? "text-acc" : "bg-bg-2 text-txt-3",
+        )}
+        style={on ? { background: "rgba(233,84,32,0.18)" } : undefined}
       >
         {count}
       </span>
@@ -371,7 +299,7 @@ function AgentCard({
           <span className="d" style={{ background: modelColor }} />
           {agent.defaultModel ?? t("agent_list.model_default")}
         </span>
-        <span className="last" style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+        <span className="last inline-flex items-center gap-1">
           <Icon name="activity" size={10} /> {t("agent_list.uses_count", { count: uses })}
         </span>
       </div>

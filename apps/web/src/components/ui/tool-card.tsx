@@ -23,21 +23,14 @@ export function ToolCard({ name, arg, note, children, defaultOpen = false }: Too
     <div className="tool-card" data-open={open ? "true" : "false"}>
       <button
         type="button"
-        className="tc-h"
+        className="tc-h w-full bg-transparent border-none p-0 font-[inherit] text-inherit text-left"
         aria-expanded={interactive ? open : undefined}
         aria-controls={hasBody ? bodyId : undefined}
         aria-disabled={interactive ? undefined : true}
         disabled={!interactive}
         onClick={() => interactive && setOpen((v) => !v)}
         style={{
-          width: "100%",
-          background: "transparent",
-          border: "none",
-          padding: 0,
-          font: "inherit",
-          color: "inherit",
           cursor: interactive ? "pointer" : "default",
-          textAlign: "left",
         }}
       >
         <Icon name={open ? "chevron-down" : "chevron"} size={12} />

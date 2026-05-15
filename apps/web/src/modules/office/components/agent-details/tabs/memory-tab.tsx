@@ -125,16 +125,16 @@ export function MemoryTab({ agentId }: { agentId: string }) {
   return (
     <div className="ao-tab-pane">
       {/* Header card */}
-      <div className="ao-card" style={{ marginBottom: 14 }}>
+      <div className="ao-card mb-[14px]">
         <div className="ao-card-header">
           <div className="ao-icon"><AoBook size={15} /></div>
           <div>
             <div className="ao-title">Memory</div>
-            <div className="ao-sub" style={{ marginTop: 2 }}>
+            <div className="ao-sub mt-[2px]">
               facts carried into every conversation · {totalFacts} facts across {groups.length} groups
             </div>
           </div>
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          <div className="ml-auto flex gap-2 items-center">
             <span className="ao-badge ao-neutral">YAML</span>
             <button type="button" className="ao-btn-mini" onClick={() => setShowRaw(!showRaw)}>
               <AoCode size={13} /> {showRaw ? "Structured" : "View raw"}
@@ -147,25 +147,13 @@ export function MemoryTab({ agentId }: { agentId: string }) {
         <textarea
           readOnly
           value={memQ.data ?? ""}
-          style={{
-            width: "100%",
-            minHeight: 300,
-            background: "var(--ao-bg-2)",
-            color: "var(--ao-fg-1)",
-            border: "1px solid var(--ao-line-1)",
-            borderRadius: "var(--ao-radius-md)",
-            padding: 14,
-            fontFamily: "var(--ao-font-mono)",
-            fontSize: 12.5,
-            outline: "none",
-            resize: "vertical",
-          }}
+          className="w-full min-h-[300px] bg-[var(--ao-bg-2)] text-[var(--ao-fg-1)] border border-[var(--ao-line-1)] rounded-[var(--ao-radius-md)] p-[14px] font-[var(--ao-font-mono)] text-[12.5px] outline-none resize-y"
         />
       ) : (
         <>
           {/* Toolbar */}
           <div className="ao-mem-toolbar">
-            <div className="ao-search-input" style={{ flex: 1 }}>
+            <div className="ao-search-input flex-1">
               <AoSearch size={14} />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search facts…" />
             </div>
@@ -177,10 +165,10 @@ export function MemoryTab({ agentId }: { agentId: string }) {
           {/* Groups */}
           {groups.length === 0 ? (
             <div className="ao-card">
-              <div className="ao-card-body" style={{ textAlign: "center", padding: 32, color: "var(--ao-fg-2)" }}>
+              <div className="ao-card-body !text-center !p-8 !text-[var(--ao-fg-2)]">
                 <AoBook size={28} />
-                <div style={{ marginTop: 8, fontSize: 13 }}>No memory yet.</div>
-                <button type="button" className="ao-btn-mini" style={{ marginTop: 12 }} onClick={addGroup}>
+                <div className="mt-2 text-[13px]">No memory yet.</div>
+                <button type="button" className="ao-btn-mini mt-3" onClick={addGroup}>
                   <AoPlus size={13} /> Add first group
                 </button>
               </div>
@@ -214,15 +202,7 @@ export function MemoryTab({ agentId }: { agentId: string }) {
                             value={f.k}
                             placeholder="key"
                             onChange={(e) => updateFact(gi, fi, { k: e.target.value })}
-                            style={{
-                              background: "transparent",
-                              border: 0,
-                              outline: 0,
-                              width: "100%",
-                              color: "var(--ao-fg-2)",
-                              fontFamily: "var(--ao-font-mono)",
-                              fontSize: 12.5,
-                            }}
+                            className="bg-transparent border-0 outline-none w-full text-[var(--ao-fg-2)] font-[var(--ao-font-mono)] text-[12.5px]"
                           />
                         </div>
                         <div className="ao-val">

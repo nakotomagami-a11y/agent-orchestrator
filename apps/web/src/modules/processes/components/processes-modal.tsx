@@ -302,7 +302,7 @@ export function ProcessesModal() {
             <div className="stat">
               <span className="l">Status</span>
               <span className="v">
-                <span className="badge ok dot" style={{ fontSize: 10 }}>
+                <span className="badge ok dot text-[10px]">
                   {processes.length} running
                 </span>
               </span>
@@ -323,9 +323,9 @@ export function ProcessesModal() {
           </div>
 
           {killError && (
-            <div style={{ padding: "6px 16px", background: "var(--ao-danger-bg, #3a1a1a)", color: "var(--ao-danger, #f87171)", fontSize: 12, fontFamily: "var(--ao-font-mono)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <div className="px-4 py-1.5 bg-[var(--ao-danger-bg,#3a1a1a)] text-[var(--ao-danger,#f87171)] text-[12px] font-[var(--ao-font-mono)] flex items-center justify-between gap-2">
               <span>{killError}</span>
-              <button onClick={() => setKillError(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0, lineHeight: 1 }}>✕</button>
+              <button onClick={() => setKillError(null)} className="bg-transparent border-none cursor-pointer text-inherit p-0 leading-none">✕</button>
             </div>
           )}
 

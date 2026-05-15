@@ -41,9 +41,8 @@ export function ChatHead({ agent, phase, usage, onBranch, onNew, onEdit }: ChatH
       <span className={"pill" + (pill ? ` ${pill}` : "")}>{phase === "idle" ? agent.status : phase}</span>
       <div className="right">
         <span
-          className="pill"
+          className="pill font-mono text-[11px]"
           title={t("chat_head.usage_title")}
-          style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}
         >
           {usage.tokensIn.toLocaleString()}↓ {usage.tokensOut.toLocaleString()}↑ · $
           {usage.cost.toFixed(4)}

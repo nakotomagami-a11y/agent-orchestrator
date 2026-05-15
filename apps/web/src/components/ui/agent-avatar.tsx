@@ -40,14 +40,10 @@ export function AgentAvatar({ unit, size = 32, label, className }: AgentAvatarPr
       src={avatarSrc(slot)}
       width={size}
       height={size}
-      className={cn("agent-avatar", className)}
+      className={cn("agent-avatar shrink-0 [image-rendering:pixelated] rounded object-cover", className)}
       style={{
         width: size,
         height: size,
-        flexShrink: 0,
-        imageRendering: "pixelated",
-        borderRadius: 6,
-        objectFit: "cover",
       }}
       alt=""
       {...ariaProps}

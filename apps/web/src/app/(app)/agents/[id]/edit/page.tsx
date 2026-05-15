@@ -16,7 +16,7 @@ export default async function EditAgentPage({ params }: Params) {
     <>
       <div className="toolbar">
         <h1>{t("agent.title_edit")}</h1>
-        <span className="sub" style={{ fontFamily: "var(--font-mono)" }}>· {id}</span>
+        <span className="sub font-mono">· {id}</span>
       </div>
       <AgentForm initial={initial} mode="edit" />
     </>

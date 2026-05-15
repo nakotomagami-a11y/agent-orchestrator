@@ -418,17 +418,10 @@ export function OfficeMap({
 
   return (
     <div
-      className="office-map"
+      className="office-map absolute left-0 top-0 pointer-events-auto"
       style={{
-        position: "absolute",
-        left: 0,
-        top: 0,
         width: cols * TILE,
         height: rows * TILE,
-        // Always interactive — placed agents are clickable/draggable
-        // regardless of build mode. Inner cell-overlay buttons gate their
-        // own behaviour on `editable || dragging` below.
-        pointerEvents: "auto",
       }}
       aria-hidden
     >
@@ -460,10 +453,9 @@ export function OfficeMap({
         return (
           <div
             key={`deco-${decorationKey(d.x, d.y)}-${d.layer}`}
-            className={def.animClass}
+            className={`${def.animClass} absolute pointer-events-none`}
             aria-label={def.label}
             style={{
-              position: "absolute",
               left,
               top,
               width: def.frameW,
@@ -472,7 +464,6 @@ export function OfficeMap({
               backgroundRepeat: "no-repeat",
               backgroundPosition: "0 0",
               imageRendering: "pixelated",
-              pointerEvents: "none",
             }}
           />
         );
@@ -485,8 +476,8 @@ export function OfficeMap({
         <div
           key={`bridge-cap-${i}-${cap.x}-${cap.y}`}
           aria-hidden
+          className="absolute pointer-events-none"
           style={{
-            position: "absolute",
             left: cap.x * TILE,
             top: cap.y * TILE,
             width: TILE,
@@ -495,7 +486,6 @@ export function OfficeMap({
             backgroundRepeat: "no-repeat",
             backgroundPosition: "0 0",
             imageRendering: "pixelated",
-            pointerEvents: "none",
           }}
         />
       ))}
@@ -564,7 +554,7 @@ export function OfficeMap({
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
-              className="placed-agent"
+              className="placed-agent absolute pointer-events-auto transition-opacity duration-150"
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData(AGENT_DRAG_MIME, JSON.stringify(ref));
@@ -575,14 +565,11 @@ export function OfficeMap({
               onDragEnd={() => setDragging(null)}
               onClick={() => onAgentClick?.(x, y, ref)}
               style={{
-                position: "absolute",
                 left,
                 top,
                 width: SIZE,
                 height: SIZE,
-                pointerEvents: "auto",
                 opacity: searchMatch ? 1 : 0.2,
-                transition: "opacity 0.15s",
               }}
               aria-label={`${agent.name} — click to open, drag to move`}
               title={agent.name}
@@ -611,14 +598,12 @@ export function OfficeMap({
             return (
               <div
                 aria-hidden
+                className="absolute pointer-events-none opacity-60"
                 style={{
-                  position: "absolute",
                   left,
                   top,
                   width: SIZE,
                   height: SIZE,
-                  pointerEvents: "none",
-                  opacity: 0.6,
                   filter: `drop-shadow(0 0 4px ${tint}) drop-shadow(0 0 2px ${tint})`,
                 }}
               >
@@ -643,8 +628,8 @@ export function OfficeMap({
               return (
                 <div
                   aria-hidden
+                  className="absolute pointer-events-none opacity-60"
                   style={{
-                    position: "absolute",
                     left,
                     top,
                     width: def.frameW,
@@ -653,8 +638,6 @@ export function OfficeMap({
                     backgroundRepeat: "no-repeat",
                     backgroundPosition: "0 0",
                     imageRendering: "pixelated",
-                    pointerEvents: "none",
-                    opacity: 0.6,
                     filter: `drop-shadow(0 0 4px ${tint}) drop-shadow(0 0 2px ${tint})`,
                   }}
                 />
@@ -714,8 +697,8 @@ export function OfficeMap({
                       /* malformed payload — ignore */
                     }
                   }}
+                  className="absolute p-0 transition-[background] duration-[80ms] ease-[ease]"
                   style={{
-                    position: "absolute",
                     left: x * TILE,
                     top: y * TILE,
                     width: TILE,
@@ -725,8 +708,6 @@ export function OfficeMap({
                       ? "1px dashed rgba(255, 255, 255, 0.25)"
                       : "none",
                     cursor: editable ? (valid ? "pointer" : "not-allowed") : "default",
-                    padding: 0,
-                    transition: "background 80ms ease",
                   }}
                   aria-label={`Cell ${x},${y}`}
                 />

@@ -49,13 +49,12 @@ export function LiveStatus({ phase, hint }: { phase: ChatPhase; hint?: string })
   if (phase === "error") {
     return (
       <div
-        className="ao-live-status"
-        style={{ borderColor: "rgba(217,83,79,0.3)" }}
+        className="ao-live-status border-[rgba(217,83,79,0.3)]"
         role="status"
         aria-live="polite"
       >
-        <span className="ao-led" style={{ background: "var(--ao-bad)", boxShadow: "none" }} aria-hidden />
-        <span style={{ color: "var(--ao-bad)" }}>{hint ? `Error: ${hint}` : "Run failed"}</span>
+        <span className="ao-led bg-[var(--ao-bad)] shadow-none" aria-hidden />
+        <span className="text-[var(--ao-bad)]">{hint ? `Error: ${hint}` : "Run failed"}</span>
       </div>
     );
   }

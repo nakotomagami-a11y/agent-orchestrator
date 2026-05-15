@@ -81,10 +81,10 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
   const isPending = createMut.isPending || writeMut.isPending;
 
   return (
-    <form onSubmit={onSubmit} className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <form onSubmit={onSubmit} className="tab-pane flex flex-col gap-[14px]">
       <Card>
         <CardHeader title={mode === "new" ? t("agent_form.title_new") : t("agent_form.title_edit", { id: values.id })} />
-        <div style={{ padding: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+        <div className="p-4 grid grid-cols-2 gap-3">
           <Field label={t("agent_form.label_name")} error={errorFor("name")}>
             <TextInput
               value={values.name}
@@ -162,7 +162,7 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
 
       <Card>
         <CardHeader title={t("agent_form.card_prompt_title")} sub={t("agent_form.card_prompt_sub")} />
-        <div style={{ padding: 16 }}>
+        <div className="p-4">
           <Textarea
             value={values.body}
             onChange={update("body")}
@@ -175,18 +175,18 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
       </Card>
 
       {serverError ? (
-        <div className="bubble-prose" role="alert" style={{ background: "var(--error)", color: "white", border: "none" }}>
+        <div className="bubble-prose !bg-[var(--error)] !text-white !border-none" role="alert">
           {serverError}
         </div>
       ) : null}
 
-      <div style={{ display: "flex", gap: 8, justifyContent: "space-between" }}>
+      <div className="flex gap-2 justify-between">
         {mode === "edit" ? (
           <button type="button" className="btn danger" onClick={onDelete} disabled={deleteMut.isPending}>
             <Icon name="x" /> {t("common.delete")}
           </button>
         ) : <span />}
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="flex gap-2">
           {hideCancel ? null : (
             <button
               type="button"
@@ -208,26 +208,20 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
 
 function SectionDivider({ label }: { label: string }) {
   return (
-    <div style={{
-      gridColumn: "span 2", display: "flex", alignItems: "center", gap: 10,
-      marginTop: 6, marginBottom: -4,
-    }}>
-      <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
-      <span style={{
-        fontSize: 9.5, fontFamily: "var(--font-mono)", textTransform: "uppercase",
-        letterSpacing: "0.1em", color: "var(--txt-4)", whiteSpace: "nowrap",
-      }}>
+    <div className="col-span-2 flex items-center gap-[10px] mt-[6px] -mb-1">
+      <div className="flex-1 h-px bg-line" />
+      <span className="text-[9.5px] font-mono uppercase tracking-[0.1em] text-txt-4 whitespace-nowrap">
         {label}
       </span>
-      <div style={{ flex: 1, height: 1, background: "var(--line)" }} />
+      <div className="flex-1 h-px bg-line" />
     </div>
   );
 }
 
 function Field({ label, error, span = 1, children }: { label: string; error?: string; span?: 1 | 2; children: React.ReactNode }) {
   return (
-    <label style={{ display: "flex", flexDirection: "column", gap: 4, gridColumn: `span ${span}` }}>
-      <span style={{ fontSize: 11, color: "var(--txt-3)", fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+    <label className={`flex flex-col gap-1 ${span === 2 ? "col-span-2" : "col-span-1"}`}>
+      <span className="text-[11px] text-txt-3 font-mono uppercase tracking-[0.06em]">
         {label}
       </span>
       {children}
@@ -237,5 +231,5 @@ function Field({ label, error, span = 1, children }: { label: string; error?: st
 }
 
 function FieldError({ message }: { message: string }) {
-  return <span style={{ fontSize: 11.5, color: "var(--error)" }}>{message}</span>;
+  return <span className="text-[11.5px] text-[var(--error)]">{message}</span>;
 }

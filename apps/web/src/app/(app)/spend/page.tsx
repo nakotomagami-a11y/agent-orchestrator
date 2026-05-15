@@ -68,19 +68,13 @@ export default function SpendPage() {
   const totalCost = days.reduce((s, d) => s + d.cost, 0);
 
   return (
-    <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-        <h1 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>
+    <div className="tab-pane flex flex-col gap-5">
+      <div className="flex items-baseline gap-2.5">
+        <h1 className="m-0 text-lg font-bold tracking-[-0.01em]">
           {t("title")}
         </h1>
         {!runsQ.isLoading && (
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 12,
-              color: "var(--txt-3)",
-            }}
-          >
+          <span className="font-mono text-xs text-txt-3">
             14d · ${totalCost.toFixed(3)}
           </span>
         )}
@@ -89,29 +83,16 @@ export default function SpendPage() {
       {runsQ.isLoading ? (
         <Skeleton width="100%" height={120} />
       ) : runsQ.data?.length === 0 ? (
-        <div
-          style={{
-            padding: "32px 0",
-            textAlign: "center",
-            fontSize: 13,
-            color: "var(--txt-3)",
-          }}
-        >
+        <div className="py-8 text-center text-[13px] text-txt-3">
           {t("no_data")}
         </div>
       ) : (
         <>
           {/* ── 14-day bar chart ── */}
-          <div className="card" style={{ padding: 16 }}>
+          <div className="card p-4">
             <SectionLabel label="14-day spend" />
             <div
-              style={{
-                display: "flex",
-                alignItems: "flex-end",
-                gap: 3,
-                height: 80,
-                marginTop: 8,
-              }}
+              className="flex items-end gap-[3px] h-20 mt-2"
               role="img"
               aria-label="14-day spend bar chart"
             >
@@ -121,37 +102,17 @@ export default function SpendPage() {
                 return (
                   <div
                     key={day.isoDate}
-                    style={{
-                      flex: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 4,
-                      height: "100%",
-                      justifyContent: "flex-end",
-                    }}
+                    className="flex-1 flex flex-col items-center gap-1 h-full justify-end"
                   >
                     <div
                       title={`${day.label}: $${day.cost.toFixed(4)}`}
+                      className="w-full [border-radius:2px_2px_0_0] [transition:height_200ms_ease]"
                       style={{
-                        width: "100%",
                         height: heightPx,
                         background: day.cost > 0 ? "var(--acc)" : "var(--bg-3)",
-                        borderRadius: "2px 2px 0 0",
-                        transition: "height 200ms ease",
                       }}
                     />
-                    <span
-                      style={{
-                        fontSize: 9,
-                        fontFamily: "var(--font-mono)",
-                        color: "var(--txt-4)",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        maxWidth: "100%",
-                      }}
-                    >
+                    <span className="text-[9px] font-mono text-txt-4 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
                       {day.label}
                     </span>
                   </div>
@@ -167,33 +128,33 @@ export default function SpendPage() {
                 <SectionLabel label="By agent" inline />
               </div>
               <table
-                style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}
+                className="w-full border-collapse text-[12.5px]"
                 aria-label="Spend by agent"
               >
                 <thead>
-                  <tr style={{ background: "var(--bg-2)", color: "var(--txt-3)" }}>
-                    <th style={TH}>{t("col_agent")}</th>
-                    <th style={{ ...TH, textAlign: "right" }}>{t("col_runs")}</th>
-                    <th style={{ ...TH, textAlign: "right" }}>{t("col_tokens")}</th>
-                    <th style={{ ...TH, textAlign: "right" }}>{t("col_cost")}</th>
+                  <tr className="bg-bg-2 text-txt-3">
+                    <th className="text-left px-[14px] py-[10px] text-[11px] uppercase tracking-[0.05em] font-semibold">{t("col_agent")}</th>
+                    <th className="text-right px-[14px] py-[10px] text-[11px] uppercase tracking-[0.05em] font-semibold">{t("col_runs")}</th>
+                    <th className="text-right px-[14px] py-[10px] text-[11px] uppercase tracking-[0.05em] font-semibold">{t("col_tokens")}</th>
+                    <th className="text-right px-[14px] py-[10px] text-[11px] uppercase tracking-[0.05em] font-semibold">{t("col_cost")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {agentRows.map((row) => (
                     <tr
                       key={row.name}
-                      style={{ borderBottom: "1px solid var(--line)" }}
+                      className="border-b border-line"
                     >
-                      <td style={TD}>
-                        <span style={{ fontWeight: 600, fontFamily: "var(--font-mono)" }}>
+                      <td className="px-[14px] py-[10px] text-[13px]">
+                        <span className="font-semibold font-mono">
                           {row.name}
                         </span>
                       </td>
-                      <td style={{ ...TD_MONO, textAlign: "right" }}>{row.runs}</td>
-                      <td style={{ ...TD_MONO, textAlign: "right" }}>
+                      <td className="px-[14px] py-[10px] text-xs font-mono text-right">{row.runs}</td>
+                      <td className="px-[14px] py-[10px] text-xs font-mono text-right">
                         {(row.tokensIn + row.tokensOut).toLocaleString()}
                       </td>
-                      <td style={{ ...TD_MONO, textAlign: "right" }}>
+                      <td className="px-[14px] py-[10px] text-xs font-mono text-right">
                         ${row.cost.toFixed(3)}
                       </td>
                     </tr>
@@ -211,33 +172,9 @@ export default function SpendPage() {
 function SectionLabel({ label, inline }: { label: string; inline?: boolean }) {
   return (
     <span
-      style={{
-        fontSize: 11,
-        color: "var(--txt-3)",
-        fontFamily: "var(--font-mono)",
-        textTransform: "uppercase",
-        letterSpacing: "0.06em",
-        fontWeight: 600,
-        display: inline ? "inline" : "block",
-        marginBottom: inline ? 0 : 0,
-      }}
+      className={`text-[11px] text-txt-3 font-mono uppercase tracking-[0.06em] font-semibold${inline ? " inline" : " block"}`}
     >
       {label}
     </span>
   );
 }
-
-const TH: React.CSSProperties = {
-  textAlign: "left",
-  padding: "10px 14px",
-  fontSize: 11,
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-  fontWeight: 600,
-};
-const TD: React.CSSProperties = { padding: "10px 14px", fontSize: 13 };
-const TD_MONO: React.CSSProperties = {
-  ...TD,
-  fontFamily: "var(--font-mono)",
-  fontSize: 12,
-};

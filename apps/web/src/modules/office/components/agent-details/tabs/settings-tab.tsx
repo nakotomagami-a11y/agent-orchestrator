@@ -52,7 +52,7 @@ export function SettingsTab({
   }
   if (!agentQ.data) {
     return (
-      <div className="ao-tab-pane" style={{ color: "var(--ao-fg-2)", padding: 18 }}>
+      <div className="ao-tab-pane text-[var(--ao-fg-2)] p-[18px]">
         Failed to load agent settings.
       </div>
     );
@@ -155,7 +155,7 @@ function SettingsForm({
                 </div>
               </div>
             </div>
-            <div className="ao-field" style={{ marginTop: 12 }}>
+            <div className="ao-field mt-3">
               <label className="ao-label">Description</label>
               <div className="ao-input">
                 <input value={v.desc} onChange={set("desc")} placeholder="One-sentence description…" />
@@ -198,7 +198,7 @@ function SettingsForm({
               </div>
             </div>
 
-            <div className="ao-field" style={{ marginTop: 14 }}>
+            <div className="ao-field mt-[14px]">
               <label className="ao-label">Permission mode</label>
               <div className="ao-permission-mode">
                 <button type="button" className={v.pm === "auto" ? "ao-active" : ""} onClick={() => setV((p) => ({ ...p, pm: "auto" }))}>
@@ -216,8 +216,8 @@ function SettingsForm({
               </div>
             </div>
 
-            <div className="ao-field" style={{ marginTop: 14 }}>
-              <label className="ao-label">Room <span className="ao-muted" style={{ textTransform: "none", letterSpacing: 0, fontFamily: "var(--ao-font-sans)", fontWeight: 400 }}>· optional</span></label>
+            <div className="ao-field mt-[14px]">
+              <label className="ao-label">Room <span className="ao-muted normal-case tracking-[0] font-[var(--ao-font-sans)] font-normal">· optional</span></label>
               <div className="ao-input">
                 <input value={v.room} onChange={set("room")} placeholder="e.g. Build" />
               </div>
@@ -261,7 +261,7 @@ function SettingsForm({
               <div className="ao-help">enter to add · comma-separated</div>
             </div>
 
-            <div className="ao-field" style={{ marginTop: 14 }}>
+            <div className="ao-field mt-[14px]">
               <label className="ao-label"><AoWrench size={11} /> Tools allowed</label>
               <div className="ao-chip-picker">
                 {tools.map((t) => (
@@ -281,19 +281,18 @@ function SettingsForm({
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTool(); } }}
                 />
               </div>
-              <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+              <div className="mt-2 flex flex-wrap gap-[6px]">
                 <span className="ao-muted ao-mono ao-tiny">suggested:</span>
                 {AVAIL_TOOLS.filter((t) => !tools.includes(t)).map((t) => (
                   <button
                     key={t}
                     type="button"
-                    className="ao-tool-chip"
-                    style={{ cursor: "pointer" }}
+                    className="ao-tool-chip cursor-pointer"
                     onClick={() => setTools([...tools, t])}
                   >
                     <span className="ao-icon">{iconForTool(t)}</span>
                     {t}
-                    <AoPlus size={10} style={{ color: "var(--ao-fg-3)" }} />
+                    <AoPlus size={10} className="text-[var(--ao-fg-3)]" />
                   </button>
                 ))}
               </div>
@@ -356,11 +355,11 @@ function SettingsForm({
                 {promptLines.map((_, i) => <div key={i}>{i + 1}</div>)}
               </div>
               <textarea
-                className="ao-code"
+                className="ao-code resize-none"
                 value={v.body}
                 onChange={(e) => setV((p) => ({ ...p, body: e.target.value }))}
                 spellCheck={false}
-                style={{ resize: "none", height: Math.max(200, promptLines.length * 20) }}
+                style={{ height: Math.max(200, promptLines.length * 20) }}
               />
             </div>
           ) : (
@@ -373,7 +372,7 @@ function SettingsForm({
 
       {/* Error display */}
       {(errors.length > 0 || serverError) && (
-        <div style={{ background: "var(--ao-bad-soft)", border: "1px solid var(--ao-bad)", borderRadius: "var(--ao-radius-md)", padding: "10px 14px", color: "var(--ao-bad)", fontSize: 13, marginBottom: 14 }}>
+        <div className="bg-[var(--ao-bad-soft)] border border-[var(--ao-bad)] rounded-[var(--ao-radius-md)] px-[14px] py-[10px] text-[var(--ao-bad)] text-[13px] mb-[14px]">
           {serverError ?? errors.join(" · ")}
         </div>
       )}
@@ -383,7 +382,7 @@ function SettingsForm({
         {dirty ? (
           <span className="ao-dirty"><span className="ao-led" /> Unsaved changes</span>
         ) : (
-          <span style={{ color: "var(--ao-fg-3)", fontSize: 12, fontFamily: "var(--ao-font-mono)" }}>No changes</span>
+          <span className="text-[var(--ao-fg-3)] text-xs font-[var(--ao-font-mono)]">No changes</span>
         )}
         <div className="ao-right">
           <button type="button" className="ao-btn ao-ghost" onClick={handleDiscard} disabled={!dirty}>
@@ -391,8 +390,7 @@ function SettingsForm({
           </button>
           <button
             type="button"
-            className="ao-btn"
-            style={{ color: "var(--ao-bad)", borderColor: "var(--ao-bad-soft)" }}
+            className="ao-btn text-[var(--ao-bad)] border-[var(--ao-bad-soft)]"
             onClick={onDelete}
             disabled={deleting}
           >

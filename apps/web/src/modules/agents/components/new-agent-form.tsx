@@ -147,7 +147,7 @@ function SectionCard({ n, title, sub, complete, children }: {
         <div className={`check${complete ? "" : " empty"}`}>
           {complete
             ? <Icon name="check" size={11} />
-            : <span style={{ width: 4, height: 4, borderRadius: 2, background: "currentColor", display: "block" }} />}
+            : <span className="w-1 h-1 rounded-[2px] bg-current block" />}
         </div>
       </div>
       <div className="na-section-body">{children}</div>
@@ -335,7 +335,7 @@ export function NewAgentForm() {
                       autoFocus
                     />
                   </div>
-                  {errFor("name") && <span style={{ fontSize: 11, color: "var(--error)" }}>{errFor("name")}</span>}
+                  {errFor("name") && <span className="text-[11px] text-status-error">{errFor("name")}</span>}
                 </div>
 
                 <div className="field">
@@ -349,13 +349,13 @@ export function NewAgentForm() {
                     />
                     <span className="prefix">.md</span>
                   </div>
-                  {errFor("id") && <span style={{ fontSize: 11, color: "var(--error)" }}>{errFor("id")}</span>}
+                  {errFor("id") && <span className="text-[11px] text-status-error">{errFor("id")}</span>}
                 </div>
 
                 <div className="field">
-                  <label className="label" style={{ justifyContent: "space-between" }}>
+                  <label className="label justify-between">
                     <span>Description</span>
-                    <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0, color: values.desc.length > DESC_MAX ? "var(--error)" : "var(--txt-4)" }}>
+                    <span className="font-normal normal-case tracking-[0]" style={{ color: values.desc.length > DESC_MAX ? "var(--error)" : "var(--txt-4)" }}>
                       {values.desc.length}/{DESC_MAX}
                     </span>
                   </label>
@@ -368,7 +368,7 @@ export function NewAgentForm() {
                     />
                   </div>
                   <div className="help">{values.desc.length} / {DESC_MAX} chars — keep it to a sentence</div>
-                  {errFor("desc") && <span style={{ fontSize: 11, color: "var(--error)" }}>{errFor("desc")}</span>}
+                  {errFor("desc") && <span className="text-[11px] text-status-error">{errFor("desc")}</span>}
                 </div>
               </div>
             </div>
@@ -489,9 +489,9 @@ export function NewAgentForm() {
             complete={sec4Done}
           >
             <MarkdownEditor value={values.body} onChange={(v) => set("body", v)} hasError={!!errFor("body")} />
-            {errFor("body") && <span style={{ fontSize: 11, color: "var(--error)" }}>{errFor("body")}</span>}
+            {errFor("body") && <span className="text-[11px] text-status-error">{errFor("body")}</span>}
             {serverError && (
-              <div style={{ background: "var(--error)", color: "white", borderRadius: 6, padding: "8px 12px", fontSize: 12 }}>
+              <div className="bg-status-error text-white rounded-[6px] px-3 py-2 text-[12px]">
                 {serverError}
               </div>
             )}
@@ -512,7 +512,7 @@ export function NewAgentForm() {
                   <AgentAvatar unit={unit} size={32} />
                 </div>
                 <div className="id-blk">
-                  <div className="n">{values.name.trim() || <span style={{ color: "var(--txt-4)" }}>Untitled agent</span>}</div>
+                  <div className="n">{values.name.trim() || <span className="text-txt-4">Untitled agent</span>}</div>
                   <div className="s">{slug || "agent-id"}</div>
                 </div>
               </div>

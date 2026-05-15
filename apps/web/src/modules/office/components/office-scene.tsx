@@ -493,19 +493,10 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   return (
     <div
       ref={containerRef}
-      className="office-scene"
+      className="office-scene relative w-full h-full bg-cover bg-center bg-no-repeat [image-rendering:pixelated] overflow-hidden cursor-default"
       style={{
-        position: "relative",
-        width: "100%",
-        height: "100%",
         backgroundImage:
           "url('https://img.itch.zone/aW1nLzEwNDk2NzQ4LnBuZw==/original/eqMZWi.png')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        imageRendering: "pixelated",
-        overflow: "hidden",
-        cursor: "default",
       }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
@@ -513,14 +504,11 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
     >
       {/* Transform wrapper: pan + zoom applied here, OfficeMap anchored at 0,0 */}
       <div
+        className="absolute left-0 top-0 origin-top-left"
         style={{
-          position: "absolute",
-          left: 0,
-          top: 0,
           width: GRID_COLS * TILE,
           height: GRID_ROWS * TILE,
           transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-          transformOrigin: "0 0",
         }}
       >
         <OfficeMap

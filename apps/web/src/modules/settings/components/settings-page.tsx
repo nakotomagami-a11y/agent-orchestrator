@@ -7,6 +7,7 @@ import { CardHeader } from "@/components/ui/card-header";
 import { TextInput } from "@/components/ui/text-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 import { useScanProjects, useSettings, useWriteSettings } from "../hooks/use-settings";
 
 
@@ -52,29 +53,20 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="tab-pane flex flex-col gap-[14px]">
       <Card>
         <CardHeader title={t("settings.projects_root_card_title")} sub={t("settings.projects_root_card_sub")} />
-        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+        <div className="p-4 flex flex-col gap-3">
           <TextInput
             value={root}
             onChange={(e) => setRoot(e.target.value)}
             placeholder={t("settings.projects_root_placeholder")}
           />
           <div>
-            <div
-              style={{
-                fontSize: 11,
-                color: "var(--txt-3)",
-                fontFamily: "var(--font-mono)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                marginBottom: 6,
-              }}
-            >
+            <div className="text-[11px] text-txt-3 font-mono uppercase tracking-[0.06em] mb-[6px]">
               {t("settings.exclusions_label")}
             </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+            <div className="flex gap-2 mb-2">
               <TextInput
                 value={excludedDraft}
                 onChange={(e) => setExcludedDraft(e.target.value)}
@@ -90,36 +82,28 @@ export function SettingsPage() {
                 <Icon name="plus" />
               </button>
             </div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <div className="flex gap-[6px] flex-wrap">
               {excluded.map((e) => (
                 <span key={e} className="attach-chip">
                   {e}
                   <button
                     type="button"
-                    className="x"
+                    className="x bg-transparent border-none p-0 text-inherit cursor-pointer inline-flex"
                     aria-label={t("settings.exclusion_remove_aria", { name: e })}
                     onClick={() => setExcluded((prev) => prev.filter((x) => x !== e))}
-                    style={{
-                      background: "transparent",
-                      border: "none",
-                      padding: 0,
-                      color: "inherit",
-                      cursor: "pointer",
-                      display: "inline-flex",
-                    }}
                   >
                     <Icon name="x" size={11} />
                   </button>
                 </span>
               ))}
               {excluded.length === 0 ? (
-                <span style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("settings.exclusions_empty")}</span>
+                <span className="text-xs text-txt-3">{t("settings.exclusions_empty")}</span>
               ) : null}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          <div className="flex gap-2 justify-end">
             {savedAt ? (
-              <span style={{ alignSelf: "center", fontSize: 12, color: "var(--done)" }}>{t("common.saved")}</span>
+              <span className="self-center text-xs text-status-done">{t("common.saved")}</span>
             ) : null}
             <button
               type="button"
@@ -141,35 +125,29 @@ export function SettingsPage() {
             excluded: scanQ.data?.filter((e) => e.excluded).length ?? 0,
           })}
         />
-        <div style={{ padding: 16 }}>
+        <div className="p-4">
           {scanQ.isLoading ? (
             <Skeleton width="100%" height={80} />
           ) : (
-            <ul style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+            <ul className="list-none m-0 p-0 flex flex-col gap-1">
               {(scanQ.data ?? []).map((entry) => (
                 <li
                   key={entry.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    padding: "6px 8px",
-                    borderRadius: 6,
-                    fontSize: 12.5,
-                    color: entry.excluded ? "var(--txt-4)" : "var(--txt)",
-                    background: entry.excluded ? "transparent" : "var(--bg-2)",
-                  }}
+                  className={cn(
+                    "flex items-center gap-[10px] px-2 py-[6px] rounded-md text-[12.5px]",
+                    entry.excluded ? "text-txt-4 bg-transparent" : "text-txt bg-bg-2",
+                  )}
                 >
                   <Icon name="folder" size={13} />
-                  <span style={{ fontWeight: 500 }}>{entry.name}</span>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>{entry.fullPath}</span>
+                  <span className="font-medium">{entry.name}</span>
+                  <span className="font-mono text-[11px] text-txt-3">{entry.fullPath}</span>
                   {entry.excluded ? (
-                    <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--txt-4)" }}>{t("settings.excluded_badge")}</span>
+                    <span className="ml-auto text-[11px] text-txt-4">{t("settings.excluded_badge")}</span>
                   ) : null}
                 </li>
               ))}
               {!scanQ.data || scanQ.data.length === 0 ? (
-                <span style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("settings.scanned_empty")}</span>
+                <span className="text-xs text-txt-3">{t("settings.scanned_empty")}</span>
               ) : null}
             </ul>
           )}

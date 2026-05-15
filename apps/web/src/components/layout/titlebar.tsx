@@ -64,13 +64,7 @@ export function Titlebar() {
       <div className="tb-title" data-tauri-drag-region>
         <span
           aria-hidden
-          style={{
-            display: "inline-block",
-            width: 16,
-            height: 16,
-            borderRadius: 4,
-            background: "linear-gradient(135deg, var(--yaru-orange), var(--yaru-purple))",
-          }}
+          className="inline-block w-4 h-4 rounded-[4px] bg-[linear-gradient(135deg,var(--yaru-orange),var(--yaru-purple))]"
         />
         {t("app.name")} — {t("app.studio_subtitle")}
       </div>

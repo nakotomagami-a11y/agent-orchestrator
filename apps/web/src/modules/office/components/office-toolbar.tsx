@@ -53,7 +53,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   if (dev.phase === "starting") {
     return (
       <button type="button" className="btn sm ghost" disabled>
-        <Icon name="refresh" size={12} style={{ animation: "spin 1s linear infinite" }} /> Starting…
+        <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Starting…
       </button>
     );
   }
@@ -61,28 +61,19 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   if (dev.phase === "stopping") {
     return (
       <button type="button" className="btn sm ghost" disabled>
-        <Icon name="refresh" size={12} style={{ animation: "spin 1s linear infinite" }} /> Stopping…
+        <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Stopping…
       </button>
     );
   }
 
   // running
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+    <span className="inline-flex items-center gap-1.5">
       <a
         href={dev.url}
         target="_blank"
         rel="noopener noreferrer"
-        style={{
-          fontFamily: "var(--font-mono)",
-          fontSize: 11,
-          color: "var(--txt-2)",
-          textDecoration: "none",
-          padding: "2px 6px",
-          borderRadius: 4,
-          background: "color-mix(in srgb, var(--working) 15%, transparent)",
-          border: "1px solid color-mix(in srgb, var(--working) 30%, transparent)",
-        }}
+        className="font-mono text-[11px] text-[var(--txt-2)] no-underline px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--working)_15%,transparent)] border border-[color-mix(in_srgb,var(--working)_30%,transparent)]"
         title={`Open ${dev.url}`}
       >
         :{dev.port}

@@ -9,8 +9,7 @@ export type CardsOfficeGhostProps = {
 export function CardsOfficeGhost({ count = 6 }: CardsOfficeGhostProps) {
   return (
     <ul
-      className="cards-office"
-      style={{ listStyle: "none", margin: 0 }}
+      className="cards-office list-none m-0"
       aria-busy="true"
       aria-label="Loading agents"
       role="status"
@@ -18,20 +17,14 @@ export function CardsOfficeGhost({ count = 6 }: CardsOfficeGhostProps) {
       {Array.from({ length: count }, (_, i) => (
         <li key={i}>
           <div
-            className="desk-card"
-            style={{
-              border: "1px solid var(--line)",
-              background: "var(--bg-1)",
-              width: "100%",
-              pointerEvents: "none",
-            }}
+            className="desk-card border border-line bg-bg-1 w-full pointer-events-none"
           >
             {/* dc-h: avatar circle + name/id + status dot placeholder */}
             <div className="dc-h">
-              <div className="av" style={{ flexShrink: 0 }}>
+              <div className="av shrink-0">
                 <Skeleton width={40} height={40} rounded={20} />
               </div>
-              <div style={{ minWidth: 0, flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
+              <div className="min-w-0 flex-1 flex flex-col gap-[5px]">
                 <Skeleton width={120} height={13} />
                 <Skeleton width={80} height={11} />
               </div>
@@ -40,7 +33,7 @@ export function CardsOfficeGhost({ count = 6 }: CardsOfficeGhostProps) {
             </div>
 
             {/* dc-task */}
-            <div className="dc-task" style={{ display: "block" }}>
+            <div className="dc-task block">
               <Skeleton width="70%" height={12} />
             </div>
 

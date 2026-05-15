@@ -6,7 +6,7 @@ export default function ActivityLoading() {
       <div className="toolbar">
         <Skeleton width={120} height={20} />
       </div>
-      <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="tab-pane flex flex-col gap-3">
         <Skeleton width="100%" height={56} />
         <Skeleton width="100%" height={56} />
         <Skeleton width="100%" height={56} />

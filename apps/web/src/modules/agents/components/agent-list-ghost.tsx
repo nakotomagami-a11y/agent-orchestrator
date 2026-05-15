@@ -14,16 +14,15 @@ export type AgentListGhostProps = {
 export function AgentListGhost({ count = 4 }: AgentListGhostProps) {
   return (
     <div
-      className="tab-pane"
-      style={{ padding: 18, overflow: "auto", display: "flex", flexDirection: "column", gap: 14 }}
+      className="tab-pane !p-[18px] overflow-auto !flex !flex-col !gap-3.5"
       aria-busy="true"
       aria-label="Loading agents"
       role="status"
     >
       {/* Search bar ghost */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ flex: "1 1 320px", maxWidth: 480 }}>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-center gap-2.5">
+          <div className="flex-[1_1_320px] max-w-[480px]">
             <Skeleton width="100%" height={32} rounded={8} />
           </div>
         </div>
@@ -31,30 +30,19 @@ export function AgentListGhost({ count = 4 }: AgentListGhostProps) {
 
       {/* Card grid ghost */}
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: 14,
-          alignContent: "start",
-        }}
+        className="grid gap-3.5 content-start"
+        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}
         aria-hidden="true"
       >
         {Array.from({ length: count }, (_, i) => (
           <div
             key={i}
-            className="card"
-            style={{
-              padding: 16,
-              display: "flex",
-              flexDirection: "column",
-              gap: 10,
-              pointerEvents: "none",
-            }}
+            className="card !p-4 !flex !flex-col !gap-2.5 pointer-events-none"
           >
             {/* Header: avatar + name/category + edit button placeholder */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="flex items-center gap-2.5">
               <Skeleton width={40} height={40} rounded={8} />
-              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 5 }}>
+              <div className="flex-1 min-w-0 flex flex-col gap-[5px]">
                 <Skeleton width={130} height={14} />
                 <Skeleton width={80} height={11} />
               </div>
@@ -62,20 +50,20 @@ export function AgentListGhost({ count = 4 }: AgentListGhostProps) {
             </div>
 
             {/* Description: two lines */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div className="flex flex-col gap-[5px]">
               <Skeleton width="100%" height={12} />
               <Skeleton width="75%" height={12} />
             </div>
 
             {/* Skills row */}
-            <div style={{ display: "flex", gap: 4 }}>
+            <div className="flex gap-1">
               <Skeleton width={60} height={20} rounded={999} />
               <Skeleton width={50} height={20} rounded={999} />
               <Skeleton width={45} height={20} rounded={999} />
             </div>
 
             {/* Footer: model tag + uses count */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "auto" }}>
+            <div className="flex items-center justify-between mt-auto">
               <Skeleton width={80} height={20} rounded={999} />
               <Skeleton width={55} height={11} />
             </div>

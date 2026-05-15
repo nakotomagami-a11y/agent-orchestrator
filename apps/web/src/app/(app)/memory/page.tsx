@@ -38,46 +38,21 @@ function ScopeEditor({ scope }: { scope: MemoryScope }) {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-        padding: "18px 24px",
-        gap: 14,
-      }}
-    >
+    <div className="flex flex-col h-full min-h-0 px-6 py-[18px] gap-3.5">
       {/* Header */}
-      <h2
-        style={{
-          margin: 0,
-          fontSize: 16,
-          fontWeight: 700,
-          letterSpacing: "-0.01em",
-          flexShrink: 0,
-        }}
-      >
+      <h2 className="m-0 text-base font-bold tracking-[-0.01em] shrink-0">
         {title}
       </h2>
 
       {/* Content area */}
       {memory.isLoading ? (
-        <div role="status" aria-label={t("empty_select")} style={{ flex: 1 }}>
+        <div role="status" aria-label={t("empty_select")} className="flex-1">
           <Skeleton width="100%" height={300} />
         </div>
       ) : memory.loadError ? (
         <div
           role="alert"
-          style={{
-            padding: "12px 14px",
-            background: "rgba(239,68,68,0.08)",
-            border: "1px solid var(--error)",
-            borderRadius: "var(--r-md)",
-            fontSize: 13,
-            color: "var(--error)",
-            flexShrink: 0,
-          }}
+          className="px-[14px] py-3 border border-[var(--error)] rounded-md text-[13px] shrink-0 bg-[rgba(239,68,68,0.08)] text-[var(--error)]"
         >
           {memory.loadError.message}
         </div>
@@ -88,21 +63,7 @@ function ScopeEditor({ scope }: { scope: MemoryScope }) {
           onKeyDown={handleKeyDown}
           placeholder={t("no_content")}
           aria-label={title}
-          style={{
-            flex: 1,
-            resize: "none",
-            fontFamily: "var(--font-mono)",
-            fontSize: 13,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: "var(--r-md)",
-            padding: 12,
-            color: "var(--txt)",
-            lineHeight: 1.6,
-            outline: "none",
-            minHeight: 200,
-            transition: "border-color 120ms",
-          }}
+          className="flex-1 resize-none font-mono text-[13px] bg-bg-1 border border-line rounded-md p-3 text-txt outline-none leading-[1.6] min-h-[200px] transition-[border-color] duration-[120ms]"
           onFocus={(e) => {
             e.currentTarget.style.borderColor = "var(--acc)";
           }}
@@ -113,24 +74,13 @@ function ScopeEditor({ scope }: { scope: MemoryScope }) {
       )}
 
       {/* Footer: status + save button */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "flex-end",
-          gap: 10,
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex items-center justify-end gap-2.5 shrink-0">
         <span
           aria-live="polite"
+          className="text-xs font-mono min-h-[16px] transition-[opacity] duration-[200ms]"
           style={{
-            fontSize: 12,
-            fontFamily: "var(--font-mono)",
-            minHeight: 16,
             color: memory.saveError ? "var(--error)" : "var(--done)",
             opacity: memory.saveError ? 1 : draft.savedRecently ? 1 : 0,
-            transition: "opacity 200ms",
           }}
         >
           {memory.saveError ? t("save_error") : t("saved")}
@@ -172,22 +122,11 @@ function NavScopeButton({
       type="button"
       onClick={() => onSelect(scope)}
       aria-current={selected ? ("true" as const) : undefined}
+      className="flex items-center gap-2 w-full h-8 pr-2 border-none rounded-sm cursor-pointer text-[13px] text-left font-[inherit]"
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        width: "100%",
-        height: 32,
         paddingLeft: indent ? 20 : 8,
-        paddingRight: 8,
         background: selected ? "var(--acc-faint)" : "transparent",
-        border: "none",
-        borderRadius: "var(--r-sm)",
-        cursor: "pointer",
-        font: "inherit",
-        fontSize: 13,
         color: selected ? "var(--acc)" : "var(--txt-2)",
-        textAlign: "left",
         fontWeight: selected ? 600 : 400,
       }}
     >
@@ -195,16 +134,10 @@ function NavScopeButton({
         name={icon}
         size={14}
         aria-hidden
-        style={{ flexShrink: 0, opacity: selected ? 1 : 0.65 }}
+        className="shrink-0"
+        style={{ opacity: selected ? 1 : 0.65 }}
       />
-      <span
-        style={{
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-          flex: 1,
-        }}
-      >
+      <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1">
         {label}
       </span>
     </button>
@@ -234,16 +167,7 @@ function NavTree({ selected, onSelect }: NavTreeProps) {
   return (
     <nav
       aria-label="Memory scopes"
-      style={{
-        width: 200,
-        flexShrink: 0,
-        borderRight: "1px solid var(--line)",
-        overflow: "auto",
-        padding: "14px 6px",
-        display: "flex",
-        flexDirection: "column",
-        gap: 2,
-      }}
+      className="w-[200px] shrink-0 border-r border-line overflow-auto py-[14px] px-[6px] flex flex-col gap-0.5"
     >
       {/* Global */}
       <NavScopeButton
@@ -255,23 +179,16 @@ function NavTree({ selected, onSelect }: NavTreeProps) {
       />
 
       {/* Projects */}
-      <div className="section-h" style={{ marginTop: 10, padding: "6px 8px 2px" }}>
+      <div className="section-h mt-[10px] !px-2 !pt-[6px] !pb-0.5">
         {t("projects_heading")}
       </div>
 
       {projectsQ.isLoading ? (
-        <div style={{ padding: "4px 8px" }}>
+        <div className="px-2 py-1">
           <Skeleton width="80%" height={14} />
         </div>
       ) : !projectsQ.data || projectsQ.data.length === 0 ? (
-        <div
-          style={{
-            padding: "4px 8px",
-            fontSize: 11.5,
-            color: "var(--txt-3)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
+        <div className="px-2 py-1 text-[11.5px] text-txt-3 font-mono">
           {t("no_projects")}
         </div>
       ) : (
@@ -292,23 +209,16 @@ function NavTree({ selected, onSelect }: NavTreeProps) {
       )}
 
       {/* Agents */}
-      <div className="section-h" style={{ marginTop: 10, padding: "6px 8px 2px" }}>
+      <div className="section-h mt-[10px] !px-2 !pt-[6px] !pb-0.5">
         {t("agents_heading")}
       </div>
 
       {agentsQ.isLoading ? (
-        <div style={{ padding: "4px 8px" }}>
+        <div className="px-2 py-1">
           <Skeleton width="80%" height={14} />
         </div>
       ) : !agentsQ.data || agentsQ.data.length === 0 ? (
-        <div
-          style={{
-            padding: "4px 8px",
-            fontSize: 11.5,
-            color: "var(--txt-3)",
-            fontFamily: "var(--font-mono)",
-          }}
-        >
+        <div className="px-2 py-1 text-[11.5px] text-txt-3 font-mono">
           {t("no_agents")}
         </div>
       ) : (
@@ -347,25 +257,10 @@ export default function MemoryPage() {
         <span className="sub">· global, project &amp; agent memory</span>
       </div>
 
-      <div
-        style={{
-          display: "flex",
-          flex: 1,
-          minHeight: 0,
-          overflow: "hidden",
-        }}
-      >
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <NavTree selected={scope} onSelect={setScope} />
 
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0,
-            overflow: "hidden",
-          }}
-        >
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <ScopeEditor scope={scope} />
         </div>
       </div>

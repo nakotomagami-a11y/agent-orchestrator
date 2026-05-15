@@ -25,21 +25,21 @@ export function SkillsPage() {
   const installedCount = (registryQ.data ?? []).filter((s) => s.installed).length;
 
   return (
-    <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="tab-pane flex flex-col gap-[14px]">
       <Card>
         <CardHeader
           title={t("skills.title")}
           sub={t("skills.card_sub", { installed: installedCount, total: registryQ.data?.length ?? 0 })}
         />
-        <div style={{ padding: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 220 }}>
+        <div className="p-4 flex gap-3 items-center flex-wrap">
+          <div className="flex-1 min-w-[220px]">
             <TextInput
               value={filter.q}
               onChange={(e) => setFilter((f) => ({ ...f, q: e.target.value }))}
               placeholder={t("skills.filter_placeholder")}
             />
           </div>
-          <label style={{ display: "inline-flex", gap: 6, alignItems: "center", fontSize: 12.5 }}>
+          <label className="inline-flex gap-[6px] items-center text-[12.5px]">
             <input
               type="checkbox"
               checked={filter.showInstalledOnly}
@@ -55,7 +55,7 @@ export function SkillsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState icon="cpu" title={t("skills.no_results_title")} description={t("common.empty")} />
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
           {filtered.map((s) => (
             <SkillCard
               key={`${s.source}-${s.name}`}
@@ -87,24 +87,24 @@ function SkillCard({
   const t = useTranslations();
   return (
     <Card>
-      <div style={{ padding: 14, display: "flex", flexDirection: "column", gap: 8, height: "100%" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <div className="p-[14px] flex flex-col gap-2 h-full">
+        <div className="flex items-center gap-2">
           <Icon name="cpu" />
-          <strong style={{ fontSize: 13 }}>{skill.name}</strong>
+          <strong className="text-[13px]">{skill.name}</strong>
           {skill.installed ? (
-            <Tag style={{ marginLeft: "auto", background: "var(--acc-faint)", color: "var(--acc)" }}>{t("skills.installed_badge")}</Tag>
+            <Tag className="ml-auto bg-acc-faint text-acc">{t("skills.installed_badge")}</Tag>
           ) : null}
         </div>
-        <div style={{ fontSize: 12, color: "var(--txt-2)", minHeight: 32 }}>
+        <div className="text-xs text-txt-2 min-h-8">
           {skill.description || t("skills.description_empty")}
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+        <div className="flex flex-wrap gap-1">
           {skill.tags.slice(0, 4).map((tag) => (
             <Tag key={tag}>{tag}</Tag>
           ))}
         </div>
-        <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>
+        <div className="mt-auto flex items-center justify-between">
+          <span className="font-mono text-[11px] text-txt-3">
             {skill.source}@{skill.ref}
           </span>
           {skill.installed ? (

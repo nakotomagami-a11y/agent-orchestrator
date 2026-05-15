@@ -245,7 +245,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
             <section>
               <h3>{t("first_run.requirements_title")}</h3>
               <p className="first-run-hint">{t("first_run.requirements_hint")}</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 16 }}>
+              <div className="flex flex-col gap-2.5 mt-4">
                 <ReqRow
                   label={t("first_run.req_claude_label")}
                   status={
@@ -260,9 +260,9 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                   errorText={t("first_run.req_claude_missing")}
                 />
                 {!healthQ.isLoading && !healthQ.data?.available ? (
-                  <div className="first-run-hint small" style={{ paddingLeft: 28 }}>
+                  <div className="first-run-hint small pl-7">
                     <div>{t("first_run.req_claude_install")}</div>
-                    <div style={{ marginTop: 4 }}>{t("first_run.req_claude_auth_note")}</div>
+                    <div className="mt-1">{t("first_run.req_claude_auth_note")}</div>
                   </div>
                 ) : null}
               </div>
@@ -300,7 +300,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                   </button>
                 ))}
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div className="flex gap-1.5">
                 <TextInput
                   value={excludedInput}
                   onChange={(e) => setExcludedInput(e.target.value)}
@@ -389,7 +389,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                 </div>
               )}
               {chosenFolder ? (
-                <div style={{ marginTop: 10 }}>
+                <div className="mt-2.5">
                   <label className="first-run-hint" htmlFor="fr-project-name">
                     {t("first_run.project_name_label")}
                   </label>
@@ -400,7 +400,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                   />
                 </div>
               ) : null}
-              <p className="first-run-hint small" style={{ marginTop: 8 }}>
+              <p className="first-run-hint small mt-2">
                 {t("first_run.project_skip_hint")}
               </p>
             </section>
@@ -422,7 +422,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
           >
             {t("common.back")}
           </button>
-          <div style={{ flex: 1 }} />
+          <div className="flex-1" />
           {!isLast ? (
             <button type="button" className="btn primary" onClick={goNext} disabled={busy}>
               {t("common.next")}
@@ -461,15 +461,16 @@ function ReqRow({
         : "var(--txt-3)";
   const detail = status === "ok" ? okText : status === "error" ? errorText : checkingText;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+    <div className="flex items-center gap-2 text-[13px]">
       <span
         aria-hidden
-        style={{ color: badgeColor, fontWeight: 700, fontSize: 15, width: 16, textAlign: "center", flexShrink: 0 }}
+        className="font-bold text-[15px] w-4 text-center shrink-0"
+        style={{ color: badgeColor }}
       >
         {badge}
       </span>
-      <span style={{ fontWeight: 600, minWidth: 90 }}>{label}</span>
-      <span style={{ color: "var(--txt-2)", fontFamily: "var(--font-mono)", fontSize: 12 }}>
+      <span className="font-semibold min-w-[90px]">{label}</span>
+      <span className="text-txt-2 font-mono text-[12px]">
         {detail}
       </span>
     </div>

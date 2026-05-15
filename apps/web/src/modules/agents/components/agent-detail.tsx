@@ -37,7 +37,7 @@ export function AgentDetail({ id }: AgentDetailProps) {
     return (
       <div className="tab-pane">
         <Skeleton width={240} height={28} />
-        <div style={{ height: 12 }} />
+        <div className="h-3" />
         <Skeleton width="100%" height={200} />
       </div>
     );
@@ -49,18 +49,18 @@ export function AgentDetail({ id }: AgentDetailProps) {
   const unit = unitForAgent(id, agent.unit);
 
   return (
-    <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+    <div className="tab-pane flex flex-col gap-[14px]">
       <Card>
-        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: 16 }}>
-          <div style={{ width: 56, height: 56, flex: "none" }}>
+        <div className="flex items-center gap-[14px] p-4">
+          <div className="w-14 h-14 shrink-0">
             <UnitSprite unit={unit} size={56} animate />
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, letterSpacing: "-0.01em" }}>{agent.name}</h2>
-            <div style={{ fontSize: 12, color: "var(--txt-3)", fontFamily: "var(--font-mono)" }}>{id}</div>
-            <div style={{ fontSize: 13, color: "var(--txt-2)", marginTop: 4 }}>{agent.description || t("agent_list.description_empty")}</div>
+          <div className="flex-1 min-w-0">
+            <h2 className="m-0 text-[18px] font-bold tracking-[-0.01em]">{agent.name}</h2>
+            <div className="text-xs text-txt-3 font-mono">{id}</div>
+            <div className="text-[13px] text-txt-2 mt-1">{agent.description || t("agent_list.description_empty")}</div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="flex gap-2">
             <button type="button" className="btn primary" onClick={() => openChat(id, { projectId: activeProjectId ?? undefined })}>
               <Icon name="send" /> {t("summon.open_chat")}
             </button>
@@ -69,12 +69,12 @@ export function AgentDetail({ id }: AgentDetailProps) {
             </Link>
           </div>
         </div>
-        <div style={{ padding: "0 16px 14px", display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <div className="px-4 pb-[14px] flex gap-[6px] flex-wrap">
           {agent.skills.map((s) => (
             <Tag key={s} variant="skill">#{s}</Tag>
           ))}
-          {agent.skills.length === 0 ? <span style={{ fontSize: 12, color: "var(--txt-3)" }}>{t("agent_details.no_skills")}</span> : null}
-          <span style={{ flex: 1 }} />
+          {agent.skills.length === 0 ? <span className="text-xs text-txt-3">{t("agent_details.no_skills")}</span> : null}
+          <span className="flex-1" />
           <Tag>{t("agent_details.tag_model", { model: agent.defaultModel ?? t("agent_details.tag_default") })}</Tag>
           <Tag>{t("agent_details.tag_effort", { effort: agent.defaultEffort ?? t("agent_details.tag_default") })}</Tag>
           <Tag>{t("agent_details.tag_tools", { count: agent.tools.length })}</Tag>
@@ -96,7 +96,7 @@ export function AgentDetail({ id }: AgentDetailProps) {
         .with("prompt", () => (
           <Card>
             <CardHeader title={t("agent_details.prompt_card_title")} sub={`~/.claude/agents/${id}.md`} />
-            <div style={{ padding: 16 }}>
+            <div className="p-4">
               {bodyQ.isLoading ? (
                 <Skeleton width="100%" height={200} />
               ) : (
@@ -125,7 +125,7 @@ function AgentMemoryCard({ id }: { id: string }) {
         title={t("agent_details.memory_card_title")}
         sub={`~/.claude/agents/${id}.memory.md`}
       />
-      <div style={{ padding: 16 }}>
+      <div className="p-4">
         <MemoryEditor
           value={memoryQ.data ?? ""}
           onSave={(content) => writeMut.mutateAsync({ id, content })}

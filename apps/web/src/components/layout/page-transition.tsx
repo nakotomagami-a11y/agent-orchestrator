@@ -12,13 +12,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
   return (
     <div
       key={pathname}
-      className="page-transition"
-      style={{
-        flex: 1,
-        minHeight: 0,
-        display: "flex",
-        flexDirection: "column",
-      }}
+      className="page-transition flex-1 min-h-0 flex flex-col"
     >
       {children}
     </div>

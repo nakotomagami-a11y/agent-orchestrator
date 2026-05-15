@@ -47,39 +47,22 @@ export function ProjectsList() {
             <Link
               key={p.id}
               href={PAGE_ROUTES.project(p.id)}
-              style={{
-                display: "grid",
-                gridTemplateColumns: "auto 1fr auto",
-                gap: 12,
-                alignItems: "center",
-                padding: "10px 16px",
-                borderBottom: "1px solid var(--line)",
-                textDecoration: "none",
-                color: "var(--txt)",
-              }}
+              className="grid gap-3 items-center px-4 py-[10px] border-b border-line no-underline text-txt"
+              style={{ gridTemplateColumns: "auto 1fr auto" }}
             >
               <Icon name="folder" />
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 600 }}>{p.name}</div>
+              <div className="min-w-0">
+                <div className="text-[13.5px] font-semibold">{p.name}</div>
                 {p.description ? (
-                  <div style={{ fontSize: 12, color: "var(--txt-2)" }}>{p.description}</div>
+                  <div className="text-[12px] text-txt-2">{p.description}</div>
                 ) : null}
                 {p.cwd ? (
-                  <div
-                    style={{
-                      fontFamily: "var(--font-mono)",
-                      fontSize: 11,
-                      color: "var(--txt-3)",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
+                  <div className="font-[var(--font-mono)] text-[11px] text-txt-3 overflow-hidden text-ellipsis whitespace-nowrap">
                     {p.cwd}
                   </div>
                 ) : null}
               </div>
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--txt-3)" }}>
+              <span className="font-[var(--font-mono)] text-[11px] text-txt-3">
                 {t("projects.instances_count", { count: p.instanceCount })}
               </span>
             </Link>

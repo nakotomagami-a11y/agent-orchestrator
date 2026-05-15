@@ -57,7 +57,7 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end" }: Dropd
   };
 
   return (
-    <div style={{ position: "relative", display: "inline-block" }}>
+    <div className="relative inline-block">
       <button
         ref={triggerRef}
         type="button"
@@ -76,18 +76,8 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end" }: Dropd
           role="menu"
           aria-label={ariaLabel}
           onKeyDown={onKey}
-          style={{
-            position: "absolute",
-            top: "calc(100% + 4px)",
-            [align === "end" ? "right" : "left"]: 0,
-            minWidth: 180,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: "var(--r-md)",
-            boxShadow: "var(--shadow-2)",
-            padding: 4,
-            zIndex: 50,
-          }}
+          className="absolute top-[calc(100%+4px)] min-w-[180px] bg-bg-1 border border-line rounded-[var(--r-md)] shadow-[var(--shadow-2)] p-1 z-50"
+          style={{ [align === "end" ? "right" : "left"]: 0 }}
         >
           {items.map((item, i) => (
             <button
@@ -100,11 +90,8 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end" }: Dropd
                 setOpen(false);
               }}
               onMouseEnter={() => setActiveIndex(i)}
-              className={cn("nav-item", i === activeIndex && "on")}
-              style={{
-                width: "100%",
-                color: item.destructive ? "var(--error)" : undefined,
-              }}
+              className={cn("nav-item w-full", i === activeIndex && "on")}
+              style={{ color: item.destructive ? "var(--error)" : undefined }}
             >
               {item.label}
             </button>

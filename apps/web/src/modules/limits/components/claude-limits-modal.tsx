@@ -95,11 +95,8 @@ function Gauge({ pct, status }: { pct: number; status: "ok" | "warn" | "bad" }) 
           stroke={color} strokeWidth={10}
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circumference}`}
-          style={{
-            transformOrigin: "70px 70px",
-            transform: "rotate(-90deg)",
-            filter: `drop-shadow(0 0 6px ${glowColor})`,
-          }}
+          className="origin-[70px_70px] -rotate-90"
+          style={{ filter: `drop-shadow(0 0 6px ${glowColor})` }}
         />
       </svg>
       <div className="label">
@@ -146,7 +143,7 @@ function BudgetHero({
         <div className="kicker">
           <span className="pulse" aria-hidden="true" />
           {periodLabel}
-          <span style={{ color: "var(--ao-fg-3)", marginLeft: 4 }}>· resets in {resetIn}</span>
+          <span className="text-[var(--ao-fg-3)] ml-1">· resets in {resetIn}</span>
         </div>
 
         <div className="big">
@@ -183,7 +180,7 @@ function BudgetHero({
             <span className="l">Burn rate</span>
             <span className="v">
               {fmtUSD(burnRate)}
-              <span className="muted" style={{ fontSize: 10, marginLeft: 4 }}>/day</span>
+              <span className="muted text-[10px] ml-1">/day</span>
             </span>
           </div>
           <div className="item">
@@ -225,22 +222,11 @@ function PlanGrid({ value }: { value: ClaudePlan }) {
       {PLAN_DEFS.map((p) => (
         <div
           key={p.id}
-          className={`plan-tile${value === p.id ? " active" : ""}`}
-          style={{ cursor: "default", pointerEvents: "none" }}
+          className={`plan-tile cursor-default pointer-events-none${value === p.id ? " active" : ""}`}
         >
           <div className="n">
             <span
-              style={{
-                width: 22, height: 22,
-                background: "var(--ao-bg-3)",
-                border: "1px solid var(--ao-line-1)",
-                borderRadius: 6,
-                display: "inline-grid",
-                placeItems: "center",
-                fontSize: 11,
-                fontFamily: "var(--ao-font-mono)",
-                flexShrink: 0,
-              }}
+              className="w-[22px] h-[22px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] rounded-[6px] inline-grid place-items-center text-[11px] font-[var(--ao-font-mono)] shrink-0"
             >
               {p.icon}
             </span>
@@ -392,7 +378,7 @@ function ByModel({
   totalCost: number;
 }) {
   if (modelRows.length === 0) {
-    return <div style={{ fontSize: 12, color: "var(--ao-fg-3)", padding: "8px 0" }}>No runs in this period.</div>;
+    return <div className="text-[12px] text-[var(--ao-fg-3)] py-2">No runs in this period.</div>;
   }
   return (
     <div className="model-rows">
@@ -434,7 +420,7 @@ function TopAgents({
   totalCost: number;
 }) {
   if (agentRows.length === 0) {
-    return <div style={{ fontSize: 12, color: "var(--ao-fg-3)", padding: "8px 0" }}>No runs in this period.</div>;
+    return <div className="text-[12px] text-[var(--ao-fg-3)] py-2">No runs in this period.</div>;
   }
   return (
     <div className="spend-rows">
@@ -665,23 +651,13 @@ export function ClaudeLimitsModal() {
               <span>
                 Counts only what Agent Office summoned (saved in{" "}
                 <code
-                  style={{
-                    color: "var(--ao-fg-1)",
-                    background: "rgba(255,255,255,0.04)",
-                    padding: "1px 4px",
-                    borderRadius: 3,
-                  }}
+                  className="text-[var(--ao-fg-1)] bg-[rgba(255,255,255,0.04)] px-1 py-px rounded-[3px]"
                 >
                   ~/.claude/agent-office/db.sqlite
                 </code>
                 ). Anything you ran through plain{" "}
                 <code
-                  style={{
-                    color: "var(--ao-fg-1)",
-                    background: "rgba(255,255,255,0.04)",
-                    padding: "1px 4px",
-                    borderRadius: 3,
-                  }}
+                  className="text-[var(--ao-fg-1)] bg-[rgba(255,255,255,0.04)] px-1 py-px rounded-[3px]"
                 >
                   claude
                 </code>{" "}

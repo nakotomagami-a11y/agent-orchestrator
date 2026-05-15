@@ -129,7 +129,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
             placeholder="Search prompts, run IDs…"
           />
           {q && (
-            <button type="button" onClick={() => setQ("")} aria-label="Clear" style={{ color: "var(--ao-fg-3)", lineHeight: 1, fontSize: 16 }}>
+            <button type="button" onClick={() => setQ("")} aria-label="Clear" className="text-[var(--ao-fg-3)] leading-none text-base">
               ×
             </button>
           )}
@@ -138,22 +138,21 @@ export function HistoryTab({ agentId }: { agentId: string }) {
           All
         </button>
         <button type="button" className={`ao-filter-btn${filter === "ok" ? " ao-active" : ""}`} onClick={() => setFilter("ok")}>
-          <span className="ao-badge ao-ok ao-dot" style={{ fontSize: 9, padding: "1px 6px" }}>ok</span>
+          <span className="ao-badge ao-ok ao-dot text-[9px] px-[6px] py-px">ok</span>
         </button>
         <button type="button" className={`ao-filter-btn${filter === "bad" ? " ao-active" : ""}`} onClick={() => setFilter("bad")}>
-          <span className="ao-badge ao-bad ao-dot" style={{ fontSize: 9, padding: "1px 6px" }}>failed</span>
+          <span className="ao-badge ao-bad ao-dot text-[9px] px-[6px] py-px">failed</span>
         </button>
         <button type="button" className="ao-filter-btn">
           <AoFilter size={13} /> More
         </button>
-        <div style={{ flex: 1 }} />
+        <div className="flex-1" />
         {confirmWipe ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 12, color: "var(--ao-fg-2)" }}>Wipe all runs?</span>
+          <div className="flex items-center gap-[6px]">
+            <span className="text-xs text-[var(--ao-fg-2)]">Wipe all runs?</span>
             <button
               type="button"
-              className="ao-filter-btn"
-              style={{ color: "var(--ao-bad)", borderColor: "var(--ao-bad)" }}
+              className="ao-filter-btn text-[var(--ao-bad)] border-[var(--ao-bad)]"
               onClick={() => wipeMutation.mutate()}
               disabled={wipeMutation.isPending}
             >
@@ -166,8 +165,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
         ) : (
           <button
             type="button"
-            className="ao-filter-btn"
-            style={{ color: "var(--ao-fg-3)" }}
+            className="ao-filter-btn text-[var(--ao-fg-3)]"
             onClick={() => setConfirmWipe(true)}
             disabled={allRuns.length === 0}
           >
@@ -179,9 +177,9 @@ export function HistoryTab({ agentId }: { agentId: string }) {
       {/* Run list */}
       {groups.length === 0 ? (
         <div className="ao-card">
-          <div className="ao-card-body" style={{ textAlign: "center", padding: 40, color: "var(--ao-fg-2)" }}>
+          <div className="ao-card-body !text-center !p-10 !text-[var(--ao-fg-2)]">
             <AoSearch size={28} />
-            <div style={{ marginTop: 10, fontSize: 14 }}>
+            <div className="mt-[10px] text-sm">
               {allRuns.length === 0 ? "No runs yet." : "No runs match your filter."}
             </div>
           </div>

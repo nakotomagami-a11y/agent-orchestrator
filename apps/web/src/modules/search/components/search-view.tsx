@@ -42,8 +42,8 @@ export function SearchView() {
   }, []);
 
   return (
-    <div className="tab-pane" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+    <div className="tab-pane flex flex-col gap-3">
+      <div className="flex gap-2 items-center">
         <input
           autoFocus
           type="search"
@@ -51,22 +51,12 @@ export function SearchView() {
           onChange={(e) => handleChange(e.target.value)}
           placeholder={t("search_page.placeholder")}
           aria-label={t("search_page.placeholder")}
-          style={{
-            flex: 1,
-            background: "var(--bg-1)",
-            border: "1px solid var(--line)",
-            borderRadius: "var(--r-md)",
-            padding: "7px 12px",
-            fontFamily: "var(--font-mono)",
-            fontSize: 13,
-            color: "var(--txt)",
-            outline: "none",
-          }}
+          className="flex-1 bg-bg-1 border border-line rounded-[var(--r-md)] px-3 py-[7px] font-[var(--font-mono)] text-[13px] text-txt outline-none"
         />
       </div>
 
       {isLoading ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        <div className="flex flex-col gap-1">
           <Skeleton width="100%" height={48} />
           <Skeleton width="100%" height={48} />
           <Skeleton width="100%" height={48} />
@@ -79,23 +69,10 @@ export function SearchView() {
         />
       ) : (
         <div>
-          <div
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-              color: "var(--txt-3)",
-              padding: "0 2px 8px",
-            }}
-          >
+          <div className="font-[var(--font-mono)] text-[11px] text-txt-3 px-[2px] pb-2">
             {t("search_page.results_count", { count: results.length })}
           </div>
-          <div
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: "var(--r-md)",
-              overflow: "hidden",
-            }}
-          >
+          <div className="border border-line rounded-[var(--r-md)] overflow-hidden">
             {results.map((run) => (
               <RunRow key={run.id} run={run} />
             ))}

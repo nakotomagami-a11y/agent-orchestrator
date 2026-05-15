@@ -12,13 +12,13 @@ export default async function SearchPage() {
       </div>
       <Suspense
         fallback={
-          <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="p-6 flex flex-col gap-1.5">
             <Skeleton width="100%" height={36} />
-            <div style={{ height: 8 }} />
+            <div className="h-2" />
             <Skeleton width="100%" height={48} />
-            <div style={{ height: 4 }} />
+            <div className="h-1" />
             <Skeleton width="100%" height={48} />
-            <div style={{ height: 4 }} />
+            <div className="h-1" />
             <Skeleton width="100%" height={48} />
           </div>
         }
