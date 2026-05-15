@@ -24,6 +24,7 @@ import type { PersistedRun } from "@agent-office/shared/types";
 import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
+import { useBranchStore } from "@/lib/branch-store";
 
 export type ChatPanelProps = {
   agent: OfficeAgent;
@@ -281,6 +282,15 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, noHea
     if (!transcriptLoaded) return;
     void saveTranscript(tKey, thread, activeRunId, sessionId);
   }, [tKey, thread, activeRunId, sessionId, transcriptLoaded]);
+
+  // ── Branch seed: pre-fill composer when opened via "Branch from here" ──
+  const consumeBranchSeed = useBranchStore((s) => s.consumeSeed);
+  useEffect(() => {
+    if (!transcriptLoaded) return;
+    const branch = consumeBranchSeed(agent.id);
+    if (branch) setPendingSeed(branch.prompt);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [transcriptLoaded, agent.id]);
 
   // ── Submit ──
   const doSubmit = (text: string) => {

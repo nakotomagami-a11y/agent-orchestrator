@@ -139,11 +139,26 @@ export const pipelineStepSchema = z.object({
   effort: z.string().optional(),
 });
 
+export const parallelPipelineStepSchema = z.object({
+  kind: z.literal("parallel"),
+  steps: z.array(pipelineStepSchema).min(2).max(8),
+});
+
+export const pipelineStepGroupSchema = z.union([pipelineStepSchema, parallelPipelineStepSchema]);
+
 export const createPipelineRequestSchema = z.object({
   steps: z
-    .array(pipelineStepSchema)
-    .min(2, "pipeline requires at least 2 steps")
-    .max(10, "pipeline allows at most 10 steps"),
+    .array(pipelineStepGroupSchema)
+    .min(2, "pipeline requires at least 2 step groups")
+    .max(10, "pipeline allows at most 10 step groups"),
   projectId: z.string().optional(),
+  cwd: z.string().optional(),
+});
+
+export const broadcastRequestSchema = z.object({
+  projectId: z.string().min(1),
+  prompt: z.string().min(1).max(MAX_PROMPT_BYTES),
+  model: z.string().optional(),
+  effort: z.string().optional(),
   cwd: z.string().optional(),
 });

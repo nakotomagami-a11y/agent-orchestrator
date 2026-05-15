@@ -120,7 +120,7 @@ export function OfficeView() {
               </div>
             )}
 
-            <OfficeScene />
+            <OfficeScene key={activeProjectId ?? "global"} projectId={activeProjectId ?? null} />
           </>
         ) : (
           <CardsOffice

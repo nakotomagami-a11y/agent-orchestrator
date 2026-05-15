@@ -12,9 +12,7 @@ import { Icon } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { EMPTY_FORM, type AgentFormValues, type FormError, slugifyId, toBody, validateForm } from "../utils/agent-form";
 import { useCreateAgent, useDeleteAgent, useWriteAgent } from "../hooks/use-agents";
-// UnitPicker removed — every agent now uses the black-faction pawn
-// avatar by default. Component file kept on disk for now in case we
-// re-enable per-agent customisation later.
+import { UnitPicker } from "@/components/ui/unit-picker";
 
 export type AgentFormProps = {
   initial?: AgentFormValues;
@@ -150,6 +148,14 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
           </Field>
           <Field label={t("agent_form.label_tools")} span={2}>
             <TextInput value={values.tools} onChange={update("tools")} placeholder={t("agent_form.placeholder_tools")} />
+          </Field>
+          <SectionDivider label="Appearance" />
+          <Field label="Avatar" span={2}>
+            <UnitPicker
+              value={values.unit}
+              onChange={(v) => setValues((prev) => ({ ...prev, unit: v }))}
+              agentName={values.name}
+            />
           </Field>
         </div>
       </Card>

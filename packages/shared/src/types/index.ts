@@ -191,8 +191,14 @@ export interface PipelineStep {
   effort?: string;
 }
 
+/** A group of steps that run concurrently; outputs are joined for the next sequential step. */
+export interface ParallelPipelineStep {
+  kind: "parallel";
+  steps: PipelineStep[];
+}
+
 export interface CreatePipelineRequest {
-  steps: PipelineStep[]; // min 2, max 10
+  steps: (PipelineStep | ParallelPipelineStep)[];
   projectId?: string;
   cwd?: string;
 }
@@ -204,6 +210,8 @@ export interface PipelineRunStep {
   status: "pending" | "running" | "done" | "error";
   output?: string;
   exitCode?: number;
+  /** When set, this step belongs to a parallel group; steps with the same value run concurrently. */
+  parallelGroup?: number;
 }
 
 export interface PipelineRun {
@@ -212,4 +220,6 @@ export interface PipelineRun {
   steps: PipelineRunStep[];
   status: "running" | "done" | "error";
   createdAt: number;
+  /** True when the server restarted while this pipeline was running. */
+  interrupted?: boolean;
 }

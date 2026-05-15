@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DB_PATH, APP_STATE_DIR, AGENTS_DIR } from "./paths";
-import type { PersistedRun } from "../types/index";
+import type { PersistedRun, PipelineRun, PipelineRunStep } from "../types/index";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -24,6 +24,8 @@ export function getDb(): Database.Database {
   db.prepare(
     "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=@now-started_at WHERE status='running'"
   ).run({ now });
+  // Any pipeline still running was interrupted by the restart — mark it so the UI can surface a recovery banner.
+  db.prepare("UPDATE pipelines SET status='error', ended_at=@now, interrupted=1 WHERE status='running'").run({ now });
   globalThis.__agentOfficeDb = db;
   return db;
 }
@@ -129,6 +131,35 @@ function createSchema(db: Database.Database): void {
       END;
     `);
     db.pragma("user_version = 1");
+  }
+
+  if (current < 2) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS pipelines (
+        id TEXT PRIMARY KEY,
+        project_id TEXT,
+        status TEXT NOT NULL DEFAULT 'running',
+        created_at INTEGER NOT NULL,
+        ended_at INTEGER,
+        interrupted INTEGER NOT NULL DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS pipeline_steps (
+        pipeline_id TEXT NOT NULL REFERENCES pipelines(id),
+        step_index INTEGER NOT NULL,
+        parallel_group INTEGER,
+        agent_id TEXT NOT NULL,
+        run_id TEXT,
+        status TEXT NOT NULL DEFAULT 'pending',
+        output TEXT,
+        exit_code INTEGER,
+        PRIMARY KEY(pipeline_id, step_index)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_pipeline_steps_pipeline ON pipeline_steps(pipeline_id);
+      CREATE INDEX IF NOT EXISTS idx_pipelines_project ON pipelines(project_id, created_at DESC);
+    `);
+    db.pragma("user_version = 2");
   }
 }
 
@@ -512,4 +543,79 @@ export function getAllUiSettings(): Record<string, string> {
   const out: Record<string, string> = {};
   for (const { key, value } of rows) out[key] = value;
   return out;
+}
+
+// ─── Pipeline operations ───────────────────────────────────────────────────────
+
+interface PipelineRow {
+  id: string; project_id: string | null; status: string;
+  created_at: number; ended_at: number | null; interrupted: number;
+}
+interface PipelineStepRow {
+  pipeline_id: string; step_index: number; parallel_group: number | null;
+  agent_id: string; run_id: string | null; status: string;
+  output: string | null; exit_code: number | null;
+}
+
+function rowToPipelineRun(row: PipelineRow, stepRows: PipelineStepRow[]): PipelineRun {
+  const steps: PipelineRunStep[] = stepRows.map((s) => ({
+    stepIndex: s.step_index,
+    agentId: s.agent_id,
+    runId: s.run_id ?? "",
+    status: s.status as PipelineRunStep["status"],
+    output: s.output ?? undefined,
+    exitCode: s.exit_code ?? undefined,
+    parallelGroup: s.parallel_group ?? undefined,
+  }));
+  return {
+    id: row.id,
+    projectId: row.project_id ?? undefined,
+    status: row.status as PipelineRun["status"],
+    createdAt: row.created_at,
+    interrupted: row.interrupted === 1 ? true : undefined,
+    steps,
+  };
+}
+
+export function insertPipeline(p: { id: string; projectId?: string; createdAt: number }): void {
+  getDb().prepare(
+    "INSERT OR IGNORE INTO pipelines (id, project_id, status, created_at, interrupted) VALUES (@id, @projectId, 'running', @createdAt, 0)"
+  ).run({ id: p.id, projectId: p.projectId ?? null, createdAt: p.createdAt });
+}
+
+export function updatePipelineStatus(id: string, status: string, endedAt?: number): void {
+  getDb().prepare("UPDATE pipelines SET status=@status, ended_at=@endedAt WHERE id=@id")
+    .run({ id, status, endedAt: endedAt ?? null });
+}
+
+export function upsertPipelineStep(s: {
+  pipelineId: string; stepIndex: number; parallelGroup?: number;
+  agentId: string; runId?: string; status: string; output?: string; exitCode?: number;
+}): void {
+  getDb().prepare(`
+    INSERT INTO pipeline_steps (pipeline_id, step_index, parallel_group, agent_id, run_id, status, output, exit_code)
+    VALUES (@pipelineId, @stepIndex, @parallelGroup, @agentId, @runId, @status, @output, @exitCode)
+    ON CONFLICT(pipeline_id, step_index) DO UPDATE SET
+      run_id=excluded.run_id, status=excluded.status, output=excluded.output, exit_code=excluded.exit_code
+  `).run({
+    pipelineId: s.pipelineId, stepIndex: s.stepIndex,
+    parallelGroup: s.parallelGroup ?? null,
+    agentId: s.agentId, runId: s.runId ?? null,
+    status: s.status, output: s.output ?? null, exitCode: s.exitCode ?? null,
+  });
+}
+
+export function getPipelineFromDb(id: string): PipelineRun | null {
+  const row = getDb().prepare("SELECT * FROM pipelines WHERE id=?").get(id) as PipelineRow | undefined;
+  if (!row) return null;
+  const steps = getDb().prepare("SELECT * FROM pipeline_steps WHERE pipeline_id=? ORDER BY step_index").all(id) as PipelineStepRow[];
+  return rowToPipelineRun(row, steps);
+}
+
+export function listInterruptedPipelines(): PipelineRun[] {
+  const rows = getDb().prepare("SELECT * FROM pipelines WHERE interrupted=1 ORDER BY created_at DESC LIMIT 50").all() as PipelineRow[];
+  return rows.map((row) => {
+    const steps = getDb().prepare("SELECT * FROM pipeline_steps WHERE pipeline_id=? ORDER BY step_index").all(row.id) as PipelineStepRow[];
+    return rowToPipelineRun(row, steps);
+  });
 }

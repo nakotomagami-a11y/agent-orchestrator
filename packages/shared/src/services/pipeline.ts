@@ -1,13 +1,23 @@
 // Multi-agent pipeline orchestration.
 //
-// `createPipeline` chains sequential runs where each step's prompt template
-// can reference `{{output}}` to receive the previous step's finalised output.
-// The function returns immediately with all steps in "pending" state and
-// continues orchestration in the background.
+// Supports sequential steps (each receives {{output}} from the previous) and
+// parallel groups ({ kind: "parallel", steps: [...] }) whose outputs are joined
+// and fed to the next sequential step.
+//
+// Every status transition is mirrored to SQLite so pipelines survive server
+// restarts. Pipelines interrupted mid-run surface as `interrupted: true` so
+// the UI can show a recovery banner identical to the run-recovery UX.
 
 import { randomUUID } from "node:crypto";
-import type { CreatePipelineRequest, PipelineRun, PipelineRunStep } from "../types/index";
+import type {
+  CreatePipelineRequest,
+  ParallelPipelineStep,
+  PipelineRun,
+  PipelineRunStep,
+  PipelineStep,
+} from "../types/index";
 import * as agents from "./agents";
+import * as db from "./db";
 import * as projects from "./projects";
 import * as summon from "./summon";
 import * as runs from "./runs";
@@ -27,21 +37,55 @@ const POLL_INTERVAL_MS = 500;
 const STEP_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 export function getPipeline(id: string): PipelineRun | undefined {
-  return pipelines.get(id);
+  return pipelines.get(id) ?? db.getPipelineFromDb(id) ?? undefined;
 }
 
 export function listPipelines(): PipelineRun[] {
   return Array.from(pipelines.values());
 }
 
+export function getInterruptedPipelines(): PipelineRun[] {
+  return db.listInterruptedPipelines();
+}
+
+function isParallel(step: PipelineStep | ParallelPipelineStep): step is ParallelPipelineStep {
+  return (step as ParallelPipelineStep).kind === "parallel";
+}
+
 /**
- * Poll until the run leaves "running" status, or until the step timeout
- * elapses. Resolves with the final status and output. Rejects with a
- * descriptive Error on timeout.
+ * Expand CreatePipelineRequest steps into a flat PipelineRunStep array.
+ * Parallel sub-steps get consecutive indices and share a `parallelGroup`.
  */
+function expandSteps(reqSteps: CreatePipelineRequest["steps"]): PipelineRunStep[] {
+  const out: PipelineRunStep[] = [];
+  let flatIdx = 0;
+  let groupIdx = 0;
+  for (const item of reqSteps) {
+    if (isParallel(item)) {
+      for (const leaf of item.steps) {
+        out.push({
+          stepIndex: flatIdx++,
+          agentId: leaf.agentId,
+          runId: "",
+          status: "pending",
+          parallelGroup: groupIdx,
+        });
+      }
+      groupIdx++;
+    } else {
+      out.push({
+        stepIndex: flatIdx++,
+        agentId: item.agentId,
+        runId: "",
+        status: "pending",
+      });
+    }
+  }
+  return out;
+}
+
 async function waitForRun(runId: string): Promise<{ output: string; exitCode: number }> {
   const deadline = Date.now() + STEP_TIMEOUT_MS;
-
   while (true) {
     const live = runs.getLiveRun(runId);
     if (live) {
@@ -49,7 +93,6 @@ async function waitForRun(runId: string): Promise<{ output: string; exitCode: nu
         return { output: live.output, exitCode: live.exitCode ?? (live.status === "done" ? 0 : 1) };
       }
     } else {
-      // Run has left the live registry — check the persisted store.
       const persisted = store.getRun(runId);
       if (persisted) {
         return {
@@ -57,132 +100,204 @@ async function waitForRun(runId: string): Promise<{ output: string; exitCode: nu
           exitCode: persisted.exitCode ?? (persisted.status === "done" ? 0 : 1),
         };
       }
-      // Not in either store yet — may be a brief gap between finalise and persist.
     }
-
     if (Date.now() >= deadline) {
       throw new Error(`step timed out after ${STEP_TIMEOUT_MS / 1000}s (runId=${runId})`);
     }
-
     await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 }
 
-async function runOrchestration(pipeline: PipelineRun, req: CreatePipelineRequest): Promise<void> {
+function mirrorStep(pipeline: PipelineRun, step: PipelineRunStep): void {
+  db.upsertPipelineStep({
+    pipelineId: pipeline.id,
+    stepIndex: step.stepIndex,
+    parallelGroup: step.parallelGroup,
+    agentId: step.agentId,
+    runId: step.runId || undefined,
+    status: step.status,
+    output: step.output,
+    exitCode: step.exitCode,
+  });
+}
+
+function mirrorPipelineStatus(pipeline: PipelineRun, endedAt?: number): void {
+  db.updatePipelineStatus(pipeline.id, pipeline.status, endedAt);
+}
+
+/** Run a single leaf step and return its output. Updates the PipelineRunStep in-place. */
+async function runLeafStep(
+  pipeline: PipelineRun,
+  pipelineStep: PipelineRunStep,
+  leafStep: PipelineStep,
+  prompt: string,
+  req: CreatePipelineRequest,
+): Promise<{ output: string; exitCode: number }> {
   const project = req.projectId ? projects.readProject(req.projectId) : null;
-  let previousOutput = "";
+  const agentResult = agents.readAgent(leafStep.agentId);
+  if (!agentResult) {
+    throw new Error(`agent '${leafStep.agentId}' not found at stepIndex ${pipelineStep.stepIndex}`);
+  }
 
-  for (let i = 0; i < req.steps.length; i++) {
-    const step = req.steps[i]!;
-    const pipelineStep = pipeline.steps[i]!;
+  const instance = projects.findInstance(project, leafStep.instanceId);
+  const appendedSystemPrompt = agents.buildAppendedPrompt(leafStep.agentId, project);
 
-    // Resolve the prompt for this step.
-    const prompt = step.promptTemplate.replace(/\{\{output\}\}/g, previousOutput);
-
-    // Resolve agent + instance.
-    const agentResult = agents.readAgent(step.agentId);
-    if (!agentResult) {
-      const errMsg = `agent '${step.agentId}' not found at step ${i}`;
-      log.warn("pipeline.agent_not_found", { pipelineId: pipeline.id, stepIndex: i, agentId: step.agentId });
-      pipelineStep.status = "error";
-      // Mark all remaining steps as error too.
-      for (let j = i + 1; j < pipeline.steps.length; j++) {
-        pipeline.steps[j]!.status = "error";
-      }
-      pipeline.status = "error";
-      return;
-    }
-
-    const instance = projects.findInstance(project, step.instanceId);
-    const appendedSystemPrompt = agents.buildAppendedPrompt(step.agentId, project);
-
-    const summonReq = {
-      agentId: step.agentId,
+  const built = summon.buildClaudeArgs({
+    request: {
+      agentId: leafStep.agentId,
       prompt,
-      model: step.model,
-      effort: step.effort,
+      model: leafStep.model,
+      effort: leafStep.effort,
       cwd: req.cwd,
       projectId: req.projectId,
-      instanceId: step.instanceId,
-    };
+      instanceId: leafStep.instanceId,
+    },
+    agent: agentResult.info,
+    instance,
+    appendedSystemPrompt,
+  });
 
-    const built = summon.buildClaudeArgs({
-      request: summonReq,
-      agent: agentResult.info,
-      instance,
-      appendedSystemPrompt,
-    });
+  const instanceLabel = instance?.label ?? (instance ? agentResult.info.name : undefined);
 
-    const instanceLabel = instance?.label ?? (instance ? agentResult.info.name : undefined);
+  pipelineStep.status = "running";
+  mirrorStep(pipeline, pipelineStep);
 
-    pipelineStep.status = "running";
-    log.info("pipeline.step.start", { pipelineId: pipeline.id, stepIndex: i, agentId: step.agentId });
+  const { runId } = runs.startRun({
+    agentId: leafStep.agentId,
+    agentName: instanceLabel ?? agentResult.info.name,
+    prompt,
+    model: built.model,
+    effort: built.effort,
+    cwd: req.cwd,
+    projectId: req.projectId,
+    instanceId: instance?.instanceId,
+    instanceLabel,
+    args: built.args,
+  });
+  pipelineStep.runId = runId;
+  mirrorStep(pipeline, pipelineStep);
 
-    let result: { output: string; exitCode: number };
-    try {
-      const { runId } = runs.startRun({
-        agentId: step.agentId,
-        agentName: instanceLabel ?? agentResult.info.name,
-        prompt,
-        model: built.model,
-        effort: built.effort,
-        cwd: req.cwd,
-        projectId: req.projectId,
-        instanceId: instance?.instanceId,
-        instanceLabel,
-        args: built.args,
-      });
-      pipelineStep.runId = runId;
+  return waitForRun(runId);
+}
 
-      result = await waitForRun(runId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      log.warn("pipeline.step.error", { pipelineId: pipeline.id, stepIndex: i, error: message });
-      pipelineStep.status = "error";
-      pipelineStep.exitCode = 1;
-      for (let j = i + 1; j < pipeline.steps.length; j++) {
-        pipeline.steps[j]!.status = "error";
+async function runOrchestration(pipeline: PipelineRun, req: CreatePipelineRequest): Promise<void> {
+  let previousOutput = "";
+  let flatIdx = 0;
+
+  for (const item of req.steps) {
+    if (isParallel(item)) {
+      // Fan-out: run all sub-steps concurrently
+      const group = item.steps;
+      const groupSteps = pipeline.steps.slice(flatIdx, flatIdx + group.length);
+      flatIdx += group.length;
+
+      log.info("pipeline.parallel.start", { pipelineId: pipeline.id, count: group.length });
+
+      const results = await Promise.allSettled(
+        group.map((leafStep, i) => {
+          const prompt = leafStep.promptTemplate.replace(/\{\{output\}\}/g, previousOutput);
+          return runLeafStep(pipeline, groupSteps[i]!, leafStep, prompt, req);
+        }),
+      );
+
+      // Collect outputs and propagate errors
+      const outputs: string[] = [];
+      let groupFailed = false;
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i]!;
+        const pStep = groupSteps[i]!;
+        if (r.status === "fulfilled") {
+          pStep.output = r.value.output;
+          pStep.exitCode = r.value.exitCode;
+          pStep.status = r.value.exitCode === 0 ? "done" : "error";
+          if (r.value.exitCode !== 0) groupFailed = true;
+          else outputs.push(r.value.output);
+        } else {
+          pStep.status = "error";
+          pStep.exitCode = 1;
+          groupFailed = true;
+          log.warn("pipeline.parallel.step_error", { pipelineId: pipeline.id, stepIndex: pStep.stepIndex, error: String(r.reason) });
+        }
+        mirrorStep(pipeline, pStep);
       }
-      pipeline.status = "error";
-      return;
-    }
 
-    pipelineStep.output = result.output;
-    pipelineStep.exitCode = result.exitCode;
-
-    if (result.exitCode !== 0) {
-      log.warn("pipeline.step.nonzero_exit", { pipelineId: pipeline.id, stepIndex: i, exitCode: result.exitCode });
-      pipelineStep.status = "error";
-      for (let j = i + 1; j < pipeline.steps.length; j++) {
-        pipeline.steps[j]!.status = "error";
+      if (groupFailed) {
+        // Mark all remaining pending steps as error
+        for (let j = flatIdx; j < pipeline.steps.length; j++) {
+          pipeline.steps[j]!.status = "error";
+          mirrorStep(pipeline, pipeline.steps[j]!);
+        }
+        pipeline.status = "error";
+        mirrorPipelineStatus(pipeline, Date.now());
+        return;
       }
-      pipeline.status = "error";
-      return;
-    }
 
-    pipelineStep.status = "done";
-    previousOutput = result.output;
-    log.info("pipeline.step.done", { pipelineId: pipeline.id, stepIndex: i });
+      // Fan-in: join outputs for the next step
+      previousOutput = outputs.join("\n\n---\n\n");
+      log.info("pipeline.parallel.done", { pipelineId: pipeline.id });
+
+    } else {
+      // Sequential step
+      const pipelineStep = pipeline.steps[flatIdx]!;
+      flatIdx++;
+
+      const prompt = item.promptTemplate.replace(/\{\{output\}\}/g, previousOutput);
+
+      log.info("pipeline.step.start", { pipelineId: pipeline.id, stepIndex: pipelineStep.stepIndex, agentId: item.agentId });
+
+      let result: { output: string; exitCode: number };
+      try {
+        result = await runLeafStep(pipeline, pipelineStep, item, prompt, req);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        log.warn("pipeline.step.error", { pipelineId: pipeline.id, stepIndex: pipelineStep.stepIndex, error: message });
+        pipelineStep.status = "error";
+        pipelineStep.exitCode = 1;
+        mirrorStep(pipeline, pipelineStep);
+        for (let j = flatIdx; j < pipeline.steps.length; j++) {
+          pipeline.steps[j]!.status = "error";
+          mirrorStep(pipeline, pipeline.steps[j]!);
+        }
+        pipeline.status = "error";
+        mirrorPipelineStatus(pipeline, Date.now());
+        return;
+      }
+
+      pipelineStep.output = result.output;
+      pipelineStep.exitCode = result.exitCode;
+
+      if (result.exitCode !== 0) {
+        log.warn("pipeline.step.nonzero_exit", { pipelineId: pipeline.id, stepIndex: pipelineStep.stepIndex, exitCode: result.exitCode });
+        pipelineStep.status = "error";
+        mirrorStep(pipeline, pipelineStep);
+        for (let j = flatIdx; j < pipeline.steps.length; j++) {
+          pipeline.steps[j]!.status = "error";
+          mirrorStep(pipeline, pipeline.steps[j]!);
+        }
+        pipeline.status = "error";
+        mirrorPipelineStatus(pipeline, Date.now());
+        return;
+      }
+
+      pipelineStep.status = "done";
+      mirrorStep(pipeline, pipelineStep);
+      previousOutput = result.output;
+      log.info("pipeline.step.done", { pipelineId: pipeline.id, stepIndex: pipelineStep.stepIndex });
+    }
   }
 
   pipeline.status = "done";
+  mirrorPipelineStatus(pipeline, Date.now());
   log.info("pipeline.done", { pipelineId: pipeline.id });
 }
 
 /**
  * Create a pipeline and begin asynchronous orchestration immediately.
- * Returns the initial `PipelineRun` with all steps in "pending" state —
- * do not await the orchestration in the caller.
+ * Returns the initial `PipelineRun` with all steps in "pending" state.
  */
 export function createPipeline(req: CreatePipelineRequest): PipelineRun {
   const id = randomUUID();
-
-  const steps: PipelineRunStep[] = req.steps.map((step, i) => ({
-    stepIndex: i,
-    agentId: step.agentId,
-    runId: "", // filled in as each step starts
-    status: "pending",
-  }));
+  const steps = expandSteps(req.steps);
 
   const pipeline: PipelineRun = {
     id,
@@ -193,9 +308,21 @@ export function createPipeline(req: CreatePipelineRequest): PipelineRun {
   };
 
   pipelines.set(id, pipeline);
-  log.info("pipeline.created", { pipelineId: id, stepCount: req.steps.length });
 
-  // Fire-and-forget — catch all errors so nothing bubbles to the caller.
+  // Persist initial state
+  db.insertPipeline({ id, projectId: req.projectId, createdAt: pipeline.createdAt });
+  for (const step of steps) {
+    db.upsertPipelineStep({
+      pipelineId: id,
+      stepIndex: step.stepIndex,
+      parallelGroup: step.parallelGroup,
+      agentId: step.agentId,
+      status: "pending",
+    });
+  }
+
+  log.info("pipeline.created", { pipelineId: id, stepCount: steps.length });
+
   void runOrchestration(pipeline, req).catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);
     log.warn("pipeline.orchestration_uncaught", { pipelineId: id, error: message });
@@ -203,8 +330,10 @@ export function createPipeline(req: CreatePipelineRequest): PipelineRun {
     for (const step of pipeline.steps) {
       if (step.status === "pending" || step.status === "running") {
         step.status = "error";
+        db.upsertPipelineStep({ pipelineId: id, stepIndex: step.stepIndex, agentId: step.agentId, status: "error" });
       }
     }
+    db.updatePipelineStatus(id, "error", Date.now());
   });
 
   return pipeline;

@@ -15,6 +15,7 @@
     "agents": "Agents",
     "limits": "Limits",
     "processes": "Servers",
+    "project": "Project",
     "primary_label": "Primary",
     "live_badge": "{count} live"
   },

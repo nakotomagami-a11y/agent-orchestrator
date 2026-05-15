@@ -13,6 +13,7 @@ import {
   AoBold, AoItalic, AoHeading, AoLink, AoCheck, AoReset, AoTrash, AoClose, AoPlus,
   AoFolder, AoSearch, AoTerminal, AoGlobe, AoList, AoPen,
 } from "@/modules/summon/components/ao-icons";
+import { UnitPicker } from "@/components/ui/unit-picker";
 
 
 const TOOL_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
@@ -296,6 +297,27 @@ function SettingsForm({
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Appearance section ── */}
+      <div className="ao-settings-section">
+        <div className="ao-section-title">
+          <span className="ao-marker" />
+          <h3>Appearance</h3>
+          <span className="ao-sub">avatar shown in the office floor and sidebar</span>
+        </div>
+        <div className="ao-card">
+          <div className="ao-card-body">
+            <div className="ao-field">
+              <label className="ao-label">Avatar</label>
+              <UnitPicker
+                value={v.unit}
+                onChange={(val) => setV((p) => ({ ...p, unit: val }))}
+                agentName={v.name}
+              />
             </div>
           </div>
         </div>

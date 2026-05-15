@@ -19,6 +19,8 @@ import {
   AoReset,
 } from "@/modules/summon/components/ao-icons";
 import { useActiveProjectStore } from "@/lib/active-project-store";
+import { useProject } from "@/modules/projects/hooks/use-projects";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
 import "@/modules/summon/styles/agent-modal.css";
 
 type Tab = AgentTab;
@@ -39,8 +41,20 @@ export function AgentDetailsModal() {
   const setActiveTab = useOfficeStore((s) => s.setActiveTab);
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const consumePendingTab = useOfficeStore((s) => s.consumePendingTab);
+  const selectAgent = useOfficeStore((s) => s.select);
   const { agents } = useOfficeAgents();
   const agent = selectedId ? agents.find((a) => a.id === selectedId) ?? null : null;
+
+  const projectQ = useProject(activeProjectId);
+  const rosterAgentIds = projectQ.data?.meta.roster
+    ? Array.from(new Set(projectQ.data.meta.roster.map((inst) => inst.agentId)))
+    : null;
+  const rosterInstances = projectQ.data?.meta.roster ?? [];
+  const rosterAgents = rosterAgentIds
+    ? rosterAgentIds
+        .map((id) => agents.find((a) => a.id === id))
+        .filter((a): a is NonNullable<typeof a> => !!a)
+    : [];
   const [tab, setTab] = useState<Tab>("conversation");
   const changeTab = (t: Tab) => { setTab(t); setActiveTab(t); };
   const [newThreadSignal, setNewThreadSignal] = useState(0);
@@ -132,6 +146,33 @@ export function AgentDetailsModal() {
             </button>
           </div>
 
+          {/* ── Body row: agent strip + content ── */}
+          <div className="ao-body-row">
+          {/* Agent switcher strip — only shown when inside a project with multiple agents */}
+          {rosterAgents.length > 1 && (
+            <div className="ao-agent-strip">
+              {rosterAgents.map((a) => {
+                const inst = rosterInstances.find((r) => r.agentId === a.id);
+                const isActive = a.id === selectedId;
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    title={a.name}
+                    className={`ao-strip-btn${isActive ? " ao-strip-active" : ""}`}
+                    onClick={() => selectAgent(a.id, { tab, instanceId: inst?.instanceId ?? null })}
+                  >
+                    <AgentAvatar unit={a.unitChoice} size={30} label={a.name} />
+                    {a.status === "working" || a.status === "thinking" ? (
+                      <span className="ao-strip-dot ao-working" />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="ao-content-col">
           {/* ── Agent header ── */}
           <div className="ao-agent-header">
             <div className="ao-avatar">
@@ -241,6 +282,8 @@ export function AgentDetailsModal() {
               />
             )}
           </div>
+          </div>{/* ao-content-col */}
+          </div>{/* ao-body-row */}
         </div>
       </div>
     </Portal>

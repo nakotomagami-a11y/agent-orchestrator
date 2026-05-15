@@ -70,7 +70,7 @@ function makeSeedGrid(): boolean[][] {
   );
 }
 
-export function OfficeScene() {
+export function OfficeScene({ projectId }: { projectId: string | null }) {
   const [grid, setGrid] = useState<boolean[][]>(() => makeSeedGrid());
   const [decorations, setDecorations] = useState<DecorationsMap>(() => ({}));
   const [agentPositions, setAgentPositions] = useState<AgentPositions>(() => ({}));
@@ -81,6 +81,7 @@ export function OfficeScene() {
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [agentSearch, setAgentSearch] = useState("");
+  const [useCustomMap, setUseCustomMap] = useState(false);
 
   const {
     zoom, panX, panY,
@@ -107,14 +108,27 @@ export function OfficeScene() {
   useEffect(() => { buildModeRef.current = buildMode; }, [buildMode, buildModeRef]);
   useEffect(() => { toolRef.current = tool; }, [tool, toolRef]);
 
-  // Load scene state from the server DB on mount
+  // Load scene state from the server DB on mount.
+  // Agent positions are always per-project when a project is active.
+  // Map layout (grid/decorations/grass) is shared by default; a per-project
+  // copy is used when office-map-custom:{projectId} === "true".
   useEffect(() => {
     fetch("/api/ui-settings")
       .then((r) => r.json())
       .then((data: Record<string, string>) => {
-        if (data["office-grid"]) {
+        const customMap = projectId
+          ? data[`office-map-custom:${projectId}`] === "true"
+          : false;
+        if (customMap) setUseCustomMap(true);
+
+        const gridKey  = customMap && projectId ? `office-grid:${projectId}`         : "office-grid";
+        const decoKey  = customMap && projectId ? `office-decorations:${projectId}`  : "office-decorations";
+        const grassKey = customMap && projectId ? `office-grass-color:${projectId}`  : "office-grass-color";
+        const agentKey = projectId              ? `office-agents:${projectId}`        : "office-agents";
+
+        if (data[gridKey]) {
           try {
-            const parsed = JSON.parse(data["office-grid"]) as unknown;
+            const parsed = JSON.parse(data[gridKey]) as unknown;
             if (
               Array.isArray(parsed) &&
               parsed.length === GRID_ROWS &&
@@ -129,9 +143,9 @@ export function OfficeScene() {
             }
           } catch { /* ignore */ }
         }
-        if (data["office-decorations"]) {
+        if (data[decoKey]) {
           try {
-            const parsed = JSON.parse(data["office-decorations"]) as unknown;
+            const parsed = JSON.parse(data[decoKey]) as unknown;
             if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
               const out: DecorationsMap = {};
               for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
@@ -154,9 +168,9 @@ export function OfficeScene() {
             }
           } catch { /* ignore */ }
         }
-        if (data["office-agents"]) {
+        if (data[agentKey]) {
           try {
-            const parsed = JSON.parse(data["office-agents"]) as unknown;
+            const parsed = JSON.parse(data[agentKey]) as unknown;
             if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
               const out: AgentPositions = {};
               for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
@@ -172,12 +186,14 @@ export function OfficeScene() {
             }
           } catch { /* ignore */ }
         }
-        if (data["office-grass-color"]) {
-          const gc = data["office-grass-color"];
+        if (data[grassKey]) {
+          const gc = data[grassKey];
           if (isGrassColor(gc)) setGrassColor(gc);
         }
       })
       .catch(() => { /* ignore */ })
+      // projectId is stable for this instance — the key prop forces a remount on change
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       .finally(() => setSceneLoaded(true));
   }, []);
 
@@ -202,39 +218,43 @@ export function OfficeScene() {
 
   useEffect(() => {
     if (!sceneLoaded) return;
+    const key = useCustomMap && projectId ? `office-grid:${projectId}` : "office-grid";
     fetch("/api/ui-settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "office-grid": JSON.stringify(grid) }),
+      body: JSON.stringify({ [key]: JSON.stringify(grid) }),
     }).catch(() => { /* best-effort */ });
-  }, [grid, sceneLoaded]);
+  }, [grid, sceneLoaded, useCustomMap, projectId]);
 
   useEffect(() => {
     if (!sceneLoaded) return;
+    const key = useCustomMap && projectId ? `office-decorations:${projectId}` : "office-decorations";
     fetch("/api/ui-settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "office-decorations": JSON.stringify(decorations) }),
+      body: JSON.stringify({ [key]: JSON.stringify(decorations) }),
     }).catch(() => { /* best-effort */ });
-  }, [decorations, sceneLoaded]);
+  }, [decorations, sceneLoaded, useCustomMap, projectId]);
 
   useEffect(() => {
     if (!sceneLoaded) return;
+    const key = projectId ? `office-agents:${projectId}` : "office-agents";
     fetch("/api/ui-settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "office-agents": JSON.stringify(agentPositions) }),
+      body: JSON.stringify({ [key]: JSON.stringify(agentPositions) }),
     }).catch(() => { /* best-effort */ });
-  }, [agentPositions, sceneLoaded]);
+  }, [agentPositions, sceneLoaded, projectId]);
 
   useEffect(() => {
     if (!sceneLoaded) return;
+    const key = useCustomMap && projectId ? `office-grass-color:${projectId}` : "office-grass-color";
     fetch("/api/ui-settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "office-grass-color": grassColor }),
+      body: JSON.stringify({ [key]: grassColor }),
     }).catch(() => { /* best-effort */ });
-  }, [grassColor, sceneLoaded]);
+  }, [grassColor, sceneLoaded, useCustomMap, projectId]);
 
   const onCellClick = useCallback(
     (x: number, y: number) => {
@@ -369,6 +389,90 @@ export function OfficeScene() {
       return next;
     });
   }, []);
+
+  // Fork the current global map into project-specific keys so the user can
+  // independently customise the layout for this project.
+  const enableCustomMap = useCallback(() => {
+    if (!projectId) return;
+    setUseCustomMap(true);
+    // Persist the flag; the save effects will fork current state to project keys.
+    fetch("/api/ui-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [`office-map-custom:${projectId}`]: "true" }),
+    }).catch(() => {});
+  }, [projectId]);
+
+  // Revert back to the shared global map layout for this project.
+  const disableCustomMap = useCallback(() => {
+    if (!projectId) return;
+    setSceneLoaded(false); // block saves while we reload global state
+    setUseCustomMap(false);
+    fetch("/api/ui-settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [`office-map-custom:${projectId}`]: "false" }),
+    }).catch(() => {});
+    fetch("/api/ui-settings")
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        if (data["office-grid"]) {
+          try {
+            const parsed = JSON.parse(data["office-grid"]) as unknown;
+            if (
+              Array.isArray(parsed) &&
+              parsed.length === GRID_ROWS &&
+              parsed.every(
+                (row): row is boolean[] =>
+                  Array.isArray(row) &&
+                  row.length === GRID_COLS &&
+                  row.every((cell) => typeof cell === "boolean"),
+              )
+            ) {
+              setGrid(parsed);
+            }
+          } catch { /* ignore */ }
+        } else {
+          setGrid(makeSeedGrid());
+        }
+        if (data["office-decorations"]) {
+          try {
+            const parsed = JSON.parse(data["office-decorations"]) as unknown;
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              const out: DecorationsMap = {};
+              for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+                if (typeof value === "string") {
+                  const migrated = migrateKind(value);
+                  if (migrated) out[key] = [migrated];
+                  continue;
+                }
+                if (Array.isArray(value)) {
+                  const arr: DecorationKind[] = [];
+                  for (const v of value) {
+                    if (typeof v !== "string") continue;
+                    const migrated = migrateKind(v);
+                    if (migrated) arr.push(migrated);
+                  }
+                  if (arr.length > 0) out[key] = arr;
+                }
+              }
+              setDecorations(out);
+            }
+          } catch { /* ignore */ }
+        } else {
+          setDecorations({});
+        }
+        if (data["office-grass-color"]) {
+          const gc = data["office-grass-color"];
+          if (isGrassColor(gc)) setGrassColor(gc);
+          else setGrassColor(DEFAULT_GRASS_COLOR);
+        } else {
+          setGrassColor(DEFAULT_GRASS_COLOR);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setSceneLoaded(true));
+  }, [projectId]);
 
   const selectAgent = useOfficeStore((s) => s.select);
   const onAgentClick = useCallback(
@@ -516,6 +620,24 @@ export function OfficeScene() {
           >
             <Icon name="x" size={13} /> Stop building
           </button>
+          {projectId && (
+            <>
+              <div className="sep" />
+              <button
+                type="button"
+                className={`map-scope${useCustomMap ? " on" : ""}`}
+                title={
+                  useCustomMap
+                    ? "Switch back to the shared map layout"
+                    : "Use a custom map layout for this project"
+                }
+                onClick={useCustomMap ? disableCustomMap : enableCustomMap}
+              >
+                <Icon name="map" size={12} />
+                {useCustomMap ? "Custom map" : "Shared map"}
+              </button>
+            </>
+          )}
           <div className="sep" />
           <button
             type="button"

@@ -106,16 +106,6 @@ export function Sidebar() {
 
   return (
     <aside className="sidebar" aria-label={t("app.name")}>
-      <div className="brand">
-        <div className="brand-logo" aria-hidden>
-          A
-        </div>
-        <div>
-          <div className="brand-name">{t("app.name")}</div>
-          <div className="brand-sub">{t("app.brand_sub")}</div>
-        </div>
-      </div>
-
       <nav className="nav" aria-label={t("nav.primary_label")}>
         <NavItem
           href={PAGE_ROUTES.office}
@@ -123,6 +113,12 @@ export function Sidebar() {
           label={t("nav.office")}
           badge={workingCount > 0 ? t("nav.live_badge", { count: workingCount }) : undefined}
           active={isActiveRoute(pathname, PAGE_ROUTES.office, { exact: true })}
+        />
+        <NavItem
+          href={activeProjectId ? PAGE_ROUTES.project(activeProjectId) : PAGE_ROUTES.projects}
+          icon="settings"
+          label={t("nav.project")}
+          active={isActiveRoute(pathname, PAGE_ROUTES.projects)}
         />
         <NavItem
           href={PAGE_ROUTES.activity}

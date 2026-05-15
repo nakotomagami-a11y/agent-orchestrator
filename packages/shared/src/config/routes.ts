@@ -62,6 +62,7 @@ export const API_ROUTES = {
   runAbort: (id: string) => `/api/runs/${encodeURIComponent(id)}/abort`,
 
   summon: "/api/summon",
+  broadcast: "/api/broadcast",
 
   settings: "/api/settings",
   settingsScan: "/api/settings/scan",

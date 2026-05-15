@@ -6,6 +6,8 @@ import { Icon } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { PersistedRun } from "@agent-office/shared/types";
 import { useRuns } from "../hooks/use-runs";
+import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
+import { useBranchStore } from "@/lib/branch-store";
 import {
   formatCost,
   formatDuration,
@@ -464,6 +466,18 @@ function FeedRow({
   onToggle: () => void;
   maxCost: number;
 }) {
+  const selectAgent = useOfficeStore((s) => s.select);
+  const setBranchSeed = useBranchStore((s) => s.setSeed);
+
+  const handleBranch = () => {
+    setBranchSeed({ agentId: run.agentId, instanceId: run.instanceId ?? null, prompt: run.prompt });
+    selectAgent(run.agentId, { tab: "conversation", instanceId: run.instanceId ?? null });
+  };
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(run.prompt);
+  };
+
   const tokens = run.tokensIn + run.tokensOut;
   const dotCls =
     run.status === "error" ? "error" : run.status === "running" ? "running" : "";
@@ -519,10 +533,10 @@ function FeedRow({
               <Icon name="chevron" size={12} />
             </button>
           </Link>
-          <button type="button" title="Branch">
+          <button type="button" title="Branch from here" onClick={handleBranch}>
             <Icon name="branch" size={12} />
           </button>
-          <button type="button" title="Copy prompt">
+          <button type="button" title="Copy prompt" onClick={handleCopyPrompt}>
             <Icon name="copy" size={12} />
           </button>
         </div>
@@ -581,11 +595,11 @@ function FeedRow({
               <Icon name="chevron" size={12} />
               Open in chat
             </Link>
-            <button type="button" className="btn sm ghost">
+            <button type="button" className="btn sm ghost" onClick={handleBranch}>
               <Icon name="branch" size={12} />
               Branch from here
             </button>
-            <button type="button" className="btn sm ghost">
+            <button type="button" className="btn sm ghost" onClick={handleCopyPrompt}>
               <Icon name="copy" size={12} />
               Copy prompt
             </button>
@@ -652,6 +666,16 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
 
   const groups = useMemo(() => groupRunsByDay(filtered), [filtered]);
 
+  const handleExport = () => {
+    const blob = new Blob([JSON.stringify(filtered, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `activity-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const maxCost = useMemo(
     () => Math.max(0.001, ...filtered.map((r) => r.cost)),
     [filtered],
@@ -675,7 +699,7 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
               </button>
             ))}
           </div>
-          <button type="button" className="btn sm ghost">
+          <button type="button" className="btn sm ghost" onClick={handleExport} disabled={filtered.length === 0}>
             <Icon name="copy" size={12} />
             Export
           </button>
