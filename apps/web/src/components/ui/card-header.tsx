@@ -10,7 +10,7 @@ export type CardHeaderProps = HTMLAttributes<HTMLDivElement> & {
 };
 
 /**
- * `.card-h` — title + optional sub + optional right-side action slot.
+ * `.card-h` - title + optional sub + optional right-side action slot.
  * Mirrors v3 markup exactly so the existing CSS adopts it without changes.
  */
 export function CardHeader({

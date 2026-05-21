@@ -1,4 +1,4 @@
-// summon.jsx — main panel: agent header + tabs + summon/history/config/prompt
+// summon.jsx - main panel: agent header + tabs + summon/history/config/prompt
 
 function AgentHeader({ agent, avatarStyle, runningCount, onAbort }) {
   return (
@@ -69,7 +69,7 @@ function SummonPanel({ agent, run, onSummon, onAbort, onClear }) {
 
   return (
     <div className="summon-grid">
-      {/* LEFT — input */}
+      {/* LEFT - input */}
       <div className="card">
         <div className="card-h">
           <span className="title">Summon</span>
@@ -138,7 +138,7 @@ function SummonPanel({ agent, run, onSummon, onAbort, onClear }) {
         </div>
       </div>
 
-      {/* RIGHT — output */}
+      {/* RIGHT - output */}
       <div className="card output">
         <div className="card-h">
           <span className="title">Output</span>
@@ -176,7 +176,7 @@ function Output({ run, agent }) {
   if (!run) {
     return (
       <div style={{ color: "var(--txt-3)", fontSize: 12, padding: "8px 0" }}>
-        <div style={{ marginBottom: 8 }}>—</div>
+        <div style={{ marginBottom: 8 }}>-</div>
         <div>No active run. Hit <span className="kbd">⌘↵</span> to summon {agent.name}.</div>
       </div>
     );

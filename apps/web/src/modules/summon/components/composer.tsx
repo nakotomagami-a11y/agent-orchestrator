@@ -31,7 +31,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
 ];
 
 type Attachment = {
-  /** Local id for React keying — not persisted. */
+  /** Local id for React keying - not persisted. */
   localId: string;
   /** Display name (filename). */
   name: string;
@@ -48,7 +48,7 @@ export type ComposerProps = {
   onSubmit: (text: string) => void;
   onAbort?: () => void;
   abortable?: boolean;
-  /** Agent owning this chat — used as the default upload target. */
+  /** Agent owning this chat - used as the default upload target. */
   agentId: string;
   /** When set, uploads go to the project's uploads dir instead of the agent's. */
   projectId?: string;
@@ -250,7 +250,7 @@ export function Composer({
       const [cmd] = v.split(/\s+/);
       if (cmd && SLASH_COMMANDS.some((s) => s.cmd === cmd) && onCommand) {
         onCommand(cmd);
-        // Slash commands are UI actions — clear the draft too.
+        // Slash commands are UI actions - clear the draft too.
         if (draftKey) void clearDraft(draftKey);
         setValue("");
         setSlashOpen(false);
@@ -264,7 +264,7 @@ export function Composer({
         ? `${v}\n\n${t("composer.attachments_intro")}\n${ready.map((a) => `- ${a.path}`).join("\n")}`.trimStart()
         : v;
     onSubmit(composed);
-    // Draft has been sent — clear it so it doesn't reappear on reopen.
+    // Draft has been sent - clear it so it doesn't reappear on reopen.
     if (draftKey) void clearDraft(draftKey);
     setValue("");
     setAttachments([]);

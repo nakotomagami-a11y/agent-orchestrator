@@ -51,7 +51,7 @@ export function RunRow({ run }: RunRowProps) {
         </span>
       </Link>
 
-      {/* Fork button — outside the link so click doesn't navigate */}
+      {/* Fork button - outside the link so click doesn't navigate */}
       <div className="pr-3 shrink-0">
         <Button
           variant="ghost"

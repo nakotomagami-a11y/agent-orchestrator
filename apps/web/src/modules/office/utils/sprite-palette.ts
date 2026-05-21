@@ -1,6 +1,6 @@
 // Deterministic sprite palette per agent. Real agents in ~/.claude/agents/
 // don't ship with sprite info, so we derive skin/hair/shirt/accessory from a
-// stable hash of the agent name — same agent = same look every render.
+// stable hash of the agent name - same agent = same look every render.
 
 import type { SpriteAgent } from "@/components/ui/pixel-sprite.utils";
 

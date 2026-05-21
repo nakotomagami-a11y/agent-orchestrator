@@ -9,7 +9,7 @@ export type ModalShellProps = {
   open: boolean;
   onClose: () => void;
   title?: string;
-  /** Footer slot — usually action buttons. */
+  /** Footer slot - usually action buttons. */
   footer?: ReactNode;
   /** Width preset. */
   size?: "sm" | "md" | "lg";

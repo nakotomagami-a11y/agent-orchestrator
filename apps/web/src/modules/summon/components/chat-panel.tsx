@@ -56,7 +56,7 @@ export type ChatPanelProps = {
  * single source of truth and the committed items never duplicate the
  * live stream view.
  *
- * Recovery: a stored `activeRunId` is probed once via /api/runs/[id] —
+ * Recovery: a stored `activeRunId` is probed once via /api/runs/[id] -
  * if the server still has it live, the SSE re-attach picks it up; if
  * it's already finished, we fall back to the persisted run's output so
  * the user actually sees the result instead of an empty bubble.
@@ -102,9 +102,9 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   const [resumeAttempt, setResumeAttempt] = useState(0);
   // Local "wall clock" tick that re-renders every second while a run is in
   // flight. Used purely to compute "Xs since last token" against
-  // stream.lastEventAt — without this, the staleness display would freeze.
+  // stream.lastEventAt - without this, the staleness display would freeze.
   const [, setTick] = useState(0);
-  // Message typed while a run is in progress — fired automatically once the
+  // Message typed while a run is in progress - fired automatically once the
   // current run finishes. Replacing the value discards the previous queued
   // message, which is the correct behavior for corrections.
   const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
@@ -127,9 +127,18 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     let cancelled = false;
     loadTranscript(tKey).then((t) => {
       if (cancelled) return;
-      setThread(t?.items ?? []);
+      const items = t?.items ?? [];
+      setThread(items);
       setActiveRunId(t?.activeRunId ?? null);
       setSessionId(t?.sessionId ?? null);
+      // Pre-set the splice index NOW, before the first render that carries
+      // activeRunId — the EventSource opens synchronously on that render and
+      // the server sends `attached` in <1ms, always before the probe HTTP
+      // response lands. Without this, startIdx is null when attached fires
+      // and the output is silently dropped with no retry.
+      if (t?.activeRunId) {
+        runStartIndexRef.current = items.length;
+      }
       setTranscriptLoaded(true);
     }).catch(() => {
       if (!cancelled) setTranscriptLoaded(true);
@@ -147,7 +156,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   }, [activeRunId]);
   useRunNotification({ agentName: agent.name, phase: stream.phase, startTs: runStartTsRef.current || null });
 
-  // ── Probe a stored runId once — drop it if the server has no record ──
+  // ── Probe a stored runId once - drop it if the server has no record ──
   useEffect(() => {
     if (resumeProbed) return;
     if (!activeRunId) {
@@ -160,7 +169,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       .then((run) => {
         if (cancelled) return;
         if (run.status !== "running") {
-          // Already finished while we were away — append its persisted
+          // Already finished while we were away - append its persisted
           // output, then drop the id so the stream effect won't try to
           // reattach.
           if (run.output && run.output.trim().length > 0) {
@@ -182,7 +191,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
           }
           setActiveRunId(null);
         } else {
-          // Still running — mark this as where the run output goes so the
+          // Still running - mark this as where the run output goes so the
           // stream splice has somewhere to land. Use *current* thread length.
           runStartIndexRef.current = thread.length;
         }
@@ -205,7 +214,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     return () => {
       cancelled = true;
     };
-    // We intentionally don't include `thread` — only fire once per runId
+    // We intentionally don't include `thread` - only fire once per runId
     // (resumeAttempt bumps when the user clicks Retry, resetting probed).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeRunId, resumeProbed, resumeAttempt]);
@@ -242,7 +251,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     const hasText = stream.thread.some(
       (it) => it.kind === "agent-text" && it.text.trim().length > 0,
     );
-    // Also consider a streamed system-error as "feedback delivered" — don't
+    // Also consider a streamed system-error as "feedback delivered" - don't
     // add a second error card on top of the one SSE already emitted.
     const hasStreamedFeedback = hasText || stream.thread.some((it) => it.kind === "system-error");
     const shouldFallback = stream.phase === "done" && !hasStreamedFeedback && fallbackAttemptedRef.current !== runId;
@@ -266,10 +275,10 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
           const before = prev.slice(0, startIdx);
           const after = prev.slice(startIdx);
           if (run.output && run.output.trim().length > 0) {
-            // SSE missed some chunks — use the persisted output.
+            // SSE missed some chunks - use the persisted output.
             return [...before, { kind: "agent-text", id: `r_${runId}`, text: run.output, streaming: false }, ...after];
           }
-          // Run completed with no output — always surface something so the
+          // Run completed with no output - always surface something so the
           // user is never left staring at their unanswered message.
           const msg = run.status === "error"
             ? `Run ended with no output (exit ${run.exitCode ?? 1}). ${run.exitCode === 1 ? "The model may be rate-limited or an internal error occurred." : "Try again."}`
@@ -278,12 +287,12 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
         });
       })
       .catch(() => {
-        // Fallback fetch failed (server down / run GC'd) — still show something.
+        // Fallback fetch failed (server down / run GC'd) - still show something.
         setThread((prev) => {
           if (startIdx === null) return prev;
           const before = prev.slice(0, startIdx);
           const after = prev.slice(startIdx);
-          return [...before, { kind: "system-error", id: `e_${runId}`, message: "Response unavailable — the server may have restarted. Retry to try again." }, ...after];
+          return [...before, { kind: "system-error", id: `e_${runId}`, message: "Response unavailable - the server may have restarted. Retry to try again." }, ...after];
         });
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -339,7 +348,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
 
   const onSubmit = (text: string) => {
     if (isStreaming) {
-      // Queue for after the current run — replacing any previous queued message
+      // Queue for after the current run - replacing any previous queued message
       // so corrections ("wait, I meant X") work naturally.
       setQueuedMessage(text);
       return;
@@ -431,15 +440,20 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     const msg = queuedMessage;
     setQueuedMessage(null);
     doSubmit(msg);
-    // doSubmit is defined inline — including it would re-run on every render.
+    // doSubmit is defined inline - including it would re-run on every render.
     // The closure captures the right sessionId because this effect only fires
     // after phase becomes idle (i.e. the done effect's state updates landed).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, queuedMessage]);
 
+  // Use only the server-provided startTs (from the attached SSE event).
+  // The local runStartTsRef is kept only for the desktop notification system.
+  // Using Date.now() as a fallback causes a wrong "0s" flash when the panel
+  // re-mounts after a project switch (transcript restores activeRunId before
+  // the SSE attached event arrives).
   const elapsedSec =
-    runStartTsRef.current && (phase === "working" || phase === "streaming")
-      ? Math.floor((Date.now() - runStartTsRef.current) / 1000)
+    stream.startTs && (phase === "working" || phase === "streaming")
+      ? Math.floor((Date.now() - stream.startTs) / 1000)
       : 0;
   const totalTok = stream.usage.tokensIn + stream.usage.tokensOut;
   const liveStats =
@@ -471,10 +485,10 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
 
   const continueRecovered = () => {
     setRecovered(null);
-    setPendingSeed("Please continue where you left off. The previous run was interrupted by a server restart — your partial output is in the thread above.");
+    setPendingSeed("Please continue where you left off. The previous run was interrupted by a server restart - your partial output is in the thread above.");
   };
 
-  // For "missing run" (404) — the original prompt is gone with the run,
+  // For "missing run" (404) - the original prompt is gone with the run,
   // but the last user message in our local thread IS the prompt. Re-summon
   // from that, treating the orphan as if it had never been started.
   const resummonLastUserMessage = () => {
@@ -504,13 +518,13 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
         />
       )}
 
-      {/* Diagnostic banners — only one shown at a time, ordered by severity.
+      {/* Diagnostic banners - only one shown at a time, ordered by severity.
           Recovered > resume-missing > resume-transient > lost > retrying > stale. */}
       {recovered ? (
         <StreamBanner
           kind="warn"
           title="Recovered partial output from the previous run."
-          detail={`Run ${recovered.runId} was interrupted — ${recovered.exitCode === -1 ? "server was killed mid-run (no clean shutdown)" : `server restarted (exit ${recovered.exitCode})`}. ${recovered.partialChars.toLocaleString()} chars · ${recovered.tokensOut.toLocaleString()} tok · $${recovered.cost.toFixed(3)} streamed before the kill — appended to the thread above. Click Continue to pick up where it stopped.`}
+          detail={`Run ${recovered.runId} was interrupted - ${recovered.exitCode === -1 ? "server was killed mid-run (no clean shutdown)" : `server restarted (exit ${recovered.exitCode})`}. ${recovered.partialChars.toLocaleString()} chars · ${recovered.tokensOut.toLocaleString()} tok · $${recovered.cost.toFixed(3)} streamed before the kill - appended to the thread above. Click Continue to pick up where it stopped.`}
           primary={{ label: "Continue", onClick: continueRecovered }}
           secondary={{ label: "Dismiss", onClick: () => setRecovered(null) }}
         />
@@ -559,14 +573,14 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       ) : stream.connection === "retrying" ? (
         <StreamBanner
           kind="warn"
-          title="Stream connection interrupted — reconnecting…"
+          title="Stream connection interrupted - reconnecting…"
           detail="Browser is retrying automatically. Click Reconnect if it doesn't recover."
           primary={{ label: "Reconnect now", onClick: stream.reconnect }}
         />
       ) : isStale && sinceLastEventMs !== null ? (
         <StreamBanner
           kind="warn"
-          title={`No new output for ${Math.floor(sinceLastEventMs / 1000)}s — still waiting.`}
+          title={`No new output for ${Math.floor(sinceLastEventMs / 1000)}s - still waiting.`}
           detail={
             stream.lastEventAt
               ? `Last event at ${new Date(stream.lastEventAt).toLocaleTimeString()}. The agent may be thinking, or the stream may be silently stuck.`
@@ -642,7 +656,7 @@ type BannerAction = { label: string; onClick: () => void };
 
 /**
  * Inline alert strip rendered between the chat head and thread. Verbose by
- * design — this app is for developers, so the user sees the actual error
+ * design - this app is for developers, so the user sees the actual error
  * string, the run id, and a primary action they can take.
  */
 function StreamBanner({

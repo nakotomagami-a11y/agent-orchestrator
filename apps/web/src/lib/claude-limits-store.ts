@@ -6,7 +6,7 @@ export type LimitsPeriod = "daily" | "week" | "month";
 
 export interface ClaudeLimits {
   plan: ClaudePlan;
-  /** Dollar cap for the period. 0 means "no quota set — just track usage". */
+  /** Dollar cap for the period. 0 means "no quota set - just track usage". */
   quotaUsd: number;
   period: LimitsPeriod;
   hardCap: "off" | "warn" | "block";
@@ -116,14 +116,14 @@ export function periodStart(period: LimitsPeriod, now = Date.now()): number {
   d.setHours(0, 0, 0, 0);
   if (period === "month") return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   if (period === "daily") return d.getTime();
-  // week — start on Monday (ISO)
+  // week - start on Monday (ISO)
   const dow = d.getDay();
   const daysSinceMonday = (dow + 6) % 7;
   d.setDate(d.getDate() - daysSinceMonday);
   return d.getTime();
 }
 
-/** End-of-period timestamp — exclusive upper bound for the current window. */
+/** End-of-period timestamp - exclusive upper bound for the current window. */
 export function periodEnd(period: LimitsPeriod, now = Date.now()): number {
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);

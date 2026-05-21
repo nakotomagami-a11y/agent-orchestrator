@@ -7,7 +7,7 @@ export type OfficeView = "iso" | "cards";
 
 /**
  * Tabs surfaced by `AgentDetailsModal`. Exported here (instead of inside the
- * modal) so other surfaces can pre-select a tab when opening the inspector —
+ * modal) so other surfaces can pre-select a tab when opening the inspector -
  * e.g. clicking the edit icon on an agent card jumps straight to "prompt".
  */
 export type AgentTab = "conversation" | "configuration" | "history" | "memory" | "settings";
@@ -23,7 +23,7 @@ type OfficeState = {
   inspectorOpen: boolean;
   /** When set, the modal opens on this tab once and then clears it. */
   pendingTab: AgentTab | null;
-  /** Currently visible tab — kept in sync by AgentDetailsModal. */
+  /** Currently visible tab - kept in sync by AgentDetailsModal. */
   activeTab: AgentTab;
   setView: (next: OfficeView) => void;
   setZoom: (next: number) => void;

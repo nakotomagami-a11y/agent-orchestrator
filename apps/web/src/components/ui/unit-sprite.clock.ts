@@ -1,5 +1,5 @@
 // Single shared rAF-driven frame counter for every UnitSprite on the page.
-// All instances read from one clock instead of each starting its own loop —
+// All instances read from one clock instead of each starting its own loop -
 // keeps re-renders synchronized and bounded regardless of how many sprites
 // the page is currently showing.
 

@@ -1,5 +1,5 @@
 // Persists per-instance chat transcripts to the server DB via /api/transcripts.
-// Keyed by `<agentId>::<instanceId>`. Async — callers must await or fire-and-forget.
+// Keyed by `<agentId>::<instanceId>`. Async - callers must await or fire-and-forget.
 
 import type { ThreadItem } from "./thread-types";
 
@@ -84,7 +84,7 @@ export async function clearTranscript(key: string): Promise<void> {
 }
 
 export async function listAgentTranscripts(agentId: string): Promise<Array<{ key: string; transcript: Transcript }>> {
-  // Not implemented for now — returns empty (was only used in archive view)
+  // Not implemented for now - returns empty (was only used in archive view)
   void agentId;
   return [];
 }

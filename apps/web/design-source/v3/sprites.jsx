@@ -1,4 +1,4 @@
-// v3/sprites.jsx — pixel agents (24x32), redrawn with accessories + idle anim
+// v3/sprites.jsx - pixel agents (24x32), redrawn with accessories + idle anim
 
 function PxSprite({ agent, size = 64, animate = true, action = "idle" }) {
   const s = agent.sprite || {};
@@ -39,7 +39,7 @@ function PxSprite({ agent, size = 64, animate = true, action = "idle" }) {
   cells.push([8,4,hairShade,2,1]);
   // ears
   cells.push([7,9,skin,1,1]); cells.push([16,9,skin,1,1]);
-  // eyes — placed as separate elements w/ blink animation
+  // eyes - placed as separate elements w/ blink animation
   // (rendered separately to apply animation)
 
   // mouth

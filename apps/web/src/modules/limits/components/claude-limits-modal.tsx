@@ -315,7 +315,7 @@ export function ClaudeLimitsModal() {
   const hardCap   = useClaudeLimitsStore((s) => s.hardCap);
   const update    = useClaudeLimitsStore((s) => s.update);
 
-  // Local editable state — only written to store on Save
+  // Local editable state - only written to store on Save
   const [localPlan,     setLocalPlan]     = useState<ClaudePlan>(plan);
   const [localQuota,    setLocalQuota]    = useState(quotaUsd);
   const [localPeriod,   setLocalPeriod]   = useState<LimitsPeriod>(period);

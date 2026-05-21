@@ -17,7 +17,7 @@ import type { PersistedRun } from "@agent-office/shared/types";
 
 export type ProjectActivityProps = {
   projectId: string;
-  /** Called with run metadata once loaded — lets the parent show count in its own header. */
+  /** Called with run metadata once loaded - lets the parent show count in its own header. */
   onMeta?: (info: { count: number; todayCost: number }) => void;
 };
 
@@ -63,7 +63,7 @@ export function ProjectActivity({ projectId, onMeta }: ProjectActivityProps) {
         <RunRow
           key={run.id}
           run={run}
-          onOpen={() => select(run.agentId, { tab: "history" })}
+          onOpen={() => select(run.agentId, { tab: "history", instanceId: run.instanceId ?? null })}
         />
       ))}
     </div>

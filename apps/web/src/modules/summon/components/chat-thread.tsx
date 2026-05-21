@@ -57,12 +57,12 @@ export type ChatThreadProps = {
   items: ThreadItem[];
   agent: OfficeAgent;
   onPickSuggestion?: (text: string) => void;
-  /** Direct submit — used by inline clarify reply. */
+  /** Direct submit - used by inline clarify reply. */
   onSubmit?: (text: string) => void;
   phase: ChatPhase;
   phaseHint?: string;
   phaseStats?: string;
-  /** Message queued while agent is running — rendered as a pending bubble at the bottom. */
+  /** Message queued while agent is running - rendered as a pending bubble at the bottom. */
   queuedMessage?: string | null;
   onCancelQueue?: () => void;
 };
@@ -84,7 +84,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   // We flip it to false the moment they scroll above the stick band, and back
   // to true the moment they return to it. While following, every new item
   // triggers a scroll-to-bottom; while not following, new tokens leave the
-  // viewport alone — exactly what the user asked for.
+  // viewport alone - exactly what the user asked for.
   const [followTail, setFollowTail] = useState(true);
   // `hasNewBelow` drives the "Jump to latest" pill. True when items arrive
   // while the user is scrolled up; cleared when they jump back down (or
@@ -98,7 +98,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
 
   // When the underlying transcript identity changes (agent / instance switch,
   // /clear, /branch), reset the visible window AND snap back to the latest
-  // message so we open at the bottom of the new conversation — never midway.
+  // message so we open at the bottom of the new conversation - never midway.
   // We detect a swap via the id of items[0]: appending tokens never changes
   // it, but loading a different transcript always does.
   const firstId = items[0]?.id ?? null;
@@ -171,7 +171,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   }, []);
 
   // ── On mount, snap to the bottom. The modal opens at the latest message,
-  //    always — no smooth scroll, no animation, just instantly there. ──
+  //    always - no smooth scroll, no animation, just instantly there. ──
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -186,7 +186,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   // ── New content effect ──
   // We track the previous item count to distinguish "appended content"
   // (token streamed in, new turn) from "user clicked Load earlier" (item
-  // count also rose, but at the top — we must NOT scroll to bottom in that
+  // count also rose, but at the top - we must NOT scroll to bottom in that
   // case). When the count rises and the diff matches the bottom of the
   // list, we're in append-mode.
   const prevLenRef = useRef(items.length);
@@ -236,6 +236,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   }, []);
 
   return (
+    <div className="chat-scroll-wrap">
     <div className="chat-scroll" ref={scrollRef}>
       {items.length === 0 && phase === "idle" ? (
         <div className="thread-empty">
@@ -247,7 +248,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
           </div>
           <div className="greet">
             <h2>Hi, I&apos;m {agent.name}.</h2>
-            <p>{agent.description || "Ready when you are — pick a starter or ask anything."}</p>
+            <p>{agent.description || "Ready when you are - pick a starter or ask anything."}</p>
           </div>
           <div className="sug-grid">
             {SUGGESTIONS.map((s) => (
@@ -312,7 +313,8 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
             })}
           </div>
           {queuedMessage ? (
-            <div className="flex flex-row-reverse self-end max-w-[80%] gap-[12px] relative opacity-[0.55]">
+            <div className="max-w-[760px] mx-auto px-2 mt-5">
+            <div className="flex flex-row-reverse ml-auto w-fit max-w-[80%] gap-[12px] relative opacity-[0.55]">
               <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
               <div className="flex flex-col items-end gap-[6px]">
                 <div className="bg-ao-bg-3 border border-dashed border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0">{queuedMessage}</div>
@@ -327,6 +329,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                 </div>
               </div>
             </div>
+            </div>
           ) : null}
           <div className="max-w-[760px] mx-auto px-2 pb-4 flex items-center gap-3">
             <LiveStatus phase={phase} hint={phaseHint} />
@@ -338,22 +341,23 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
               very end of the scroll container so scrollIntoView({block:"end"})
               lands precisely where we want, regardless of LiveStatus height. */}
           <div ref={bottomAnchorRef} aria-hidden className="h-px" />
-          {!followTail ? (
-            <div className="chat-jump-latest-wrap" aria-live="polite">
-              <button
-                type="button"
-                className="chat-jump-latest"
-                data-new={hasNewBelow}
-                onClick={jumpToBottom}
-                aria-label={t("jump_to_latest_aria")}
-              >
-                <Icon name="chevron-down" size={14} />
-                {hasNewBelow ? t("jump_to_latest") : t("scroll_to_bottom")}
-              </button>
-            </div>
-          ) : null}
         </>
       )}
+    </div>
+    {!followTail ? (
+      <div className="chat-jump-latest-wrap" aria-live="polite">
+        <button
+          type="button"
+          className="chat-jump-latest"
+          data-new={hasNewBelow}
+          onClick={jumpToBottom}
+          aria-label={t("jump_to_latest_aria")}
+        >
+          <Icon name="chevron-down" size={14} />
+          {hasNewBelow ? t("jump_to_latest") : t("scroll_to_bottom")}
+        </button>
+      </div>
+    ) : null}
     </div>
   );
 }

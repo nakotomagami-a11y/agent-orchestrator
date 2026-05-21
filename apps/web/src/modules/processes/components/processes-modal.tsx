@@ -13,12 +13,12 @@ import { useProcesses, type ProcessInfo } from "../hooks/use-processes";
 /* ------------------------------------------------------------------ */
 
 function fmtMem(mb: number): string {
-  if (mb === 0) return "—";
+  if (mb === 0) return "-";
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
 }
 
 function fmtUptime(startedAt: number): string {
-  if (!startedAt) return "—";
+  if (!startedAt) return "-";
   const ms = Math.max(0, Date.now() - startedAt);
   const s = Math.floor(ms / 1000);
   if (s < 60) return `${s}s`;
@@ -31,7 +31,7 @@ function fmtUptime(startedAt: number): string {
 }
 
 function fmtAgo(startedAt: number): string {
-  if (!startedAt) return "—";
+  if (!startedAt) return "-";
   const ms = Math.max(0, Date.now() - startedAt);
   const s = Math.floor(ms / 1000);
   if (s < 60) return `${s}s ago`;
@@ -128,7 +128,7 @@ function ServerCard({
             )}
           </div>
           <div className="row2">
-            <span className="cmd" title={p.cmd}>{p.cmd || "—"}</span>
+            <span className="cmd" title={p.cmd}>{p.cmd || "-"}</span>
           </div>
           <div className="row3">
             <span className="item"><span className="l">PID</span><span className="v">{p.pid}</span></span>
@@ -163,8 +163,8 @@ function ServerCard({
         <div className="srv-detail">
           <div className="kv-list">
             <div className="kv"><span className="k">PID</span><span className="v">{p.pid}</span></div>
-            <div className="kv"><span className="k">Working dir</span><span className="v">{p.cwd || "—"}</span></div>
-            <div className="kv"><span className="k">Command</span><span className="v">{p.cmd || "—"}</span></div>
+            <div className="kv"><span className="k">Working dir</span><span className="v">{p.cwd || "-"}</span></div>
+            <div className="kv"><span className="k">Command</span><span className="v">{p.cmd || "-"}</span></div>
             <div className="kv"><span className="k">Started</span><span className="v">{fmtAgo(p.startedAt)} · up {fmtUptime(p.startedAt)}</span></div>
             <div className="kv"><span className="k">Address</span><span className="v">{p.address}:{p.port}</span></div>
           </div>
@@ -374,7 +374,7 @@ export function ProcessesModal() {
             <div className="hint">
               <Icon name="server" size={11} />
               <span>scanning <kbd>localhost</kbd> ports via <kbd>ss -tlnp</kbd></span>
-              <span className="lag">refreshed {processesQ.dataUpdatedAt ? fmtAgo(processesQ.dataUpdatedAt) : "—"}</span>
+              <span className="lag">refreshed {processesQ.dataUpdatedAt ? fmtAgo(processesQ.dataUpdatedAt) : "-"}</span>
             </div>
             <div className="right">
               <button className="lim-btn ghost" onClick={() => setOpen(false)}>Close</button>

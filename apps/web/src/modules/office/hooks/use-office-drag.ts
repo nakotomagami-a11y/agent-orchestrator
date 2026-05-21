@@ -30,7 +30,7 @@ export const useOfficeDragStore = create<OfficeDragState>((set) => ({
  *  is being dragged (the actual JSON payload is only readable on drop). */
 export const AGENT_DRAG_MIME = "application/x-agent-office-agent+json";
 
-/** Encode a DragRef as a stable key — used both inside the position map
+/** Encode a DragRef as a stable key - used both inside the position map
  *  to dedupe (same agent dragged to a new cell moves rather than
  *  duplicates) and as the value stored at "x,y". */
 export function dragRefKey(ref: DragRef): string {

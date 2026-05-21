@@ -260,7 +260,7 @@ export function ProjectsList() {
       )
     : allProjects;
 
-  // Active (has agents) first, then empty — each group sorted alphabetically
+  // Active (has agents) first, then empty - each group sorted alphabetically
   const sorted = [...filtered].sort((a, b) => {
     if (a.instanceCount > 0 && b.instanceCount === 0) return -1;
     if (a.instanceCount === 0 && b.instanceCount > 0) return 1;

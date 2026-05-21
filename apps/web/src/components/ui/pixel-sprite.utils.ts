@@ -1,6 +1,6 @@
 /**
  * Pure cell-builder for the 24x32 pixel agent sprite. Ported from
- * design-source/v3/sprites.jsx — kept in this `.utils.ts` so the React
+ * design-source/v3/sprites.jsx - kept in this `.utils.ts` so the React
  * component is a thin SVG renderer with no domain logic.
  */
 
@@ -36,7 +36,7 @@ const SHOES = "#1E1A18";
 
 /**
  * Lighten/darken a hex colour. `percent` clamped to [-100, 100]; negative shades
- * toward black, positive toward white. Tiny port of the v3 helper — fast enough
+ * toward black, positive toward white. Tiny port of the v3 helper - fast enough
  * to call per-render without memoisation.
  */
 export function shadeColor(hex: string, percent: number): string {

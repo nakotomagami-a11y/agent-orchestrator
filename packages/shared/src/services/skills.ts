@@ -414,7 +414,7 @@ export async function checkForUpdates(): Promise<SkillUpdate[]> {
 
 export async function updateSkill(name: string): Promise<{ filesWritten: number; sha: string }> {
   const prov = readProvenance(name);
-  if (!prov) throw new Error(`no provenance for ${name} — can't update`);
+  if (!prov) throw new Error(`no provenance for ${name} - can't update`);
   const result = await installSkill(prov.source, prov.ref, prov.path, name);
   const newProv = readProvenance(name);
   return { filesWritten: result.filesWritten, sha: newProv?.sha ?? "" };

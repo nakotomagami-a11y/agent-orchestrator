@@ -31,8 +31,8 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
           <div className="p-[var(--ao-pad-card)]">
             <KV k="Name" v={agent.name} />
             <KV k="ID" v={agent.id} mono />
-            <KV k="Description" v={agent.description || <span className="text-ao-fg-2">—</span>} />
-            <KV k="Room" v={agent.room || <span className="text-ao-fg-2">— unassigned</span>} />
+            <KV k="Description" v={agent.description || <span className="text-ao-fg-2">-</span>} />
+            <KV k="Room" v={agent.room || <span className="text-ao-fg-2">- unassigned</span>} />
           </div>
         </div>
 

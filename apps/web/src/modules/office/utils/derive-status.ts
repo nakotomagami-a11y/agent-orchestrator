@@ -18,7 +18,7 @@ export interface AgentStatusInfo {
 
 export function statusFromRuns(agentId: string, runs: PersistedRun[]): AgentStatusInfo {
   const now = Date.now();
-  // Running jobs are always shown regardless of age — a job can run for hours.
+  // Running jobs are always shown regardless of age - a job can run for hours.
   // Completed jobs stick for 90s so the status doesn't flicker back to idle
   // the instant a run finishes.
   const recent = runs.filter(

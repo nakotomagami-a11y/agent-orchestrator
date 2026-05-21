@@ -6,7 +6,7 @@ export type StatusDotProps = Omit<HTMLAttributes<HTMLSpanElement>, "children"> &
   status: AgentStatus;
   /** Override label text; falls back to the canonical English label. */
   label?: string;
-  /** Hide the text portion — render only the dot. */
+  /** Hide the text portion - render only the dot. */
   hideLabel?: boolean;
   /** Pixel size for the dot. Defaults to 8px (matches v3 inline styles). */
   size?: number;

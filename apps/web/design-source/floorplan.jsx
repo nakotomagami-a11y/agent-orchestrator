@@ -1,4 +1,4 @@
-// floorplan.jsx — pixel-art office: each agent is a desk on a 2D grid
+// floorplan.jsx - pixel-art office: each agent is a desk on a 2D grid
 
 function FloorPlan({ agents, selectedId, onSelect, avatarStyle }) {
   // Layout: 4 rooms (Research, Build, QA, Ops) + center "lounge"
@@ -74,7 +74,7 @@ function FloorPlan({ agents, selectedId, onSelect, avatarStyle }) {
             className={"desk " + agent.status + (selectedId === agent.id ? " selected" : "")}
             style={{ left: x, top: y }}
             onClick={() => onSelect(agent.id)}
-            title={agent.name + " — " + agent.status}>
+            title={agent.name + " - " + agent.status}>
             <div className="desk-top">
               <span className={"statusdot " + agent.status}></span>
               <span style={{ color: "var(--txt-2)", fontSize: 8 }}>{agent.id.slice(0,6)}</span>

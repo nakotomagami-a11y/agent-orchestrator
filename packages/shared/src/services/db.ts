@@ -24,7 +24,7 @@ export function getDb(): Database.Database {
   db.prepare(
     "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=@now-started_at WHERE status='running'"
   ).run({ now });
-  // Any pipeline still running was interrupted by the restart — mark it so the UI can surface a recovery banner.
+  // Any pipeline still running was interrupted by the restart - mark it so the UI can surface a recovery banner.
   db.prepare("UPDATE pipelines SET status='error', ended_at=@now, interrupted=1 WHERE status='running'").run({ now });
   globalThis.__agentOfficeDb = db;
   return db;

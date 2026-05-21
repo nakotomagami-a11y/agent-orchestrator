@@ -44,7 +44,7 @@ function periodStart(period: LimitsPeriod, now = Date.now()): number {
   d.setHours(0, 0, 0, 0);
   if (period === "month") return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
   if (period === "daily") return d.getTime();
-  // week — start on Monday (ISO)
+  // week - start on Monday (ISO)
   const dow = d.getDay();
   const daysSinceMonday = (dow + 6) % 7;
   d.setDate(d.getDate() - daysSinceMonday);

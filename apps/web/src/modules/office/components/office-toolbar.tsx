@@ -273,7 +273,7 @@ export function OfficeToolbar({ view, setView, agentCount, workingCount }: Offic
 
       <div className="ml-auto flex items-center gap-[8px]">
         {activeProjectId && project?.meta.cwd && (
-          <DevServerButton projectId={activeProjectId} />
+          <DevServerButton key={activeProjectId} projectId={activeProjectId} />
         )}
         <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
           <button

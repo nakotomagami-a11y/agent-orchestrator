@@ -18,7 +18,7 @@ const EVENT_NAMES: readonly SseEventName[] = [
  * Connection lifecycle, tracked separately from `phase` so the UI can show
  * "still reconnecting…" or "connection lost" even when the logical run phase
  * would otherwise look fine. EventSource auto-retries on its own, so we only
- * mark `lost` after the browser gave up — at which point the user has to
+ * mark `lost` after the browser gave up - at which point the user has to
  * trigger a manual reconnect.
  */
 export type ConnectionState = "idle" | "connecting" | "open" | "retrying" | "lost";
@@ -31,8 +31,10 @@ export interface RunStreamState {
   connection: ConnectionState;
   /** Epoch ms when we last received any SSE event. Null until first event. */
   lastEventAt: number | null;
-  /** Session ID from the completed run — available once phase is "done". */
+  /** Session ID from the completed run - available once phase is "done". */
   sessionId: string | null;
+  /** Epoch ms when the run started on the server - set from the attached event. */
+  startTs: number | null;
 }
 
 const INITIAL: RunStreamState = {
@@ -43,6 +45,7 @@ const INITIAL: RunStreamState = {
   connection: "idle",
   lastEventAt: null,
   sessionId: null,
+  startTs: null,
 };
 
 type SseHandler = (e: MessageEvent) => void;
@@ -79,7 +82,7 @@ export function useRunStream(runId: string | null): UseRunStreamResult {
     const handlers = new Map<SseEventName, SseHandler>();
 
     // EventSource fires an `open` event whenever the underlying connection
-    // (re)opens — covers both the first connect and any automatic reconnect
+    // (re)opens - covers both the first connect and any automatic reconnect
     // after a transient drop. Reset the retry counter so a healthy reconnect
     // doesn't carry old failures into the next disconnect.
     const onOpen = () => {
@@ -100,7 +103,7 @@ export function useRunStream(runId: string | null): UseRunStreamResult {
         if (!event) return;
         const now = Date.now();
         setState((prev) => {
-          const next = applySseEvent({ thread: prev.thread, usage: prev.usage }, event);
+          const next = applySseEvent({ thread: prev.thread, usage: prev.usage, startTs: prev.startTs }, event);
           const phase: RunPhase = next.error
             ? "error"
             : next.done
@@ -116,6 +119,7 @@ export function useRunStream(runId: string | null): UseRunStreamResult {
             connection: "open",
             lastEventAt: now,
             sessionId: next.sessionId !== undefined ? next.sessionId : prev.sessionId,
+            startTs: next.startTs !== undefined ? next.startTs : prev.startTs,
           };
         });
         if (name === "done") source.close();

@@ -51,7 +51,7 @@ export function Titlebar() {
   // Only the centre title strip is the drag handle. The left and right
   // sections are full of interactive controls (project switcher,
   // theme toggle, the win-dot buttons) and shouldn't trigger window
-  // dragging — leaving those wrappers without the attribute is the
+  // dragging - leaving those wrappers without the attribute is the
   // simplest way to opt them out wholesale.
   return (
     <div className="grid items-center px-3 border-b border-line select-none [grid-template-columns:1fr_auto_1fr] bg-[linear-gradient(180deg,var(--bg-2),var(--bg-1))] dark:bg-[linear-gradient(180deg,#3a322c,#2A2522)]">
@@ -68,7 +68,7 @@ export function Titlebar() {
           aria-hidden
           className="inline-block w-4 h-4 rounded-[4px] bg-[linear-gradient(135deg,var(--yaru-orange),var(--yaru-purple))]"
         />
-        {t("app.name")} — {t("app.studio_subtitle")}
+        {t("app.name")} - {t("app.studio_subtitle")}
       </div>
       <div className="flex items-center gap-2 justify-end">
         <button

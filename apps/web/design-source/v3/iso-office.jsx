@@ -1,4 +1,4 @@
-// v3/iso-office.jsx — isometric pixel-art office room
+// v3/iso-office.jsx - isometric pixel-art office room
 
 function IsoOffice({ agents, selectedId, onSelect, gamified = true, zoom = 1 }) {
   if (!gamified) {
@@ -24,8 +24,8 @@ function CardsOffice({ agents, selectedId, onSelect }) {
             <span className={"roster-row".split(" ")[0]} style={{ position: "static" }}></span>
             <StatusDot status={a.status} />
           </div>
-          <div className="dc-task" title={a.task || "Idle — ready when you are"}>
-            {a.task || "Idle — ready when you are"}
+          <div className="dc-task" title={a.task || "Idle - ready when you are"}>
+            {a.task || "Idle - ready when you are"}
           </div>
           <div className="dc-meta">
             <span>{a.model} · {a.effort}</span>
@@ -151,7 +151,7 @@ function FloorSVG({ offsetX, offsetY }) {
         </linearGradient>
       </defs>
 
-      {/* Back walls — two trapezoids meeting at top */}
+      {/* Back walls - two trapezoids meeting at top */}
       {/* Left wall (along row=0 edge) */}
       <polygon
         points={
@@ -333,7 +333,7 @@ function DeskWithAgent({ agent, x, y, selected, onClick }) {
         <rect x="40" y="50" width="16" height="3" fill="#1E1A18" opacity="0.6" />
       </svg>
 
-      {/* Agent sprite — positioned behind/beside desk */}
+      {/* Agent sprite - positioned behind/beside desk */}
       <div style={{
         position: "absolute",
         left: 30, top: -16,

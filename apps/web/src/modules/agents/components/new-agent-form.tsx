@@ -31,7 +31,7 @@ const TOOL_SUGGESTIONS = [
 
 const MODELS = [
   { id: "haiku",  name: "haiku",  full: "claude-haiku-4-5",  badge: "fast",  price: "$0.25/Mt", desc: "Light tasks, snappy. Good for orchestration." },
-  { id: "sonnet", name: "sonnet", full: "claude-sonnet-4-6", badge: "smart", price: "$3.00/Mt", desc: "Balanced — the default for most agents." },
+  { id: "sonnet", name: "sonnet", full: "claude-sonnet-4-6", badge: "smart", price: "$3.00/Mt", desc: "Balanced - the default for most agents." },
   { id: "opus",   name: "opus",   full: "claude-opus-4-7",   badge: "deep",  price: "$15.00/Mt", desc: "Hardest reasoning. Slow. Use sparingly." },
 ] as const;
 
@@ -312,7 +312,7 @@ export function NewAgentForm() {
         {/* Main column */}
         <div className="flex flex-col min-w-0 gap-[18px]">
 
-          {/* Section 1 — Identity */}
+          {/* Section 1 - Identity */}
           <SectionCard n="1" title="Identity" sub="how this agent is named and described" complete={sec1Done}>
             <div className="grid items-start gap-[18px]" style={{ gridTemplateColumns: "96px 1fr" }}>
               <div className="flex flex-col items-center gap-[6px]">
@@ -373,14 +373,14 @@ export function NewAgentForm() {
                       maxLength={DESC_MAX + 20}
                     />
                   </div>
-                  <div className="text-txt-3 text-[11px] mt-[1px]">{values.desc.length} / {DESC_MAX} chars — keep it to a sentence</div>
+                  <div className="text-txt-3 text-[11px] mt-[1px]">{values.desc.length} / {DESC_MAX} chars - keep it to a sentence</div>
                   {errFor("desc") && <span className="text-[11px] text-status-error">{errFor("desc")}</span>}
                 </div>
               </div>
             </div>
           </SectionCard>
 
-          {/* Section 2 — Runtime */}
+          {/* Section 2 - Runtime */}
           <SectionCard n="2" title="Runtime" sub="model, effort, and execution policy" complete={sec2Done}>
             {/* Model */}
             <div className="flex flex-col gap-[5px]">
@@ -459,7 +459,7 @@ export function NewAgentForm() {
             </div>
           </SectionCard>
 
-          {/* Section 3 — Capabilities */}
+          {/* Section 3 - Capabilities */}
           <SectionCard
             n="3"
             title="Capabilities"
@@ -473,7 +473,7 @@ export function NewAgentForm() {
                 suggestions={skillSuggestions}
                 onAdd={(v) => set("skills", toCsv([...skillChips, v]))}
                 onRemove={(v) => set("skills", toCsv(skillChips.filter((c) => c !== v)))}
-                placeholder="add a skill — frontend-design, research…"
+                placeholder="add a skill - frontend-design, research…"
               />
             </div>
             <div className="flex flex-col gap-[5px]">
@@ -488,7 +488,7 @@ export function NewAgentForm() {
             </div>
           </SectionCard>
 
-          {/* Section 4 — System prompt */}
+          {/* Section 4 - System prompt */}
           <SectionCard
             n="4"
             title="System prompt"
@@ -523,11 +523,11 @@ export function NewAgentForm() {
                   <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11px] mt-[1px]">{slug || "agent-id"}</div>
                 </div>
               </div>
-              <div className="text-txt-2 text-[12.5px] leading-[1.5]">{values.desc || "No description yet — agents without one are hard to summon."}</div>
+              <div className="text-txt-2 text-[12.5px] leading-[1.5]">{values.desc || "No description yet - agents without one are hard to summon."}</div>
               <div className="grid gap-[8px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                <div className="bg-bg-1 border border-line px-[10px] py-[8px] rounded-[8px]"><div className="text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.08em]">Model</div><div className="text-txt font-semibold font-[var(--font-mono)] text-[12.5px] mt-[2px]">{values.model || "—"}</div></div>
-                <div className="bg-bg-1 border border-line px-[10px] py-[8px] rounded-[8px]"><div className="text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.08em]">Effort</div><div className="text-txt font-semibold font-[var(--font-mono)] text-[12.5px] mt-[2px]">{values.effort || "—"}</div></div>
-                <div className="bg-bg-1 border border-line px-[10px] py-[8px] rounded-[8px]"><div className="text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.08em]">Permission</div><div className="text-txt font-semibold font-[var(--font-mono)] text-[12.5px] mt-[2px]">{values.pm || "—"}</div></div>
+                <div className="bg-bg-1 border border-line px-[10px] py-[8px] rounded-[8px]"><div className="text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.08em]">Model</div><div className="text-txt font-semibold font-[var(--font-mono)] text-[12.5px] mt-[2px]">{values.model || "-"}</div></div>
+                <div className="bg-bg-1 border border-line px-[10px] py-[8px] rounded-[8px]"><div className="text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.08em]">Effort</div><div className="text-txt font-semibold font-[var(--font-mono)] text-[12.5px] mt-[2px]">{values.effort || "-"}</div></div>
+                <div className="bg-bg-1 border border-line px-[10px] py-[8px] rounded-[8px]"><div className="text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.08em]">Permission</div><div className="text-txt font-semibold font-[var(--font-mono)] text-[12.5px] mt-[2px]">{values.pm || "-"}</div></div>
                 <div className="bg-bg-1 border border-line px-[10px] py-[8px] rounded-[8px]"><div className="text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.08em]">Tools</div><div className="text-txt font-semibold font-[var(--font-mono)] text-[12.5px] mt-[2px]">{toolChips.length}</div></div>
               </div>
             </div>

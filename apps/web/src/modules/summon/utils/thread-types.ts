@@ -1,5 +1,5 @@
 // In-memory thread item shapes built from SSE events. The chat panel renders
-// these directly — keeping them denormalised here means components don't have
+// these directly - keeping them denormalised here means components don't have
 // to know anything about the wire format.
 
 export type ThreadItem =
@@ -9,7 +9,7 @@ export type ThreadItem =
   | { kind: "agent-thinking"; id: string; text: string }
   | { kind: "agent-subagent"; id: string; name: string; prompt: string; status: "running" | "done" | "error"; startTs: number; durationMs?: number }
   | { kind: "system-error"; id: string; message: string }
-  | { kind: "system-done"; id: string; exitCode: number };
+  | { kind: "system-done"; id: string; exitCode: number; durationMs?: number; tokensIn?: number; tokensOut?: number; cost?: number };
 
 export interface UsageMeter {
   tokensIn: number;

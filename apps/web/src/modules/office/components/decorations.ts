@@ -23,7 +23,7 @@ export type DecoCategory = "land" | "buildings" | "water";
 
 /**
  * Logical group a decoration belongs to. Each cell may hold at most one
- * decoration per family — so 4 bush variants share family "bush", and
+ * decoration per family - so 4 bush variants share family "bush", and
  * placing bush2 on a cell that already has bush1 replaces it.
  * Different-family decorations stack freely (bush + tree + rock all in
  * the same cell is fine).
@@ -113,7 +113,7 @@ export interface DecorationDef {
   frames: number;
   terrain: Terrain;
   category: DecoCategory;
-  /** Placement uniqueness key — at most one decoration of each family
+  /** Placement uniqueness key - at most one decoration of each family
    *  may occupy a cell. Variants of the same kind (bush1..bush4) share
    *  a family so e.g. bush2 replaces bush1 at the same cell rather than
    *  stacking two bushes. */
@@ -123,7 +123,7 @@ export interface DecorationDef {
    *
    *   - "bottom" (default): the sprite's bottom-centre aligns with the
    *     cell's bottom-centre. Tall sprites (trees, houses, towers) hang
-   *     upward from the cell — they look rooted to the ground.
+   *     upward from the cell - they look rooted to the ground.
    *   - "center": the sprite's centre aligns with the cell's centre.
    *     Used for free-standing creatures (sheep) so they read as
    *     standing on the tile rather than hanging from its top edge.
@@ -158,7 +158,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
   },
 
-  // ─ Rocks (static, 64×64) — overlays, coexist with anything ─────────
+  // ─ Rocks (static, 64×64) - overlays, coexist with anything ─────────
   rock: {
     label: "Rock 1",
     src: "/decorations/rock.png",
@@ -212,7 +212,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
 
   // ─ Trees (8 frames, animated sway). Tree1/Tree2 are taller (192×256
   //   per frame); Tree3/Tree4 are shorter (192×192). All share the
-  //   .deco-tree keyframe — same 8-frame stride at 192 wide each. ─────
+  //   .deco-tree keyframe - same 8-frame stride at 192 wide each. ─────
   tree: {
     label: "Tree 1",
     src: "/decorations/tree.png",
@@ -240,7 +240,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
 
   // ─ Buildings (static). Houses are 128×192; tower 128×256; castle
   //   320×256 (footprint of a small fortress). All anchor at the
-  //   bottom-centre of a single cell — tall buildings extend upward. ──
+  //   bottom-centre of a single cell - tall buildings extend upward. ──
   house1: {
     label: "House 1",
     src: "/decorations/house1.png",
@@ -259,7 +259,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     frameW: 128, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
   },
-  // Knights House — 4 faction colour variants from the Update 010 pack.
+  // Knights House - 4 faction colour variants from the Update 010 pack.
   house_blue: {
     label: "House (Blue)",
     src: "/decorations/house_blue.png",
@@ -284,17 +284,17 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     frameW: 128, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
   },
-  // Goblin Wood House — the only Goblin house variant in the pack.
+  // Goblin Wood House - the only Goblin house variant in the pack.
   house_goblin: {
     label: "Goblin House",
     src: "/decorations/house_goblin.png",
     frameW: 128, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
   },
-  // Gold Mine — three states from the Update 010 Resources/Gold Mine
+  // Gold Mine - three states from the Update 010 Resources/Gold Mine
   // folder. All 192×128 static frames anchored at bottom-centre (the
   // sprite spans ~3 cells wide and ~2 cells tall visually). Single
-  // "gold_mine" family so a cell only ever shows one state at a time —
+  // "gold_mine" family so a cell only ever shows one state at a time -
   // switching between active/inactive/destroyed swaps the sprite in
   // place.
   gold_mine_active: {
@@ -315,7 +315,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     frameW: 192, frameH: 128, frames: 1,
     terrain: "land", category: "buildings", family: "gold_mine",
   },
-  // Cursed chest — animated 6×64×64. Treated as a "building" so it
+  // Cursed chest - animated 6×64×64. Treated as a "building" so it
   // sits in the same toolbar group as houses and the mine.
   cursed_chest: {
     label: "Cursed chest",
@@ -476,7 +476,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
   // ─ Sheep (animated, 8 × 128×128). Reuses the deco-bush keyframe
   //   since both sheets have identical 1024×128 stride. Agents standing
   //   on a sheep tile while working switch to the knife animation
-  //   (sheep-shearing pose) — see OfficeMap. ───────────────────────────
+  //   (sheep-shearing pose) - see OfficeMap. ───────────────────────────
   sheep: {
     label: "Sheep",
     src: "/decorations/sheep.png",
@@ -486,18 +486,18 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
   },
 
   // ─ Bridges (static 64×64, water-only). Only the middle plank is
-  //   player-placeable — the matching end caps are painted
+  //   player-placeable - the matching end caps are painted
   //   automatically by OfficeMap onto neighbouring land cells, so the
   //   bridge always meets land cleanly without forcing the user to
   //   place caps manually. Single "bridge" family per cell. ────────────
   bridge_h: {
-    label: "Bridge — horizontal",
+    label: "Bridge - horizontal",
     src: "/decorations/bridge-h-m.png",
     frameW: 64, frameH: 64, frames: 1,
     terrain: "water", category: "water", family: "bridge",
   },
   bridge_v: {
-    label: "Bridge — vertical",
+    label: "Bridge - vertical",
     src: "/decorations/bridge-v-m.png",
     frameW: 64, frameH: 64, frames: 1,
     terrain: "water", category: "water", family: "bridge",
@@ -506,7 +506,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
 
 /**
  * Auto-rendered bridge end-cap sprites. These are NOT placeable
- * decorations — OfficeMap paints them on land cells that touch a
+ * decorations - OfficeMap paints them on land cells that touch a
  * placed `bridge_h` / `bridge_v` middle tile, so the bridge always
  * "lands" with a proper end-piece without the user having to manage
  * caps in the build palette.
@@ -532,7 +532,7 @@ export const DECORATION_KINDS: DecorationKind[] = Object.keys(DECORATIONS) as De
  * convention placement keeps solids before overlays, so a tree's leaves
  * draw under any bushes/rocks placed at the same cell.
  *
- * Sparse — cells with no decoration aren't keys (empty arrays are
+ * Sparse - cells with no decoration aren't keys (empty arrays are
  * cleaned up on erase so the map size stays minimal).
  */
 export type DecorationsMap = Record<string, DecorationKind[]>;
@@ -560,7 +560,7 @@ export function familyOf(kind: DecorationKind): DecoFamily {
  * this cell (horizontal bridge on the L/R neighbour, vertical bridge on
  * the T/B neighbour).
  *
- * Used to block decoration placement on the cap cell — once a bridge
+ * Used to block decoration placement on the cap cell - once a bridge
  * uses a land tile as its anchor, that tile is reserved for the
  * bridge ramp.
  */
@@ -615,7 +615,7 @@ export function applyPlacement(
 }
 
 /**
- * Remove the topmost decoration from a cell's stack — last-in-first-out.
+ * Remove the topmost decoration from a cell's stack - last-in-first-out.
  * Returns the new stack (possibly empty) and the removed kind, or null
  * if nothing was there.
  */

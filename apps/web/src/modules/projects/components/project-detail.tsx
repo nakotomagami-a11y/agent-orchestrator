@@ -440,7 +440,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
             <div className="grid place-items-center shrink-0 w-[28px] h-[28px] rounded-[7px] border" style={{ color: "var(--error)", background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)" }}><Icon name="shield" size={14} /></div>
             <div className="flex-1 min-w-0">
               <h3 className="flex items-center font-bold m-0 text-[13px] gap-[8px]" style={{ color: "var(--error)" }}>Danger zone</h3>
-              <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">destructive actions — they cannot be undone</div>
+              <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">destructive actions - they cannot be undone</div>
             </div>
           </div>
           <div>
@@ -448,7 +448,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               <div className="flex-1">
                 <div className="font-semibold text-txt text-[13px]">Reset roster</div>
                 <div className="text-txt-3 font-[var(--font-mono)] text-[11px] mt-[2px]">
-                  remove all {rosterCount} agents from the office — agent definitions stay in ~/.claude/agents/
+                  remove all {rosterCount} agents from the office - agent definitions stay in ~/.claude/agents/
                 </div>
               </div>
               {pendingDanger === "reset" ? (
@@ -477,7 +477,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               <div className="flex-1">
                 <div className="font-semibold text-txt text-[13px]">Delete project</div>
                 <div className="text-txt-3 font-[var(--font-mono)] text-[11px] mt-[2px]">
-                  remove the workspace entry and all conversation history — files at {project.meta.cwd ?? project.meta.name} stay untouched
+                  remove the workspace entry and all conversation history - files at {project.meta.cwd ?? project.meta.name} stay untouched
                 </div>
               </div>
               {pendingDanger === "delete" ? (

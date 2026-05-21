@@ -1,4 +1,4 @@
-// v3/chat.jsx — Claude/ChatGPT-style chat with tool cards, slash menu, attachments
+// v3/chat.jsx - Claude/ChatGPT-style chat with tool cards, slash menu, attachments
 
 function ChatPanel({ agent, onClose, onMinimize }) {
   const seed = window.V3_CONVOS[agent.id] || window.v3MakeGenericConvo(agent);
@@ -170,7 +170,7 @@ function ChatPanel({ agent, onClose, onMinimize }) {
                   value={input}
                   onChange={onInputChange}
                   onKeyDown={onKeyDown}
-                  placeholder={`Message ${agent.short} — / for commands, @ to mention an agent`}
+                  placeholder={`Message ${agent.short} - / for commands, @ to mention an agent`}
                   rows={1}
                 />
                 <div className="composer-bar">
@@ -392,7 +392,7 @@ function mockResponses(agent, userText) {
     body: "src/checkout/state.ts:14: // TODO: derive eligibility from cart\nsrc/api/orders.ts:88: // TODO: idempotency key\nsrc/components/CartLine.tsx:32: // TODO: a11y label\nsrc/store/session.ts:7: // TODO: rotate auth\n…" });
   r.push({ type: "tool", name: "Read", arg: "src/checkout/state.ts", note: "84 lines",
     body: "// (truncated)\nexport type CheckoutState = { ... }" });
-  r.push({ type: "text", text: `Here's what I found and what I'd do next:\n\n**Observation.** The three TODOs in checkout are all about the same thing — eligibility is computed in three places. I'd consolidate to a single \`eligibility(state)\` selector.\n\n**Plan.**\n1. Add the selector to \`src/checkout/state.ts\`\n2. Replace the three call-sites\n3. Test the empty-cart and gift-card-only paths\n\nWant me to go ahead and make the change, or hand off to **Crafts** to implement?` });
+  r.push({ type: "text", text: `Here's what I found and what I'd do next:\n\n**Observation.** The three TODOs in checkout are all about the same thing - eligibility is computed in three places. I'd consolidate to a single \`eligibility(state)\` selector.\n\n**Plan.**\n1. Add the selector to \`src/checkout/state.ts\`\n2. Replace the three call-sites\n3. Test the empty-cart and gift-card-only paths\n\nWant me to go ahead and make the change, or hand off to **Crafts** to implement?` });
   return r;
 }
 
@@ -539,7 +539,7 @@ function MemoryTab({ agent }) {
     { k: "tech_stack", v: "React 18 + TypeScript 5.4 + Vite. Tailwind 3.x. Drizzle + Postgres." },
     { k: "do_not_touch", v: "src/legacy/* is read-only; ask before touching." },
     { k: "naming", v: "Components PascalCase, hooks `useFooBar`, types suffixed with `Type` only when ambiguous." },
-    { k: "recent_pr", v: "Last PR #3812 — split CartLine into CartLine + CartLineActions. Reviewer noted: 'good split, name the second one clearer next time.'" },
+    { k: "recent_pr", v: "Last PR #3812 - split CartLine into CartLine + CartLineActions. Reviewer noted: 'good split, name the second one clearer next time.'" },
     { k: "deadline", v: "Checkout v2 ships Fri 28th. A11y audit must pass before merge." },
   ];
   return (
@@ -576,7 +576,7 @@ ROLE: ${agent.desc}
 
 OPERATING PRINCIPLES
 • Match the team's existing voice and conventions. Read before writing.
-• Never invent context — if you don't know, say so or look it up.
+• Never invent context - if you don't know, say so or look it up.
 • Prefer minimal, focused changes over sweeping rewrites.
 • When uncertain, ask before acting.
 

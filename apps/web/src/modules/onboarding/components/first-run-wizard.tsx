@@ -17,13 +17,13 @@ import { cn } from "@/lib/cn";
  * First-run wizard. A four-step modal that appears once on a fresh
  * install and walks the user through:
  *
- *   1. Projects root path — where their code folders live on disk.
- *   2. Excluded folders   — names to skip when scanning (with a
+ *   1. Projects root path - where their code folders live on disk.
+ *   2. Excluded folders   - names to skip when scanning (with a
  *      sensible default list pre-filled).
- *   3. Starter agents     — checkboxes for which of the 13 bundled
+ *   3. Starter agents     - checkboxes for which of the 13 bundled
  *      agents to import into ~/.claude/agents/. "Select all" is the
  *      first checkbox so users who want the demo can click once.
- *   4. First project      — pick one of the scanned folders to turn
+ *   4. First project      - pick one of the scanned folders to turn
  *      into the user's first project, optionally name it.
  *
  * On finish: PUT /api/settings (marks firstRunComplete: true), POST
@@ -32,7 +32,7 @@ import { cn } from "@/lib/cn";
  * populated UI with the project active in the sidebar.
  *
  * Steps can be skipped: empty agents list is allowed, project step is
- * skippable. Settings step (root path) is mandatory — it's what
+ * skippable. Settings step (root path) is mandatory - it's what
  * "first-run complete" means.
  */
 
@@ -93,7 +93,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   });
   const starter = starterQ.data ?? [];
 
-  // Pre-select every starter agent the first time the list loads —
+  // Pre-select every starter agent the first time the list loads -
   // most users will want the full demo set, and unticking is faster
   // than ticking 13 boxes.
   useEffect(() => {
@@ -119,7 +119,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
 
   const finishMut = useMutation({
     mutationFn: async () => {
-      // 1. Persist settings — this flips firstRunComplete: true.
+      // 1. Persist settings - this flips firstRunComplete: true.
       await apiFetch<AppSettings>(API_ROUTES.settings, {
         method: "PUT",
         body: { projectsRoot: root.trim(), excluded },
@@ -148,7 +148,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     onSuccess: ({ createdId }) => {
       // Important: close ourselves first via the local dismiss flag,
       // BEFORE waiting on any refetches. The gate's invalidate-based
-      // unmount still runs, but we don't depend on it any more — if
+      // unmount still runs, but we don't depend on it any more - if
       // it succeeds the gate also returns null, and our null
       // short-circuit makes the wizard disappear immediately.
       if (createdId) setActiveProjectId(createdId);

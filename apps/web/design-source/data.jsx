@@ -1,4 +1,4 @@
-// data.jsx — mock fleet, runs, skills
+// data.jsx - mock fleet, runs, skills
 
 const SKILLS = [
   "research", "code-review", "qa-web", "qa-app", "scraping",
@@ -11,7 +11,7 @@ const TOOLS = [
   "Computer", "MCP:postgres", "MCP:github", "MCP:linear",
 ];
 
-// Carefully tuned roster — 18 hand-named, then auto-fill to 50 for stress test
+// Carefully tuned roster - 18 hand-named, then auto-fill to 50 for stress test
 const HAND_AGENTS = [
   { id: "atlas",    name: "Atlas",    glyph: "🗺", desc: "Plans multi-step research across the open web; produces structured briefs with citations.",
     skills: ["research", "docs"], tools: ["WebSearch","WebFetch","Read","Write"], model: "opus", effort: "high",
@@ -19,7 +19,7 @@ const HAND_AGENTS = [
   { id: "felix",    name: "Felix",    glyph: "🔍", desc: "Reviews diffs for correctness, style and risk. Suggests fixes inline. Quiet on uncontroversial changes.",
     skills: ["code-review", "refactor"], tools: ["Read","Edit","Bash"], model: "sonnet", effort: "high",
     status: "idle", pm: "ask" },
-  { id: "maya",     name: "Maya",     glyph: "🕷", desc: "Drives a real browser to QA web flows — fills forms, asserts UI states, files repros with screenshots.",
+  { id: "maya",     name: "Maya",     glyph: "🕷", desc: "Drives a real browser to QA web flows - fills forms, asserts UI states, files repros with screenshots.",
     skills: ["qa-web","test-gen"], tools: ["Computer","WebFetch","Read","Write"], model: "sonnet", effort: "medium",
     status: "working", pm: "auto", lastRunMs: 7.4*60_000 },
   { id: "mori",     name: "Mori",     glyph: "🐚", desc: "Surveys research papers, blogs, and changelogs for a given topic; deduplicates and synthesizes findings.",
@@ -52,16 +52,16 @@ const HAND_AGENTS = [
   { id: "boreal",   name: "Boreal",   glyph: "❄", desc: "Cold-starts new repos with conventional layouts, CI, lint, prettier, vitest.",
     skills: ["devops","docs"], tools: ["Read","Write","Bash"], model: "haiku", effort: "low",
     status: "idle", pm: "auto" },
-  { id: "lumen",    name: "Lumen",    glyph: "☀", desc: "Visualizes datasets — picks chart types, generates interactive HTML with notes about caveats.",
+  { id: "lumen",    name: "Lumen",    glyph: "☀", desc: "Visualizes datasets - picks chart types, generates interactive HTML with notes about caveats.",
     skills: ["data","design"], tools: ["Read","Write"], model: "sonnet", effort: "medium",
     status: "idle", pm: "auto" },
   { id: "auger",    name: "Auger",    glyph: "↯", desc: "Runs targeted ML experiments end-to-end: dataset → train → eval → report. Resumes from checkpoints.",
     skills: ["ml","data"], tools: ["Read","Write","Bash"], model: "opus", effort: "high",
     status: "idle", pm: "ask" },
-  { id: "halcyon",  name: "Halcyon",  glyph: "◐", desc: "Triages bug reports — reproduces, isolates, files actionable issues with stack + repro steps.",
+  { id: "halcyon",  name: "Halcyon",  glyph: "◐", desc: "Triages bug reports - reproduces, isolates, files actionable issues with stack + repro steps.",
     skills: ["qa-app","qa-web"], tools: ["Read","Bash","Computer"], model: "sonnet", effort: "medium",
     status: "idle", pm: "auto" },
-  { id: "orchid",   name: "Orchid",   glyph: "❀", desc: "Reviews UX writing — labels, errors, empty states. Tightens copy to product voice.",
+  { id: "orchid",   name: "Orchid",   glyph: "❀", desc: "Reviews UX writing - labels, errors, empty states. Tightens copy to product voice.",
     skills: ["docs","design"], tools: ["Read","Edit"], model: "haiku", effort: "low",
     status: "done", pm: "auto" },
   { id: "arc",      name: "Arc",      glyph: "↗", desc: "Plans and executes migrations: framework upgrades, dep bumps, API surface changes. Runs incremental.",
@@ -133,7 +133,7 @@ function buildHistory(agents) {
 const SAMPLE_PROMPTS = [
   "Compare Polars vs DuckDB for sub-second analytical queries on 5GB parquet; benchmark on the box.",
   "Audit the auth flow for CSRF and open-redirect risk; list fixes ordered by blast radius.",
-  "Refactor src/billing/* — split out invoice rendering from price calc; keep tests green.",
+  "Refactor src/billing/* - split out invoice rendering from price calc; keep tests green.",
   "QA the new onboarding on a fresh signup; file a repro for any blocking bug with screenshots.",
   "Survey papers on KV-cache compression for LLM serving since Jan 2025; group by approach.",
   "Find every TODO older than 90 days in /server and propose what to do with each.",
@@ -141,7 +141,7 @@ const SAMPLE_PROMPTS = [
   "Localize the settings page into es-MX and ja-JP; flag idioms needing review.",
   "Visualize the last 30 days of latency by route; annotate the deploy windows.",
   "Migrate the React Router setup from v6 to v7 incrementally; one route group per PR.",
-  "Triage the 12 open issues tagged 'mobile' — reproduce or close as won't-fix.",
+  "Triage the 12 open issues tagged 'mobile' - reproduce or close as won't-fix.",
   "Profile the editor's keystroke path; find any wins ≥5ms p95.",
   "Scrape the docs site for every public API and emit a typed client.",
 ];
@@ -159,7 +159,7 @@ const STREAM_LINES = [
   { tool: "Read", arg: "src/billing/invoice.ts", note: "847 lines" },
   { tool: "Read", arg: "src/billing/price.ts",   note: "412 lines" },
   { who: "agent", text: "Both modules import from a shared `Money` type with two implementations. Splitting rendering out is safe; price calc is internally referentially-transparent." },
-  { who: "agent", text: "Plan:\n  1. extract InvoiceRenderer to src/billing/render/\n  2. inline tiny helpers in price.ts that only have one caller\n  3. move totals math into PriceCalc.totals()\n  4. update 6 call sites — none cross package boundary\n" },
+  { who: "agent", text: "Plan:\n  1. extract InvoiceRenderer to src/billing/render/\n  2. inline tiny helpers in price.ts that only have one caller\n  3. move totals math into PriceCalc.totals()\n  4. update 6 call sites - none cross package boundary\n" },
   { tool: "Bash", arg: "rg -n 'import.*invoice'", note: "12 matches" },
   { who: "agent", text: "Touching 12 files across `web` and `worker`. Proceeding with step 1." },
   { tool: "Edit", arg: "src/billing/render/InvoiceRenderer.tsx", note: "+184 −0" },
@@ -212,7 +212,7 @@ function fmtDur(ms) {
   return Math.floor(ms/60_000) + "m " + Math.floor((ms%60_000)/1000) + "s";
 }
 
-const SAMPLE_PROMPT_BODY = `Refactor src/billing/* — split out invoice rendering from price calc; keep tests green.
+const SAMPLE_PROMPT_BODY = `Refactor src/billing/* - split out invoice rendering from price calc; keep tests green.
 
 Notes:
  - tests at __tests__/billing/* must keep passing
@@ -221,7 +221,7 @@ Notes:
 `;
 
 // Sample system prompt body (markdown-ish)
-const SAMPLE_SYS_PROMPT = `# Ren — Refactor Specialist
+const SAMPLE_SYS_PROMPT = `# Ren - Refactor Specialist
 
 You are **Ren**, a focused refactoring agent. You make codebases smaller and clearer, one named area at a time.
 
@@ -238,8 +238,8 @@ You are **Ren**, a focused refactoring agent. You make codebases smaller and cle
 - Execute one step, run tests, then continue. If tests fail, stop and ask.
 
 ## Tools
-- \`Read\`, \`Edit\` — primary
-- \`Bash\` — for tests, git, simple greps. Never for installs.
+- \`Read\`, \`Edit\` - primary
+- \`Bash\` - for tests, git, simple greps. Never for installs.
 
 ## Skills
 \`refactor\` \`code-review\`

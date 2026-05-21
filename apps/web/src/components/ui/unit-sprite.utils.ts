@@ -5,7 +5,7 @@
 // the character actually sits inside each frame so the UnitSprite can crop the
 // transparent padding away and fill the avatar with the character body.
 //
-// Numbers come from inspection of the original assets — the Tiny Swords pack
+// Numbers come from inspection of the original assets - the Tiny Swords pack
 // (Free Pack by Pixel Frog) is the source of truth.
 
 export const UNIT_FACTIONS = ["blue", "red", "purple", "yellow", "black"] as const;

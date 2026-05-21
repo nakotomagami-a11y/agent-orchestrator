@@ -41,10 +41,10 @@ export function formatPriorContext(messages: db.HistoryMessage[]): string {
       return `${label}: ${content}`;
     })
     .join("\n\n");
-  return `[Prior conversation — ${messages.length} most recent messages]\n${body}\n[End prior context]\n\n`;
+  return `[Prior conversation - ${messages.length} most recent messages]\n${body}\n[End prior context]\n\n`;
 }
 
 export function historyNote(agentId: string, instanceId: string): string {
   const dbPath = DB_PATH.replace(homedir(), "~");
-  return `${dbPath} — query: sqlite3 "${dbPath}" "SELECT role, content FROM messages WHERE agent_id='${agentId}' AND instance_id='${instanceId}' ORDER BY ts DESC LIMIT 20"`;
+  return `${dbPath} - query: sqlite3 "${dbPath}" "SELECT role, content FROM messages WHERE agent_id='${agentId}' AND instance_id='${instanceId}' ORDER BY ts DESC LIMIT 20"`;
 }

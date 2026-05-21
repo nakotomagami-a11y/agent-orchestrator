@@ -14,7 +14,7 @@ import { API_ROUTES } from "@agent-office/shared/config/routes";
 export interface AgentPrompt {
   /** Derived from the first line (≤60 chars) of the raw string. */
   title: string;
-  /** Full prompt text — replaces the composer value on selection. */
+  /** Full prompt text - replaces the composer value on selection. */
   body: string;
 }
 

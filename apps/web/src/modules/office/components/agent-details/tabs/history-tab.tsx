@@ -10,7 +10,7 @@ import {
 } from "@/modules/summon/components/ao-icons";
 
 function fmtDur(ms: number): string {
-  if (!ms) return "—";
+  if (!ms) return "-";
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   const m = Math.floor(ms / 60_000);
   const s = Math.round((ms % 60_000) / 1000);
@@ -48,7 +48,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
   const [confirmWipe, setConfirmWipe] = useState(false);
   const qc = useQueryClient();
 
-  // Don't filter by instanceId — standalone agents always store runs as
+  // Don't filter by instanceId - standalone agents always store runs as
   // instance_id="default" regardless of the UI's selectedInstanceId.
   const runsQ = useRuns({ agentId, limit: 200 });
 
@@ -268,7 +268,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                           <AoSparkle size={11} /> response
                         </div>
                         <div className="px-[12px] py-[10px] font-mono text-[12px] text-ao-fg-0 leading-[1.55] max-h-[160px] overflow-y-auto whitespace-pre-wrap break-words">
-                          {r.output || "—"}
+                          {r.output || "-"}
                         </div>
                       </div>
                       {/* Meta row */}
@@ -278,7 +278,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                           { lbl: "duration", val: fmtDur(r.durMs) },
                           { lbl: "tokens",   val: fmtTok((r.tokensIn || 0) + (r.tokensOut || 0)) },
                           { lbl: "cost",     val: `$${(r.cost || 0).toFixed(4)}` },
-                          { lbl: "model",    val: r.model || "—" },
+                          { lbl: "model",    val: r.model || "-" },
                         ].map(({ lbl, val }) => (
                           <div key={lbl} className="flex flex-col font-mono text-[11px]">
                             <div className="text-ao-fg-2 uppercase tracking-[0.08em] text-[10.5px]">{lbl}</div>

@@ -1,4 +1,4 @@
-// app.jsx — main composition
+// app.jsx - main composition
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "accent": "jade",
@@ -160,7 +160,7 @@ function App() {
             </div>
           ) : view === "grid" ? (
             <div style={{ display: "grid", gridTemplateRows: "auto 1fr", minHeight: 0 }}>
-              <FloorHeader runningCount={runningCount} totalAgents={agents.length} title="Fleet — Grid" />
+              <FloorHeader runningCount={runningCount} totalAgents={agents.length} title="Fleet - Grid" />
               <GridView agents={agents} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); setView("list"); }} avatarStyle={t.avatar} history={history} />
             </div>
           ) : (
@@ -218,7 +218,7 @@ function App() {
   );
 }
 
-function FloorHeader({ runningCount, totalAgents, title = "Office — Floor Plan" }) {
+function FloorHeader({ runningCount, totalAgents, title = "Office - Floor Plan" }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 14,
@@ -296,7 +296,7 @@ function TweaksUI({ t, setTweak }) {
   );
 }
 
-// Custom TweakColor renderOption hook — falls back to default if undefined
+// Custom TweakColor renderOption hook - falls back to default if undefined
 // (the starter component already supports color string options; here we pass strings for accents)
 
 ReactDOM.createRoot(document.getElementById("app")).render(<App />);

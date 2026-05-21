@@ -46,8 +46,8 @@ import { useOfficePainting } from "../hooks/use-office-painting";
  */
 
 // Renamed/removed bridge kinds get rewritten on load. The four cap kinds
-// (bridge_h_l/r, bridge_v_t/b) are no longer placeable — caps now auto-
-// paint on adjacent land cells — so any persisted cap drops silently.
+// (bridge_h_l/r, bridge_v_t/b) are no longer placeable - caps now auto-
+// paint on adjacent land cells - so any persisted cap drops silently.
 // The middle kinds got shorter names: bridge_h_m → bridge_h, _v_m → _v.
 const KIND_MIGRATIONS: Record<string, DecorationKind | null> = {
   bridge_h_m: "bridge_h",
@@ -63,7 +63,7 @@ function migrateKind(raw: string): DecorationKind | null {
   return raw in DECORATIONS ? (raw as DecorationKind) : null;
 }
 
-/** Default grid is empty — users build their own island. */
+/** Default grid is empty - users build their own island. */
 function makeSeedGrid(): boolean[][] {
   return Array.from({ length: GRID_ROWS }, () =>
     Array.from({ length: GRID_COLS }, () => false),
@@ -192,7 +192,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         }
       })
       .catch(() => { /* ignore */ })
-      // projectId is stable for this instance — the key prop forces a remount on change
+      // projectId is stable for this instance - the key prop forces a remount on change
       // eslint-disable-next-line react-hooks/exhaustive-deps
       .finally(() => setSceneLoaded(true));
   }, []);
@@ -305,7 +305,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
               return next;
             });
             // If a bridge was removed from a water cell, evict any agent
-            // standing on it — they can't stand on water.
+            // standing on it - they can't stand on water.
             const isWater = grid[y]?.[x] !== true;
             const bridgeGone = isWater && !popped.stack.some((k) => familyOf(k) === "bridge");
             if (bridgeGone && agentPositions[key]) {
@@ -373,7 +373,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
     camPointerUp();
   }, [paintPointerUp, camPointerUp]);
 
-  // Drop handler — invoked by OfficeMap when an agent is dropped on a
+  // Drop handler - invoked by OfficeMap when an agent is dropped on a
   // grid cell that passes its terrain + overlap validation. Move
   // semantics: if the same agent is already on the map, its old cell
   // becomes empty.
@@ -526,7 +526,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         />
       </div>
 
-      {/* Canvas tools — top-left: zoom + recenter */}
+      {/* Canvas tools - top-left: zoom + recenter */}
       <div className="absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
         <button
           type="button"
@@ -578,7 +578,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         )}
       </div>
 
-      {/* Canvas info — bottom-left: tile coords + map stats */}
+      {/* Canvas info - bottom-left: tile coords + map stats */}
       {(() => {
         const grassCount = grid.flat().filter(Boolean).length;
         const decoCount  = Object.values(decorations).reduce((s, stack) => s + (stack?.length ?? 0), 0);
@@ -587,7 +587,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
           <div className="absolute flex z-[10] pointer-events-none bottom-[14px] left-[14px] gap-[14px] px-[12px] py-[8px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] font-mono text-[10.5px] text-[rgba(138,128,121,0.9)] backdrop-blur-[10px]">
             <div className="item">
               <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Tile</div>
-              <div className="text-[rgba(244,239,234,0.9)]">{hoverTile ? `${hoverTile.x}, ${hoverTile.y}` : "—"}</div>
+              <div className="text-[rgba(244,239,234,0.9)]">{hoverTile ? `${hoverTile.x}, ${hoverTile.y}` : "-"}</div>
             </div>
             <div className="item">
               <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Map</div>
@@ -601,7 +601,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         );
       })()}
 
-      {/* Build actions bar — bottom-center, build mode only */}
+      {/* Build actions bar - bottom-center, build mode only */}
       {buildMode && (
         <div className="absolute flex items-center gap-[4px] z-[15] pointer-events-auto whitespace-nowrap rounded-full bottom-[14px] left-1/2 [transform:translateX(-50%)] p-[5px] bg-[rgba(26,22,20,0.92)] border border-[rgba(255,240,230,0.14)] shadow-[0_14px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-[12px]">
           <button

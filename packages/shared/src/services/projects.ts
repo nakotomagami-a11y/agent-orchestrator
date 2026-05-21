@@ -1,4 +1,4 @@
-// Projects — scanned from the user's projectsRoot.
+// Projects - scanned from the user's projectsRoot.
 // Per-project metadata in ~/.claude/projects/<id>/project.md (YAML frontmatter + memory body).
 // Rosters of agent instances live in that frontmatter.
 
@@ -173,7 +173,7 @@ export function deleteProject(id: string): boolean {
 /**
  * Generate an instance id that's never been used in this roster *and*
  * also includes a short timestamp/random suffix so re-adding the same
- * agent after a remove yields a fresh id — that's how chat transcripts
+ * agent after a remove yields a fresh id - that's how chat transcripts
  * key off the instance, so collisions would carry old conversations
  * into a new "colleague".
  */

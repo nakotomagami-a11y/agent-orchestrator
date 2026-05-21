@@ -24,7 +24,7 @@ export type UnitSpriteProps = {
    *  declare the matching sheet in UNIT_DEFS (pawn does); otherwise the
    *  sprite gracefully falls back to idle. */
   action?: "idle" | "working" | "axe" | "hammer" | "pickaxe" | "knife";
-  /** Mirror horizontally — used when the contextual target (e.g. a tree
+  /** Mirror horizontally - used when the contextual target (e.g. a tree
    *  being chopped) is on the pawn's left rather than its default right. */
   flip?: boolean;
   /** Optional accessible label. Decorative by default. */
@@ -51,7 +51,7 @@ export function UnitSprite({
   // Render a placeholder square and shout in the console so the offending
   // callsite shows up in dev. Types should catch this at compile time but
   // any cast / persisted data / out-of-tree mutation could still break the
-  // invariant — and "blank avatar" beats "white page of death".
+  // invariant - and "blank avatar" beats "white page of death".
   const def =
     unit && typeof unit.kind === "string" ? UNIT_DEFS[unit.kind] : undefined;
   if (!def) {

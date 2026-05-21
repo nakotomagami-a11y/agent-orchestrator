@@ -1,4 +1,4 @@
-// tui.jsx — TUI / terminal aesthetic Agent Office
+// tui.jsx - TUI / terminal aesthetic Agent Office
 
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "color": "amber",
@@ -687,7 +687,7 @@ function Wizard({ onClose }) {
     desc: "Tiny utility agent that does one small thing well.",
     skills: ["docs"], tools: ["Read","Write"], pm: "auto",
     model: "haiku", effort: "low",
-    body: "# Pico\n\nYou are Pico — a tiny utility agent. Do one small thing well.\n\n## Workflow\n- Read the file or area in question\n- Make the smallest possible change\n- Confirm what you did in 1-2 lines\n",
+    body: "# Pico\n\nYou are Pico - a tiny utility agent. Do one small thing well.\n\n## Workflow\n- Read the file or area in question\n- Make the smallest possible change\n- Confirm what you did in 1-2 lines\n",
   });
   const set = (k,v) => setD(p => ({...p, [k]: v}));
 

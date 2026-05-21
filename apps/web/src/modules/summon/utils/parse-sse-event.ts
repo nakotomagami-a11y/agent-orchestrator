@@ -9,6 +9,7 @@ export interface ApplyResult {
   done: boolean;
   error: string | null;
   sessionId?: string;
+  startTs?: number;
 }
 
 const attachedSchema = z.object({
@@ -29,7 +30,15 @@ const usageSchema = z.object({
   tokensOut: z.number(),
   cost: z.number(),
 });
-const doneSchema = z.object({ runId: z.string(), exitCode: z.number(), sessionId: z.string().optional() });
+const doneSchema = z.object({
+  runId: z.string(),
+  exitCode: z.number(),
+  sessionId: z.string().optional(),
+  durationMs: z.number().optional(),
+  tokensIn: z.number().optional(),
+  tokensOut: z.number().optional(),
+  cost: z.number().optional(),
+});
 const errorSchema = z.object({ runId: z.string(), message: z.string() });
 
 const eventSchemas = {
@@ -60,7 +69,7 @@ export function parseSseEvent(name: string, raw: unknown): RunStreamEvent | null
 }
 
 export function applySseEvent(
-  prev: { thread: ThreadItem[]; usage: UsageMeter },
+  prev: { thread: ThreadItem[]; usage: UsageMeter; startTs?: number | null },
   event: RunStreamEvent,
 ): ApplyResult {
   return match(event)
@@ -74,6 +83,7 @@ export function applySseEvent(
         usage: { tokensIn: data.tokensIn, tokensOut: data.tokensOut, cost: data.cost },
         done: data.status === "done" || data.status === "error",
         error: null,
+        startTs: data.startTs,
       };
     })
     .with({ name: "chunk" }, ({ data }) => ({
@@ -118,9 +128,28 @@ export function applySseEvent(
           ? { ...it, status: "done" as const, durationMs: now - it.startTs }
           : it,
       );
+      // Use server-provided durationMs when available; fall back to client-side
+      // calculation from startTs so offline / GC'd runs still show a duration.
+      const durationMs = data.durationMs ?? (prev.startTs ? now - prev.startTs : undefined);
+      // Use server-provided tokens when present, otherwise fall back to the
+      // accumulated stream usage (may be 0 if the usage event never arrived).
+      const tokensIn = data.tokensIn ?? prev.usage.tokensIn;
+      const tokensOut = data.tokensOut ?? prev.usage.tokensOut;
+      const cost = data.cost ?? prev.usage.cost;
       return {
-        thread: closeStreaming([...finalized, { kind: "system-done" as const, id: newId(), exitCode: data.exitCode }]),
-        usage: prev.usage,
+        thread: closeStreaming([
+          ...finalized,
+          {
+            kind: "system-done" as const,
+            id: newId(),
+            exitCode: data.exitCode,
+            durationMs,
+            tokensIn,
+            tokensOut,
+            cost,
+          },
+        ]),
+        usage: { tokensIn, tokensOut, cost },
         done: true,
         error: null,
         sessionId: data.sessionId,
@@ -178,7 +207,7 @@ function formatToolArg(input: unknown): string | undefined {
     return input.trim().length > 0 ? input : undefined;
   }
   if (typeof input === "object") {
-    // Empty objects / arrays carry no information — rendering `{}` next to
+    // Empty objects / arrays carry no information - rendering `{}` next to
     // every tool name just adds visual noise without helping the user
     // understand the call. Drop them here so the UI layer doesn't have to.
     const empty = Array.isArray(input)
@@ -187,7 +216,7 @@ function formatToolArg(input: unknown): string | undefined {
     if (empty) return undefined;
   }
   try {
-    // Keep the full payload — the tool-card header truncates via CSS ellipsis,
+    // Keep the full payload - the tool-card header truncates via CSS ellipsis,
     // and the expanded body needs the complete value to be useful.
     return JSON.stringify(input);
   } catch {

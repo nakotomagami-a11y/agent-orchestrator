@@ -2,7 +2,7 @@
  * Single fetch wrapper used by every React Query hook. Handles JSON parsing,
  * error normalization, and automatic 4xx/5xx → throw conversion.
  *
- * Hooks should call `apiFetch<TResponse>(url, init?)` — never bare `fetch()`.
+ * Hooks should call `apiFetch<TResponse>(url, init?)` - never bare `fetch()`.
  */
 
 export class ApiError extends Error {

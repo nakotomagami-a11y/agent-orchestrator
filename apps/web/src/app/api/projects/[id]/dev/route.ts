@@ -49,7 +49,7 @@ function scriptToName(key: string): string {
 }
 
 function detectDevCommands(cwd: string, pm: string): DetectedCommand[] {
-  // 1. .ao.json custom override — takes full priority
+  // 1. .ao.json custom override - takes full priority
   const aoPath = join(cwd, ".ao.json");
   if (existsSync(aoPath)) {
     try {
@@ -71,7 +71,7 @@ function detectDevCommands(cwd: string, pm: string): DetectedCommand[] {
 
   const commands: DetectedCommand[] = [];
 
-  // 2. Flutter — check root and common monorepo subfolders (apps/*, mobile/*, packages/*)
+  // 2. Flutter - check root and common monorepo subfolders (apps/*, mobile/*, packages/*)
   const flutterCandidates: Array<{ dir: string; label: string }> = [
     { dir: cwd, label: "Flutter Web" },
   ];
@@ -81,7 +81,7 @@ function detectDevCommands(cwd: string, pm: string): DetectedCommand[] {
       if (!existsSync(parentDir)) continue;
       for (const entry of readdirSync(parentDir, { withFileTypes: true })) {
         if (!entry.isDirectory()) continue;
-        flutterCandidates.push({ dir: join(parentDir, entry.name), label: `Flutter — ${entry.name}` });
+        flutterCandidates.push({ dir: join(parentDir, entry.name), label: `Flutter - ${entry.name}` });
       }
     }
   } catch { /* ignore */ }
@@ -224,8 +224,9 @@ export async function POST(req: Request, { params }: Params) {
   const needsPort = command.portMode !== "device";
   const port = needsPort ? await findFreePort(3001) : 0;
   const argv = [...command.argv];
-  if (command.portMode === "next") argv.push("--", "-p", String(port));
-  else if (command.portMode === "flutter") argv.push("--web-port", String(port));
+  // "next" portMode uses PORT env var (exported via portExport in spawnInTerminal) —
+  // appending `-- -p port` breaks Next.js ≥ v13 which treats `--` as a directory argument.
+  if (command.portMode === "flutter") argv.push("--web-port", String(port));
 
   const cmdCwd = command.cwd ?? cwd;
   const child = spawnInTerminal(command.name, cmdCwd, argv, needsPort ? port : null);

@@ -45,7 +45,7 @@ export async function GET(request: Request) {
       grassColor: allSettings["office-grass-color"] ?? null,
     };
 
-    // History — only for roster instances
+    // History - only for roster instances
     type HistoryEntry = { agentId: string; instanceId: string; transcript: string };
     let history: HistoryEntry[] | undefined;
     if (includeHistory) {

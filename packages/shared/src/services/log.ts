@@ -1,4 +1,4 @@
-// Tiny structured logger — JSON lines to stderr.
+// Tiny structured logger - JSON lines to stderr.
 
 type Level = "debug" | "info" | "warn" | "error";
 

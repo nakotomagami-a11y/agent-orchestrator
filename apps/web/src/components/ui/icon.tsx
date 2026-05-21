@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
  * collapsed into a single declarative component so callers say
  * <Icon name="home" /> instead of pulling individual symbols.
  *
- * Adding a new icon? Append a key to ICON_PATHS — the type updates itself.
+ * Adding a new icon? Append a key to ICON_PATHS - the type updates itself.
  */
 
 type IconShape = {
@@ -474,7 +474,7 @@ export type IconProps = Omit<SVGProps<SVGSVGElement>, "name"> & {
   name: IconName;
   /** Pixel size; defaults to inheriting from the surrounding `.i` rule (16px). */
   size?: number;
-  /** Optional accessible label — when omitted the icon is `aria-hidden`. */
+  /** Optional accessible label - when omitted the icon is `aria-hidden`. */
   label?: string;
 };
 

@@ -32,7 +32,7 @@ export async function GET(_request: Request, { params }: Params) {
     // Extract ISO timestamp from filename: <id>.body.<ISO-with-dashes>.md
     // The timestamp portion replaces : and . with - so we reverse that
     const inner = filename.slice(prefix.length, -".md".length);
-    // inner looks like 2024-01-15T10-30-45-123Z — convert back to parseable ISO
+    // inner looks like 2024-01-15T10-30-45-123Z - convert back to parseable ISO
     const isoRaw = inner
       .replace(/T(\d{2})-(\d{2})-(\d{2})-(\d{3})Z$/, "T$1:$2:$3.$4Z")
       .replace(/T(\d{2})-(\d{2})-(\d{2})Z$/, "T$1:$2:$3Z");

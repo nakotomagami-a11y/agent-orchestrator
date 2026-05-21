@@ -4,7 +4,7 @@ import { type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 /**
- * Cross-fade route content. CSS keyed on the pathname — the browser handles
+ * Cross-fade route content. CSS keyed on the pathname - the browser handles
  * the animation, so no extra render pass per navigation.
  */
 export function PageTransition({ children }: { children: ReactNode }) {

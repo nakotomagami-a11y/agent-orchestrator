@@ -14,7 +14,7 @@ export function markRunAborted(id: string): void {
 }
 
 export function pushRun(run: PersistedRun): void {
-  // upsert — run may already exist (inserted at startRun time)
+  // upsert - run may already exist (inserted at startRun time)
   db.updateRun(run.id, {
     status: run.status,
     exitCode: run.exitCode,

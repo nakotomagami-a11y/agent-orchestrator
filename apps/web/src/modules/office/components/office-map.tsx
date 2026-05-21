@@ -26,7 +26,7 @@ import {
   type DragRef,
 } from "../hooks/use-office-drag";
 
-/** "x,y" → DragRef. Sparse — cells with no agent aren't keys. */
+/** "x,y" → DragRef. Sparse - cells with no agent aren't keys. */
 export type AgentPositions = Record<string, DragRef>;
 
 /**
@@ -39,7 +39,7 @@ export type AgentPositions = Record<string, DragRef>;
  * runs on every render, so transitions stay clean as the shape changes.
  *
  * Tiles are 64-px slices from the active grass tileset (a 9×6 grid).
- * The tileset URL is chosen by the island's `grassColor` prop — every
+ * The tileset URL is chosen by the island's `grassColor` prop - every
  * color variant shares the exact same layout, so the auto-tile picker
  * doesn't care which one is in use. Coords are 0-indexed into that grid.
  */
@@ -84,7 +84,7 @@ const T = {
   lt_br: { c: 2, r: 2 },
 
   // 1-wide vertical-column variants (col 3, rows 0-2). Used when a cell has
-  // both left AND right empty — i.e. it's a vertical strip of grass with
+  // both left AND right empty - i.e. it's a vertical strip of grass with
   // water on both sides. Without these the picker would pick a regular
   // corner tile and one side would render as a hard edge ("cut").
   col_top: { c: 3, r: 0 }, // rims on T + L + R, grass opens down
@@ -98,7 +98,7 @@ const T = {
  *   - 4 outer corners (2 adjacent sides empty)
  *   - 4 edges (1 side empty)
  *   - Interior (all neighbours present)
- *   - 1-wide vertical column (both left AND right empty) — uses the
+ *   - 1-wide vertical column (both left AND right empty) - uses the
  *     column-cap tiles in col 3 of the tileset so 1-wide vertical
  *     protrusions get rims on all three exposed sides instead of just
  *     two.
@@ -106,15 +106,15 @@ const T = {
  * Limitation: 1-wide horizontal protrusions and isolated single tiles
  * still fall through to a corner tile and will look "cut" on one side.
  * The tileset doesn't appear to ship dedicated horizontal-cap tiles in
- * an obvious slot — happy to dig further if you hit those shapes.
+ * an obvious slot - happy to dig further if you hit those shapes.
  */
 type Picked = { tile: Coord; rotate?: 0 | 90; quarter?: Quarter };
 
 /**
  * Returns one or more visual layers for a cell. Most cells render as a
  * single tile; the isolated case (all 4 sides water) stacks two `col_mid`
- * tiles — one unrotated for L+R rims, one rotated 90° for T+B rims after
- * rotation — so all four sides get a proper grass edge.
+ * tiles - one unrotated for L+R rims, one rotated 90° for T+B rims after
+ * rotation - so all four sides get a proper grass edge.
  */
 function pickGrass(grid: boolean[][], x: number, y: number): Picked[] {
   const t = !grid[y - 1]?.[x];
@@ -122,7 +122,7 @@ function pickGrass(grid: boolean[][], x: number, y: number): Picked[] {
   const l = !grid[y]?.[x - 1];
   const r = !grid[y]?.[x + 1];
 
-  // Isolated single tile — none of the available tiles has rims on all
+  // Isolated single tile - none of the available tiles has rims on all
   // four sides. Assemble one from the four corner tiles' matching
   // quadrants: TL of lt_tl gives a top+left rim corner, TR of lt_tr a
   // top+right, etc. Stitched together they cover all four edges of the
@@ -267,7 +267,7 @@ export type OfficeMapProps = {
   grid: boolean[][];
   decorations: DecorationsMap;
   agentPositions: AgentPositions;
-  /** Index of OfficeAgent by id — used to resolve placed agents into a
+  /** Index of OfficeAgent by id - used to resolve placed agents into a
    *  UnitSprite. Passed in instead of useOfficeAgents'd here so the
    *  component stays presentational. */
   agentsById: Map<string, OfficeAgent>;
@@ -297,7 +297,7 @@ export type OfficeMapProps = {
  *
  * Decoration placement: invalid if the tool's terrain doesn't match the
  * cell, or if the exact same kind is already in the stack (would be a
- * no-op). Different variants of the same family are valid — they
+ * no-op). Different variants of the same family are valid - they
  * replace the existing family member in place.
  */
 function isToolValidAt(
@@ -313,7 +313,7 @@ function isToolValidAt(
   if (tool === "erase") return cellHasGrass || (stack !== undefined && stack.length > 0);
   if (!isPlacementValid(tool, cellHasGrass)) return false;
   if (stack?.includes(tool)) return false; // already exactly that kind
-  // Cells acting as a bridge ramp are reserved for the cap — block any
+  // Cells acting as a bridge ramp are reserved for the cap - block any
   // new decoration placement there.
   if (hasBridgeCap(x, y, grid, decorations)) return false;
   return true;
@@ -343,7 +343,7 @@ export function OfficeMap({
 
   // Whether placing the currently-dragged agent at (x, y) would succeed:
   // Agents can stand on grass cells or on water cells that have a bridge
-  // decoration. Bridge cap cells (land ramps) are excluded — they're
+  // decoration. Bridge cap cells (land ramps) are excluded - they're
   // reserved for the bridge art and are too narrow for an agent to stand on.
   const isBridgeCell = (x: number, y: number): boolean => {
     if (grid[y]?.[x] === true) return false; // land, not a bridge water cell
@@ -361,7 +361,7 @@ export function OfficeMap({
 
   // Flatten the decoration map into per-cell layers, then sort by cell Y
   // (lower rows draw on top of higher rows for depth). Within a cell the
-  // stack order is preserved — solids first, overlays on top — so e.g. a
+  // stack order is preserved - solids first, overlays on top - so e.g. a
   // bush placed on a tree's cell paints over the trunk.
   const decoList = Object.entries(decorations).flatMap(([key, stack]) => {
     const [xs, ys] = key.split(",");
@@ -371,14 +371,14 @@ export function OfficeMap({
   }).sort((a, b) => a.y - b.y || a.layer - b.layer);
 
   // Auto-rendered bridge end-caps. For every placed bridge middle, paint
-  // the matching cap on any neighbouring land cell — left/right for a
+  // the matching cap on any neighbouring land cell - left/right for a
   // horizontal bridge, top/bottom for a vertical one. Caps are not
   // placeable decorations; they live entirely at render time so the
   // user's build palette only exposes the middle plank.
   //
   // The cap art has transparent padding on the side that connects to
   // the bridge, so painting the full 64×64 tile over the land cell only
-  // covers the half that meets the bridge — the rest of the land tile
+  // covers the half that meets the bridge - the rest of the land tile
   // (and any decorations on it) shows through.
   const isLand = (cx: number, cy: number): boolean => grid[cy]?.[cx] === true;
   const bridgeCaps: Array<{ x: number; y: number; src: string }> = [];
@@ -489,7 +489,7 @@ export function OfficeMap({
           }}
         />
       ))}
-      {/* Placed agents — sorted by y so lower rows draw on top of higher
+      {/* Placed agents - sorted by y so lower rows draw on top of higher
           rows for natural depth. Skips any ref whose agent isn't in the
           current catalog (e.g. deleted agent, project switched and the
           instance no longer exists). */}
@@ -505,7 +505,7 @@ export function OfficeMap({
           // Sit the character symmetrically centred on the cell. With
           // SIZE > TILE the sprite overflows by (SIZE-TILE)/2 on every
           // side, so the head sits above the cell and the feet just
-          // below — the character looks anchored to the middle of the
+          // below - the character looks anchored to the middle of the
           // tile rather than its bottom edge.
           const SIZE = AGENT_SIZE;
           const left = x * TILE + (TILE - SIZE) / 2;
@@ -517,10 +517,10 @@ export function OfficeMap({
           //   - tree on same tile OR 1-2 cells below (trees are 256 px tall
           //     and anchor at their base; an agent placed in the canopy area
           //     visually appears on the tree) → axe
-          //   - rock on same tile only (rocks are exactly 64×64 — one tile;
+          //   - rock on same tile only (rocks are exactly 64×64 - one tile;
           //     no look-down needed) → pickaxe
           //   - sheep on left/right neighbour (same row) → knife
-          //     (sheep on the same tile does NOT count — the shearing
+          //     (sheep on the same tile does NOT count - the shearing
           //     pose only makes sense when there's something to swing
           //     at on the side. Sheep on left flips the sprite so the
           //     knife faces the target.)
@@ -544,7 +544,7 @@ export function OfficeMap({
             else if (hasOnNeighbour(x, y, "rock")) action = "pickaxe";
             else if (sheepRight || sheepLeft) {
               action = "knife";
-              // Right wins when sheep flank both sides — the default
+              // Right wins when sheep flank both sides - the default
               // sprite faces right, so we only flip when the only
               // sheep is on the left.
               flip = !sheepRight && sheepLeft;
@@ -571,7 +571,7 @@ export function OfficeMap({
                 height: SIZE,
                 opacity: searchMatch ? 1 : 0.2,
               }}
-              aria-label={`${agent.name} — click to open, drag to move`}
+              aria-label={`${agent.name} - click to open, drag to move`}
               title={agent.name}
             >
               <UnitSprite
@@ -644,7 +644,7 @@ export function OfficeMap({
               );
             })()
           : null}
-      {/* Cell overlay — present when in build mode OR while an agent is
+      {/* Cell overlay - present when in build mode OR while an agent is
           being dragged. Outside build mode we still need cells to be
           drop targets so users can drop an agent without entering build
           mode first. */}
@@ -694,7 +694,7 @@ export function OfficeMap({
                       if (!isAgentDropValid(x, y, ref)) return;
                       onAgentDrop?.(x, y, ref);
                     } catch {
-                      /* malformed payload — ignore */
+                      /* malformed payload - ignore */
                     }
                   }}
                   className="absolute p-0 transition-[background] duration-[80ms] ease-[ease]"

@@ -126,7 +126,11 @@ export function Sidebar() {
           active={isActiveRoute(pathname, PAGE_ROUTES.projects)}
         />
         <NavItem
-          href={PAGE_ROUTES.activity}
+          href={
+            activeProjectId
+              ? `${PAGE_ROUTES.activity}?project=${encodeURIComponent(activeProjectId)}`
+              : PAGE_ROUTES.activity
+          }
           icon="activity"
           label={t("nav.activity")}
           active={isActiveRoute(pathname, PAGE_ROUTES.activity)}

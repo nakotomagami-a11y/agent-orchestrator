@@ -19,7 +19,7 @@ export async function GET(request: Request, { params }: Params) {
   const attached = runs.attachEmit(id, emit);
 
   if (!attached) {
-    // Run not in live registry — check DB so we can give the correct exit status.
+    // Run not in live registry - check DB so we can give the correct exit status.
     const persisted = store.getRun(id);
     if (persisted) {
       if (persisted.status === "running") {
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: Params) {
       const failed = persisted.status === "error" || (persisted.exitCode != null && persisted.exitCode !== 0);
       if (failed) {
         const message = persisted.exitCode === -1
-          ? "Run was interrupted — the server restarted while this run was in progress"
+          ? "Run was interrupted - the server restarted while this run was in progress"
           : "Run ended with an error";
         await writer.write("error", { runId: id, message });
       }

@@ -1,4 +1,4 @@
-// v3/app.jsx — main app: GNOME window, sidebar, office, chat, tweaks
+// v3/app.jsx - main app: GNOME window, sidebar, office, chat, tweaks
 
 const { useState, useEffect, useMemo, useRef } = React;
 
@@ -187,7 +187,7 @@ function TitleBar({ tweaks, setTweak }) {
           display: "inline-block", width: 16, height: 16, borderRadius: 4,
           background: "linear-gradient(135deg, var(--yaru-orange), var(--yaru-purple))",
         }}></span>
-        Agent Office — Studio
+        Agent Office - Studio
       </div>
       <div className="tb-right">
         <button className={"tb-btn " + (tweaks.theme === "dark" ? "on" : "")}
@@ -392,7 +392,7 @@ function Inspector({ agent, activity, onClose, onOpenChat }) {
         <span className="k">skills</span><span className="v">{agent.skills.map(s => "#"+s).join(" ")}</span>
         <span className="k">tools</span><span className="v">{agent.tools.length} allowed</span>
         <span className="k">status</span><span className="v" style={{ color: agent.status === "error" ? "var(--error)" : agent.status === "working" ? "var(--acc)" : "var(--txt)" }}>
-          {agent.status}{agent.task ? " — " + agent.task : ""}
+          {agent.status}{agent.task ? " - " + agent.task : ""}
         </span>
       </div>
       <div className="iactivity">
@@ -460,10 +460,10 @@ function ActivityView({ activity, agents, onOpen }) {
 
 function TemplatesView() {
   const tpl = [
-    { name: "PR reviewer", desc: "Reads diff, flags risk, suggests fixes — never edits.", model: "sonnet", uses: 412 },
+    { name: "PR reviewer", desc: "Reads diff, flags risk, suggests fixes - never edits.", model: "sonnet", uses: 412 },
     { name: "Codebase cartographer", desc: "Maps repo structure into a single index for new contributors.", model: "opus", uses: 87 },
     { name: "Release-note writer", desc: "Reads merged PRs, drafts a release-note in your team's voice.", model: "haiku", uses: 233 },
-    { name: "Dep updater", desc: "Bumps dependencies, runs tests, opens a PR — backs out on red.", model: "sonnet", uses: 198 },
+    { name: "Dep updater", desc: "Bumps dependencies, runs tests, opens a PR - backs out on red.", model: "sonnet", uses: 198 },
     { name: "Bug repro-r", desc: "Reads an issue, drives a browser, files a clean repro.", model: "sonnet", uses: 64 },
     { name: "Story writer", desc: "Turns Linear tickets into UI stories with acceptance criteria.", model: "haiku", uses: 156 },
   ];

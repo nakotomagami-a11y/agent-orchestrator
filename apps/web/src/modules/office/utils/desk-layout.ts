@@ -1,6 +1,6 @@
 /**
  * Deterministic seat assignment for the top-down office. Each agent gets a
- * `(tier, slot)` pair derived from its position in the roster — no per-agent
+ * `(tier, slot)` pair derived from its position in the roster - no per-agent
  * persistence needed. 4 sides per pod × 4 pods = 16 seats; overflow wraps.
  *
  * `plant` / `monitor` are visual flags consumed by `iso-office.tsx` to vary

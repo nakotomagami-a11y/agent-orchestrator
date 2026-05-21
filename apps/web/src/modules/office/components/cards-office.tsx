@@ -110,7 +110,7 @@ export function CardsOffice({
             <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-8 h-8 rounded-lg border border-[var(--acc-tint)]"><Icon name="activity" size={14} /></div>
             <div className="text-txt-2 flex-1 text-[13.5px]">
               <span className="text-txt font-semibold">{workingCount} agent{workingCount === 1 ? "" : "s"} working</span>
-              {" — open one to follow along, or jump to the activity feed."}
+              {" - open one to follow along, or jump to the activity feed."}
             </div>
             <div className="flex gap-2">
               <Link href={PAGE_ROUTES.activity} className="inline-flex items-center gap-[6px] bg-bg-3 border border-line text-txt-2 cursor-pointer px-[10px] py-[6px] rounded-[8px] text-[12.5px] transition-[background,color] duration-[120ms] hover:bg-bg-2 hover:text-txt hover:border-line-2 no-underline">
@@ -322,7 +322,7 @@ function OfficeCard({
     agent.taskKind === "think" ? "thinking" :
     "status";
 
-  const stateText = agent.task ?? "Idle — ready when you are";
+  const stateText = agent.task ?? "Idle - ready when you are";
 
   const modelColor =
     (agent.defaultModel ?? "").includes("haiku") ? "var(--done)" :

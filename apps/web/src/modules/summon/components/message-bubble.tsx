@@ -22,6 +22,18 @@ import {
   AoWrench,
 } from "@/modules/summon/components/ao-icons";
 
+// ── Duration formatter ────────────────────────────────────────────────────────
+function fmtDuration(ms: number): string {
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
+}
+
 // ── Image handling ────────────────────────────────────────────────────────────
 const IMG_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i;
 
@@ -351,7 +363,7 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
   );
 }
 
-// ── Tool group row (exported — used by chat-thread for grouped tool chains) ───
+// ── Tool group row (exported - used by chat-thread for grouped tool chains) ───
 export function ToolGroupRow({
   tools,
   avatar,
@@ -620,19 +632,42 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
         </div>
       );
 
-    case "system-done":
+    case "system-done": {
+      const totalTok =
+        item.tokensIn !== undefined || item.tokensOut !== undefined
+          ? (item.tokensIn ?? 0) + (item.tokensOut ?? 0)
+          : null;
       return (
         <div className="flex items-center gap-3 my-1">
           <span className="flex-1 h-[1px] bg-[var(--ao-line-0)]" />
-          <span className="inline-flex items-center gap-[10px] px-3 py-[5px] bg-ao-bg-2 border border-ao-line-1 rounded-full font-mono text-[11px] text-ao-fg-2">
+          <span className="inline-flex items-center gap-[6px] px-3 py-[5px] bg-ao-bg-2 border border-ao-line-1 rounded-full font-mono text-[11px] text-ao-fg-2">
             <span className="text-[var(--ao-ok)] inline-flex items-center gap-1">
               <AoCheck size={11} />
               {item.exitCode === 0 ? "Done" : `Exited ${item.exitCode}`}
             </span>
+            {item.durationMs !== undefined && (
+              <>
+                <span className="text-ao-fg-3 select-none" aria-hidden>·</span>
+                <span>{fmtDuration(item.durationMs)}</span>
+              </>
+            )}
+            {totalTok !== null && totalTok > 0 && (
+              <>
+                <span className="text-ao-fg-3 select-none" aria-hidden>·</span>
+                <span>{totalTok.toLocaleString()} tok</span>
+              </>
+            )}
+            {item.cost !== undefined && item.cost > 0 && (
+              <>
+                <span className="text-ao-fg-3 select-none" aria-hidden>·</span>
+                <span>${item.cost.toFixed(4)}</span>
+              </>
+            )}
           </span>
           <span className="flex-1 h-[1px] bg-[var(--ao-line-0)]" />
         </div>
       );
+    }
 
     default: {
       const _exhaustive: never = item;

@@ -1,11 +1,11 @@
 /**
  * Catalog of grass-tile color variants. Each entry is a 9×6 tileset PNG
- * that follows the *exact* same layout as the default — only the hue
+ * that follows the *exact* same layout as the default - only the hue
  * differs (taken from the Tiny Swords Free Pack's Tilemap_color1..5).
  *
  * The grass color is an **island-level** choice (one per scene, not per
- * cell). That keeps the auto-tile picker dead simple — it never has to
- * blend two colors at a transition — and matches what users expect:
+ * cell). That keeps the auto-tile picker dead simple - it never has to
+ * blend two colors at a transition - and matches what users expect:
  * pick the vibe of your island once.
  *
  * Adding a new color: drop the 9×6 PNG in /apps/web/public/tiles/ and
@@ -13,7 +13,7 @@
  * registry automatically.
  *
  * Side transitions (a color shifting into a different color or another
- * terrain mid-island) aren't supported yet — corners/edges only auto-
+ * terrain mid-island) aren't supported yet - corners/edges only auto-
  * tile within a single color. That's intentional for now.
  */
 
@@ -27,7 +27,7 @@ export type GrassColor =
 export interface GrassColorDef {
   id: GrassColor;
   label: string;
-  /** Tileset URL — same 9×6 layout as the default grass.png. */
+  /** Tileset URL - same 9×6 layout as the default grass.png. */
   src: string;
 }
 

@@ -60,7 +60,8 @@ pub fn run() {
                     .expect("node binary missing from resources")
                     .permissions();
                 perms.set_mode(0o755);
-                std::fs::set_permissions(&node_bin, perms).expect("chmod node");
+                // Ignore error — dpkg installs binaries as root-owned; they're already executable.
+                let _ = std::fs::set_permissions(&node_bin, perms);
 
                 let child = Command::new(&node_bin)
                     .arg(&server_js)

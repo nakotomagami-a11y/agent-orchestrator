@@ -9,7 +9,7 @@
  *   pnpm exec next build && node scripts/prepare-bundle.mjs
  */
 
-import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync } from "node:fs";
+import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -31,6 +31,58 @@ if (existsSync(serverDestDir)) {
 // dereference: true converts symlinks to real copies — required so that
 // the Tauri AppImage bundle doesn't contain dangling absolute symlinks.
 cpSync(standaloneDir, serverDestDir, { recursive: true, dereference: true });
+
+// 1b. Fix pnpm symlinks in apps/web/node_modules — Next.js standalone with pnpm
+//     produces relative symlinks (next → ../../../.pnpm/...); cpSync turns them
+//     into absolute symlinks pointing into the source tree. Tauri's DEB bundler
+//     skips symlinks entirely, so next/react never make it into the package.
+//     Replace each symlink with a real copy dereferenced from the pnpm store.
+const appWebModulesDir = join(serverDestDir, "apps", "web", "node_modules");
+if (existsSync(appWebModulesDir)) {
+  for (const entry of readdirSync(appWebModulesDir, { withFileTypes: true })) {
+    if (!entry.isSymbolicLink()) continue;
+    const linkPath = join(appWebModulesDir, entry.name);
+    const realTarget = realpathSync(linkPath);
+    rmSync(linkPath, { recursive: true, force: true });
+    cpSync(realTarget, linkPath, { recursive: true, dereference: true });
+    console.log(`  resolved symlink: apps/web/node_modules/${entry.name}`);
+  }
+}
+
+// 1c. Hoist pnpm virtual store → flat server/node_modules so next and its runtime
+//     deps (styled-jsx, busboy, @next/env, etc.) resolve via standard Node.js
+//     module resolution. The standalone output puts everything in .pnpm/ but
+//     omits the top-level hoisted symlinks that pnpm normally creates.
+const pnpmVirtualStore = join(serverDestDir, "node_modules", ".pnpm");
+const rootNodeModules = join(serverDestDir, "node_modules");
+if (existsSync(pnpmVirtualStore)) {
+  for (const storeEntry of readdirSync(pnpmVirtualStore)) {
+    const innerMods = join(pnpmVirtualStore, storeEntry, "node_modules");
+    if (!existsSync(innerMods)) continue;
+    for (const entry of readdirSync(innerMods, { withFileTypes: true })) {
+      if (entry.name.startsWith(".")) continue;
+      const srcPath = join(innerMods, entry.name);
+      if (entry.name.startsWith("@")) {
+        // Scoped package dir (@next, @swc, etc.) — hoist each sub-package inside it
+        const scopeDestDir = join(rootNodeModules, entry.name);
+        if (!existsSync(scopeDestDir)) mkdirSync(scopeDestDir, { recursive: true });
+        for (const scoped of readdirSync(srcPath, { withFileTypes: true })) {
+          if (scoped.name.startsWith(".")) continue;
+          const scopedDest = join(scopeDestDir, scoped.name);
+          if (!existsSync(scopedDest)) {
+            cpSync(join(srcPath, scoped.name), scopedDest, { recursive: true, dereference: true });
+          }
+        }
+      } else {
+        const destPath = join(rootNodeModules, entry.name);
+        if (!existsSync(destPath)) {
+          cpSync(srcPath, destPath, { recursive: true, dereference: true });
+        }
+      }
+    }
+  }
+  console.log("  pnpm store hoisted → server/node_modules/");
+}
 
 // 2. Static assets — in a pnpm monorepo the standalone tree mirrors the repo
 //    structure, so static files must land at apps/web/.next/static/ within it.

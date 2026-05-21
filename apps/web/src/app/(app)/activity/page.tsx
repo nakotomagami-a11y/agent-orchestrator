@@ -1,5 +1,12 @@
 import { ActivityFeed } from "@/modules/runs/components/activity-feed";
 
-export default async function ActivityPage() {
-  return <ActivityFeed />;
+type SearchParams = Promise<{ project?: string }>;
+
+export default async function ActivityPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const { project } = await searchParams;
+  return <ActivityFeed projectId={project} />;
 }

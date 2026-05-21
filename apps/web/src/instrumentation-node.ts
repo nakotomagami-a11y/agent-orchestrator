@@ -1,15 +1,15 @@
 /**
  * Node-only side of the instrumentation hook. Imported dynamically
  * from instrumentation.ts under the nodejs runtime guard, so the edge
- * bundle never has to compile this file — the fs and os imports
+ * bundle never has to compile this file - the fs and os imports
  * below would fail there otherwise.
  *
  * Installs the bundled starter SKILLS into `~/.claude/agents/_skills/`
- * on a fresh machine. Agents are NOT auto-installed here — the
+ * on a fresh machine. Agents are NOT auto-installed here - the
  * first-run wizard lets the user pick which of the bundled agents to
  * import, so seeding all 13 on boot would defeat that choice.
  *
- * Existing user data is never overwritten — subsequent restarts are
+ * Existing user data is never overwritten - subsequent restarts are
  * no-ops.
  */
 

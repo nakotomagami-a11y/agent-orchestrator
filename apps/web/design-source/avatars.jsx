@@ -1,4 +1,4 @@
-// avatars.jsx — four avatar styles. Pure SVG/CSS, deterministic per agent id.
+// avatars.jsx - four avatar styles. Pure SVG/CSS, deterministic per agent id.
 
 function hashStr(s) {
   let h = 2166136261;
@@ -13,7 +13,7 @@ function colorFor(id, sat = 0.10, light = 0.62) {
   return `oklch(${light} ${sat} ${h})`;
 }
 
-// 1) Pixel sprite — top-down chibi person at a desk. Deterministic palette.
+// 1) Pixel sprite - top-down chibi person at a desk. Deterministic palette.
 function PixelSprite({ id, size = 36 }) {
   const h = hashStr(id);
   const skin   = ["#f6c8a3","#e3a684","#c98c63","#7e5238"][h % 4];
@@ -56,7 +56,7 @@ function PixelSprite({ id, size = 36 }) {
   );
 }
 
-// 2) Identicon — 5x5 mirrored geometric, single hue
+// 2) Identicon - 5x5 mirrored geometric, single hue
 function Identicon({ id, size = 36 }) {
   const h = hashStr(id);
   const c = colorFor(id, 0.13, 0.62);
@@ -128,7 +128,7 @@ function Avatar({ agent, style = "sprite", size = 36 }) {
   return <Monogram id={id} name={agent.name} size={size} />;
 }
 
-// Tiny sparkline — area + line
+// Tiny sparkline - area + line
 function Sparkline({ data, color = "currentColor", w = 36, h = 14 }) {
   if (!data || !data.length) return null;
   const max = Math.max(...data, 0.01);

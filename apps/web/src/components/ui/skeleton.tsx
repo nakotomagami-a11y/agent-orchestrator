@@ -5,7 +5,7 @@ export type SkeletonProps = {
   height?: number | string;
   rounded?: number | string;
   className?: string;
-  /** Mark as decorative — caller should add a `role="status"` wrapper if needed. */
+  /** Mark as decorative - caller should add a `role="status"` wrapper if needed. */
   ariaHidden?: boolean;
 };
 

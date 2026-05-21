@@ -215,7 +215,7 @@ function StatTiles({ runs }: { runs: PersistedRun[] }) {
     cur: number,
     ref: number,
   ): { text: string; cls: string } {
-    if (ref === 0) return { text: "—", cls: "flat" };
+    if (ref === 0) return { text: "-", cls: "flat" };
     const pct = Math.round((100 * (cur - ref)) / ref);
     if (pct === 0) return { text: "no change vs yesterday", cls: "flat" };
     return {
@@ -375,7 +375,7 @@ function Heatmap({ runs }: { runs: PersistedRun[] }) {
                 <div
                   key={h}
                   className={`hcell bg-bg-3 border border-line cursor-pointer relative h-[16px] rounded-[2px] transition-transform duration-[100ms] ${lvl(v)} ${d === nowDay && h === nowHour ? "now" : ""}`}
-                  title={`${dayLabels[d]} ${String(h).padStart(2, "0")}:00 — ${v} run${v === 1 ? "" : "s"}`}
+                  title={`${dayLabels[d]} ${String(h).padStart(2, "0")}:00 - ${v} run${v === 1 ? "" : "s"}`}
                 />
               ))}
             </Fragment>
@@ -680,7 +680,9 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
     <>
       <div className="flex items-center gap-[10px] px-[18px] py-[10px] border-b border-line bg-bg-1">
         <h1 className="m-0 text-[16px] font-bold tracking-[-0.01em]">Activity</h1>
-        <span className="text-[12px] text-txt-3 font-[var(--font-mono)]">· run history across all agents</span>
+        <span className="text-[12px] text-txt-3 font-[var(--font-mono)]">
+          {projectId ? "· run history for this project" : "· run history across all agents"}
+        </span>
         <div className="ml-auto flex items-center gap-2">
           <div className="act-scope-seg flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden" style={{ borderRadius: "var(--r-md)" }}>
             {(["today", "week", "month", "all"] as const).map((s) => (

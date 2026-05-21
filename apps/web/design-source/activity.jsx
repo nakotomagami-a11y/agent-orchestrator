@@ -1,4 +1,4 @@
-// activity.jsx — global activity drawer + bottom PIP strip + wizard
+// activity.jsx - global activity drawer + bottom PIP strip + wizard
 
 function ActivityDrawer({ items, onClose, onJump }) {
   const running = items.filter(r => r.status === "running");
@@ -89,7 +89,7 @@ function Wizard({ onClose, onCreate }) {
     pm: "auto",
     model: "haiku",
     effort: "low",
-    body: "# Pico\n\nYou are Pico — a tiny utility agent. Do one small thing well.\n\n## Workflow\n- Read the file or area in question\n- Make the smallest possible change\n- Confirm what you did in 1-2 lines\n",
+    body: "# Pico\n\nYou are Pico - a tiny utility agent. Do one small thing well.\n\n## Workflow\n- Read the file or area in question\n- Make the smallest possible change\n- Confirm what you did in 1-2 lines\n",
   });
 
   const set = (k, v) => setData(d => ({ ...d, [k]: v }));

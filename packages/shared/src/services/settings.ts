@@ -1,4 +1,4 @@
-// App settings — persisted to ~/.claude/agent-office-settings.json (legacy path).
+// App settings - persisted to ~/.claude/agent-office-settings.json (legacy path).
 // Absence of the file = first run.
 //
 // Kept on the legacy path so existing installs continue to load.

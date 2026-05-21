@@ -1,4 +1,4 @@
-// sidebar.jsx — left roster: search, filters, group-by, dense rows
+// sidebar.jsx - left roster: search, filters, group-by, dense rows
 
 function Sidebar({
   agents, history, selectedId, onSelect,

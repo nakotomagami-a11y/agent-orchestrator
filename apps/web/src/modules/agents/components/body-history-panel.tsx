@@ -34,7 +34,7 @@ export function BodyHistoryPanel({ agentId, onRestore }: Props) {
       );
       onRestore(content);
     } catch {
-      // surface nothing — the parent form will stay unchanged
+      // surface nothing - the parent form will stay unchanged
     }
   };
 

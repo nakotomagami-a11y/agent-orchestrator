@@ -16,7 +16,7 @@ export interface OfficeAgent extends ApiAgent {
   id: string;
   short: string;
   desk: DeskCoords;
-  /** Legacy palette (skin/hair/shirt) — still used to colour the iso-office chair. */
+  /** Legacy palette (skin/hair/shirt) - still used to colour the iso-office chair. */
   sprite: ReturnType<typeof paletteForAgent>["sprite"];
   /** Tiny Swords avatar selection: explicit override, else hashed from name. */
   unitChoice: UnitSelection;

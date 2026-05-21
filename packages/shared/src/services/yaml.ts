@@ -49,7 +49,7 @@ function parseScalar(raw: string): YamlValue {
 }
 
 function parseFlowList(raw: string): YamlValue[] {
-  // raw includes the surrounding [ ] — strip and split on commas at depth 0.
+  // raw includes the surrounding [ ] - strip and split on commas at depth 0.
   const inner = raw.trim().slice(1, -1).trim();
   if (!inner) return [];
   const parts: string[] = [];
@@ -274,7 +274,7 @@ function stringifyValue(v: YamlValue, indent: number): string {
       })
       .join("\n");
   }
-  // object — caller should handle nested context. For top-level use stringifyYaml.
+  // object - caller should handle nested context. For top-level use stringifyYaml.
   const lines: string[] = [];
   for (const [k, val] of Object.entries(v)) {
     if (val && typeof val === "object" && !Array.isArray(val)) {

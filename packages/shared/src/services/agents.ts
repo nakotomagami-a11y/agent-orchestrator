@@ -141,7 +141,7 @@ export function writeAgentMemory(agentId: string, content: string): void {
 
 /**
  * Composition order: skills → global → project → per-agent → history note.
- * Caller passes a pre-resolved `Project` (or null) — we don't import the
+ * Caller passes a pre-resolved `Project` (or null) - we don't import the
  * projects service here to avoid a cycle.
  */
 export function buildAppendedPrompt(agentName: string, project: Project | null, instanceId?: string): string {

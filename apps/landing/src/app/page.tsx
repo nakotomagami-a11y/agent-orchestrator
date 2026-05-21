@@ -10,7 +10,7 @@ const SUMMON_LINES = [
   { text: '→ Edit · src/auth/session.ts', type: 'tool' },
   { text: '   removed stale cookie check (was always true)', type: 'tool' },
   { text: '→ Edit · src/auth/middleware.ts', type: 'tool' },
-  { text: '   simplified token validation — 3 checks → 1', type: 'tool' },
+  { text: '   simplified token validation - 3 checks → 1', type: 'tool' },
   { text: '✓ done · 2 files changed · $0.34', type: 'ok' },
 ];
 const SUMMON_DELAYS = [0, 500, 1100, 1700, 2200, 2600, 3100, 3500, 4200];
@@ -67,7 +67,9 @@ export default function Home() {
           </div>
           <div className="right">
             <span className="beta-pill"><span className="led"></span> Closed Beta</span>
-            <a href="#beta" className="cta">Request Access</a>
+            <span className="tooltip-disabled" data-tooltip="Temporarily disabled">
+              <a href="#beta" className="cta">Request Access</a>
+            </span>
           </div>
         </div>
       </nav>
@@ -87,154 +89,38 @@ export default function Home() {
           </h1>
 
           <p className="hero-sub">
-            Agent Office is a desktop app for managing Claude Code agents —
+            Agent Office is a desktop app for managing Claude Code agents -{' '}
             <strong>roster them to a project, summon them with a prompt, watch output stream back in real time.</strong>{' '}
             Built for people who already run Claude Code and want a better view of what's happening.
           </p>
 
           <div className="hero-ctas">
-            <a href="#beta" className="btn btn-primary">Request Beta Access <span className="arrow">→</span></a>
+            <span className="tooltip-disabled" data-tooltip="Temporarily disabled">
+              <a href="#beta" className="btn btn-primary">Request Beta Access <span className="arrow">→</span></a>
+            </span>
             <a href="#how" className="btn btn-ghost">See how it works <span className="arrow">↓</span></a>
           </div>
 
           <div className="hero-meta">
-            <span>Linux · macOS · Windows</span>
-            <span className="sep">·</span>
-            <span>Linux ships first</span>
-            <span className="sep">·</span>
-            <span>BYO Anthropic key</span>
+            <div className="hero-meta-track">
+              <span>Linux · macOS · Windows</span>
+              <span className="sep">·</span>
+              <span>Linux ships first</span>
+              <span className="sep">·</span>
+              <span>BYO Anthropic key</span>
+              {/* duplicate for seamless mobile marquee loop */}
+              <span className="hero-meta-dup">Linux · macOS · Windows</span>
+              <span className="sep hero-meta-dup">·</span>
+              <span className="hero-meta-dup">Linux ships first</span>
+              <span className="sep hero-meta-dup">·</span>
+              <span className="hero-meta-dup">BYO Anthropic key</span>
+            </div>
           </div>
         </div>
 
-        {/* Product hero device frame */}
-        <div className="hero-device-wrap">
-          <div className="device">
-            <div className="titlebar">
-              <div className="lights"><span></span><span></span><span></span></div>
-              <div className="titlebar-title">agent-office — The Office</div>
-              <div style={{ width: '30px' }}></div>
-            </div>
-            <div className="screen">
-              <aside className="sidebar">
-                <div className="ws">
-                  <div className="av">O</div>
-                  <div className="meta">
-                    <span className="n">Agent Office</span>
-                    <span className="v">~/work</span>
-                  </div>
-                </div>
-                <div className="nav-item active">
-                  <span className="ic"></span>
-                  <span>Office</span>
-                  <span className="badge">2 live</span>
-                </div>
-                <div className="nav-item">
-                  <span className="ic"></span>
-                  <span>Activity</span>
-                </div>
-                <div className="nav-item">
-                  <span className="ic"></span>
-                  <span>Agents</span>
-                  <span className="badge">9</span>
-                </div>
-                <div className="nav-item">
-                  <span className="ic"></span>
-                  <span>Limits</span>
-                  <span className="badge">$5.41</span>
-                </div>
-                <div className="nav-item">
-                  <span className="ic"></span>
-                  <span>Servers</span>
-                </div>
-                <div className="nav-item">
-                  <span className="ic"></span>
-                  <span>Project</span>
-                </div>
-              </aside>
-              <div className="main">
-                <div className="pageh">
-                  <h3>The office</h3>
-                  <span className="kick">· 6 agents in agent-office</span>
-                  <span className="live"><span className="d"></span>2 working</span>
-                </div>
-                <div className="grid">
-                  <div className="card live">
-                    <div className="card-head">
-                      <div className="av">🛠<span className="led"></span></div>
-                      <div className="info">
-                        <div className="n">developer</div>
-                        <div className="s">developer.md</div>
-                      </div>
-                      <span className="chip">running</span>
-                    </div>
-                    <div className="state-box">
-                      <div className="l">doing now</div>
-                      <div className="t">Edit · apps/web/composer.tsx</div>
-                      <div className="prog"><div className="f"></div></div>
-                    </div>
-                    <div className="card-foot">
-                      <span className="pill">sonnet</span>
-                      <span className="pill">high</span>
-                    </div>
-                  </div>
-                  <div className="card live">
-                    <div className="card-head">
-                      <div className="av">🧙<span className="led"></span></div>
-                      <div className="info">
-                        <div className="n">agent-architect</div>
-                        <div className="s">agent-architect.md</div>
-                      </div>
-                      <span className="chip">thinking</span>
-                    </div>
-                    <div className="state-box">
-                      <div className="l">thinking</div>
-                      <div className="t">Drafting a refusal section for the new code-reviewer…</div>
-                    </div>
-                    <div className="card-foot">
-                      <span className="pill">opus</span>
-                      <span className="pill">xhigh</span>
-                    </div>
-                  </div>
-                  <div className="card">
-                    <div className="card-head">
-                      <div className="av">🎨<span className="led idle"></span></div>
-                      <div className="info">
-                        <div className="n">frontend-craftsman</div>
-                        <div className="s">frontend.md</div>
-                      </div>
-                      <span className="chip">idle</span>
-                    </div>
-                    <div className="state-box">
-                      <div className="l">status</div>
-                      <div className="t muted">Idle — ready when you are</div>
-                    </div>
-                    <div className="card-foot">
-                      <span className="pill">sonnet</span>
-                      <span className="pill">high</span>
-                    </div>
-                  </div>
-                  <div className="card">
-                    <div className="card-head">
-                      <div className="av">🦊<span className="led idle"></span></div>
-                      <div className="info">
-                        <div className="n">qa-runtime</div>
-                        <div className="s">qa-runtime.md</div>
-                      </div>
-                      <span className="chip">idle</span>
-                    </div>
-                    <div className="state-box">
-                      <div className="l">status</div>
-                      <div className="t muted">Idle — last smoke suite 1d ago</div>
-                    </div>
-                    <div className="card-foot">
-                      <span className="pill">sonnet</span>
-                      <span className="pill">medium</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        {/* App screenshot */}
+        <div className="hero-screenshot">
+          <img src="/screenshot.png" alt="Agent Office - The Office" />
         </div>
       </header>
 
@@ -246,6 +132,7 @@ export default function Home() {
           <span>Isometric Office UI</span><span className="dot">▪</span>
           <span>Tauri 2</span><span className="dot">▪</span>
           <span>BYOK Compatible</span><span className="dot">▪</span>
+          <span>Agent Memory</span><span className="dot">▪</span>
           <span>Local SQLite</span><span className="dot">▪</span>
           <span>Run History</span><span className="dot">▪</span>
           {/* duplicate for seamless loop */}
@@ -254,6 +141,7 @@ export default function Home() {
           <span>Isometric Office UI</span><span className="dot">▪</span>
           <span>Tauri 2</span><span className="dot">▪</span>
           <span>BYOK Compatible</span><span className="dot">▪</span>
+          <span>Agent Memory</span><span className="dot">▪</span>
           <span>Local SQLite</span><span className="dot">▪</span>
           <span>Run History</span><span className="dot">▪</span>
         </div>
@@ -273,7 +161,7 @@ export default function Home() {
           </h2>
           <p className="lede">
             Three steps. Set up once, then summon agents the way you'd open a tab.
-            Every step lives where you already work — no new tools to install beyond Claude Code.
+            Every step lives where you already work - no new tools to install beyond Claude Code.
           </p>
 
           <div className="steps">
@@ -281,7 +169,7 @@ export default function Home() {
               <div className="num">01</div>
               <h3>Drop in your agents.</h3>
               <p>
-                Agent Office reads every <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontSize: '14px' }}>.md</code> file in <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--fg-0)', fontSize: '14px' }}>~/.claude/agents/</code> and builds your roster automatically. The same files Claude Code already reads — no new format, no migration.
+                Agent Office reads every <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)', fontSize: '14px' }}>.md</code> file in <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--fg-0)', fontSize: '14px' }}>~/.claude/agents/</code> and builds your roster automatically. The same files Claude Code already reads - no new format, no migration.
               </p>
               <div className="mock">
                 <span className="out">$ ls ~/.claude/agents</span><br />
@@ -296,7 +184,7 @@ export default function Home() {
               <h3>Give them a desk. See them all at once.</h3>
               <p>
                 Drag agents onto tiles in the isometric office floor. Each gets a desk, a status LED,
-                and a live activity card. Three agents running at the same time — you see all three
+                and a live activity card. Three agents running at the same time - you see all three
                 without switching context.
               </p>
               <div className="mock">
@@ -310,8 +198,8 @@ export default function Home() {
               <div className="num">03</div>
               <h3>Watch them work.</h3>
               <p>
-                Output streams back in real time over SSE. Full transcripts stored locally in SQLite.
-                The office stays ambient — check in when you want to, not because you have to.
+                Output streams back in real time over SSE. Full transcripts and per-agent memory stored locally in SQLite.
+                The office stays ambient - check in when you want to, not because you have to.
               </p>
               <div className="mock">
                 <span className="out">developer · running</span><br />
@@ -336,7 +224,7 @@ export default function Home() {
             <em>command-line crew.</em>
           </h2>
           <p className="lede">
-            Every surface designed for builders who already think in terminals — but want
+            Every surface designed for builders who already think in terminals - but want
             an interface that respects their attention.
           </p>
 
@@ -397,14 +285,14 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Summon — full-width animated demo */}
+            {/* Summon - full-width animated demo */}
             <div className="feature f-summon">
               <div className="summon-left">
                 <span className="label">Summon</span>
                 <h4>Prompt an agent.<br />Watch it work.</h4>
                 <p>
-                  Send any agent a task. Output streams back line by line — tool calls, edits,
-                  reasoning — all stored in SQLite the moment the run ends.
+                  Send any agent a task. Output streams back line by line - tool calls, edits,
+                  reasoning - all stored in SQLite the moment the run ends.
                 </p>
               </div>
               <div className="summon-right">
@@ -412,17 +300,17 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Roster — screenshot-ready background, component demo for now */}
+            {/* Roster - screenshot-ready background, component demo for now */}
             <div className="feature f-roster">
               <div>
                 <span className="label">Roster</span>
                 <h4>All your agents. One glance.</h4>
-                <p>Cards view alongside the office floor — mixed states, all visible at once.</p>
+                <p>Cards view alongside the office floor - mixed states, all visible at once.</p>
               </div>
               <div className="roster-grid">
                 <div className="r-card r-live">
                   <div className="r-head">
-                    <div className="r-av">🛠<span className="r-led on"></span></div>
+                    <div className="r-av"><img src="/avatars/12.png" alt="" /><span className="r-led on"></span></div>
                     <span className="r-name">developer</span>
                     <span className="r-chip run">running</span>
                   </div>
@@ -431,7 +319,7 @@ export default function Home() {
                 </div>
                 <div className="r-card r-live">
                   <div className="r-head">
-                    <div className="r-av">🧙<span className="r-led on"></span></div>
+                    <div className="r-av"><img src="/avatars/04.png" alt="" /><span className="r-led on"></span></div>
                     <span className="r-name">agent-architect</span>
                     <span className="r-chip think">thinking</span>
                   </div>
@@ -440,7 +328,7 @@ export default function Home() {
                 </div>
                 <div className="r-card">
                   <div className="r-head">
-                    <div className="r-av">🎨<span className="r-led"></span></div>
+                    <div className="r-av"><img src="/avatars/07.png" alt="" /><span className="r-led"></span></div>
                     <span className="r-name">frontend-craftsman</span>
                     <span className="r-chip">idle</span>
                   </div>
@@ -449,7 +337,7 @@ export default function Home() {
                 </div>
                 <div className="r-card">
                   <div className="r-head">
-                    <div className="r-av">🦊<span className="r-led"></span></div>
+                    <div className="r-av"><img src="/avatars/18.png" alt="" /><span className="r-led"></span></div>
                     <span className="r-name">qa-runtime</span>
                     <span className="r-chip">idle</span>
                   </div>
@@ -511,13 +399,13 @@ export default function Home() {
           </div>
           <div className="cell">
             <div className="lbl">Platforms</div>
-            <div className="v">Linux <em>· macOS · Win</em></div>
+            <div className="v" style={{ whiteSpace: 'nowrap' }}>Linux <em>· macOS · Win</em></div>
             <div className="d">Tauri 2 · Linux ships first</div>
           </div>
           <div className="cell">
             <div className="lbl">Storage</div>
             <div className="v"><em>Local-first</em> SQLite</div>
-            <div className="d">Runs, transcripts, settings on-device</div>
+            <div className="d">Runs, transcripts, agent memory on-device</div>
           </div>
           <div className="cell">
             <div className="lbl">Pricing</div>
@@ -542,13 +430,15 @@ export default function Home() {
 
           <p className="beta-sub">
             Agent Office is currently invite-only while we harden the runner and polish the office floor.
-            Drop your email to claim a slot — Linux .deb and AppImage ship first, macOS and Windows follow.
+            Drop your email to claim a slot - Linux .deb and AppImage ship first, macOS and Windows follow.
           </p>
 
-          <form className="beta-form" onSubmit={(e) => { e.preventDefault(); const btn = (e.currentTarget as HTMLFormElement).querySelector('button'); if (btn) btn.textContent = "✓  YOU'RE IN"; }}>
-            <input type="email" placeholder="your@email.com" required />
-            <button type="submit">Request Access</button>
-          </form>
+          <div className="tooltip-disabled tooltip-disabled-block" data-tooltip="Temporarily disabled">
+            <form className="beta-form" onSubmit={(e) => e.preventDefault()}>
+              <input type="email" placeholder="your@email.com" required disabled />
+              <button type="submit" disabled>Request Access</button>
+            </form>
+          </div>
 
           <div className="beta-platforms">
             <div className="item"><span>Linux .deb</span><span className="soon">SOON</span></div>
@@ -582,19 +472,19 @@ export default function Home() {
             </div>
             <div className="q">
               <h5>Do I need an Anthropic API key?</h5>
-              <p>Yes — Agent Office is BYOK. We never see or store your key; it stays on your machine and talks directly to Anthropic via the Claude Code CLI.</p>
+              <p>Yes - Agent Office is BYOK. We never see or store your key; it stays on your machine and talks directly to Anthropic via the Claude Code CLI.</p>
             </div>
             <div className="q">
               <h5>How is this different from Cursor or Claude Code?</h5>
-              <p>Claude Code is single-agent, terminal-only, no persistent UI. Agent Office wraps Claude Code agents in a visual workspace — roster management, run history, project scoping, and an office floor that makes multi-agent work legible at a glance.</p>
+              <p>Claude Code is a terminal tool - powerful, but no persistent visual workspace. Agent Office gives your agents a home: roster management, per-agent memory, run history, project scoping, and an office floor that makes multi-agent work legible at a glance.</p>
             </div>
             <div className="q">
               <h5>Does this replace Claude Code?</h5>
-              <p>No — it wraps it. Agent Office needs the Claude Code CLI installed and an Anthropic key configured. Think of it as a control room, not a replacement runtime.</p>
+              <p>No - it wraps it. Agent Office needs the Claude Code CLI installed and an Anthropic key configured. Think of it as a control room, not a replacement runtime.</p>
             </div>
             <div className="q">
               <h5>When can I download it?</h5>
-              <p>Invites are rolling out in waves. Drop your email above and we'll send a download link as soon as your slot clears — usually within a week.</p>
+              <p>Beta access is paused while we finalize the first release. Drop your email above and we'll send a download link the moment it opens.</p>
             </div>
             <div className="q">
               <h5>What does it cost?</h5>
@@ -627,17 +517,17 @@ export default function Home() {
           </div>
           <div className="footer-col">
             <h6>Resources</h6>
-            <a href="#">Documentation</a>
-            <a href="#">Changelog</a>
-            <a href="#">Case study</a>
-            <a href="#">Roadmap</a>
+            <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>Documentation</a>
+            <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>Changelog</a>
+            <a href="https://agent-orchestrator-landing.vercel.app/" target="_blank" rel="noreferrer">Case study</a>
+            <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>Roadmap</a>
           </div>
           <div className="footer-col">
             <h6>Connect</h6>
-            <a href="#">GitHub</a>
-            <a href="#">Discord</a>
-            <a href="#">X / Twitter</a>
-            <a href="#">Email</a>
+            <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>GitHub</a>
+            <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>Discord</a>
+            <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>X / Twitter</a>
+            <a href="mailto:hello.arturas.miceika@gmail.com">Email</a>
           </div>
         </div>
         <div className="footer-bottom">

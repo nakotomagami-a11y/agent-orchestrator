@@ -105,7 +105,7 @@ async function runMigration(): Promise<void> {
     }
     window.localStorage.setItem(MIGRATION_FLAG, "1");
   } catch {
-    // Migration failed — will retry next load (migration flag not set)
+    // Migration failed - will retry next load (migration flag not set)
   }
 }
 

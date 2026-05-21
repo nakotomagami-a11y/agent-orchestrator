@@ -36,7 +36,7 @@ export async function DELETE(_request: Request, { params }: Params): Promise<Nex
   }
 
   try {
-    // SIGKILL: cannot be caught or ignored — the process dies immediately.
+    // SIGKILL: cannot be caught or ignored - the process dies immediately.
     // Using SIGTERM here left processes alive when they ignored the signal.
     process.kill(pid, "SIGKILL");
     deleteProcess(pid);

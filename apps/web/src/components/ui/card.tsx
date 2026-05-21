@@ -7,7 +7,7 @@ export type CardProps = HTMLAttributes<HTMLDivElement> & {
 
 /**
  * Bare `.card` container. Pair with `<CardHeader>` and any body content.
- * Body padding is intentionally not baked in — different cards need different
+ * Body padding is intentionally not baked in - different cards need different
  * paddings (table cards bleed, prose cards pad).
  */
 export function Card({ className, children, ...rest }: CardProps) {

@@ -265,7 +265,7 @@ function SettingsForm({
                 ))}
                 <input
                   className="ao-add-chip bg-transparent border-0 outline-none flex-1 min-w-[100px] text-ao-fg-0 font-mono text-[12.5px]"
-                  placeholder={skills.length === 0 ? "add a skill — frontend-design, research, …" : "+ add skill"}
+                  placeholder={skills.length === 0 ? "add a skill - frontend-design, research, …" : "+ add skill"}
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(); } }}

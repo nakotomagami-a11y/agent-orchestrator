@@ -1,7 +1,7 @@
 // Live run registry. Spawns `claude` subprocesses, parses stream-json output,
 // and broadcasts events to subscribed SSE writers.
 //
-// Each subscriber is a callback (`SseEmit`) instead of a websocket — works with
+// Each subscriber is a callback (`SseEmit`) instead of a websocket - works with
 // `apps/web/src/lib/sse.ts` writers and any other consumer.
 
 import { spawn, type ChildProcessByStdio } from "node:child_process";
@@ -23,6 +23,8 @@ export type SseEvent =
   | { name: "error"; data: SseErrorEvent };
 
 export type SseEmit = (event: SseEvent) => void | Promise<void>;
+
+type ReplayableEvent = Extract<SseEvent, { name: "chunk" | "tool" | "usage" }>;
 
 interface LiveRun {
   id: string;
@@ -52,6 +54,8 @@ interface LiveRun {
   args: string[];
   stderrBuf: string;
   lastActivityAt: number;
+  /** Ordered log of chunk/tool/usage events for full replay to late subscribers. */
+  eventLog: ReplayableEvent[];
 }
 
 const IDLE_TIMEOUT_MS = 10 * 60_000; // kill runs with no stdout for 10 min
@@ -62,7 +66,7 @@ declare global {
   // eslint-disable-next-line no-var
   var __agentOfficeRunsInstalled: boolean | undefined;
   // Indirection so the signal handler always invokes the *current* module's
-  // killAllRuns — without this, HMR replaces the function but the SIGINT
+  // killAllRuns - without this, HMR replaces the function but the SIGINT
   // handler stays bound to the old one and our new finalize-on-kill logic
   // never runs until the dev server is fully restarted.
   // eslint-disable-next-line no-var
@@ -73,7 +77,7 @@ const liveRuns: Map<string, LiveRun> =
   globalThis.__agentOfficeLiveRuns ??
   (globalThis.__agentOfficeLiveRuns = new Map());
 
-const RUN_RETENTION_MS = 5 * 60_000;
+const RUN_RETENTION_MS = 4 * 60 * 60_000;
 
 function gc(): void {
   const now = Date.now();
@@ -205,6 +209,7 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     args: opts.args,
     stderrBuf: "",
     lastActivityAt: Date.now(),
+    eventLog: [],
   };
   liveRuns.set(runId, run);
 
@@ -278,11 +283,14 @@ export function attachEmit(runId: string, emit: SseEmit): boolean {
   const run = liveRuns.get(runId);
   if (!run) return false;
   run.subscribers.add(emit);
+  // Send metadata via `attached` with empty output — the full event log replay
+  // below rebuilds the thread in the correct order (chunks interleaved with
+  // tool calls), so sending output text here would duplicate it.
   void emit({
     name: "attached",
     data: {
       runId,
-      output: run.output,
+      output: "",
       tokensIn: run.tokensIn,
       tokensOut: run.tokensOut,
       cost: run.cost,
@@ -290,8 +298,24 @@ export function attachEmit(runId: string, emit: SseEmit): boolean {
       startTs: run.startTs,
     },
   });
+  // Replay all recorded events so the client reconstructs the full thread —
+  // including tool groups that fired while no subscriber was watching.
+  for (const event of run.eventLog) {
+    void emit(event);
+  }
   if (run.status !== "running") {
-    void emit({ name: "done", data: { runId, exitCode: run.exitCode ?? 0, sessionId: run.sessionId } });
+    void emit({
+      name: "done",
+      data: {
+        runId,
+        exitCode: run.exitCode ?? 0,
+        sessionId: run.sessionId,
+        durationMs: run.finishedAt !== undefined ? run.finishedAt - run.startTs : undefined,
+        tokensIn: run.tokensIn,
+        tokensOut: run.tokensOut,
+        cost: run.cost,
+      },
+    });
   }
   return true;
 }
@@ -318,7 +342,7 @@ export function killAllRuns(): void {
     } catch {
       /* ignore */
     }
-    // Defensively finalise here too — `proc.on('exit')` may not get a turn
+    // Defensively finalise here too - `proc.on('exit')` may not get a turn
     // if Node is about to exit. Without this, in-flight runs at SIGINT time
     // never reach runs.log and a refresh later shows "not_found".
     // finalizeRun is idempotent against status checks, so a real exit
@@ -330,6 +354,9 @@ export function killAllRuns(): void {
 }
 
 function broadcast(run: LiveRun, event: SseEvent): void {
+  if (event.name === "chunk" || event.name === "tool" || event.name === "usage") {
+    run.eventLog.push(event as ReplayableEvent);
+  }
   for (const emit of run.subscribers) {
     try {
       void emit(event);
@@ -501,7 +528,7 @@ function finalizeRun(run: LiveRun, exitCode: number): void {
     sessionId: run.sessionId,
   };
 
-  // Persist best-effort — a DB failure must never swallow the broadcast below.
+  // Persist best-effort - a DB failure must never swallow the broadcast below.
   try {
     pushRun(persisted);
   } catch (err) {
@@ -517,8 +544,19 @@ function finalizeRun(run: LiveRun, exitCode: number): void {
       ts: run.startTs,
     });
   } catch {
-    // history write is best-effort — never block finalization
+    // history write is best-effort - never block finalization
   }
 
-  broadcast(run, { name: "done", data: { runId: run.id, exitCode, sessionId: run.sessionId } });
+  broadcast(run, {
+    name: "done",
+    data: {
+      runId: run.id,
+      exitCode,
+      sessionId: run.sessionId,
+      durationMs: run.finishedAt - run.startTs,
+      tokensIn: run.tokensIn,
+      tokensOut: run.tokensOut,
+      cost: run.cost,
+    },
+  });
 }

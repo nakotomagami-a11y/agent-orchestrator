@@ -1,4 +1,4 @@
-// v3/data.jsx — expanded fleet (16) with roles + moods + desk states
+// v3/data.jsx - expanded fleet (16) with roles + moods + desk states
 
 const V3_SKILLS = [
   "frontend","backend","qa","docs","research","refactor",
@@ -49,7 +49,7 @@ const V3_AGENTS = [
     status: "working", task: "Adding rate limit to /v2/orders", taskKind: "Editing",
   },
   { id: "backend-reviewer", name: "Backend Reviewer", short: "Rev", role: "reviewer",
-    desc: "Read-only backend reviewer — flags correctness, security (OWASP), perf, API contract risks. Doesn't edit.",
+    desc: "Read-only backend reviewer - flags correctness, security (OWASP), perf, API contract risks. Doesn't edit.",
     skills: ["backend","security"], tools: ["Read","Grep","Bash"],
     model: "sonnet", effort: "high",
     sprite: { skin: "#E3A684", hair: "#A3A8B8", shirt: "#5E5C64", accessory: "glasses" },
@@ -81,7 +81,7 @@ const V3_AGENTS = [
     status: "idle",
   },
   { id: "scribe", name: "Scribe", short: "Scribe", role: "docs",
-    desc: "Writes and updates docs from source — README, API refs, ADRs, migration notes.",
+    desc: "Writes and updates docs from source - README, API refs, ADRs, migration notes.",
     skills: ["docs"], tools: ["Read","Write","Edit"],
     model: "haiku", effort: "low",
     sprite: { skin: "#E3A684", hair: "#7E3F2E", shirt: "#C28A00", accessory: null },
@@ -105,7 +105,7 @@ const V3_AGENTS = [
     status: "error", task: "MCP:github auth expired", taskKind: "Blocked",
   },
   { id: "data-lumen", name: "Lumen", short: "Lumen", role: "data",
-    desc: "Visualizes datasets — picks chart types, generates interactive HTML with caveats.",
+    desc: "Visualizes datasets - picks chart types, generates interactive HTML with caveats.",
     skills: ["data","design"], tools: ["Read","Write","Bash"],
     model: "sonnet", effort: "medium",
     sprite: { skin: "#F5C68C", hair: "#C98A3E", shirt: "#E95420", accessory: "headphones" },
@@ -141,7 +141,7 @@ const V3_AGENTS = [
 // Chat seed conversations per agent (Claude/ChatGPT-style)
 const V3_CONVOS = {
   "frontend-architect": [
-    { role: "you", text: "We need to completely overhaul the checkout flow — it's 4 screens, fields scatter across them, conversion is dropping. What do you suggest?", t: -2200 },
+    { role: "you", text: "We need to completely overhaul the checkout flow - it's 4 screens, fields scatter across them, conversion is dropping. What do you suggest?", t: -2200 },
     { role: "agent", t: -2100, parts: [
       { type: "thinking", text: "Reading the existing flow + the analytics doc you linked." },
       { type: "tool", name: "Read", arg: "src/checkout/*.tsx", note: "8 files · 1,842 lines",
@@ -150,11 +150,11 @@ const V3_CONVOS = {
       { type: "tool", name: "WebFetch", arg: "analytics/checkout-funnel-q1.pdf", note: "12.4 KB",
         body: "Drop-off: 38% Shipping → Payment\n             24% Payment → Review\n             8%  Review → Confirm\nMost-skipped field: company name (87% blank)",
       },
-      { type: "text", text: "Three takes — I'd recommend Option B.\n\n**Option A — Single page, accordion sections.** Familiar, keeps the 4-step mental model but removes route switches. Low risk, mid reward (~10% lift expected).\n\n**Option B — Two-screen, smart defaults.** Merge Shipping + Payment with autofill from saved cards; ditch Company unless cart contains a B2B SKU. One Review step. Predicted ~22% lift on the Shipping→Payment drop.\n\n**Option C — Inline drawer over cart.** Most ambitious. Cart stays visible the entire time. Drawer slides up with progressive fields. High reward, high risk on mobile — requires a fresh form-state model.\n\nWant me to draft a state-shape + component tree for one of these?" },
+      { type: "text", text: "Three takes - I'd recommend Option B.\n\n**Option A - Single page, accordion sections.** Familiar, keeps the 4-step mental model but removes route switches. Low risk, mid reward (~10% lift expected).\n\n**Option B - Two-screen, smart defaults.** Merge Shipping + Payment with autofill from saved cards; ditch Company unless cart contains a B2B SKU. One Review step. Predicted ~22% lift on the Shipping→Payment drop.\n\n**Option C - Inline drawer over cart.** Most ambitious. Cart stays visible the entire time. Drawer slides up with progressive fields. High reward, high risk on mobile - requires a fresh form-state model.\n\nWant me to draft a state-shape + component tree for one of these?" },
     ]},
     { role: "you", text: "Let's go with B. Draft the state shape.", t: -200 },
     { role: "agent", t: -100, streaming: true, parts: [
-      { type: "thinking", text: "Designing a flat state — three sections, derived eligibility flags, single source of truth for validation." },
+      { type: "thinking", text: "Designing a flat state - three sections, derived eligibility flags, single source of truth for validation." },
       { type: "code", lang: "ts", title: "checkout/state.ts",
         body:
 `type CheckoutState = {
@@ -175,7 +175,7 @@ const eligibility = (s: CheckoutState) => ({
   needsCompany: s.meta.b2bMode,
   showReview:   eligibility(s).canSubmit && !s.meta.fastTrack,
 });` },
-      { type: "text", text: "I left `billing.sameAsShip = true` as the default — that's the single biggest perf win on mobile (no re-render of the billing block).\n\nWant me to outline the component tree next, or hand this off to **Crafts** to start building?" },
+      { type: "text", text: "I left `billing.sameAsShip = true` as the default - that's the single biggest perf win on mobile (no re-render of the billing block).\n\nWant me to outline the component tree next, or hand this off to **Crafts** to start building?" },
     ]},
   ],
   // others use a small generic conversation
@@ -188,12 +188,12 @@ function v3MakeGenericConvo(a) {
       { type: "thinking", text: "Loading context and getting oriented." },
       { type: "tool", name: "Read", arg: "src/" + a.role + "/index.ts", note: "Read ok · 240 lines",
         body: "// glanced at the entrypoint, looks fine\n// dependencies: see package.json" },
-      { type: "text", text: `Quick read on this — it's solid, just a few things I'd tighten up:\n\n1. The error path on the boundary swallows the underlying cause — propagate via cause chain.\n2. There's an unused import in line 34.\n3. The test for the empty case asserts on a stale snapshot.\n\nWant me to fix all three in one pass, or one at a time?` },
+      { type: "text", text: `Quick read on this - it's solid, just a few things I'd tighten up:\n\n1. The error path on the boundary swallows the underlying cause - propagate via cause chain.\n2. There's an unused import in line 34.\n3. The test for the empty case asserts on a stale snapshot.\n\nWant me to fix all three in one pass, or one at a time?` },
     ]},
   ];
 }
 
-// Activity items — recent runs across fleet
+// Activity items - recent runs across fleet
 function v3BuildActivity(agents) {
   const out = [];
   let t = Date.now();

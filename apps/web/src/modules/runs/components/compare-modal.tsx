@@ -46,7 +46,7 @@ export function CompareModal() {
         className="grid gap-4 min-h-[200px]"
         style={{ gridTemplateColumns: "1fr 1fr" }}
       >
-        {/* Left pane — base run */}
+        {/* Left pane - base run */}
         <div>
           <PaneLabel>{t("base_run")}</PaneLabel>
           {baseQ.isLoading ? (
@@ -58,7 +58,7 @@ export function CompareModal() {
           )}
         </div>
 
-        {/* Right pane — comparison run */}
+        {/* Right pane - comparison run */}
         <div>
           <PaneLabel>{t("compare_with")}</PaneLabel>
           <select
@@ -142,7 +142,7 @@ function Empty({ message }: { message?: string }) {
     <div
       className="py-8 text-center text-[13px] text-txt-3"
     >
-      {message ?? "—"}
+      {message ?? "-"}
     </div>
   );
 }

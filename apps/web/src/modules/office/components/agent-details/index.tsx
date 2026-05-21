@@ -150,7 +150,7 @@ export function AgentDetailsModal() {
 
           {/* ── Body row: agent strip + content ── */}
           <div className="ao-body-row">
-          {/* Agent switcher strip — only shown when inside a project with multiple agents */}
+          {/* Agent switcher strip - only shown when inside a project with multiple agents */}
           {rosterAgents.length > 1 && (
             <div className="ao-agent-strip">
               {rosterAgents.map((a) => {

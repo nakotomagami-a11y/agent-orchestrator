@@ -41,7 +41,7 @@ export function safeFilename(name: string): string {
 }
 
 // Strict validator for URL :id / :name segments that flow into path.join.
-// Rejects path separators, traversal, leading dots, and oversized names —
+// Rejects path separators, traversal, leading dots, and oversized names -
 // the route should respond 400 instead of silently transforming the value.
 export function isValidIdSegment(name: string): boolean {
   if (typeof name !== "string") return false;
@@ -63,7 +63,7 @@ export function expandTilde(p: string): string {
 export function buildAugmentedPath(): string {
   const extra: string[] = [];
 
-  // NVM — add every installed node version's bin dir (newest first via reverse sort)
+  // NVM - add every installed node version's bin dir (newest first via reverse sort)
   const nvmVersionsDir = join(HOME, ".nvm", "versions", "node");
   if (existsSync(nvmVersionsDir)) {
     try {
