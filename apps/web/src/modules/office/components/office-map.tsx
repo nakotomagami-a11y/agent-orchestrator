@@ -277,7 +277,7 @@ export type OfficeMapProps = {
   /** When true, render a clickable cell overlay so the builder can edit. */
   editable?: boolean;
   /** Currently-armed tool, used for hover-preview tinting. */
-  tool?: BuildTool;
+  tool?: BuildTool | null;
   /** Called with grid coords when the user clicks a cell in editable mode. */
   onCellClick?: (x: number, y: number) => void;
   /** Called when an agent is dropped on a grid cell. Validation (grass

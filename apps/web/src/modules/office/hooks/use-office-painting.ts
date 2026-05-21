@@ -14,7 +14,7 @@ export function useOfficePainting({
 }) {
   const isPainting = useRef(false);
   const buildModeRef = useRef(false);
-  const toolRef = useRef<BuildTool>("grass");
+  const toolRef = useRef<BuildTool | null>(null);
   const onCellClickRef = useRef<(x: number, y: number) => void>(() => undefined);
 
   const onPointerDown = useCallback(

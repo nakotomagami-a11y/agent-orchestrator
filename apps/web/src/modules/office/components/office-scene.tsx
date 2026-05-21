@@ -75,7 +75,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   const [decorations, setDecorations] = useState<DecorationsMap>(() => ({}));
   const [agentPositions, setAgentPositions] = useState<AgentPositions>(() => ({}));
   const [buildMode, setBuildMode] = useState(false);
-  const [tool, setTool] = useState<BuildTool>("grass");
+  const [tool, setTool] = useState<BuildTool | null>(null);
   const [grassColor, setGrassColor] = useState<GrassColor>(() => DEFAULT_GRASS_COLOR);
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
@@ -260,6 +260,8 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
     (x: number, y: number) => {
       const key = decorationKey(x, y);
       const cellHasGrass = grid[y]?.[x] === true;
+
+      if (!tool) return;
 
       if (tool === "grass") {
         if (cellHasGrass) return;
@@ -527,7 +529,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Canvas tools - top-left: zoom + recenter */}
-      <div className="absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
+      <div className="canvas-tools absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
         <button
           type="button"
           className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
@@ -603,7 +605,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
 
       {/* Build actions bar - bottom-center, build mode only */}
       {buildMode && (
-        <div className="absolute flex items-center gap-[4px] z-[15] pointer-events-auto whitespace-nowrap rounded-full bottom-[14px] left-1/2 [transform:translateX(-50%)] p-[5px] bg-[rgba(26,22,20,0.92)] border border-[rgba(255,240,230,0.14)] shadow-[0_14px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-[12px]">
+        <div className="build-actions-bar absolute flex items-center gap-[4px] z-[15] pointer-events-auto whitespace-nowrap rounded-full bottom-[14px] left-1/2 [transform:translateX(-50%)] p-[5px] bg-[rgba(26,22,20,0.92)] border border-[rgba(255,240,230,0.14)] shadow-[0_14px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-[12px]">
           <button
             type="button"
             className="inline-flex items-center gap-[7px] rounded-full bg-acc text-white font-semibold px-[16px] py-[8px] text-[12.5px] transition-opacity duration-[120ms] hover:opacity-[0.88]"

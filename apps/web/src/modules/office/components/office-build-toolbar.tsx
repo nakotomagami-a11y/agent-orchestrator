@@ -20,10 +20,10 @@ export type BuildTool = "grass" | "erase" | DecorationKind;
 
 export type OfficeBuildToolbarProps = {
   active: boolean;
-  tool: BuildTool;
+  tool: BuildTool | null;
   grassColor: GrassColor;
   onToggle: () => void;
-  onSelectTool: (next: BuildTool) => void;
+  onSelectTool: (next: BuildTool | null) => void;
   onSelectGrassColor: (next: GrassColor) => void;
 };
 
@@ -45,6 +45,7 @@ export function OfficeBuildToolbar({
 
   // Keep tab in sync when a deco tool is selected externally
   useEffect(() => {
+    if (!tool) return;
     const kind = tool as DecorationKind;
     if (DECORATION_KINDS.includes(kind)) {
       setActiveTab(DECORATIONS[kind].category);
@@ -86,7 +87,7 @@ export function OfficeBuildToolbar({
     return (
       <button
         type="button"
-        className="absolute inline-flex items-center gap-[6px] bg-bg-1 border border-line text-txt font-semibold cursor-pointer z-[6] right-[14px] bottom-[14px] px-[14px] py-2 rounded-[8px] shadow-[var(--shadow-2)] text-[13px] transition-[background,border-color] duration-100 hover:bg-bg-2 hover:border-line-2"
+        className="build-entry-btn absolute inline-flex items-center gap-[6px] bg-bg-1 border border-line text-txt font-semibold cursor-pointer z-[6] right-[14px] bottom-[14px] px-[14px] py-2 rounded-[8px] shadow-[var(--shadow-2)] text-[13px] transition-[background,border-color] duration-100 hover:bg-bg-2 hover:border-line-2"
         onClick={onToggle}
         aria-label="Enter build mode"
       >
@@ -97,7 +98,7 @@ export function OfficeBuildToolbar({
   }
 
   return (
-    <div className="absolute flex flex-col min-h-0 overflow-hidden z-[6] bg-bg-1 border border-line right-[14px] top-[14px] bottom-[14px] w-[300px] rounded-[var(--r-lg)] shadow-[var(--shadow-2)]">
+    <div className="build-panel absolute flex flex-col min-h-0 overflow-hidden z-[6] bg-bg-1 border border-line right-[14px] top-[14px] bottom-[14px] w-[300px] rounded-[var(--r-lg)] shadow-[var(--shadow-2)]">
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="border-b border-line shrink-0 px-[16px] pt-[14px] pb-[10px]">
         <div className="flex items-center gap-[10px]">
@@ -278,7 +279,7 @@ function DecoTileCell({
 }: {
   kind: DecorationKind;
   selected: boolean;
-  onSelect: (k: BuildTool) => void;
+  onSelect: (k: BuildTool | null) => void;
 }) {
   const def = DECORATIONS[kind];
   return (
