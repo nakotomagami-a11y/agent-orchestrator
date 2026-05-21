@@ -2,8 +2,6 @@
 
 import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
-import { Card } from "@/components/ui/card";
-import { CardHeader } from "@/components/ui/card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { unitForAgent } from "@/components/ui/unit-sprite.utils";
@@ -19,14 +17,11 @@ import type { PersistedRun } from "@agent-office/shared/types";
 
 export type ProjectActivityProps = {
   projectId: string;
+  /** Called with run metadata once loaded — lets the parent show count in its own header. */
+  onMeta?: (info: { count: number; todayCost: number }) => void;
 };
 
-/**
- * Read-only feed of runs scoped to a project. Audit surface, not a
- * coordination tool — clicking a row opens the agent's modal at the
- * History tab so you can see the full transcript in context.
- */
-export function ProjectActivity({ projectId }: ProjectActivityProps) {
+export function ProjectActivity({ projectId, onMeta }: ProjectActivityProps) {
   const t = useTranslations();
   const select = useOfficeStore((s) => s.select);
   const { data, isLoading } = useRuns({ projectId, limit: 100 });
@@ -38,41 +33,40 @@ export function ProjectActivity({ projectId }: ProjectActivityProps) {
     .filter((r) => r.ts >= today.getTime())
     .reduce((sum, r) => sum + (r.cost || 0), 0);
 
+  // Notify parent once data lands
+  if (!isLoading && onMeta) onMeta({ count: runs.length, todayCost });
+
+  if (isLoading) {
+    return (
+      <div className="px-[18px] py-[14px] flex flex-col gap-[6px]">
+        <Skeleton width="100%" height={44} />
+        <Skeleton width="100%" height={44} />
+        <Skeleton width="100%" height={44} />
+      </div>
+    );
+  }
+
+  if (runs.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-[8px] py-[32px] px-[18px]">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-txt-4 opacity-40">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+        <p className="m-0 text-[13px] text-txt-3 text-center">{t("project_activity.empty")}</p>
+      </div>
+    );
+  }
+
   return (
-    <Card>
-      <CardHeader
-        title={t("project_activity.card_title")}
-        sub={
-          isLoading
-            ? t("project_activity.loading")
-            : t("project_activity.sub_runs", { count: runs.length }) +
-              (todayCost > 0 ? " " + t("project_activity.sub_today", { amount: formatCost(todayCost) }) : "")
-        }
-      />
-      {isLoading ? (
-        <div className="p-4">
-          <Skeleton width="100%" height={48} />
-          <div className="h-1.5" />
-          <Skeleton width="100%" height={48} />
-          <div className="h-1.5" />
-          <Skeleton width="100%" height={48} />
-        </div>
-      ) : runs.length === 0 ? (
-        <div className="p-5 text-[13px] text-txt-3 text-center">
-          {t("project_activity.empty")}
-        </div>
-      ) : (
-        <div>
-          {runs.map((run) => (
-            <RunRow
-              key={run.id}
-              run={run}
-              onOpen={() => select(run.agentId, { tab: "history" })}
-            />
-          ))}
-        </div>
-      )}
-    </Card>
+    <div>
+      {runs.map((run) => (
+        <RunRow
+          key={run.id}
+          run={run}
+          onOpen={() => select(run.agentId, { tab: "history" })}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -82,18 +76,15 @@ function RunRow({ run, onOpen }: { run: PersistedRun; onOpen: () => void }) {
     .with("done", () => "done" as const)
     .with("error", () => "error" as const)
     .exhaustive();
-  // Project activity rows don't have the full ApiAgent — fall back to the
-  // hash-derived unit. Once we plumb the per-agent unit through the run
-  // record we can honour overrides here too.
   const unit = unitForAgent(run.agentId);
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="w-full bg-transparent border-none text-left cursor-pointer font-[inherit] text-[inherit] p-0"
+      className="w-full bg-transparent border-none text-left cursor-pointer font-[inherit] text-[inherit] p-0 hover:bg-bg-2 transition-colors duration-100"
     >
       <div
-        className="grid gap-3 items-center px-3.5 py-2.5 border-b border-line"
+        className="grid gap-3 items-center px-[18px] py-[11px] border-b border-line"
         style={{ gridTemplateColumns: "32px 1fr auto auto" }}
       >
         <div className="w-8 h-8" aria-hidden>

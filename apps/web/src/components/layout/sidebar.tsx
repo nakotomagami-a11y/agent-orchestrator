@@ -9,6 +9,7 @@ import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { isActiveRoute } from "./sidebar.utils";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 import { useOfficeAgents, type OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
@@ -105,8 +106,12 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="sidebar" aria-label={t("app.name")}>
-      <nav className="nav" aria-label={t("nav.primary_label")}>
+    <aside
+      className="bg-bg-2 border-r border-line grid min-h-0 overflow-hidden max-[1024px]:overflow-hidden max-[600px]:hidden"
+      style={{ gridTemplateRows: "auto auto 1fr auto" }}
+      aria-label={t("app.name")}
+    >
+      <nav className="p-[6px] flex flex-col gap-[2px]" aria-label={t("nav.primary_label")}>
         <NavItem
           href={PAGE_ROUTES.office}
           icon="home"
@@ -143,8 +148,8 @@ export function Sidebar() {
         <CommandPaletteNavButton />
       </nav>
 
-      <div className="sidebar-roster-section">
-        <div className="section-h section-h-row">
+      <div className="grid min-h-0" style={{ gridTemplateRows: "auto 1fr" }}>
+        <div className="text-[10.5px] uppercase tracking-[0.08em] text-txt-3 font-semibold section-h-row" style={{ padding: "12px 14px 6px" }}>
           <span>{t("sidebar.roster_label", { count: rosterRows.length })}</span>
           <input
             type="text"
@@ -154,17 +159,17 @@ export function Sidebar() {
             onBlur={() => setFilterFocused(false)}
             placeholder={t("common.search_placeholder")}
             aria-label={t("sidebar.filter_aria")}
-            className="roster-filter"
+            className="ml-auto bg-bg-1 border border-line text-txt rounded-[6px] px-2 py-[3px] font-[var(--font-mono)] text-[11px] outline-none transition-[width] duration-[150ms] ease-in-out"
             style={{ width: filterFocused ? 160 : 88 }}
           />
         </div>
-        <div className="roster-list">
+        <div className="overflow-y-auto flex flex-col gap-[2px] min-h-0 pb-2 px-[6px]">
           {project && rosterRows.length === 0 ? (
-            <div className="roster-empty">
+            <div className="text-txt-3 px-[14px] py-3 text-[12px] leading-[1.4]">
               {t("sidebar.no_agents_in_project", { project: project.meta.name })}
             </div>
           ) : !project && rosterRows.length === 0 ? (
-            <div className="roster-empty">
+            <div className="text-txt-3 px-[14px] py-3 text-[12px] leading-[1.4]">
               {t("sidebar.no_agent_definitions")}
             </div>
           ) : (
@@ -189,7 +194,7 @@ export function Sidebar() {
             })
           )}
           {filtered.length === 0 && rosterRows.length > 0 ? (
-            <div className="roster-no-match">
+            <div className="text-txt-3 px-[14px] py-2 text-[11px]">
               {t("common.no_matches", { query: filter })}
             </div>
           ) : null}
@@ -206,17 +211,17 @@ function SidebarFoot({ spendToday }: { spendToday: number }) {
   return (
     <Link
       href={PAGE_ROUTES.settings}
-      className="sidebar-foot sidebar-foot-link"
+      className="p-[10px] border-t border-line flex items-center gap-[10px] no-underline text-txt max-[1024px]:justify-center max-[1024px]:px-0 max-[1024px]:py-3"
       aria-label={t("common.open_settings")}
     >
-      <div className="me" aria-hidden>
+      <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-white font-bold text-[12px] [background:linear-gradient(135deg,#77216F,#E95420)]" aria-hidden>
         P
       </div>
       <div>
-        <div className="me-name">{t("sidebar.me_name")}</div>
-        <div className="me-sub">{t("sidebar.me_sub")}</div>
+        <div className="text-[12px] font-medium max-[1024px]:hidden">{t("sidebar.me_name")}</div>
+        <div className="text-[10.5px] text-txt-3 font-[var(--font-mono)] max-[1024px]:hidden">{t("sidebar.me_sub")}</div>
       </div>
-      <div className="foot-spend" aria-label={t("common.spend_today_aria", { amount: spendToday.toFixed(2) })}>
+      <div className="ml-auto font-[var(--font-mono)] text-[11px] bg-bg-1 border border-line py-1 px-2 rounded-[999px] text-txt-2 max-[1024px]:hidden" aria-label={t("common.spend_today_aria", { amount: spendToday.toFixed(2) })}>
         ${spendToday.toFixed(2)}
       </div>
     </Link>
@@ -257,7 +262,11 @@ function RosterEntry({
 
   return (
     <div
-      className={"roster-row roster-row-grab" + (selected ? " on" : "")}
+      className={cn(
+        "relative cursor-grab grid items-center gap-[10px] rounded-[var(--r-sm)] cursor-pointer hover:bg-bg-3",
+        selected ? "bg-acc-faint" : ""
+      )}
+      style={{ gridTemplateColumns: "32px 1fr auto", padding: "6px 8px" }}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
@@ -271,16 +280,17 @@ function RosterEntry({
         type="button"
         onClick={onSelect}
         title={t("sidebar.row_open_chat_title")}
-        className="roster-select-btn"
+        className="bg-transparent border-none text-left cursor-pointer grid items-center w-full min-w-0 col-span-full"
+        style={{ color: "inherit", font: "inherit", padding: 0, margin: 0, gridTemplateColumns: "32px 1fr auto", gap: 10 }}
       >
-        <div className="av">
+        <div className="w-[32px] h-[32px] relative">
           <AgentAvatar unit={agent.unitChoice} size={32} />
         </div>
-        <div className="roster-name-cell">
-          <div className="nm roster-truncate">
+        <div className="min-w-0">
+          <div className="text-[12.5px] font-medium text-txt overflow-hidden text-ellipsis whitespace-nowrap">
             {displayName}
           </div>
-          <div className="ml roster-truncate">
+          <div className="text-[10.5px] text-txt-3 font-[var(--font-mono)] overflow-hidden text-ellipsis whitespace-nowrap">
             {agent.status === "idle"
               ? t("sidebar.status_ready")
               : agent.status === "done"
@@ -292,7 +302,7 @@ function RosterEntry({
                     : agent.task ?? agent.status}
           </div>
         </div>
-        <span className={"st " + agent.status} title={agent.status} />
+        <span className={"inline-block w-[8px] h-[8px] rounded-full st " + agent.status} title={agent.status} />
       </button>
       {canRemove ? (
         <button
@@ -303,7 +313,8 @@ function RosterEntry({
           }}
           aria-label={t("sidebar.remove_from_project_aria", { name: displayName })}
           title={t("sidebar.remove_from_project_title")}
-          className="roster-row-remove roster-row-remove-btn"
+          className="absolute bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 cursor-pointer opacity-0 hover:text-[var(--error)] hover:border-[var(--error)] transition-opacity duration-[120ms]"
+          style={{ right: 6, top: "50%", transform: "translateY(-50%)", width: 22, height: 22 }}
         >
           <Icon name="x" size={11} />
         </button>
@@ -319,13 +330,13 @@ function CommandPaletteNavButton() {
   return (
     <button
       type="button"
-      className="nav-item nav-item-btn text-txt-3"
+      className="flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-3 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full"
       onClick={() => setOpen(true)}
       aria-label="Open command palette"
     >
       <Icon name="search" />
-      <span className="nav-item-label">Command palette</span>
-      <span className="nav-item-kbd">
+      <span className="flex-1 text-left">Command palette</span>
+      <span className="bg-bg-2 border border-line text-txt-3 text-[10px] font-[var(--font-mono)] rounded px-[5px] py-[1px]">
         {isMac ? "⌘K" : "Ctrl+K"}
       </span>
     </button>
@@ -343,12 +354,12 @@ function LimitsNavButton({ spendToday }: { spendToday: number }) {
     <button
       type="button"
       onClick={() => openLimits(true)}
-      className="nav-item nav-item-btn"
+      className="flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full"
       aria-label={t("sidebar.limits_aria")}
     >
       <Icon name="gauge" />
       <span>{t("nav.limits")}</span>
-      <span className="badge">{badge}</span>
+      <span className="ml-auto font-[var(--font-mono)] text-[10.5px] py-[2px] px-[6px] bg-bg-3 text-txt-2 rounded-[999px]">{badge}</span>
     </button>
   );
 }
@@ -360,7 +371,7 @@ function ProcessesNavButton() {
     <button
       type="button"
       onClick={() => setOpen(true)}
-      className="nav-item nav-item-btn"
+      className="flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full"
       aria-label={t("processes.title")}
     >
       <Icon name="server" />

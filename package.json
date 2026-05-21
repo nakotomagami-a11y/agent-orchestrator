@@ -5,9 +5,11 @@
   "packageManager": "pnpm@11.0.9",
   "scripts": {
     "dev": "pnpm --filter @agent-office/web dev",
+    "dev:landing": "pnpm --filter @agent-office/landing dev",
     "build": "pnpm --filter @agent-office/web build",
+    "build:landing": "pnpm --filter @agent-office/landing build",
     "start": "pnpm --filter @agent-office/web start",
-    "lint": "pnpm --filter @agent-office/web lint",
+    "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck"
   },
   "engines": {

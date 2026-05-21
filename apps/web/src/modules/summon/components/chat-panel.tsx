@@ -19,6 +19,7 @@ import {
 import { clearDraft } from "../utils/draft-store";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useProject } from "@/modules/projects/hooks/use-projects";
+import { Button } from "@/components/ui/button";
 import type { ThreadItem } from "../utils/thread-types";
 import type { PersistedRun } from "@agent-office/shared/types";
 import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
@@ -241,7 +242,10 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     const hasText = stream.thread.some(
       (it) => it.kind === "agent-text" && it.text.trim().length > 0,
     );
-    const shouldFallback = stream.phase === "done" && !hasText && fallbackAttemptedRef.current !== runId;
+    // Also consider a streamed system-error as "feedback delivered" — don't
+    // add a second error card on top of the one SSE already emitted.
+    const hasStreamedFeedback = hasText || stream.thread.some((it) => it.kind === "system-error");
+    const shouldFallback = stream.phase === "done" && !hasStreamedFeedback && fallbackAttemptedRef.current !== runId;
 
     runStartIndexRef.current = null;
     fallbackAttemptedRef.current = runId;
@@ -257,24 +261,30 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     if (!shouldFallback) return;
     apiFetch<PersistedRun>(API_ROUTES.run(runId))
       .then((run) => {
-        if (!run.output || run.output.trim().length === 0) return;
         setThread((prev) => {
           if (startIdx === null) return prev;
-          // Insert the persisted output at the run slot so user sees the
-          // text even though SSE didn't deliver it.
           const before = prev.slice(0, startIdx);
           const after = prev.slice(startIdx);
-          const fallback: ThreadItem = {
-            kind: "agent-text",
-            id: `r_${runId}`,
-            text: run.output,
-            streaming: false,
-          };
-          return [...before, fallback, ...after];
+          if (run.output && run.output.trim().length > 0) {
+            // SSE missed some chunks — use the persisted output.
+            return [...before, { kind: "agent-text", id: `r_${runId}`, text: run.output, streaming: false }, ...after];
+          }
+          // Run completed with no output — always surface something so the
+          // user is never left staring at their unanswered message.
+          const msg = run.status === "error"
+            ? `Run ended with no output (exit ${run.exitCode ?? 1}). ${run.exitCode === 1 ? "The model may be rate-limited or an internal error occurred." : "Try again."}`
+            : "Run completed but the agent produced no response. Try sending your message again.";
+          return [...before, { kind: "system-error", id: `e_${runId}`, message: msg }, ...after];
         });
       })
       .catch(() => {
-        // ignore — we already cleared the run, user can retry
+        // Fallback fetch failed (server down / run GC'd) — still show something.
+        setThread((prev) => {
+          if (startIdx === null) return prev;
+          const before = prev.slice(0, startIdx);
+          const after = prev.slice(startIdx);
+          return [...before, { kind: "system-error", id: `e_${runId}`, message: "Response unavailable — the server may have restarted. Retry to try again." }, ...after];
+        });
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stream.phase, stream.thread, stream.sessionId, activeRunId, qc, sessionId, transcriptLoaded]);
@@ -671,23 +681,22 @@ function StreamBanner({
       </div>
       <div className="flex gap-1.5 shrink-0">
         {secondary ? (
-          <button
-            type="button"
-            className="btn sm ghost"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={secondary.onClick}
           >
             {secondary.label}
-          </button>
+          </Button>
         ) : null}
         {primary ? (
-          <button
-            type="button"
-            className="btn sm"
+          <Button
+            size="sm"
             onClick={primary.onClick}
             style={{ borderColor: colour, color: colour }}
           >
             {primary.label}
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>

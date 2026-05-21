@@ -13,6 +13,7 @@ import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { EMPTY_FORM, type AgentFormValues, type FormError, slugifyId, toBody, validateForm } from "../utils/agent-form";
 import { useCreateAgent, useDeleteAgent, useWriteAgent } from "../hooks/use-agents";
 import { UnitPicker } from "@/components/ui/unit-picker";
+import { Button } from "@/components/ui/button";
 
 export type AgentFormProps = {
   initial?: AgentFormValues;
@@ -81,7 +82,7 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
   const isPending = createMut.isPending || writeMut.isPending;
 
   return (
-    <form onSubmit={onSubmit} className="tab-pane flex flex-col gap-[14px]">
+    <form onSubmit={onSubmit} className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
       <Card>
         <CardHeader title={mode === "new" ? t("agent_form.title_new") : t("agent_form.title_edit", { id: values.id })} />
         <div className="p-4 grid grid-cols-2 gap-3">
@@ -182,24 +183,23 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
 
       <div className="flex gap-2 justify-between">
         {mode === "edit" ? (
-          <button type="button" className="btn danger" onClick={onDelete} disabled={deleteMut.isPending}>
+          <Button variant="danger" onClick={onDelete} disabled={deleteMut.isPending}>
             <Icon name="x" /> {t("common.delete")}
-          </button>
+          </Button>
         ) : <span />}
         <div className="flex gap-2">
           {hideCancel ? null : (
-            <button
-              type="button"
-              className="btn ghost"
+            <Button
+              variant="ghost"
               onClick={() => (onCancel ? onCancel() : router.back())}
               disabled={isPending}
             >
               {t("agent_form.cancel")}
-            </button>
+            </Button>
           )}
-          <button type="submit" className="btn primary" disabled={isPending}>
+          <Button type="submit" variant="primary" disabled={isPending}>
             {isPending ? t("common.saving") : t("common.save")}
-          </button>
+          </Button>
         </div>
       </div>
     </form>

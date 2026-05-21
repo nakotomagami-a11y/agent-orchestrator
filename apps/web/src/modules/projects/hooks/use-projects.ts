@@ -10,6 +10,7 @@ export function useProjects() {
   return useQuery({
     queryKey: queryKeys.projects.list(),
     queryFn: () => apiFetch<ProjectSummary[]>(API_ROUTES.projects),
+    refetchInterval: 10_000,
   });
 }
 

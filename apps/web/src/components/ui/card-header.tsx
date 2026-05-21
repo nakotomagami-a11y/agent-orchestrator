@@ -21,10 +21,10 @@ export function CardHeader({
   ...rest
 }: CardHeaderProps) {
   return (
-    <div className={cn("card-h", className)} {...rest}>
-      <span className="title">{title}</span>
-      {sub ? <span className="sub">{sub}</span> : null}
-      {right ? <div className="card-h-right">{right}</div> : null}
+    <div className={cn("border-b border-line flex items-center gap-[10px] px-4 py-3", className)} {...rest}>
+      <span className="font-bold text-[13px]">{title}</span>
+      {sub ? <span className="text-txt-3 text-[11.5px] font-[var(--font-mono)]">{sub}</span> : null}
+      {right ? <div className="ml-auto">{right}</div> : null}
     </div>
   );
 }

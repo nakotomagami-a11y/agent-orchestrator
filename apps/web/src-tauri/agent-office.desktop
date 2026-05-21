@@ -1,7 +1,7 @@
 [Desktop Entry]
 Categories=
 Comment=A Tauri App
-Exec=bash /usr/bin/agent-office
+Exec=agent-office
 StartupWMClass=app
 Icon=app
 Name=Agent Office

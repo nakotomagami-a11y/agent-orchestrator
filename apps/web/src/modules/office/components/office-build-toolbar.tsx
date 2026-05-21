@@ -86,7 +86,7 @@ export function OfficeBuildToolbar({
     return (
       <button
         type="button"
-        className="build-entry-btn"
+        className="absolute inline-flex items-center gap-[6px] bg-bg-1 border border-line text-txt font-semibold cursor-pointer z-[6] right-[14px] bottom-[14px] px-[14px] py-2 rounded-[8px] shadow-[var(--shadow-2)] text-[13px] transition-[background,border-color] duration-100 hover:bg-bg-2 hover:border-line-2"
         onClick={onToggle}
         aria-label="Enter build mode"
       >
@@ -97,52 +97,52 @@ export function OfficeBuildToolbar({
   }
 
   return (
-    <div className="build-panel">
+    <div className="absolute flex flex-col min-h-0 overflow-hidden z-[6] bg-bg-1 border border-line right-[14px] top-[14px] bottom-[14px] w-[300px] rounded-[var(--r-lg)] shadow-[var(--shadow-2)]">
       {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="bp-head">
-        <div className="bp-head-top">
-          <div className="bp-head-crest">
+      <div className="border-b border-line shrink-0 px-[16px] pt-[14px] pb-[10px]">
+        <div className="flex items-center gap-[10px]">
+          <div className="w-[28px] h-[28px] rounded-[7px] bg-acc-faint text-acc grid place-items-center shrink-0 bp-head-crest">
             <Icon name="hammer" size={14} />
           </div>
           <div>
-            <div className="bp-head-title">Build</div>
-            <div className="bp-head-sub">painting decor · agent-office</div>
+            <div className="font-bold text-[14px] text-txt">Build</div>
+            <div className="text-txt-3 text-[11px] mt-[1px] font-mono">painting decor · agent-office</div>
           </div>
-          <button type="button" className="bp-help-btn" title="Help">
+          <button type="button" className="ml-auto grid place-items-center bg-transparent text-txt-3 cursor-pointer shrink-0 w-[26px] h-[26px] rounded-[6px] border border-transparent transition-[color,border-color,background] duration-100 hover:text-txt hover:border-line hover:bg-bg-2" title="Help">
             <Icon name="help-circle" size={13} />
           </button>
         </div>
-        <div className="bp-tools">
+        <div className="flex gap-[3px] mt-[10px] bg-bg-2 border border-line p-[3px] rounded-[8px]">
           <button
             type="button"
-            className={`bp-tool ${tool === "grass" ? "active" : ""}`}
+            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "grass" ? " bg-acc text-white" : ""}`}
             onClick={() => onSelectTool("grass")}
             title="Paint terrain (B)"
           >
             <Icon name="pen" size={16} />
-            <span className="bp-tool-label">paint</span>
-            <span className="bp-tool-kbd">B</span>
+            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">paint</span>
+            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "grass" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>B</span>
           </button>
           <button
             type="button"
-            className={`bp-tool ${tool === "erase" ? "active" : ""}`}
+            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "erase" ? " bg-acc text-white" : ""}`}
             onClick={() => onSelectTool("erase")}
             title="Erase (E)"
           >
             <Icon name="trash" size={16} />
-            <span className="bp-tool-label">erase</span>
-            <span className="bp-tool-kbd">E</span>
+            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">erase</span>
+            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "erase" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>E</span>
           </button>
         </div>
       </div>
 
       {/* ── Island color ────────────────────────────────────────────── */}
-      <div className="biome-row">
-        <div className="biome-row-head">
+      <div className="border-b border-line shrink-0 px-[14px] py-[10px]">
+        <div className="flex items-center gap-[8px] uppercase text-txt-3 font-mono text-[10px] [letter-spacing:0.08em] mb-[6px]">
           Island color
-          {grassColorDef && <span className="v">· {grassColorDef.label}</span>}
+          {grassColorDef && <span className="text-txt-2 text-[11px] normal-case tracking-normal">· {grassColorDef.label}</span>}
         </div>
-        <div className="biome-swatches">
+        <div className="flex gap-[5px]">
           {GRASS_COLOR_LIST.map((c) => (
             <GrassColorSwatch
               key={c.id}
@@ -155,10 +155,11 @@ export function OfficeBuildToolbar({
       </div>
 
       {/* ── Search ──────────────────────────────────────────────────── */}
-      <div className="bp-search-wrap">
-        <div className="bp-search">
+      <div className="border-b border-line shrink-0 px-[14px] py-[8px]">
+        <div className="bp-search flex items-center gap-[8px] bg-bg-2 border border-line text-txt-3 px-[10px] py-[6px] rounded-[7px] text-[12.5px]">
           <Icon name="search" size={13} />
           <input
+            className="flex-1 bg-transparent border-0 outline-none text-txt text-[12px]"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search tiles…"
@@ -177,7 +178,7 @@ export function OfficeBuildToolbar({
 
       {/* ── Category tabs ───────────────────────────────────────────── */}
       {!q && (
-        <div className="bp-cats" role="tablist" aria-label="Tile categories">
+        <div className="flex border-b border-line shrink-0 gap-0 px-[10px]" role="tablist" aria-label="Tile categories">
           {CATEGORY_TABS.map(({ id, label }) => {
             const count = DECORATION_KINDS.filter((k) => DECORATIONS[k].category === id).length;
             return (
@@ -186,11 +187,11 @@ export function OfficeBuildToolbar({
                 type="button"
                 role="tab"
                 aria-selected={activeTab === id}
-                className={`bp-cat ${activeTab === id ? "active" : ""}`}
+                className={`bp-cat relative text-txt-3 font-medium cursor-pointer py-[7px] px-2 pb-[9px] text-[11.5px] transition-[color] duration-100 hover:text-txt ${activeTab === id ? "active text-txt font-semibold" : ""}`}
                 onClick={() => setActiveTab(id)}
               >
                 {label}
-                <span className="count">{count}</span>
+                <span className="ml-1 text-txt-4 font-mono text-[9.5px]">{count}</span>
               </button>
             );
           })}
@@ -198,13 +199,13 @@ export function OfficeBuildToolbar({
       )}
 
       {/* ── Tile grid ───────────────────────────────────────────────── */}
-      <div className="bp-tiles" role="tabpanel">
+      <div className="flex-1 min-h-0 overflow-y-auto grid gap-[6px] p-[10px_12px_8px] [grid-template-columns:repeat(5,1fr)] [align-content:start] [scrollbar-width:thin] [scrollbar-color:var(--bg-3)_transparent]" role="tabpanel">
         {q.trim() ? (
           searchGroups && searchGroups.length > 0 ? (
             searchGroups.map(([cat, kinds]) => (
               <div key={cat} style={{ display: "contents" }}>
-                <div className="bp-section-head capitalize">
-                  {cat}<span className="line" />
+                <div className="flex items-center gap-2 uppercase text-txt-3 [grid-column:1/-1] my-[6px] -mb-[2px] font-mono text-[9.5px] tracking-[0.08em] capitalize">
+                  {cat}<span className="flex-1 h-px bg-line" />
                 </div>
                 {kinds.map((kind) => (
                   <DecoTileCell
@@ -217,7 +218,7 @@ export function OfficeBuildToolbar({
               </div>
             ))
           ) : (
-            <div className="bp-tiles-empty">No tiles match &ldquo;{q}&rdquo;</div>
+            <div className="text-center text-txt-3 [grid-column:1/-1] px-3 py-6 font-mono text-[11.5px]">No tiles match &ldquo;{q}&rdquo;</div>
           )
         ) : (
           filteredKinds.map((kind) => (
@@ -232,24 +233,24 @@ export function OfficeBuildToolbar({
       </div>
 
       {/* ── Footer ──────────────────────────────────────────────────── */}
-      <div className="bp-foot">
-        <div className="bp-foot-row">
-          <div className="bp-foot-preview">
+      <div className="border-t border-line bg-bg-2 shrink-0 p-[10px_14px]">
+        <div className="grid items-center gap-[10px] [grid-template-columns:38px_1fr_auto]">
+          <div className="w-[38px] h-[38px] rounded-[7px] bg-bg-3 border border-line grid place-items-center text-[20px]">
             {selectedDef ? (
               <DecoSprite def={selectedDef} size={28} />
             ) : (
               <span className="text-txt-4 text-[18px]">·</span>
             )}
           </div>
-          <div className="bp-foot-info">
-            <div className="name">{selectedDef?.label ?? "no selection"}</div>
-            <div className="meta">
+          <div>
+            <div className="font-semibold text-txt text-[12.5px]">{selectedDef?.label ?? "no selection"}</div>
+            <div className="text-txt-3 mt-[2px] font-mono text-[10px]">
               {selectedDef ? (
                 <>
                   <span>{selectedDef.category}</span>
-                  <span className="sep">·</span>
+                  <span className="text-txt-4 mx-1">·</span>
                   <span>{selectedDef.family}</span>
-                  <span className="sep">·</span>
+                  <span className="text-txt-4 mx-1">·</span>
                   <span>{selectedKind}</span>
                 </>
               ) : (
@@ -257,8 +258,8 @@ export function OfficeBuildToolbar({
               )}
             </div>
           </div>
-          <div className="bp-foot-actions">
-            <button type="button" title="Pin tile">
+          <div className="flex gap-[3px]">
+            <button type="button" title="Pin tile" className="w-[28px] h-[28px] grid place-items-center bg-bg-3 border border-line text-txt-3 rounded-[5px] transition-[color,border-color] duration-100 hover:text-txt hover:border-line-2">
               <Icon name="pin" size={13} />
             </button>
           </div>
@@ -283,13 +284,13 @@ function DecoTileCell({
   return (
     <button
       type="button"
-      className={`tile-cell ${selected ? "active" : ""}`}
+      className={`relative flex flex-col items-center justify-end gap-[3px] cursor-pointer overflow-hidden bg-bg-2 border border-line px-[3px] pt-[6px] pb-[5px] rounded-[7px] min-h-[56px] transition-[background,border-color] duration-100 hover:bg-bg-3 hover:border-line-2 ${selected ? "active bg-acc-faint" : ""}`}
       onClick={() => onSelect(kind)}
       title={`${def.label} · ${def.terrain}-only`}
       aria-pressed={selected}
     >
       <DecoSprite def={def} size={32} />
-      <div className="lbl">{def.label}</div>
+      <div className={`text-center overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[8px] leading-[1.2] max-w-full ${selected ? "text-acc" : "text-txt-3"}`}>{def.label}</div>
     </button>
   );
 }
@@ -333,7 +334,7 @@ function GrassColorSwatch({
       type="button"
       onClick={onClick}
       title={def.label}
-      className={`biome-swatch ${selected ? "active" : ""}`}
+      className={`biome-swatch flex-1 relative cursor-pointer overflow-hidden h-[32px] rounded-[6px] transition-[transform,border-color] duration-100 hover:[transform:translateY(-1px)] hover:border-[var(--line-2)]${selected ? " active border-[var(--acc)] shadow-[0_0_0_2px_var(--acc-faint)]" : " border-[1.5px] border-[var(--line)]"}`}
       aria-pressed={selected}
       aria-label={`Island color: ${def.label}`}
       style={{

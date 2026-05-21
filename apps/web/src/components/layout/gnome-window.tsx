@@ -38,7 +38,7 @@ export function GnomeWindow({ titlebar, children, className }: GnomeWindowProps)
 
   return (
     <div
-      className={cn("gnome-window", maximized && "maximized", className)}
+      className={cn("absolute bg-bg-1 shadow-[var(--shadow-window)] overflow-hidden grid border border-line-2 [grid-template-rows:38px_1fr] inset-[18px] rounded-[10px] max-[600px]:inset-0 max-[600px]:rounded-none", maximized && "inset-0 rounded-none shadow-none border-none", className)}
     >
       {titlebar}
       {children}

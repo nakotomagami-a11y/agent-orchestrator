@@ -3,6 +3,7 @@
 import { useState, useMemo, Fragment } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { PersistedRun } from "@agent-office/shared/types";
 import { useRuns } from "../hooks/use-runs";
@@ -15,6 +16,7 @@ import {
   dayLabel,
   groupRunsByDay,
 } from "../utils/format-run-meta";
+import { cn } from "@/lib/cn";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,12 +108,12 @@ function Spark({
 function LiveStrip({ runs }: { runs: PersistedRun[] }) {
   if (runs.length === 0) return null;
   return (
-    <section className="act-live-strip">
-      <div className="act-strip-head">
-        <span className="live-led" />
+    <section className="flex flex-col gap-[8px]">
+      <div className="flex items-center uppercase text-txt-3 gap-[10px] font-[var(--font-mono)] text-[10.5px] tracking-[0.1em]">
+        <span className="live-led shrink-0 relative rounded-full w-[7px] h-[7px]" style={{ background: "var(--working)" }} />
         Live now
-        <span className="count-pill">{runs.length}</span>
-        <span className="line" />
+        <span className="bg-bg-2 border border-line text-txt-2 rounded-full normal-case px-[8px] py-[1px] tracking-[0]">{runs.length}</span>
+        <span className="flex-1 h-[1px] bg-[var(--line)]" />
         <span className="normal-case tracking-normal">
           updating live
         </span>
@@ -120,29 +122,30 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
         <div
           key={r.id}
           className="act-live-run"
+          style={{ gridTemplateColumns: "30px minmax(0,1fr) auto auto auto auto" }}
         >
-          <div className="agent-av">{agentInitial(r.agentName)}</div>
-          <div className="info">
-            <div className="who">
-              <span className="led" />
+          <div className="grid place-items-center shrink-0 bg-bg-3 border border-line uppercase font-bold text-txt-2 w-[28px] h-[28px] rounded-[6px] text-[14px] font-[var(--font-mono)]">{agentInitial(r.agentName)}</div>
+          <div className="min-w-0">
+            <div className="flex items-center font-semibold text-txt gap-[8px] text-[13px]">
+              <span className="rounded-full w-[6px] h-[6px]" style={{ background: "var(--working)", boxShadow: "0 0 6px var(--working)", animation: "pulseDot 1s infinite" }} />
               {r.agentName}
             </div>
-            <div className="prompt">{r.prompt}</div>
+            <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11.5px] mt-[2px]">{r.prompt}</div>
           </div>
-          <span className="phase-pill">
+          <span className="inline-flex items-center bg-bg-2 border border-line rounded-full text-txt-2 whitespace-nowrap gap-[6px] px-[10px] py-[4px] font-[var(--font-mono)] text-[11px]">
             <Icon name="refresh" size={11} />
             running
           </span>
-          <span className="meta-cell">
-            <span className="lbl">elapsed </span>
+          <span className="text-txt-2 whitespace-nowrap font-[var(--font-mono)] text-[11px]">
+            <span className="text-txt-4">elapsed </span>
             {elapsedSince(r.ts)}
           </span>
-          <span className="meta-cell">
+          <span className="text-txt-2 whitespace-nowrap font-[var(--font-mono)] text-[11px]">
             {fmtTok(r.tokensIn + r.tokensOut)} tok · {formatCost(r.cost)}
           </span>
-          <Link href={PAGE_ROUTES.run(r.id)} className="btn sm ghost">
+          <Button href={PAGE_ROUTES.run(r.id)} variant="ghost" size="sm">
             <Icon name="chevron" size={12} />
-          </Link>
+          </Button>
         </div>
       ))}
     </section>
@@ -257,16 +260,18 @@ function StatTiles({ runs }: { runs: PersistedRun[] }) {
   ];
 
   return (
-    <div className="act-stat-grid">
+    <div className="grid [grid-template-columns:repeat(4,1fr)] max-[1024px]:[grid-template-columns:repeat(2,1fr)] max-[600px]:[grid-template-columns:1fr] gap-[12px]">
       {tiles.map((t) => (
-        <div key={t.label} className="act-stat-tile">
-          <div className="lbl">{t.label}</div>
-          <div className="val">
+        <div key={t.label} className="bg-bg-1 border border-line relative overflow-hidden flex flex-col px-[16px] py-[14px] rounded-[12px] gap-[5px] min-h-[106px] [box-shadow:var(--shadow-1)]">
+          <div className="text-txt-3 uppercase font-[var(--font-mono)] text-[10px] tracking-[0.1em]">{t.label}</div>
+          <div className="font-bold text-txt text-[24px] tracking-[-0.01em]">
             {t.value}
-            {t.unit && <span className="unit">{t.unit}</span>}
+            {t.unit && <span className="text-txt-3 font-medium text-[12px] ml-[3px] font-[var(--font-mono)]">{t.unit}</span>}
           </div>
-          <div className={`delta ${t.delta.cls}`}>{t.delta.text}</div>
-          <div className="spark-wrap">
+          <div className={cn("inline-flex items-center gap-[4px] font-[var(--font-mono)] text-[10.5px]", t.delta.cls === "neg" ? "text-[var(--error)]" : t.delta.cls === "flat" ? "text-txt-3" : "text-[var(--working)]")}>
+            {t.delta.text}
+          </div>
+          <div className="absolute right-[12px] bottom-[12px] w-[70px] h-[34px]">
             <Spark data={t.spark} color={t.color} />
           </div>
         </div>
@@ -339,50 +344,52 @@ function Heatmap({ runs }: { runs: PersistedRun[] }) {
   }
 
   return (
-    <div className="act-heatmap">
-      <div className="act-heatmap-head">
+    <div className="bg-bg-1 border border-line rounded-[12px] px-[18px] py-[16px] [box-shadow:var(--shadow-1)]">
+      <div className="flex items-center gap-[10px] mb-[14px]">
         <div>
-          <div className="ttl">Activity timeline</div>
-          <div className="sub">
+          <div className="font-semibold text-txt text-[13px]">Activity timeline</div>
+          <div className="text-txt-3 text-[11px] font-[var(--font-mono)]">
             last 7 days · {total} runs · busiest {dayLabels[busiest.d]}{" "}
             {String(busiest.h).padStart(2, "0")}:00
           </div>
         </div>
-        <div className="legend">
+        <div className="ml-auto flex items-center text-txt-3 gap-[6px] font-[var(--font-mono)] text-[10px]">
           less
-          <div className="scale">
-            <div className="sc" />
-            <div className="sc l1" />
-            <div className="sc l2" />
-            <div className="sc l3" />
-            <div className="sc l4" />
+          <div className="flex gap-[2px]">
+            <div className="bg-bg-3 border border-line w-[10px] h-[10px] rounded-[2px]" />
+            <div className="hcell l1 w-[10px] h-[10px] rounded-[2px]" />
+            <div className="hcell l2 w-[10px] h-[10px] rounded-[2px]" />
+            <div className="hcell l3 w-[10px] h-[10px] rounded-[2px]" />
+            <div className="hcell l4 w-[10px] h-[10px] rounded-[2px]" />
           </div>
           more
         </div>
       </div>
 
-      <div className="act-heatmap-grid">
-        {grid.map((row, d) => (
-          <Fragment key={d}>
-            <div className="day-lbl">{dayLabels[d]}</div>
-            {row.map((v, h) => (
-              <div
-                key={h}
-                className={`hcell ${lvl(v)} ${d === nowDay && h === nowHour ? "now" : ""}`}
-                title={`${dayLabels[d]} ${String(h).padStart(2, "0")}:00 — ${v} run${v === 1 ? "" : "s"}`}
-              />
-            ))}
-          </Fragment>
-        ))}
-      </div>
+      <div className="act-heatmap-scroll overflow-x-auto">
+        <div className="act-heatmap-grid grid items-center gap-[2px]" style={{ gridTemplateColumns: "26px repeat(24, 1fr)" }}>
+          {grid.map((row, d) => (
+            <Fragment key={d}>
+              <div className="text-txt-3 text-right font-[var(--font-mono)] text-[9.5px] pr-[4px]">{dayLabels[d]}</div>
+              {row.map((v, h) => (
+                <div
+                  key={h}
+                  className={`hcell bg-bg-3 border border-line cursor-pointer relative h-[16px] rounded-[2px] transition-transform duration-[100ms] ${lvl(v)} ${d === nowDay && h === nowHour ? "now" : ""}`}
+                  title={`${dayLabels[d]} ${String(h).padStart(2, "0")}:00 — ${v} run${v === 1 ? "" : "s"}`}
+                />
+              ))}
+            </Fragment>
+          ))}
+        </div>
 
-      <div className="act-heatmap-foot">
-        <div />
-        {Array.from({ length: 24 }, (_, h) => (
-          <div key={h} className="h-lbl">
-            {h % 3 === 0 ? String(h).padStart(2, "0") : ""}
-          </div>
-        ))}
+        <div className="act-heatmap-foot grid gap-[2px] mt-[4px]" style={{ gridTemplateColumns: "26px repeat(24, 1fr)" }}>
+          <div />
+          {Array.from({ length: 24 }, (_, h) => (
+            <div key={h} className="text-txt-4 text-center font-[var(--font-mono)] text-[9px]">
+              {h % 3 === 0 ? String(h).padStart(2, "0") : ""}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -413,39 +420,40 @@ function FilterBar({
   }
 
   return (
-    <div className="act-filter-bar">
-      <div className="act-filter-search">
+    <div className="flex items-center flex-wrap gap-[8px]">
+      <div className="act-filter-search flex-1 flex items-center bg-bg-1 border border-line-2 text-txt-3 min-w-[220px] gap-[10px] px-[13px] py-[8px] rounded-[10px] [box-shadow:var(--shadow-1)]">
         <Icon name="search" size={14} />
         <input
           value={filters.query}
           onChange={(e) => setFilters({ ...filters, query: e.target.value })}
           placeholder="Search prompts, run IDs, agents…"
+          className="flex-1 bg-transparent border-none text-txt outline-none text-[13.5px] [&::placeholder]:text-txt-4"
         />
-        <kbd>/</kbd>
+        <kbd className="bg-bg-2 border border-line text-txt-3 font-[var(--font-mono)] text-[10px] px-[5px] py-[1px] rounded-[4px]">/</kbd>
       </div>
 
       <button
-        className={`act-f-chip ${filters.statuses.includes("done") ? "on" : ""}`}
+        className={cn("act-f-chip inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)]", filters.statuses.includes("done") && "on")}
         onClick={() => toggleStatus("done")}
         type="button"
       >
-        <span className="dot text-[#22c55e]" />
+        <span className="dot rounded-full w-[6px] h-[6px] bg-current text-[#22c55e]" />
         done
       </button>
       <button
-        className={`act-f-chip ${filters.statuses.includes("error") ? "on" : ""}`}
+        className={cn("act-f-chip inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)]", filters.statuses.includes("error") && "on")}
         onClick={() => toggleStatus("error")}
         type="button"
       >
-        <span className="dot text-[#ef4444]" />
+        <span className="dot rounded-full w-[6px] h-[6px] bg-current text-[#ef4444]" />
         error
       </button>
       <button
-        className={`act-f-chip ${filters.statuses.includes("running") ? "on" : ""}`}
+        className={cn("act-f-chip inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)]", filters.statuses.includes("running") && "on")}
         onClick={() => toggleStatus("running")}
         type="button"
       >
-        <span className="dot text-[#E95420]" />
+        <span className="dot rounded-full w-[6px] h-[6px] bg-current text-[#E95420]" />
         live
       </button>
     </div>
@@ -484,30 +492,31 @@ function FeedRow({
   return (
     <>
       <div
-        className={`act-row ${isOpen ? "open" : ""}`}
+        className={cn("act-row grid items-center bg-bg-1 border border-line cursor-pointer relative gap-[12px] px-[14px] py-[11px] rounded-[10px] mb-[5px] transition-[background,border-color] duration-[100ms] [box-shadow:var(--shadow-1)]", isOpen && "open")}
+        style={{ gridTemplateColumns: "28px minmax(0,1fr) 100px auto auto auto 18px" }}
         onClick={onToggle}
         role="button"
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && onToggle()}
       >
-        <div className="act-row-av">
+        <div className="act-row-av grid place-items-center bg-bg-2 border border-line font-bold text-txt-2 uppercase relative shrink-0 w-[26px] h-[26px] rounded-[6px] text-[13px] font-[var(--font-mono)]">
           {agentInitial(run.agentName)}
-          <span className={`sdot ${dotCls}`} />
+          <span className={cn("sdot absolute rounded-full bottom-[-2px] right-[-2px] w-[8px] h-[8px] [border:2px_solid_var(--bg-1)]", dotCls === "error" ? "[background:var(--error)]" : "[background:var(--working)]", dotCls)} />
         </div>
 
-        <div className="act-row-main">
-          <div className="act-row-who">
+        <div className="min-w-0">
+          <div className="flex items-center font-semibold text-txt gap-[7px] text-[13px]">
             <span>{run.agentName}</span>
-            <span className="model-tag">{run.model || "default"}</span>
+            <span className="text-txt-3 bg-bg-2 border border-line font-normal font-[var(--font-mono)] text-[10px] rounded-[4px] px-[5px] py-[1px]">{run.model || "default"}</span>
           </div>
-          <div className="act-row-prompt">{run.prompt}</div>
+          <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11.5px] mt-[2px]">{run.prompt}</div>
         </div>
 
-        <div className="act-row-cost">
-          <div className="cv">{formatCost(run.cost)}</div>
-          <div className="bar">
+        <div className="flex flex-col gap-[3px] font-[var(--font-mono)] text-[11px]">
+          <div className="text-txt">{formatCost(run.cost)}</div>
+          <div className="overflow-hidden bg-bg-3 h-[3px] rounded-[2px]">
             <div
-              className="fill"
+              className="act-row-cost-fill h-full rounded-[2px]"
               style={{
                 width: `${Math.max(2, (run.cost / Math.max(maxCost, 0.001)) * 100)}%`,
               }}
@@ -515,93 +524,78 @@ function FeedRow({
           </div>
         </div>
 
-        <span className="act-row-cell">{formatDuration(run.durMs)}</span>
-        <span className="act-row-cell dim">{fmtTok(tokens)} tok</span>
-        <span className="act-row-cell dim">{formatRelative(run.ts)}</span>
+        <span className="text-txt-2 whitespace-nowrap font-[var(--font-mono)] text-[11.5px]">{formatDuration(run.durMs)}</span>
+        <span className="text-txt-3 whitespace-nowrap font-[var(--font-mono)] text-[11.5px]">{fmtTok(tokens)} tok</span>
+        <span className="text-txt-3 whitespace-nowrap font-[var(--font-mono)] text-[11.5px]">{formatRelative(run.ts)}</span>
 
-        <span className="act-row-chev">
+        <span className={cn("act-row-chev text-txt-4 transition-transform duration-[180ms]", isOpen && "text-acc rotate-180")}>
           <Icon name="chevron-down" size={14} />
         </span>
 
         <div
-          className="act-row-actions"
+          className="act-row-actions absolute flex bg-bg-1 border border-line opacity-0 gap-[2px] p-[2px] rounded-[8px] transition-[opacity] duration-[140ms]"
+          style={{ right: 34, top: "50%", transform: "translateY(-50%)" }}
           onClick={(e) => e.stopPropagation()}
         >
           <Link href={PAGE_ROUTES.run(run.id)}>
-            <button type="button" title="Open run">
+            <button type="button" title="Open run" className="grid place-items-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt">
               <Icon name="chevron" size={12} />
             </button>
           </Link>
-          <button type="button" title="Branch from here" onClick={handleBranch}>
+          <button type="button" title="Branch from here" className="grid place-items-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt" onClick={handleBranch}>
             <Icon name="branch" size={12} />
           </button>
-          <button type="button" title="Copy prompt" onClick={handleCopyPrompt}>
+          <button type="button" title="Copy prompt" className="grid place-items-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt" onClick={handleCopyPrompt}>
             <Icon name="copy" size={12} />
           </button>
         </div>
       </div>
 
       {isOpen && (
-        <div className="act-detail">
-          <div className="panel">
-            <div className="head">
+        <div className="act-detail grid bg-bg-2 m-0 mb-[5px] border-t-0 rounded-b-[10px] px-[16px] py-[14px] gap-[12px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
+          <div className="bg-bg-1 border border-line overflow-hidden rounded-[8px]">
+            <div className="flex items-center text-txt-3 uppercase border-b border-line px-[12px] py-[7px] font-[var(--font-mono)] text-[10px] tracking-[0.08em] gap-[8px]">
               <Icon name="chevron" size={10} /> prompt
             </div>
-            <div className="body">{run.prompt}</div>
+            <div className="text-txt overflow-y-auto break-words px-[12px] py-[10px] font-[var(--font-mono)] text-[11.5px] leading-[1.55] max-h-[150px] whitespace-pre-wrap">{run.prompt}</div>
           </div>
-          <div className="panel">
-            <div className="head">
+          <div className="bg-bg-1 border border-line overflow-hidden rounded-[8px]">
+            <div className="flex items-center text-txt-3 uppercase border-b border-line px-[12px] py-[7px] font-[var(--font-mono)] text-[10px] tracking-[0.08em] gap-[8px]">
               <Icon name="activity" size={10} /> response
             </div>
-            <div className="body">
+            <div className="text-txt overflow-y-auto break-words px-[12px] py-[10px] font-[var(--font-mono)] text-[11.5px] leading-[1.55] max-h-[150px] whitespace-pre-wrap">
               {run.output || "(no output recorded)"}
             </div>
           </div>
-          <div className="timeline">
-            <div className="step">
-              <div className="l">run id</div>
-              <div className="v">{run.id.slice(0, 12)}…</div>
-            </div>
-            <div className="step">
-              <div className="l">duration</div>
-              <div className="v">{formatDuration(run.durMs)}</div>
-            </div>
-            <div className="step">
-              <div className="l">tokens</div>
-              <div className="v">{fmtTok(tokens)}</div>
-            </div>
-            <div className="step">
-              <div className="l">cost</div>
-              <div className="v">{formatCost(run.cost)}</div>
-            </div>
-            <div className="step">
-              <div className="l">model</div>
-              <div className="v">{run.model || "default"}</div>
-            </div>
-            <div className="step">
-              <div className="l">effort</div>
-              <div className="v">{run.effort || "default"}</div>
-            </div>
-            {run.cwd && (
-              <div className="step">
-                <div className="l">cwd</div>
-                <div className="v">{run.cwd}</div>
+          <div className="flex flex-wrap gap-[18px] pt-[8px] border-t border-dashed border-line" style={{ gridColumn: "1 / -1" }}>
+            {[
+              { l: "run id", v: run.id.slice(0, 12) + "…" },
+              { l: "duration", v: formatDuration(run.durMs) },
+              { l: "tokens", v: fmtTok(tokens) },
+              { l: "cost", v: formatCost(run.cost) },
+              { l: "model", v: run.model || "default" },
+              { l: "effort", v: run.effort || "default" },
+              ...(run.cwd ? [{ l: "cwd", v: run.cwd }] : []),
+            ].map(({ l, v }) => (
+              <div key={l} className="flex flex-col font-[var(--font-mono)]">
+                <div className="text-txt-4 uppercase text-[9.5px] tracking-[0.08em]">{l}</div>
+                <div className="text-txt text-[11.5px] mt-[2px]">{v}</div>
               </div>
-            )}
+            ))}
           </div>
-          <div className="act-btns">
-            <Link href={PAGE_ROUTES.run(run.id)} className="btn sm">
+          <div className="flex gap-[8px] pt-[10px] border-t border-dashed border-line" style={{ gridColumn: "1 / -1" }}>
+            <Button href={PAGE_ROUTES.run(run.id)} size="sm">
               <Icon name="chevron" size={12} />
               Open in chat
-            </Link>
-            <button type="button" className="btn sm ghost" onClick={handleBranch}>
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleBranch}>
               <Icon name="branch" size={12} />
               Branch from here
-            </button>
-            <button type="button" className="btn sm ghost" onClick={handleCopyPrompt}>
+            </Button>
+            <Button size="sm" variant="ghost" onClick={handleCopyPrompt}>
               <Icon name="copy" size={12} />
               Copy prompt
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -671,7 +665,9 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
     const a = document.createElement("a");
     a.href = url;
     a.download = `activity-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
@@ -682,15 +678,15 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
 
   return (
     <>
-      <div className="toolbar">
-        <h1>Activity</h1>
-        <span className="sub">· run history across all agents</span>
-        <div className="right">
-          <div className="act-scope-seg">
+      <div className="flex items-center gap-[10px] px-[18px] py-[10px] border-b border-line bg-bg-1">
+        <h1 className="m-0 text-[16px] font-bold tracking-[-0.01em]">Activity</h1>
+        <span className="text-[12px] text-txt-3 font-[var(--font-mono)]">· run history across all agents</span>
+        <div className="ml-auto flex items-center gap-2">
+          <div className="act-scope-seg flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden" style={{ borderRadius: "var(--r-md)" }}>
             {(["today", "week", "month", "all"] as const).map((s) => (
               <button
                 key={s}
-                className={scope === s ? "on" : ""}
+                className={cn("bg-transparent border-none cursor-pointer text-txt-3 px-[11px] py-[4px] rounded-[6px] text-[12px] font-[var(--font-mono)]", scope === s && "on")}
                 onClick={() => setScope(s)}
                 type="button"
               >
@@ -698,14 +694,14 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
               </button>
             ))}
           </div>
-          <button type="button" className="btn sm ghost" onClick={handleExport} disabled={filtered.length === 0}>
+          <Button size="sm" variant="ghost" onClick={handleExport} disabled={filtered.length === 0}>
             <Icon name="copy" size={12} />
             Export
-          </button>
+          </Button>
         </div>
       </div>
 
-      <div className="act-page-body">
+      <div className="flex flex-col overflow-y-auto flex-1 min-h-0 px-[24px] pt-[20px] pb-[32px] gap-[20px]">
         <LiveStrip runs={liveRuns} />
         <StatTiles runs={allRuns} />
         <Heatmap runs={allRuns} />
@@ -735,11 +731,11 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
               );
               return (
                 <div key={g.day}>
-                  <div className="act-day-strip">
-                    <span className="day">{dayLabel(g.day)}</span>
-                    <span className="runs-pill">{g.runs.length} runs</span>
-                    <span className="line" />
-                    <span className="stats">
+                  <div className="flex items-center text-txt-3 gap-[12px] px-[2px] pt-[12px] pb-[8px] font-[var(--font-mono)] text-[11px]">
+                    <span className="uppercase text-txt-2 font-semibold tracking-[0.08em]">{dayLabel(g.day)}</span>
+                    <span className="bg-bg-2 border border-line text-txt-2 rounded-full px-[8px] py-[1px]">{g.runs.length} runs</span>
+                    <span className="flex-1 h-[1px] bg-[var(--line)]" />
+                    <span className="text-txt-3 whitespace-nowrap">
                       {formatCost(dayCost)} · {fmtTok(dayTok)} tok
                     </span>
                   </div>

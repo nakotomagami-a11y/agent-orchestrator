@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { projects } from "@agent-office/shared/services";
+import { projects, db as dbService } from "@agent-office/shared/services";
 import { validateBody } from "@/lib/validation";
 import { projectMetaPatchSchema } from "@/lib/validation-schemas";
 import { notFound, tryService, validateIdParam } from "@/lib/api-helpers";
@@ -11,7 +11,16 @@ export async function GET(_request: Request, { params }: Params) {
   if (error) return error;
   const p = projects.readProject(id);
   if (!p) return notFound();
-  return NextResponse.json(p);
+  let runCount = 0;
+  let lastRunAt: number | undefined;
+  try {
+    const row = dbService.getDb()
+      .prepare("SELECT COUNT(*) as count, MAX(started_at) as last_run FROM runs WHERE project_id = ?")
+      .get(id) as { count: number; last_run: number | null };
+    runCount = row.count;
+    lastRunAt = row.last_run ?? undefined;
+  } catch { /* db not ready */ }
+  return NextResponse.json({ ...p, runCount, lastRunAt });
 }
 
 export async function PUT(request: Request, { params }: Params) {

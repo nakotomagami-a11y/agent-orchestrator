@@ -11,6 +11,7 @@ import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlVal
 import { log } from "./log";
 import { readSettings, scanProjects, slugify } from "./settings";
 import { deleteRunsForInstance } from "./store";
+import { getDb } from "./db";
 
 function metadataFile(id: string): string {
   return join(PROJECTS_DIR, id, "project.md");
@@ -114,6 +115,15 @@ function projectFromScan(entry: ScannedEntry): Project {
 export function listProjectSummaries(): ProjectSummary[] {
   const settings = readSettings();
   if (!settings) return [];
+
+  const lastRuns = new Map<string, number>();
+  try {
+    const rows = getDb()
+      .prepare("SELECT project_id, MAX(started_at) as last_run FROM runs WHERE project_id IS NOT NULL GROUP BY project_id")
+      .all() as { project_id: string; last_run: number }[];
+    for (const row of rows) lastRuns.set(row.project_id, row.last_run);
+  } catch { /* db not ready */ }
+
   return scanProjects(settings.projectsRoot, settings.excluded)
     .map((entry) => {
       const p = projectFromScan(entry);
@@ -123,6 +133,7 @@ export function listProjectSummaries(): ProjectSummary[] {
         description: p.meta.description,
         cwd: p.meta.cwd,
         instanceCount: p.meta.roster.length,
+        lastRunAt: lastRuns.get(p.id),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

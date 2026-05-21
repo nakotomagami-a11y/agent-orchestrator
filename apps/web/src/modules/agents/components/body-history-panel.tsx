@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@agent-office/shared/hooks/api";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 
 export type HistoryEntry = {
   filename: string;
@@ -74,15 +75,14 @@ export function BodyHistoryPanel({ agentId, onRestore }: Props) {
                 {kb} KB · {entry.filename}
               </div>
             </div>
-            <button
-              type="button"
-              className="btn sm"
+            <Button
+              size="sm"
               onClick={() => handleRestore(entry)}
               title={`Restore version saved ${date}`}
             >
               <Icon name="refresh" />
               Restore
-            </button>
+            </Button>
           </div>
         );
       })}

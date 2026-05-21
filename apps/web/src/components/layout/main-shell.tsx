@@ -16,9 +16,9 @@ export type MainShellProps = {
  */
 export function MainShell({ children, className }: MainShellProps) {
   return (
-    <div className={cn("win-body", className)}>
+    <div className={cn("grid min-h-0 [grid-template-columns:248px_minmax(0,1fr)] max-[1024px]:[grid-template-columns:64px_minmax(0,1fr)] max-[600px]:[grid-template-columns:minmax(0,1fr)]", className)}>
       <Sidebar />
-      <main className="main">
+      <main className="flex flex-col min-h-0 [min-width:0]">
         <ScrollReset />
         <PageTransition>{children}</PageTransition>
       </main>

@@ -7,8 +7,8 @@ export default async function SearchPage() {
   const t = await getTranslations();
   return (
     <>
-      <div className="toolbar">
-        <h1>{t("search_page.title")}</h1>
+      <div className="flex items-center gap-[10px] px-[18px] py-[10px] border-b border-line bg-bg-1">
+        <h1 className="m-0 text-[16px] font-bold tracking-[-0.01em]">{t("search_page.title")}</h1>
       </div>
       <Suspense
         fallback={

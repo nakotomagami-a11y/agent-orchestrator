@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
 import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
@@ -370,12 +371,12 @@ export function Composer({
 
   return (
     <div
-      className="composer"
+      className="bg-bg-1 px-[24px] pt-[12px] pb-[18px]"
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
     >
-      <div className="composer-inner relative">
+      <div className="max-w-[760px] mx-auto relative">
         {slashOpen && filteredSlash.length > 0 ? (
           <div className="slash-popup" role="listbox" aria-label="Slash commands">
             {filteredSlash.map((s, i) => (
@@ -397,12 +398,12 @@ export function Composer({
 
         {promptsOpen ? (
           <div
-            className="slash-popup prompts-popup"
+            className="slash-popup overflow-y-auto max-w-full left-0 right-0 max-h-[200px]"
             role="listbox"
             aria-label={t("composer.saved_prompts_aria")}
           >
             {filteredPrompts.length === 0 ? (
-              <div className="prompts-empty">
+              <div className="text-txt-3 px-3 py-[10px] text-[12px]">
                 {t("composer.saved_prompts_empty")}
               </div>
             ) : (
@@ -412,11 +413,11 @@ export function Composer({
                   type="button"
                   role="option"
                   aria-selected={i === promptsIdx}
-                  className={"item" + (i === promptsIdx ? " on" : "")}
+                  className={"item flex-col items-start gap-0.5" + (i === promptsIdx ? " on" : "")}
                   onMouseEnter={() => setPromptsIdx(i)}
                   onClick={() => selectPrompt(p.body)}
                 >
-                  <span className="prompt-title">{p.title}</span>
+                  <span className="font-semibold text-txt text-[12px]">{p.title}</span>
                   <span className="desc">
                     {p.body.length > 60 ? p.body.slice(0, 57) + "…" : p.body}
                   </span>
@@ -427,7 +428,7 @@ export function Composer({
         ) : null}
 
         <div
-          className={"composer-box" + (dragOver ? " drag-over" : "")}
+          className={"composer-box bg-bg-1 border-[1.5px] border-line-2 rounded-[16px] [box-shadow:var(--shadow-1)] transition-[border-color] duration-[160ms]" + (dragOver ? " drag-over" : "")}
           aria-label={dragOver ? t("composer.drop_to_attach") : undefined}
         >
           {dragOver ? (
@@ -437,11 +438,11 @@ export function Composer({
             </div>
           ) : null}
           {attachments.length > 0 ? (
-            <div className="composer-attachments">
+            <div className="flex gap-[6px] px-[10px] pt-[8px] flex-wrap">
               {attachments.map((a) => (
                 <span
                   key={a.localId}
-                  className="attach-chip"
+                  className="attach-chip inline-flex items-center gap-[6px] bg-bg-2 border border-line rounded-full text-txt-2 px-[8px] py-[4px] text-[11.5px]"
                   title={a.error ? t("composer.upload_failed_title", { error: a.error }) : a.path ?? a.name}
                   style={
                     a.error
@@ -459,7 +460,7 @@ export function Composer({
                   {a.pending ? t("composer.uploading_label") : a.name}
                   <button
                     type="button"
-                    className="x bg-transparent border-none p-0 text-inherit cursor-pointer inline-flex"
+                    className="bg-transparent border-none p-0 text-txt-3 cursor-pointer inline-flex items-center justify-center w-[14px] h-[14px] hover:text-[var(--error)]"
                     aria-label={t("composer.remove_chip_aria", { name: a.name })}
                     onClick={() =>
                       setAttachments((prev) => prev.filter((x) => x.localId !== a.localId))
@@ -480,44 +481,45 @@ export function Composer({
             placeholder={t("composer.input_placeholder")}
             aria-label={t("composer.input_aria")}
             rows={1}
+            className="border-none bg-transparent resize-none text-txt w-full px-[14px] pt-[12px] pb-[6px] font-[inherit] text-[14px] leading-[1.55] outline-none min-h-[48px] max-h-[220px] placeholder:text-txt-4"
           />
-          <div className="composer-bar">
-            <button
-              type="button"
-              className="btn sm ghost"
+          <div className="flex items-center gap-[4px] px-[8px] pb-[8px] pt-[6px]">
+            <Button
+              variant="ghost"
+              size="sm"
               title={t("composer.attach_title")}
               onClick={() => fileRef.current?.click()}
               aria-label={t("composer.attach_title")}
             >
               <Icon name="attach" />
-            </button>
-            <button
-              type="button"
-              className="btn sm ghost"
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
               title={t("composer.slash_insert_title")}
               onClick={() => onChange("/")}
               aria-label={t("composer.slash_insert_aria")}
             >
               <Icon name="slash" />
-            </button>
-            {cwdChip ? <span className="chip" title="working directory">{cwdChip}</span> : null}
-            {modelChip ? <span className="chip" title="active model">{modelChip}</span> : null}
-            <div className="right">
+            </Button>
+            {cwdChip ? <span className="inline-flex items-center gap-[5px] bg-bg-2 border border-line text-txt-2 rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] hover:bg-bg-3" title="working directory">{cwdChip}</span> : null}
+            {modelChip ? <span className="inline-flex items-center gap-[5px] bg-bg-2 border border-line text-txt-2 rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] hover:bg-bg-3" title="active model">{modelChip}</span> : null}
+            <div className="ml-auto flex items-center gap-[6px]">
               {abortable ? (
-                <button type="button" className="btn sm" onClick={onAbort}>
+                <Button size="sm" onClick={onAbort}>
                   <Icon name="stop" /> {t("common.abort")}
-                </button>
+                </Button>
               ) : (
                 <span
                   className="text-[11px] text-[var(--txt-4)] font-mono"
                 >
-                  <span className="kbd">⏎</span> {t("composer.shortcut_send")} ·{" "}
-                  <span className="kbd">⇧⏎</span> {t("composer.shortcut_newline")}
+                  <span className="inline-block bg-bg-1 text-txt-2 px-[5px] py-[1px] border border-b-2 border-line-2 rounded font-mono text-[10.5px]">⏎</span> {t("composer.shortcut_send")} ·{" "}
+                  <span className="inline-block bg-bg-1 text-txt-2 px-[5px] py-[1px] border border-b-2 border-line-2 rounded font-mono text-[10.5px]">⇧⏎</span> {t("composer.shortcut_newline")}
                 </span>
               )}
               <button
                 type="button"
-                className="send-btn"
+                className="send-btn bg-acc text-white border-none inline-flex items-center justify-center cursor-pointer w-[32px] h-[32px] rounded-[10px] [box-shadow:0_1px_0_rgba(0,0,0,0.08),0_2px_6px_rgba(233,84,32,0.30)] hover:bg-[var(--acc-hover)] disabled:bg-bg-3 disabled:text-txt-3 disabled:cursor-not-allowed disabled:[box-shadow:none]"
                 onClick={send}
                 disabled={sendDisabled}
                 aria-label={t("composer.send_label")}

@@ -19,6 +19,7 @@ import { ActivityFeed } from "@/modules/runs/components/activity-feed";
 import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { MemoryEditor } from "@/modules/memory/components/memory-editor";
+import { Button } from "@/components/ui/button";
 
 export type AgentDetailProps = { id: string };
 
@@ -35,7 +36,7 @@ export function AgentDetail({ id }: AgentDetailProps) {
 
   if (agentQ.isLoading) {
     return (
-      <div className="tab-pane">
+      <div className="overflow-auto py-[18px] px-6">
         <Skeleton width={240} height={28} />
         <div className="h-3" />
         <Skeleton width="100%" height={200} />
@@ -43,13 +44,13 @@ export function AgentDetail({ id }: AgentDetailProps) {
     );
   }
   if (!agentQ.data) {
-    return <div className="tab-pane">{t("errors.not_found")}</div>;
+    return <div className="overflow-auto py-[18px] px-6">{t("errors.not_found")}</div>;
   }
   const agent = agentQ.data;
   const unit = unitForAgent(id, agent.unit);
 
   return (
-    <div className="tab-pane flex flex-col gap-[14px]">
+    <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
       <Card>
         <div className="flex items-center gap-[14px] p-4">
           <div className="w-14 h-14 shrink-0">
@@ -61,12 +62,12 @@ export function AgentDetail({ id }: AgentDetailProps) {
             <div className="text-[13px] text-txt-2 mt-1">{agent.description || t("agent_list.description_empty")}</div>
           </div>
           <div className="flex gap-2">
-            <button type="button" className="btn primary" onClick={() => openChat(id, { projectId: activeProjectId ?? undefined })}>
+            <Button variant="primary" onClick={() => openChat(id, { projectId: activeProjectId ?? undefined })}>
               <Icon name="send" /> {t("summon.open_chat")}
-            </button>
-            <Link href={PAGE_ROUTES.agentEdit(id)} className="btn">
+            </Button>
+            <Button href={PAGE_ROUTES.agentEdit(id)}>
               <Icon name="edit" /> {t("common.edit")}
-            </Link>
+            </Button>
           </div>
         </div>
         <div className="px-4 pb-[14px] flex gap-[6px] flex-wrap">

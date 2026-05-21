@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { NextResponse } from "next/server";
+import { deleteProcess } from "@/lib/server-process-store";
 
 type Params = { params: Promise<{ pid: string }> };
 
@@ -38,6 +39,7 @@ export async function DELETE(_request: Request, { params }: Params): Promise<Nex
     // SIGKILL: cannot be caught or ignored — the process dies immediately.
     // Using SIGTERM here left processes alive when they ignored the signal.
     process.kill(pid, "SIGKILL");
+    deleteProcess(pid);
     return NextResponse.json({ ok: true });
   } catch (e) {
     const err = e as NodeJS.ErrnoException;

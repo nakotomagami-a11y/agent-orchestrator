@@ -8,8 +8,10 @@ import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import type { AppSettings, ScannedEntry, Project, HealthInfo } from "@agent-office/shared/types";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import { useActiveProjectStore } from "@/lib/active-project-store";
+import { cn } from "@/lib/cn";
 
 /**
  * First-run wizard. A four-step modal that appears once on a fresh
@@ -225,26 +227,47 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   if (dismissed) return null;
 
   return (
-    <div className="first-run-overlay" role="dialog" aria-modal="true" aria-labelledby="fr-title">
-      <div className="first-run-card">
-        <header className="first-run-header">
-          <h2 id="fr-title">{t("first_run.title")}</h2>
-          <p className="first-run-sub">{t("first_run.subtitle")}</p>
-          <ol className="first-run-steps">
+    <div
+      className="fixed inset-0 flex items-center justify-center z-[9999] p-[24px] [backdrop-filter:blur(8px)]"
+      style={{ background: "rgba(0,0,0,0.72)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="fr-title"
+    >
+      <div
+        className="flex flex-col overflow-hidden border border-line-2 rounded-[12px] w-[min(720px,100%)] max-h-[90vh]"
+        style={{ background: "var(--bg-elev)", boxShadow: "0 24px 60px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.25)" }}
+      >
+        <header className="border-b border-line-2 px-[24px] pt-[20px] pb-[12px]">
+          <h2 id="fr-title" className="font-semibold m-0 mb-[4px] text-[18px]">{t("first_run.title")}</h2>
+          <p className="text-txt-3 m-0 text-[13px]">{t("first_run.subtitle")}</p>
+          <ol className="flex list-none uppercase text-txt-3 pt-[14px] m-0 gap-[6px] font-[var(--font-mono)] text-[11px] tracking-[0.06em]">
             {STEP_ORDER.map((s, i) => (
-              <li key={s} className={i === stepIdx ? "active" : i < stepIdx ? "done" : ""}>
-                <span>{i + 1}</span>
+              <li
+                key={s}
+                className={cn(
+                  "inline-flex items-center border border-line rounded-full gap-[6px] px-[10px] py-[4px]",
+                  i === stepIdx && "text-acc [border-color:var(--acc)]",
+                  i < stepIdx && "text-txt-2",
+                )}
+              >
+                <span className={cn(
+                  "inline-flex items-center justify-center rounded-full w-[18px] h-[18px] text-[10px]",
+                  i === stepIdx ? "bg-acc text-white" : i < stepIdx ? "bg-acc-faint text-acc" : "bg-bg-2 text-txt-3",
+                )}>
+                  {i + 1}
+                </span>
                 {t(`first_run.step_${s}`)}
               </li>
             ))}
           </ol>
         </header>
 
-        <div className="first-run-body">
+        <div className="overflow-y-auto flex-1 px-[24px] py-[18px]">
           {step === "requirements" ? (
             <section>
-              <h3>{t("first_run.requirements_title")}</h3>
-              <p className="first-run-hint">{t("first_run.requirements_hint")}</p>
+              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.requirements_title")}</h3>
+              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.requirements_hint")}</p>
               <div className="flex flex-col gap-2.5 mt-4">
                 <ReqRow
                   label={t("first_run.req_claude_label")}
@@ -260,7 +283,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                   errorText={t("first_run.req_claude_missing")}
                 />
                 {!healthQ.isLoading && !healthQ.data?.available ? (
-                  <div className="first-run-hint small pl-7">
+                  <div className="text-txt-3 m-0 mb-[12px] text-[11.5px] leading-[1.5] mt-[6px] mb-0 pl-7">
                     <div>{t("first_run.req_claude_install")}</div>
                     <div className="mt-1">{t("first_run.req_claude_auth_note")}</div>
                   </div>
@@ -271,28 +294,28 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
 
           {step === "root" ? (
             <section>
-              <h3>{t("first_run.root_title")}</h3>
-              <p className="first-run-hint">{t("first_run.root_hint")}</p>
+              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.root_title")}</h3>
+              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.root_hint")}</p>
               <TextInput
                 value={root}
                 onChange={(e) => setRoot(e.target.value)}
                 placeholder={HOME_FALLBACK}
                 autoFocus
               />
-              <p className="first-run-hint small">{t("first_run.root_examples")}</p>
+              <p className="text-txt-3 m-0 text-[11.5px] leading-[1.5] mt-[6px]">{t("first_run.root_examples")}</p>
             </section>
           ) : null}
 
           {step === "excluded" ? (
             <section>
-              <h3>{t("first_run.excluded_title")}</h3>
-              <p className="first-run-hint">{t("first_run.excluded_hint")}</p>
-              <div className="first-run-chips">
+              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.excluded_title")}</h3>
+              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.excluded_hint")}</p>
+              <div className="flex flex-wrap gap-[6px] mb-[10px]">
                 {excluded.map((name) => (
                   <button
                     key={name}
                     type="button"
-                    className="chip"
+                    className="inline-flex items-center bg-bg-2 border border-line rounded-full cursor-pointer text-txt-2 gap-[4px] px-[9px] py-[3px] font-[var(--font-mono)] text-[11.5px] hover:bg-bg-1 hover:text-txt"
                     onClick={() => removeExcluded(name)}
                     title={t("first_run.excluded_remove", { name })}
                   >
@@ -312,42 +335,44 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                   }}
                   placeholder={t("first_run.excluded_placeholder")}
                 />
-                <button type="button" className="btn ghost sm" onClick={addExcluded}>
+                <Button variant="ghost" size="sm" onClick={addExcluded}>
                   {t("first_run.excluded_add")}
-                </button>
+                </Button>
               </div>
             </section>
           ) : null}
 
           {step === "agents" ? (
             <section>
-              <h3>{t("first_run.agents_title")}</h3>
-              <p className="first-run-hint">{t("first_run.agents_hint")}</p>
+              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.agents_title")}</h3>
+              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.agents_hint")}</p>
               {starterQ.isLoading ? (
                 <p>{t("common.loading")}</p>
               ) : (
                 <>
-                  <label className="agent-row select-all">
+                  <label className="flex items-start cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] bg-acc-faint mb-[6px]" style={{ border: "1px dashed var(--acc)" }}>
                     <input
                       type="checkbox"
+                      className="mt-[3px]"
                       checked={selectedAgents.size === starter.length && starter.length > 0}
                       onChange={toggleAll}
                     />
-                    <span className="agent-name">
+                    <span className="font-medium text-[13px]">
                       {t("first_run.agents_select_all", { count: starter.length })}
                     </span>
                   </label>
-                  <div className="agent-list">
+                  <div className="flex flex-col overflow-y-auto border border-line-2 gap-[4px] max-h-[320px] rounded-[8px] p-[4px]">
                     {starter.map((a) => (
-                      <label key={a.id} className="agent-row">
+                      <label key={a.id} className="flex items-start cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] hover:bg-bg-2">
                         <input
                           type="checkbox"
+                          className="mt-[3px]"
                           checked={selectedAgents.has(a.id)}
                           onChange={() => toggleAgent(a.id)}
                         />
                         <div>
-                          <div className="agent-name">{a.name}</div>
-                          <div className="agent-desc">{a.description}</div>
+                          <div className="font-medium text-[13px]">{a.name}</div>
+                          <div className="text-txt-3 text-[11.5px] mt-[2px] leading-[1.4]">{a.description}</div>
                         </div>
                       </label>
                     ))}
@@ -359,21 +384,24 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
 
           {step === "project" ? (
             <section>
-              <h3>{t("first_run.project_title")}</h3>
-              <p className="first-run-hint">{t("first_run.project_hint")}</p>
+              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.project_title")}</h3>
+              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.project_hint")}</p>
               {scanQ.isLoading ? (
                 <p>{t("common.loading")}</p>
               ) : candidates.length === 0 ? (
-                <p className="first-run-empty">
+                <p className="bg-bg-2 text-txt-3 px-[16px] py-[16px] rounded-[8px] text-[12.5px]">
                   {t("first_run.project_empty", { root })}
                 </p>
               ) : (
-                <div className="project-list">
+                <div className="flex flex-col overflow-y-auto gap-[4px] max-h-[280px]">
                   {candidates.map((c) => (
                     <button
                       key={c.id}
                       type="button"
-                      className={chosenFolder?.id === c.id ? "project-row selected" : "project-row"}
+                      className={cn(
+                        "flex items-center bg-bg-1 border border-line-2 text-left cursor-pointer text-txt gap-[10px] px-[10px] py-[8px] rounded-[8px] font-[inherit] text-[13px] hover:bg-bg-2",
+                        chosenFolder?.id === c.id && "bg-acc-faint [border-color:var(--acc)]",
+                      )}
                       onClick={() => {
                         setChosenFolder(c);
                         setProjectName(c.name);
@@ -381,8 +409,8 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                     >
                       <Icon name="folder" />
                       <div>
-                        <div className="agent-name">{c.name}</div>
-                        <div className="agent-desc">{c.fullPath}</div>
+                        <div className="font-medium text-[13px]">{c.name}</div>
+                        <div className="text-txt-3 text-[11.5px] mt-[2px] leading-[1.4]">{c.fullPath}</div>
                       </div>
                     </button>
                   ))}
@@ -390,7 +418,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
               )}
               {chosenFolder ? (
                 <div className="mt-2.5">
-                  <label className="first-run-hint" htmlFor="fr-project-name">
+                  <label className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]" htmlFor="fr-project-name">
                     {t("first_run.project_name_label")}
                   </label>
                   <TextInput
@@ -400,7 +428,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                   />
                 </div>
               ) : null}
-              <p className="first-run-hint small mt-2">
+              <p className="text-txt-3 m-0 text-[11.5px] leading-[1.5] mt-[6px] mt-2">
                 {t("first_run.project_skip_hint")}
               </p>
             </section>
@@ -408,29 +436,32 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
         </div>
 
         {error ? (
-          <div className="first-run-error" role="alert">
+          <div
+            className="mx-[24px] px-[12px] py-[8px] rounded-[6px] text-[12px]"
+            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid var(--error)", color: "var(--error)" }}
+            role="alert"
+          >
             {error}
           </div>
         ) : null}
 
-        <footer className="first-run-footer">
-          <button
-            type="button"
-            className="btn ghost"
+        <footer className="border-t border-line-2 flex items-center px-[24px] py-[14px] gap-[8px]">
+          <Button
+            variant="ghost"
             onClick={goBack}
             disabled={isFirst || busy}
           >
             {t("common.back")}
-          </button>
+          </Button>
           <div className="flex-1" />
           {!isLast ? (
-            <button type="button" className="btn primary" onClick={goNext} disabled={busy}>
+            <Button variant="primary" onClick={goNext} disabled={busy}>
               {t("common.next")}
-            </button>
+            </Button>
           ) : (
-            <button type="button" className="btn primary" onClick={onFinish} disabled={busy}>
+            <Button variant="primary" onClick={onFinish} disabled={busy}>
               {busy ? t("first_run.finishing") : t("first_run.finish")}
-            </button>
+            </Button>
           )}
         </footer>
       </div>

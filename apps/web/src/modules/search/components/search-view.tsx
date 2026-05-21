@@ -42,7 +42,7 @@ export function SearchView() {
   }, []);
 
   return (
-    <div className="tab-pane flex flex-col gap-3">
+    <div className="overflow-auto py-[18px] px-6 flex flex-col gap-3">
       <div className="flex gap-2 items-center">
         <input
           autoFocus

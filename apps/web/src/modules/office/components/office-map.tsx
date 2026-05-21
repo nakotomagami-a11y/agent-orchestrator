@@ -554,7 +554,7 @@ export function OfficeMap({
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
-              className="placed-agent absolute pointer-events-auto transition-opacity duration-150"
+              className="cursor-grab transition-[transform,filter] duration-100 ease-linear hover:scale-[1.12] hover:drop-shadow-[0_0_6px_#fbbf24] hover:z-[5] active:cursor-grabbing absolute pointer-events-auto transition-opacity duration-150"
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData(AGENT_DRAG_MIME, JSON.stringify(ref));

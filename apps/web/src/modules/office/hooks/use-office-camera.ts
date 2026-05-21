@@ -47,18 +47,24 @@ export function useOfficeCamera() {
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      const rect = el.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
-      const z = zoomRef.current;
-      const p = panRef.current;
-      const factor = e.deltaY < 0 ? 1 + ZOOM_STEP : 1 - ZOOM_STEP;
-      const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z * factor));
-      const wx = (mx - p.x) / z;
-      const wy = (my - p.y) / z;
-      setZoom(newZoom);
-      setPanX(mx - wx * newZoom);
-      setPanY(my - wy * newZoom);
+      // ctrlKey = pinch gesture or Ctrl+scroll → zoom; plain scroll → pan
+      if (e.ctrlKey) {
+        const rect = el.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const z = zoomRef.current;
+        const p = panRef.current;
+        const factor = e.deltaY < 0 ? 1 + ZOOM_STEP : 1 - ZOOM_STEP;
+        const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z * factor));
+        const wx = (mx - p.x) / z;
+        const wy = (my - p.y) / z;
+        setZoom(newZoom);
+        setPanX(mx - wx * newZoom);
+        setPanY(my - wy * newZoom);
+      } else {
+        setPanX((x) => x - e.deltaX);
+        setPanY((y) => y - e.deltaY);
+      }
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);

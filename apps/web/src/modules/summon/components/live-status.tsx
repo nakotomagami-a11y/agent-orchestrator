@@ -15,7 +15,7 @@ export function LiveStatus({ phase, hint }: { phase: ChatPhase; hint?: string })
 
   if (phase === "streaming") {
     return (
-      <div className="ao-live-status" role="status" aria-live="polite">
+      <div className="ao-live-status flex items-center gap-[10px] px-[14px] py-[8px] bg-ao-bg-2 border border-ao-line-1 rounded-full text-[12.5px] text-ao-fg-1 w-fit self-start" role="status" aria-live="polite">
         <span className="ao-led" aria-hidden />
         Typing
         <span className="ao-typing" aria-hidden>
@@ -27,12 +27,12 @@ export function LiveStatus({ phase, hint }: { phase: ChatPhase; hint?: string })
 
   if (phase === "working") {
     return (
-      <div className="ao-live-status" role="status" aria-live="polite">
+      <div className="ao-live-status flex items-center gap-[10px] px-[14px] py-[8px] bg-ao-bg-2 border border-ao-line-1 rounded-full text-[12.5px] text-ao-fg-1 w-fit self-start" role="status" aria-live="polite">
         <span className="ao-led" aria-hidden />
         {hint ? (
           <>
             Using
-            <span className="ao-tool-arg">{hint}</span>
+            <span className="font-mono text-[11.5px] text-ao-fg-2 px-[6px] py-[1px] bg-ao-bg-3 border border-ao-line-1 rounded-[4px] max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap">{hint}</span>
           </>
         ) : (
           <>
@@ -49,7 +49,7 @@ export function LiveStatus({ phase, hint }: { phase: ChatPhase; hint?: string })
   if (phase === "error") {
     return (
       <div
-        className="ao-live-status border-[rgba(217,83,79,0.3)]"
+        className="ao-live-status flex items-center gap-[10px] px-[14px] py-[8px] bg-ao-bg-2 border border-[rgba(217,83,79,0.3)] rounded-full text-[12.5px] text-ao-fg-1 w-fit self-start"
         role="status"
         aria-live="polite"
       >
@@ -61,7 +61,7 @@ export function LiveStatus({ phase, hint }: { phase: ChatPhase; hint?: string })
 
   // sending / connecting
   return (
-    <div className="ao-live-status" role="status" aria-live="polite">
+    <div className="ao-live-status flex items-center gap-[10px] px-[14px] py-[8px] bg-ao-bg-2 border border-ao-line-1 rounded-full text-[12.5px] text-ao-fg-1 w-fit self-start" role="status" aria-live="polite">
       <span className="ao-led" aria-hidden />
       {phase === "connecting" ? "Connecting…" : "Sending…"}
     </div>

@@ -126,6 +126,8 @@ export interface Project {
   id: string;
   meta: ProjectMeta;
   memory: string;
+  runCount?: number;
+  lastRunAt?: number;
 }
 
 export interface ProjectSummary {
@@ -134,6 +136,7 @@ export interface ProjectSummary {
   description: string;
   cwd?: string;
   instanceCount: number;
+  lastRunAt?: number;
 }
 
 export interface HealthInfo {

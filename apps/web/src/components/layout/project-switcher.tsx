@@ -5,8 +5,10 @@ import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useCreateProject, useProjects } from "@/modules/projects/hooks/use-projects";
+import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import {
   useActiveProjectHydration,
@@ -43,6 +45,8 @@ export function ProjectSwitcher() {
   const setActiveId = useActiveProjectStore((s) => s.setId);
 
   const createProject = useCreateProject();
+  const settingsQ = useSettings();
+  const projectsRoot = settingsQ.data?.projectsRoot ?? "";
 
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -158,7 +162,7 @@ export function ProjectSwitcher() {
       <button
         ref={triggerRef}
         type="button"
-        className="ps-trigger"
+        className="inline-flex items-center cursor-pointer text-txt-2 gap-[7px] px-2 py-1 pl-[6px] rounded-[7px] text-[12.5px] transition-[background,color] duration-[120ms] hover:bg-bg-3 hover:text-txt aria-expanded:bg-bg-3 aria-expanded:text-txt"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
@@ -166,7 +170,7 @@ export function ProjectSwitcher() {
         onClick={() => setOpen((v) => !v)}
       >
         {currentId ? (
-          <span className="ps-trigger-av" style={{ background: projectGradient(currentId) }}>
+          <span className="grid place-items-center shrink-0 text-white font-bold w-[18px] h-[18px] rounded text-[10px]" style={{ background: projectGradient(currentId) }}>
             {triggerLabel.slice(0, 1).toUpperCase()}
           </span>
         ) : (
@@ -184,7 +188,8 @@ export function ProjectSwitcher() {
           role="menu"
           aria-label={t("project_switcher.menu_label")}
           onKeyDown={onKey}
-          className="ps-menu"
+          className="absolute overflow-hidden border border-line-2 bg-bg-elev rounded-[var(--r-lg)] shadow-[var(--shadow-3)] z-50"
+          style={{ top: "calc(100% + 6px)", left: 0, width: 340 }}
         >
           <div className="p-1">
             <ProjectRow
@@ -265,6 +270,11 @@ export function ProjectSwitcher() {
                 }}
                 className="w-full px-2 py-[5px] text-[13px] bg-bg-2 border border-line rounded text-txt outline-none box-border font-[inherit]"
               />
+              {projectsRoot && newName.trim() && (
+                <div className="font-mono text-[10.5px] text-txt-3 truncate" title={`${projectsRoot}/${newName.trim()}`}>
+                  {projectsRoot}/{newName.trim()}
+                </div>
+              )}
               <div className="flex gap-1.5">
                 <button
                   type="button"
@@ -297,10 +307,11 @@ export function ProjectSwitcher() {
               ) : null}
             </div>
           ) : (
-            <div className="ps-foot">
+            <div className="grid border-t border-line bg-bg-2 gap-[2px] p-[6px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
               <button
                 type="button"
                 role="menuitem"
+                className="flex items-center gap-2 text-txt-2 py-[7px] px-[10px] rounded-[6px] text-[12.5px] hover:bg-bg-3 hover:text-txt transition-[background,color] duration-[100ms]"
                 onClick={openCreate}
               >
                 <Icon name="plus" size={13} /> {t("project_switcher.new_project")}
@@ -308,6 +319,7 @@ export function ProjectSwitcher() {
               <button
                 type="button"
                 role="menuitem"
+                className="flex items-center gap-2 text-txt-2 py-[7px] px-[10px] rounded-[6px] text-[12.5px] hover:bg-bg-3 hover:text-txt transition-[background,color] duration-[100ms]"
                 onMouseEnter={() => setActiveIndex(rows.length - 1)}
                 onClick={() => navigate(PAGE_ROUTES.projects, currentId)}
               >
@@ -322,12 +334,12 @@ export function ProjectSwitcher() {
 }
 
 function Separator() {
-  return <div className="ps-sep" />;
+  return <div className="h-px bg-[var(--line)] my-1" />;
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="ps-section-label">
+    <div className="flex items-center uppercase text-txt-4 px-3 pt-2 pb-1 font-[var(--font-mono)] text-[10px] tracking-[0.08em] gap-[6px]">
       {children}
     </div>
   );
@@ -364,14 +376,18 @@ function ProjectRow({
       role="menuitem"
       onMouseEnter={onHover}
       onClick={e => { e.preventDefault(); onSelect(); }}
-      className={`ps-item${selected ? " active" : ""}${highlighted ? " highlighted" : ""}`}
+      className={cn(
+        "ps-item flex items-center relative cursor-pointer text-txt no-underline gap-[10px] px-[10px] py-2 rounded-[var(--r-sm)] transition-[background] duration-[100ms] hover:bg-bg-3",
+        highlighted && "bg-bg-3",
+        selected && "active bg-acc-faint"
+      )}
     >
       {projectId ? (
-        <span className="ps-item-av" style={{ background: projectGradient(projectId) }}>
+        <span className="grid place-items-center shrink-0 text-white font-bold w-[32px] h-[32px] rounded-[8px] text-[12px] border border-[rgba(255,255,255,0.08)]" style={{ background: projectGradient(projectId) }}>
           {primary.slice(0, 1).toUpperCase()}
         </span>
       ) : (
-        <span className="ps-item-av bg-bg-3">
+        <span className="grid place-items-center shrink-0 text-white font-bold w-[32px] h-[32px] rounded-[8px] text-[12px] border border-[rgba(255,255,255,0.08)] bg-bg-3">
           <Icon name="folder" size={13} className="text-txt-3" />
         </span>
       )}

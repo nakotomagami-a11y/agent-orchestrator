@@ -59,9 +59,20 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
     }
   }, [memQ.data]);
 
+  const handleDiscard = () => {
+    if (memQ.data !== undefined) {
+      setGroups(parseMemory(memQ.data));
+      setDirty(false);
+    }
+  };
+
+  useEffect(() => {
+    if (discardRef) discardRef.current = handleDiscard;
+  });
+
   if (memQ.isLoading) {
     return (
-      <div className="ao-tab-pane">
+      <div className="px-6 pt-5 pb-6 flex-1 flex flex-col">
         <Skeleton width="100%" height={180} />
       </div>
     );
@@ -111,37 +122,26 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
     setDirty(false);
   };
 
-  const handleDiscard = () => {
-    if (memQ.data !== undefined) {
-      setGroups(parseMemory(memQ.data));
-      setDirty(false);
-    }
-  };
-
-  useEffect(() => {
-    if (discardRef) discardRef.current = handleDiscard;
-  });
-
   const matches = (g: Group, f: Fact) => {
     if (!q) return true;
     return `${g.key} ${f.k} ${f.v}`.toLowerCase().includes(q.toLowerCase());
   };
 
   return (
-    <div className="ao-tab-pane">
+    <div className="px-6 pt-5 pb-6 flex-1 flex flex-col">
       {/* Header card */}
-      <div className="ao-card mb-[14px]">
-        <div className="ao-card-header">
-          <div className="ao-icon"><AoBook size={15} /></div>
+      <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden mb-[14px]">
+        <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
+          <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoBook size={15} /></div>
           <div>
-            <div className="ao-title">Memory</div>
-            <div className="ao-sub mt-[2px]">
+            <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Memory</div>
+            <div className="text-[11.5px] text-ao-fg-2 font-mono mt-[2px]">
               facts carried into every conversation · {totalFacts} facts across {groups.length} groups
             </div>
           </div>
           <div className="ml-auto flex gap-2 items-center">
             <span className="ao-badge ao-neutral">YAML</span>
-            <button type="button" className="ao-btn-mini" onClick={() => setShowRaw(!showRaw)}>
+            <button type="button" className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2" onClick={() => setShowRaw(!showRaw)}>
               <AoCode size={13} /> {showRaw ? "Structured" : "View raw"}
             </button>
           </div>
@@ -157,23 +157,28 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
       ) : (
         <>
           {/* Toolbar */}
-          <div className="ao-mem-toolbar">
-            <div className="ao-search-input flex-1">
+          <div className="flex items-center gap-[10px] mb-[14px]">
+            <div className="flex-1 flex items-center gap-[10px] px-[14px] py-[9px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md text-ao-fg-2 focus-within:border-[var(--ao-accent-line)] focus-within:shadow-[0_0_0_3px_var(--ao-accent-softer)]">
               <AoSearch size={14} />
-              <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search facts…" />
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search facts…"
+                className="flex-1 bg-transparent border-0 outline-none text-ao-fg-0 placeholder:text-[var(--ao-fg-3)]"
+              />
             </div>
-            <button type="button" className="ao-btn-mini" onClick={addGroup}>
+            <button type="button" className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2" onClick={addGroup}>
               <AoPlus size={13} /> Add group
             </button>
           </div>
 
           {/* Groups */}
           {groups.length === 0 ? (
-            <div className="ao-card">
-              <div className="ao-card-body !text-center !p-8 !text-[var(--ao-fg-2)]">
+            <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
+              <div className="p-[var(--ao-pad-card)] !text-center !p-8 !text-ao-fg-2">
                 <AoBook size={28} />
                 <div className="mt-2 text-[13px]">No memory yet.</div>
-                <button type="button" className="ao-btn-mini mt-3" onClick={addGroup}>
+                <button type="button" className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2 mt-3" onClick={addGroup}>
                   <AoPlus size={13} /> Add first group
                 </button>
               </div>
@@ -183,16 +188,17 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
               const visible = g.facts.filter((f) => matches(g, f));
               if (q && visible.length === 0) return null;
               return (
-                <div key={`${g.key}_${gi}`} className="ao-mem-section">
-                  <div className="ao-mem-section-header">
-                    <span className="ao-name">{g.key}:</span>
-                    <span className="ao-count">{g.facts.length} {g.facts.length === 1 ? "fact" : "facts"}</span>
-                    <div className="ao-actions">
+                <div key={`${g.key}_${gi}`} className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden mb-[12px]">
+                  {/* Section header */}
+                  <div className="flex items-center gap-[10px] px-[14px] py-[10px] bg-ao-bg-2 border-b border-[var(--ao-line-0)]">
+                    <span className="font-mono text-[12.5px] font-semibold text-ao-accent lowercase">{g.key}:</span>
+                    <span className="text-ao-fg-2 font-mono text-[11px]">{g.facts.length} {g.facts.length === 1 ? "fact" : "facts"}</span>
+                    <div className="ml-auto flex gap-[4px]">
                       <button
                         type="button"
                         aria-label="Delete group"
-                        className="ao-danger"
                         onClick={() => removeGroup(gi)}
+                        className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-bad"
                       >
                         <AoTrash size={13} />
                       </button>
@@ -201,8 +207,12 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
                   {visible.map((f) => {
                     const fi = g.facts.indexOf(f);
                     return (
-                      <div key={f.id} className="ao-mem-fact">
-                        <div className="ao-key">
+                      <div
+                        key={f.id}
+                        className="group/fact grid gap-[12px] items-center px-[14px] py-[10px] border-t border-[var(--ao-line-0)] first:border-t-0"
+                        style={{ gridTemplateColumns: "180px 1fr auto" }}
+                      >
+                        <div className="font-mono text-[12.5px] text-ao-fg-2 whitespace-nowrap overflow-hidden text-ellipsis">
                           <input
                             value={f.k}
                             placeholder="key"
@@ -210,19 +220,20 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
                             className="bg-transparent border-0 outline-none w-full text-[var(--ao-fg-2)] font-[var(--ao-font-mono)] text-[12.5px]"
                           />
                         </div>
-                        <div className="ao-val">
+                        <div className="text-ao-fg-0 text-[13.5px]">
                           <input
                             value={f.v}
                             placeholder="value"
                             onChange={(e) => updateFact(gi, fi, { v: e.target.value })}
+                            className="bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px] py-[4px] focus:border-b focus:border-[var(--ao-accent-line)]"
                           />
                         </div>
-                        <div className="ao-actions">
+                        <div className="flex gap-[4px] opacity-0 group-hover/fact:opacity-100 transition-opacity duration-[140ms]">
                           <button
                             type="button"
                             aria-label="Delete"
-                            className="ao-danger"
                             onClick={() => removeFact(gi, fi)}
+                            className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-[var(--ao-fg-3)] hover:bg-ao-bg-3 hover:text-ao-bad"
                           >
                             <AoTrash size={13} />
                           </button>
@@ -230,7 +241,11 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
                       </div>
                     );
                   })}
-                  <button type="button" className="ao-mem-add-row" onClick={() => addFact(gi)}>
+                  <button
+                    type="button"
+                    className="flex items-center gap-[8px] px-[14px] py-[10px] border-t border-dashed border-[var(--ao-line-0)] text-ao-fg-2 text-[13px] font-mono w-full hover:bg-ao-bg-3 hover:text-ao-fg-0"
+                    onClick={() => addFact(gi)}
+                  >
                     <AoPlus size={13} /> add fact to {g.key}
                   </button>
                 </div>
@@ -242,16 +257,18 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
 
       {/* Save bar */}
       {dirty && (
-        <div className="ao-save-bar">
-          <span className="ao-dirty"><span className="ao-led" /> Unsaved changes</span>
-          <span className="ao-hint ao-mono ao-tiny">~/.claude/agents/{agentId}.memory.yaml</span>
-          <div className="ao-right">
-            <button type="button" className="ao-btn ao-ghost" onClick={handleDiscard}>
+        <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[14px] bg-[linear-gradient(180deg,transparent,var(--ao-bg-1)_30%)] border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0">
+          <span className="inline-flex items-center gap-2 font-mono text-[12px] text-[var(--ao-warn)]">
+            <span className="w-[6px] h-[6px] rounded-full bg-[var(--ao-warn)] shadow-[0_0_8px_var(--ao-warn)] animate-[ao-pulse_1.6s_infinite]" /> Unsaved changes
+          </span>
+          <span className="text-ao-fg-2 font-mono text-[11.5px]">~/.claude/agents/{agentId}.memory.yaml</span>
+          <div className="ml-auto flex gap-2">
+            <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-transparent border-transparent text-ao-fg-1 hover:bg-ao-bg-3 hover:text-ao-fg-0 disabled:opacity-50" onClick={handleDiscard}>
               Discard
             </button>
             <button
               type="button"
-              className="ao-btn ao-primary"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-[var(--ao-accent)] border border-transparent text-white hover:bg-[color-mix(in_oklab,var(--ao-accent)_90%,white)] disabled:opacity-50"
               onClick={handleSave}
               disabled={writeMem.isPending}
             >

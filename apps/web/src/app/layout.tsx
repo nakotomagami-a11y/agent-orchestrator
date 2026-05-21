@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import { Ubuntu, Ubuntu_Sans_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { Providers } from "./providers";
-import "./globals.css"; 
+import "./globals.css";
 
-const ubuntu = Ubuntu({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
+const ubuntu = localFont({
+  src: "../fonts/Ubuntu.ttf",
   variable: "--font-sans",
   display: "swap",
 });
 
-const ubuntuMono = Ubuntu_Sans_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const ubuntuMono = localFont({
+  src: "../fonts/UbuntuSansMono.ttf",
   variable: "--font-mono",
   display: "swap",
 });

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { RunPhase, UsageMeter } from "../utils/thread-types";
 
@@ -47,34 +48,34 @@ export function ChatHead({ agent, phase, usage, onBranch, onNew, onEdit }: ChatH
           {usage.tokensIn.toLocaleString()}↓ {usage.tokensOut.toLocaleString()}↑ · $
           {usage.cost.toFixed(4)}
         </span>
-        <button
-          type="button"
-          className="btn sm ghost"
+        <Button
+          variant="ghost"
+          size="sm"
           title={t("chat_head.branch_title")}
           onClick={onBranch}
           disabled={!onBranch}
         >
           <Icon name="branch" /> {t("chat_head.branch_button")}
-        </button>
-        <button
-          type="button"
-          className="btn sm ghost"
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           title={t("chat_head.new_title")}
           onClick={onNew}
           disabled={!onNew}
         >
           <Icon name="plus" /> {t("chat_head.new_button")}
-        </button>
-        <button
-          type="button"
-          className="btn sm ghost"
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           title={t("chat_head.edit_title")}
           onClick={onEdit}
           disabled={!onEdit}
           aria-label={t("chat_head.edit_aria")}
         >
           <Icon name="edit" />
-        </button>
+        </Button>
       </div>
     </div>
   );

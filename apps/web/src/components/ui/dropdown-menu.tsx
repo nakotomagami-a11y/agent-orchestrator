@@ -65,7 +65,7 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end" }: Dropd
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((v) => !v)}
-        className="tb-btn"
+        className="h-[24px] px-[10px] inline-flex items-center gap-[6px] bg-transparent border border-transparent rounded-sm text-txt-2 font-[inherit] text-[12.5px] cursor-pointer hover:bg-bg-2 hover:border-line"
       >
         {trigger}
       </button>
@@ -90,7 +90,10 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end" }: Dropd
                 setOpen(false);
               }}
               onMouseEnter={() => setActiveIndex(i)}
-              className={cn("nav-item w-full", i === activeIndex && "on")}
+              className={cn(
+              "flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full",
+              i === activeIndex && "bg-acc text-[var(--acc-ink)] shadow-[0_1px_0_rgba(0,0,0,0.06),0_2px_6px_rgba(233,84,32,0.30)]"
+            )}
               style={{ color: item.destructive ? "var(--error)" : undefined }}
             >
               {item.label}

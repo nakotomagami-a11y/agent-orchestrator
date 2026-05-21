@@ -4,6 +4,7 @@ import Link from "next/link";
 import { match } from "ts-pattern";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useCompareStore } from "@/lib/compare-store";
 import type { PersistedRun } from "@agent-office/shared/types";
@@ -52,15 +53,16 @@ export function RunRow({ run }: RunRowProps) {
 
       {/* Fork button — outside the link so click doesn't navigate */}
       <div className="pr-3 shrink-0">
-        <button
-          type="button"
-          className="btn sm ghost run-row-fork opacity-0 transition-opacity duration-[120ms]"
+        <Button
+          variant="ghost"
+          size="sm"
+          className="run-row-fork opacity-0 transition-opacity duration-[120ms]"
           title="Fork run"
           aria-label={`Fork run ${run.id}`}
           onClick={() => openCompare(run.id)}
         >
           <Icon name="branch" />
-        </button>
+        </Button>
       </div>
     </div>
   );

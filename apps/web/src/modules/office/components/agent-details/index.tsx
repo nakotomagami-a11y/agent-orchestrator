@@ -121,25 +121,25 @@ export function AgentDetailsModal() {
           onClick={(e) => e.stopPropagation()}
         >
           {/* ── Tab bar ── */}
-          <div className="ao-tabbar" role="tablist">
+          <div className="flex items-stretch px-2 border-b border-ao-line-1 bg-gradient-to-b from-white/[0.02] to-transparent h-[var(--ao-tab-h)] shrink-0 relative" role="tablist">
             {TABS.map((t) => (
               <button
                 key={t.id}
                 role="tab"
                 aria-selected={tab === t.id}
-                className={`ao-tab${tab === t.id ? " ao-active" : ""}`}
+                className={`ao-tab relative inline-flex items-center gap-2 px-[18px] h-full text-[13px] font-medium tracking-[0.01em] whitespace-nowrap transition-colors duration-[120ms] ${tab === t.id ? "ao-active text-ao-fg-0 font-semibold" : "text-ao-fg-2 hover:text-ao-fg-1"}`}
                 onClick={() => changeTab(t.id)}
                 type="button"
               >
                 <span>{t.label}</span>
                 {t.id === "history" && runCount > 0 && (
-                  <span className="ao-pip">{runCount}</span>
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-[6px] rounded-[9px] bg-ao-bg-3 text-ao-fg-1 text-[11px] font-semibold border border-ao-line-1">{runCount}</span>
                 )}
               </button>
             ))}
-            <div className="ao-spacer" />
+            <div className="flex-1" />
             <button
-              className="ao-close"
+              className="inline-flex items-center justify-center w-8 h-8 my-auto mr-1 rounded-lg text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-bg-3"
               aria-label="Close"
               onClick={closeInspector}
               type="button"
@@ -176,49 +176,53 @@ export function AgentDetailsModal() {
 
           <div className="ao-content-col">
           {/* ── Agent header ── */}
-          <div className="ao-agent-header">
-            <div className="ao-avatar">
+          <div className="flex items-center gap-[14px] px-6 py-4 border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
+            <div className="relative w-[40px] h-[40px] rounded-[10px] bg-ao-bg-3 border border-ao-line-1 overflow-hidden shrink-0 grid place-items-center [image-rendering:pixelated]">
               <span className="text-[22px]">{agent.short[0]?.toUpperCase() ?? "?"}</span>
-              <span className={`ao-status-dot ${statusDotClass}`} />
+              <span className={`absolute right-[-2px] bottom-[-2px] w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
+                statusDotClass === "ao-working"
+                  ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]"
+                  : "bg-ao-fg-3"
+              }`} />
             </div>
-            <div className="ao-titles">
-              <div className="ao-name">{agent.name}</div>
-              <div className="ao-meta">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <div className="font-bold text-base text-ao-fg-0">{agent.name}</div>
+              <div className="flex items-center gap-2 text-ao-fg-2 font-mono text-[12px]">
                 <span>{agent.id}</span>
-                <span className="ao-dot" />
+                <span className="w-[3px] h-[3px] bg-ao-fg-3 rounded-full" />
                 <span>{agent.defaultModel ?? "default"}</span>
-                <span className="ao-dot" />
+                <span className="w-[3px] h-[3px] bg-ao-fg-3 rounded-full" />
                 <span>effort {agent.defaultEffort ?? "default"}</span>
               </div>
             </div>
-            <div className="ao-right">
+            <div className="ml-auto flex items-center gap-2">
               <span className={`ao-chip-pill ${ledClass}`}>
                 <span className="ao-led" />
                 {effectiveStatus}
               </span>
               {tab === "conversation" && (
                 <>
-                  <span className="ao-cost-chip">
-                    <span className="ao-tok">{(usage.tokensIn + usage.tokensOut).toLocaleString()} tok</span>
-                    <span className="ao-price">${usage.cost.toFixed(4)}</span>
+                  <span className="inline-flex items-center gap-[10px] h-7 px-3 rounded-lg bg-ao-bg-3 border border-ao-line-1 font-mono text-[11.5px] text-ao-fg-1">
+                    <span className="text-ao-fg-2">{(usage.tokensIn + usage.tokensOut).toLocaleString()} tok</span>
+                    <span className="text-ao-fg-0">${usage.cost.toFixed(4)}</span>
                   </span>
                   <button
                     type="button"
-                    className="ao-btn-mini"
+                    className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                     onClick={() => setBranchSignal((n) => n + 1)}
                   >
                     <AoBranch size={13} /> Branch
                   </button>
                   <button
                     type="button"
-                    className="ao-btn-mini"
+                    className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                     onClick={() => setNewThreadSignal((n) => n + 1)}
                   >
                     <AoPlus size={13} /> New
                   </button>
                   <button
                     type="button"
-                    className="ao-btn-mini ao-ghost"
+                    className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-transparent border-transparent text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-3"
                     aria-label="Edit agent"
                     onClick={() => changeTab("settings")}
                   >
@@ -229,7 +233,7 @@ export function AgentDetailsModal() {
               {tab === "configuration" && (
                 <button
                   type="button"
-                  className="ao-btn-mini"
+                  className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                   onClick={() => changeTab("settings")}
                 >
                   <AoPen size={13} /> Edit
@@ -238,7 +242,7 @@ export function AgentDetailsModal() {
               {tab === "memory" && (
                 <button
                   type="button"
-                  className="ao-btn-mini"
+                  className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                   onClick={() => memoryDiscardRef.current?.()}
                 >
                   <AoReset size={13} /> Discard
@@ -247,7 +251,7 @@ export function AgentDetailsModal() {
               {tab === "settings" && (
                 <button
                   type="button"
-                  className="ao-btn-mini"
+                  className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                   onClick={() => settingsResetRef.current?.()}
                 >
                   <AoReset size={13} /> Reset
@@ -257,7 +261,7 @@ export function AgentDetailsModal() {
           </div>
 
           {/* ── Tab content ── */}
-          <div className="ao-modal-body">
+          <div className="ao-modal-body flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-color:var(--ao-bg-4)_transparent] [scrollbar-width:thin] relative flex flex-col">
             {tab === "conversation" && (
               <ChatPanel
                 agent={agent}

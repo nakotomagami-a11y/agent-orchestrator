@@ -29,8 +29,10 @@ export function Titlebar() {
   const toggle = useThemeStore((s) => s.toggle);
   useThemeHydration();
 
+  const dotBg = { close: "bg-[#E95420]", min: "bg-[#FFC107]", max: "bg-[#4CAF50]" } as const;
+
   const dotProps = (kind: "close" | "min" | "max") => ({
-    className: `win-dot ${kind}`,
+    className: `${dotBg[kind]} w-[14px] h-[14px] rounded-full inline-flex items-center justify-center text-[9px] leading-none cursor-pointer border border-[rgba(0,0,0,0.08)] [color:rgba(0,0,0,0.5)]`,
     role: "button" as const,
     tabIndex: 0,
     "aria-label": t(`titlebar.win_${kind}`),
@@ -52,26 +54,26 @@ export function Titlebar() {
   // dragging — leaving those wrappers without the attribute is the
   // simplest way to opt them out wholesale.
   return (
-    <div className="titlebar">
-      <div className="tb-left">
-        <div className="win-controls">
+    <div className="grid items-center px-3 border-b border-line select-none [grid-template-columns:1fr_auto_1fr] bg-[linear-gradient(180deg,var(--bg-2),var(--bg-1))] dark:bg-[linear-gradient(180deg,#3a322c,#2A2522)]">
+      <div className="flex items-center gap-2">
+        <div className="flex gap-2">
           <span {...dotProps("close")} />
           <span {...dotProps("min")} />
           <span {...dotProps("max")} />
         </div>
         <ProjectSwitcher />
       </div>
-      <div className="tb-title" data-tauri-drag-region>
+      <div className="font-semibold text-[13px] text-txt-2 flex items-center gap-2 max-[600px]:hidden" data-tauri-drag-region>
         <span
           aria-hidden
           className="inline-block w-4 h-4 rounded-[4px] bg-[linear-gradient(135deg,var(--yaru-orange),var(--yaru-purple))]"
         />
         {t("app.name")} — {t("app.studio_subtitle")}
       </div>
-      <div className="tb-right">
+      <div className="flex items-center gap-2 justify-end">
         <button
           type="button"
-          className="tb-btn"
+          className="h-[24px] px-[10px] inline-flex items-center gap-[6px] bg-transparent border border-transparent rounded-sm text-txt-2 font-[inherit] text-[12.5px] cursor-pointer hover:bg-bg-2 hover:border-line"
           onClick={toggle}
           aria-label={theme === "dark" ? t("titlebar.switch_to_light") : t("titlebar.switch_to_dark")}
         >

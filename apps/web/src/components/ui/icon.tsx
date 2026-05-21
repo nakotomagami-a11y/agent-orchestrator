@@ -499,7 +499,7 @@ export function Icon({
   return (
     <svg
       viewBox={shape.viewBox ?? "0 0 24 24"}
-      className={cn("i", className)}
+      className={cn("w-4 h-4 shrink-0 [flex:0_0_16px]", className)}
       fill={shape.fill}
       stroke={shape.stroke}
       strokeWidth={shape.strokeWidth}

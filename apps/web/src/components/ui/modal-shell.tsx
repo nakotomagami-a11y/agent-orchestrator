@@ -95,14 +95,14 @@ export function ModalShell({
           aria-modal="true"
           aria-label={title}
           onClick={(e) => e.stopPropagation()}
-          className={cn("card w-full flex flex-col max-h-[calc(100vh-40px)] outline-none", className)}
+          className={cn("bg-bg-1 border border-line rounded-[var(--r-lg)] shadow-1 w-full flex flex-col max-h-[calc(100vh-40px)] outline-none", className)}
           style={{
             maxWidth: maxWidth ?? SIZE_PX[size],
           }}
         >
           {title ? (
-            <div className="card-h">
-              <span className="title">{title}</span>
+            <div className="border-b border-line flex items-center gap-[10px] px-4 py-3">
+              <span className="font-bold text-[13px]">{title}</span>
               <button
                 type="button"
                 onClick={onClose}

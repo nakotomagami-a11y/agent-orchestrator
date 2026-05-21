@@ -14,6 +14,7 @@ import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
+import { Button } from "@/components/ui/button";
 import type { OfficeFilter } from "./cards-office";
 import { useMemo } from "react";
 
@@ -100,13 +101,14 @@ export function OfficeView() {
                   className="inline-block shrink-0 w-1.5 h-1.5 rounded-full bg-[var(--error)]"
                 />
                 {t("office.error_filter_banner")}
-                <button
-                  type="button"
-                  className="btn ghost sm ml-auto"
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="ml-auto"
                   onClick={() => setErrorFilter(false)}
                 >
                   {t("office.error_filter_clear")}
-                </button>
+                </Button>
               </div>
             )}
 

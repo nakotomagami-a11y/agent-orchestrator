@@ -80,7 +80,7 @@ export function AgentList() {
   }
 
   return (
-    <div className="tab-pane p-[18px] overflow-auto flex flex-col gap-[14px]">
+    <div className="p-[18px] overflow-auto flex flex-col gap-[14px]">
       <FilterBar
         search={search}
         onSearchChange={setSearch}
@@ -97,7 +97,7 @@ export function AgentList() {
           {t("agent_list.no_matches")}
         </div>
       ) : (
-        <div className="of-grid">
+        <div className="grid [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] max-[1024px]:[grid-template-columns:repeat(2,1fr)] max-[600px]:[grid-template-columns:1fr] gap-[14px]">
           {visible.map((a) => (
             <AgentCard
               key={a.name}
@@ -261,22 +261,22 @@ function AgentCard({
 
   return (
     <div
-      className="of-card"
+      className="of-card bg-bg-2 border border-line flex flex-col gap-[12px] cursor-pointer relative overflow-hidden rounded-[14px] p-4 transition-[background,border-color,transform,box-shadow] duration-[120ms] group hover:bg-bg-3 hover:border-line-2 hover:[transform:translateY(-1px)] hover:[box-shadow:var(--shadow-2)]"
       onClick={onOpen}
       role="button"
       tabIndex={0}
       onKeyDown={e => e.key === "Enter" && onOpen()}
     >
-      <div className="head-row">
-        <div className="av">
+      <div className="grid items-center gap-[12px] [grid-template-columns:48px_1fr_auto]">
+        <div className="bg-bg-3 border border-line grid place-items-center relative overflow-visible w-[48px] h-[48px] rounded-[12px]">
           <AgentAvatar unit={unit} size={42} />
         </div>
-        <div className="name-blk">
-          <div className="name">{agent.name}</div>
-          <div className="slug">{agent.name}</div>
+        <div className="min-w-0">
+          <div className="font-bold text-txt flex items-center gap-[6px] whitespace-nowrap overflow-hidden text-ellipsis text-[15px]">{agent.name}</div>
+          <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11px] mt-[2px]">{agent.name}</div>
         </div>
         <span
-          className="status-chip"
+          className="inline-flex items-center gap-[6px] rounded-full bg-bg-3 border border-line text-txt-3 lowercase shrink-0 px-[9px] py-[4px] font-[var(--font-mono)] text-[10.5px] tracking-[0.04em]"
           style={{
             background: `color-mix(in srgb, ${catColor} 12%, var(--bg-2))`,
             border: `1px solid color-mix(in srgb, ${catColor} 30%, transparent)`,
@@ -287,33 +287,34 @@ function AgentCard({
         </span>
       </div>
 
-      <div className="state-box">
-        <div className="label">about</div>
-        <div className={cn("text", !agent.description && "muted")}>
+      <div className="border border-line bg-bg-1 relative rounded-[10px] p-[10px_12px]">
+        <div className="flex items-center gap-[6px] text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.1em] mb-[4px]">about</div>
+        <div className={cn("text-txt font-[var(--font-mono)] text-[12.5px] leading-[1.5]", !agent.description && "text-txt-3")}>
           {agent.description || t("agent_list.description_empty")}
         </div>
       </div>
 
-      <div className="foot-row">
-        <span className="meta-pill">
-          <span className="d" style={{ background: modelColor }} />
+      <div className="flex items-center gap-[10px] border-t border-line pt-[10px] mt-auto">
+        <span className="inline-flex items-center gap-[5px] bg-bg-3 border border-line text-txt-2 px-[6px] pr-[8px] py-[3px] rounded-[6px] font-[var(--font-mono)] text-[10.5px]">
+          <span className="rounded-full w-[4px] h-[4px]" style={{ background: modelColor }} />
           {agent.defaultModel ?? t("agent_list.model_default")}
         </span>
-        <span className="last inline-flex items-center gap-1">
+        <span className="ml-auto font-[var(--font-mono)] text-[10.5px] text-txt-4 inline-flex items-center gap-1">
           <Icon name="activity" size={10} /> {t("agent_list.uses_count", { count: uses })}
         </span>
       </div>
 
-      <div className="of-card-actions">
+      <div className="of-card-actions absolute flex gap-[3px] border opacity-0 top-[12px] right-[12px] p-[3px] bg-[var(--bg-elev)] border-line-2 rounded-[8px] [box-shadow:var(--shadow-2)] [transform:translateY(-2px)] transition-[opacity,transform] duration-[140ms] z-[2] group-hover:opacity-100 group-hover:[transform:translateY(0)]">
         <button
           type="button"
-          className="primary"
+          className="bg-acc inline-flex items-center font-semibold text-[var(--acc-ink)] px-[10px] py-0 h-[26px] gap-[4px] text-[11.5px] rounded-[5px] hover:bg-[var(--acc-hover)] hover:text-[var(--acc-ink)]"
           onClick={e => { e.stopPropagation(); onOpen(); }}
         >
           <Icon name="send" size={11} /> Open
         </button>
         <button
           type="button"
+          className="grid place-items-center text-txt-3 w-[26px] h-[26px] rounded-[5px] hover:bg-bg-3 hover:text-txt"
           title={t("agent_list.edit_title")}
           aria-label={t("agent_list.edit_aria", { name: agent.name })}
           onClick={e => { e.stopPropagation(); onEdit(); }}

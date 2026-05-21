@@ -16,7 +16,11 @@ export function Tag({
 }: TagProps) {
   return (
     <span
-      className={cn("tag", variant === "skill" && "skill", className)}
+      className={cn(
+        "inline-flex items-center gap-1 bg-bg-2 border border-line rounded-full text-txt-2 px-2 py-0.5 text-[11px] font-mono",
+        variant === "skill" && "bg-acc-faint text-acc border-[rgba(233,84,32,0.2)]",
+        className,
+      )}
       {...rest}
     >
       {children}

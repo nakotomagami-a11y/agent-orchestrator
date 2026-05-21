@@ -351,14 +351,21 @@ export function getRun(id: string): PersistedRun | null {
 }
 
 export function deleteRunsForInstance(projectId: string, instanceId: string): number {
-  const result = getDb().prepare(
-    "DELETE FROM runs WHERE project_id = ? AND instance_id = ?"
-  ).run(projectId, instanceId);
+  const db = getDb();
+  const runIds = (db.prepare("SELECT id FROM runs WHERE project_id = ? AND instance_id = ?").all(projectId, instanceId) as { id: string }[]).map(r => r.id);
+  if (runIds.length === 0) return 0;
+  const placeholders = runIds.map(() => "?").join(",");
+  db.prepare(`DELETE FROM tool_calls WHERE run_id IN (${placeholders})`).run(...runIds);
+  db.prepare(`DELETE FROM messages WHERE run_id IN (${placeholders})`).run(...runIds);
+  const result = db.prepare("DELETE FROM runs WHERE project_id = ? AND instance_id = ?").run(projectId, instanceId);
   return result.changes;
 }
 
 export function deleteRunsByAgent(agentId: string): number {
-  const result = getDb().prepare("DELETE FROM runs WHERE agent_id = ?").run(agentId);
+  const db = getDb();
+  db.prepare("DELETE FROM tool_calls WHERE run_id IN (SELECT id FROM runs WHERE agent_id = ?)").run(agentId);
+  db.prepare("DELETE FROM messages WHERE agent_id = ?").run(agentId);
+  const result = db.prepare("DELETE FROM runs WHERE agent_id = ?").run(agentId);
   return result.changes;
 }
 

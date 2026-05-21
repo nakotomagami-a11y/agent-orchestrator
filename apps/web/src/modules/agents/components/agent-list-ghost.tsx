@@ -14,7 +14,7 @@ export type AgentListGhostProps = {
 export function AgentListGhost({ count = 4 }: AgentListGhostProps) {
   return (
     <div
-      className="tab-pane !p-[18px] overflow-auto !flex !flex-col !gap-3.5"
+      className="p-[18px] overflow-auto flex flex-col gap-3.5"
       aria-busy="true"
       aria-label="Loading agents"
       role="status"
@@ -37,7 +37,7 @@ export function AgentListGhost({ count = 4 }: AgentListGhostProps) {
         {Array.from({ length: count }, (_, i) => (
           <div
             key={i}
-            className="card !p-4 !flex !flex-col !gap-2.5 pointer-events-none"
+            className="bg-bg-1 border border-line rounded-[var(--r-lg)] shadow-1 !p-4 !flex !flex-col !gap-2.5 pointer-events-none"
           >
             {/* Header: avatar + name/category + edit button placeholder */}
             <div className="flex items-center gap-2.5">

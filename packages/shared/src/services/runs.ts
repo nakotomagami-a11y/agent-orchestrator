@@ -465,8 +465,8 @@ function handleStreamLine(run: LiveRun, line: string): void {
       name: "usage",
       data: { runId: run.id, tokensIn: run.tokensIn, tokensOut: run.tokensOut, cost: run.cost },
     });
-    if (evt.is_error && evt.error) {
-      broadcast(run, { name: "error", data: { runId: run.id, message: evt.error } });
+    if (evt.is_error) {
+      broadcast(run, { name: "error", data: { runId: run.id, message: evt.error || "The agent encountered an error" } });
     }
   }
 }

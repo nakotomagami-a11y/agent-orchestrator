@@ -28,3 +28,7 @@ apps/web/src-tauri/gen/
 
 # Claude Code local state (worktrees, hooks)
 .claude/
+
+# Large binaries — Tauri sidecar Node runtime and release archives
+apps/web/src-tauri/binaries/
+*.zip

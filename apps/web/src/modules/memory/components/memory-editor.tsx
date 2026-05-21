@@ -1,6 +1,7 @@
 "use client";
 
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { useMemoryDraft } from "../hooks/use-memory-draft";
 
 export type MemoryEditorProps = {
@@ -43,16 +44,15 @@ export function MemoryEditor({
         >
           {savedLabel}
         </span>
-        <button
-          type="button"
-          className="btn primary"
+        <Button
+          variant="primary"
           disabled={!draft.isDirty || draft.isSaving}
           onClick={() => {
             void draft.save();
           }}
         >
           {draft.isSaving ? savingLabel : saveLabel}
-        </button>
+        </Button>
       </div>
     </div>
   );

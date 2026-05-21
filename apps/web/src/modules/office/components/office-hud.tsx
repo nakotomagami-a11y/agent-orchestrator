@@ -47,15 +47,15 @@ export function OfficeHud({
   );
 
   return (
-    <div className="office-hud">
-      <div className="hud-card">
+    <div className="absolute flex items-center gap-2 pointer-events-none z-[5] top-[14px] left-[18px] right-[18px]">
+      <div className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1">
         <span
           aria-hidden
           className="w-2 h-2 rounded-full bg-[var(--working)] inline-block"
         />{" "}
         <b>{workingCount}</b> {t("office.live_label")}
       </div>
-      <div className="hud-card">
+      <div className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1">
         <span
           aria-hidden
           className="w-2 h-2 rounded-full bg-[var(--idle)] inline-block"
@@ -66,19 +66,19 @@ export function OfficeHud({
         onErrorFilter ? (
           <button
             type="button"
-            className="hud-card cursor-pointer"
+            className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1 cursor-pointer"
             onClick={onErrorFilter}
             title="Show agents needing attention"
           >
             {errorCard}
           </button>
         ) : (
-          <div className="hud-card">{errorCard}</div>
+          <div className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1">{errorCard}</div>
         )
       ) : null}
       <div className="flex-1" />
       {budgetDaily ? (
-        <div className="hud-card">
+        <div className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1">
           {t("office.budget_daily")} <b>${budgetDaily.toFixed(2)}/day</b>
         </div>
       ) : null}

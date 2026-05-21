@@ -42,7 +42,7 @@ export function StatusDot({
 
   return (
     <span
-      className={cn("status-dot", className)}
+      className={cn("inline-flex items-center gap-[5px] text-txt-3 uppercase text-[10.5px] font-mono tracking-[0.04em]", className)}
       style={style}
       title={text}
       aria-label={hideLabel ? text : undefined}

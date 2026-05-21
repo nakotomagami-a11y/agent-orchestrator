@@ -527,16 +527,17 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Canvas tools — top-left: zoom + recenter */}
-      <div className="canvas-tools">
+      <div className="absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
         <button
           type="button"
+          className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
           onClick={() => zoomBy(1 - ZOOM_STEP)}
           aria-label="Zoom out"
         >
           <Icon name="minus" size={11} />
         </button>
         <div
-          className="zoom-readout"
+          className="text-center cursor-pointer px-[8px] py-[2px] text-[rgba(199,191,183,0.9)] font-mono text-[11px] min-w-[40px] hover:text-[#f4efea]"
           onClick={resetCamera}
           title="Reset camera"
           role="button"
@@ -547,14 +548,16 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         </div>
         <button
           type="button"
+          className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
           onClick={() => zoomBy(1 + ZOOM_STEP)}
           aria-label="Zoom in"
         >
           <Icon name="plus" size={11} />
         </button>
-        <div className="sep" />
+        <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
         <button
           type="button"
+          className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
           title="Recenter"
           onClick={resetCamera}
         >
@@ -562,9 +565,9 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         </button>
         {!buildMode && (
           <>
-            <div className="sep" />
+            <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
             <input
-              className="agent-search"
+              className="agent-search bg-transparent border-none outline-none text-[rgba(199,191,183,0.9)] font-mono text-[11px] w-[110px] px-[4px] py-[2px] focus:text-[#f4efea]"
               type="search"
               placeholder="Find agent…"
               value={agentSearch}
@@ -581,18 +584,18 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         const decoCount  = Object.values(decorations).reduce((s, stack) => s + (stack?.length ?? 0), 0);
         const placedCount = grassCount + decoCount;
         return (
-          <div className="canvas-info">
+          <div className="absolute flex z-[10] pointer-events-none bottom-[14px] left-[14px] gap-[14px] px-[12px] py-[8px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] font-mono text-[10.5px] text-[rgba(138,128,121,0.9)] backdrop-blur-[10px]">
             <div className="item">
-              <div className="l">Tile</div>
-              <div className="v">{hoverTile ? `${hoverTile.x}, ${hoverTile.y}` : "—"}</div>
+              <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Tile</div>
+              <div className="text-[rgba(244,239,234,0.9)]">{hoverTile ? `${hoverTile.x}, ${hoverTile.y}` : "—"}</div>
             </div>
             <div className="item">
-              <div className="l">Map</div>
-              <div className="v">{GRID_COLS} × {GRID_ROWS}</div>
+              <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Map</div>
+              <div className="text-[rgba(244,239,234,0.9)]">{GRID_COLS} × {GRID_ROWS}</div>
             </div>
             <div className="item">
-              <div className="l">Placed</div>
-              <div className="v">{placedCount} tiles</div>
+              <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Placed</div>
+              <div className="text-[rgba(244,239,234,0.9)]">{placedCount} tiles</div>
             </div>
           </div>
         );
@@ -600,20 +603,20 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
 
       {/* Build actions bar — bottom-center, build mode only */}
       {buildMode && (
-        <div className="build-actions-bar">
+        <div className="absolute flex items-center gap-[4px] z-[15] pointer-events-auto whitespace-nowrap rounded-full bottom-[14px] left-1/2 [transform:translateX(-50%)] p-[5px] bg-[rgba(26,22,20,0.92)] border border-[rgba(255,240,230,0.14)] shadow-[0_14px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-[12px]">
           <button
             type="button"
-            className="stop"
+            className="inline-flex items-center gap-[7px] rounded-full bg-acc text-white font-semibold px-[16px] py-[8px] text-[12.5px] transition-opacity duration-[120ms] hover:opacity-[0.88]"
             onClick={() => { setBuildMode(false); setPendingChanges(0); }}
           >
             <Icon name="x" size={13} /> Stop building
           </button>
           {projectId && (
             <>
-              <div className="sep" />
+              <div className="shrink-0 w-[1px] h-[20px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
               <button
                 type="button"
-                className={`map-scope${useCustomMap ? " on" : ""}`}
+                className={`inline-flex items-center gap-[5px] rounded-full bg-transparent cursor-pointer font-medium text-[12px] px-[11px] py-[5px] border border-[rgba(255,240,230,0.15)] text-[rgba(255,240,230,0.55)] transition-[background,color,border-color] duration-100 hover:bg-[rgba(255,240,230,0.07)] hover:text-[rgba(255,240,230,0.8)]${useCustomMap ? " !border-[rgba(233,84,32,0.5)] !bg-[rgba(233,84,32,0.12)] !text-[#e95420]" : ""}`}
                 title={
                   useCustomMap
                     ? "Switch back to the shared map layout"
@@ -626,13 +629,13 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
               </button>
             </>
           )}
-          <div className="sep" />
+          <div className="shrink-0 w-[1px] h-[20px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
           <button
             type="button"
-            className="save"
+            className="inline-flex items-center gap-[6px] rounded-full font-medium text-[12px] px-[14px] py-[7px] bg-[rgba(255,240,230,0.06)] border border-[rgba(255,240,230,0.10)] text-[rgba(244,239,234,0.9)] transition-[background] duration-100 hover:bg-[rgba(255,240,230,0.10)]"
             onClick={() => { setBuildMode(false); setPendingChanges(0); }}
           >
-            {pendingChanges > 0 && <span className="led" />}
+            {pendingChanges > 0 && <span className="rounded-full shrink-0 w-[6px] h-[6px] bg-[#e6b35a] shadow-[0_0_6px_#e6b35a]" />}
             <Icon name="check" size={13} />
             Save{pendingChanges > 0 ? ` · ${pendingChanges} changes` : ""}
           </button>

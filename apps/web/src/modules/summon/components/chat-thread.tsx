@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 import { MessageBubble, ToolGroupRow } from "./message-bubble";
 import { LiveStatus, type ChatPhase } from "./live-status";
 import type { ThreadItem } from "../utils/thread-types";
@@ -266,9 +267,9 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
         <>
           {hiddenConversationalCount > 0 ? (
             <div className="max-w-[760px] mx-auto mb-3 px-2 flex justify-center">
-              <button
-                type="button"
-                className="btn sm ghost"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={loadEarlier}
                 aria-label={t("load_earlier_aria", { count: hiddenConversationalCount })}
               >
@@ -276,13 +277,16 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                   <Icon name="chevron-down" size={12} />
                 </span>
                 {t("load_earlier", { count: hiddenConversationalCount })}
-              </button>
+              </Button>
             </div>
           ) : null}
           <div className="chat-thread">
             {rows.map((row, idx) => {
               if (row.kind === "single") {
                 const isQuestion = questionIds.has(row.item.id);
+                const lastYouText = row.item.kind === "system-error" && onSubmit
+                  ? (items.slice(0, items.indexOf(row.item)).reverse().find(it => it.kind === "you") as { kind: "you"; text: string } | undefined)?.text
+                  : undefined;
                 return (
                   <MessageBubble
                     key={row.item.id}
@@ -291,6 +295,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                     isQuestion={isQuestion}
                     onReply={isQuestion && onSubmit ? onSubmit : undefined}
                     onRerun={row.item.kind === "you" && onSubmit ? onSubmit : undefined}
+                    onRetry={lastYouText ? () => onSubmit!(lastYouText) : undefined}
                   />
                 );
               }
@@ -307,20 +312,18 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
             })}
           </div>
           {queuedMessage ? (
-            <div className="ao-msg ao-user ao-msg-queued">
-              <div className="ao-av ao-you" aria-hidden>P</div>
+            <div className="flex flex-row-reverse self-end max-w-[80%] gap-[12px] relative opacity-[0.55]">
+              <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
               <div className="flex flex-col items-end gap-[6px]">
-                <div className="ao-bubble ao-bubble-queued">{queuedMessage}</div>
-                <div className="ao-queued-row">
-                  <span className="ao-queued-pill">queued</span>
+                <div className="bg-ao-bg-3 border border-dashed border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0">{queuedMessage}</div>
+                <div className="flex items-center gap-[6px]">
+                  <span className="font-mono text-[10px] tracking-[0.06em] uppercase text-ao-fg-3 bg-ao-bg-3 border border-ao-line-1 rounded-full px-[7px] py-[1px]">queued</span>
                   <button
                     type="button"
-                    className="ao-queued-cancel"
+                    className="w-4 h-4 rounded-full bg-transparent border border-ao-line-1 text-ao-fg-3 text-[12px] leading-none cursor-pointer grid place-items-center p-0 hover:bg-ao-bg-3 hover:text-ao-fg-1"
                     onClick={onCancelQueue}
                     aria-label="Cancel queued message"
-                  >
-                    ×
-                  </button>
+                  >×</button>
                 </div>
               </div>
             </div>
@@ -328,7 +331,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
           <div className="max-w-[760px] mx-auto px-2 pb-4 flex items-center gap-3">
             <LiveStatus phase={phase} hint={phaseHint} />
             {phaseStats && phase !== "idle" && phase !== "done" && phase !== "aborted" && (
-              <span className="ao-phase-stats">{phaseStats}</span>
+              <span className="font-mono text-[11.5px] text-ao-fg-3 whitespace-nowrap shrink-0">{phaseStats}</span>
             )}
           </div>
           {/* Sentinel for the stick-to-bottom scroll anchor. Lives at the
@@ -340,10 +343,11 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
               <button
                 type="button"
                 className="chat-jump-latest"
+                data-new={hasNewBelow}
                 onClick={jumpToBottom}
                 aria-label={t("jump_to_latest_aria")}
               >
-                <Icon name="chevron-down" size={12} />
+                <Icon name="chevron-down" size={14} />
                 {hasNewBelow ? t("jump_to_latest") : t("scroll_to_bottom")}
               </button>
             </div>

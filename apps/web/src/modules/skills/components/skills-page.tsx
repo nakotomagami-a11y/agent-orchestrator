@@ -8,6 +8,7 @@ import { TextInput } from "@/components/ui/text-input";
 import { Tag } from "@/components/ui/tag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useInstallSkill, useRegistry, useUninstallSkill } from "../hooks/use-skills";
 import { filterRegistry, type RegistryFilter } from "../utils/filter-registry";
@@ -25,7 +26,7 @@ export function SkillsPage() {
   const installedCount = (registryQ.data ?? []).filter((s) => s.installed).length;
 
   return (
-    <div className="tab-pane flex flex-col gap-[14px]">
+    <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
       <Card>
         <CardHeader
           title={t("skills.title")}
@@ -108,13 +109,13 @@ function SkillCard({
             {skill.source}@{skill.ref}
           </span>
           {skill.installed ? (
-            <button type="button" className="btn sm" onClick={onUninstall} disabled={busy}>
+            <Button size="sm" onClick={onUninstall} disabled={busy}>
               {t("skills.remove_button")}
-            </button>
+            </Button>
           ) : (
-            <button type="button" className="btn sm primary" onClick={onInstall} disabled={busy}>
+            <Button size="sm" variant="primary" onClick={onInstall} disabled={busy}>
               {t("skills.install_button")}
-            </button>
+            </Button>
           )}
         </div>
       </div>

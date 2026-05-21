@@ -18,7 +18,7 @@ export function RunDetail({ runId }: RunDetailProps) {
 
   if (isLoading) {
     return (
-      <div className="tab-pane">
+      <div className="overflow-auto py-[18px] px-6">
         <Skeleton width={220} height={20} />
         <div className="h-4" />
         <Skeleton width="100%" height={300} />
@@ -27,7 +27,7 @@ export function RunDetail({ runId }: RunDetailProps) {
   }
   if (!run) {
     return (
-      <div className="tab-pane">
+      <div className="overflow-auto py-[18px] px-6">
         <p className="text-txt-3">{t("errors.not_found")}</p>
       </div>
     );
@@ -40,7 +40,7 @@ export function RunDetail({ runId }: RunDetailProps) {
     .exhaustive();
 
   return (
-    <div className="tab-pane flex flex-col gap-[14px]">
+    <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
       <Card>
         <CardHeader
           title={run.agentName}

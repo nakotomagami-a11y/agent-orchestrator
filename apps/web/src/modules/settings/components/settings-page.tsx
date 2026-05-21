@@ -8,6 +8,7 @@ import { TextInput } from "@/components/ui/text-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
+import { Button } from "@/components/ui/button";
 import { useScanProjects, useSettings, useWriteSettings } from "../hooks/use-settings";
 
 
@@ -46,14 +47,14 @@ export function SettingsPage() {
 
   if (settingsQ.isLoading) {
     return (
-      <div className="tab-pane">
+      <div className="overflow-auto py-[18px] px-6">
         <Skeleton width="100%" height={120} />
       </div>
     );
   }
 
   return (
-    <div className="tab-pane flex flex-col gap-[14px]">
+    <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
       <Card>
         <CardHeader title={t("settings.projects_root_card_title")} sub={t("settings.projects_root_card_sub")} />
         <div className="p-4 flex flex-col gap-3">
@@ -78,9 +79,9 @@ export function SettingsPage() {
                 }}
                 placeholder={t("settings.exclusions_placeholder")}
               />
-              <button type="button" className="btn" onClick={addExclusion}>
+              <Button onClick={addExclusion}>
                 <Icon name="plus" />
-              </button>
+              </Button>
             </div>
             <div className="flex gap-[6px] flex-wrap">
               {excluded.map((e) => (
@@ -105,14 +106,13 @@ export function SettingsPage() {
             {savedAt ? (
               <span className="self-center text-xs text-status-done">{t("common.saved")}</span>
             ) : null}
-            <button
-              type="button"
-              className="btn primary"
+            <Button
+              variant="primary"
               disabled={writeMut.isPending || !root.trim()}
               onClick={onSave}
             >
               {writeMut.isPending ? t("common.saving") : t("common.save")}
-            </button>
+            </Button>
           </div>
         </div>
       </Card>

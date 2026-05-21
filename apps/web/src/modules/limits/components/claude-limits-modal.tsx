@@ -19,15 +19,6 @@ import { useRuns } from "@/modules/runs/hooks/use-runs";
 const fmtUSD = (n: number, dec = 2): string => `$${n.toFixed(dec)}`;
 const fmtTok = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
-function formatResetCountdown(endTs: number): string {
-  const ms = Math.max(0, endTs - Date.now());
-  const days = Math.floor(ms / 86_400_000);
-  const hours = Math.floor((ms % 86_400_000) / 3_600_000);
-  if (days >= 1) return `${days}d ${hours}h`;
-  const minutes = Math.floor((ms % 3_600_000) / 60_000);
-  return `${hours}h ${minutes}m`;
-}
-
 /* ------------------------------------------------------------------ */
 /* Plan config                                                          */
 /* ------------------------------------------------------------------ */
@@ -70,148 +61,6 @@ function LimHeader({ onClose }: { onClose: () => void }) {
         <div className="sub">spend caps, plan, and per-model breakdown · workspace local</div>
       </div>
       <button className="close" aria-label="Close" onClick={onClose}>×</button>
-    </div>
-  );
-}
-
-function Gauge({ pct, status }: { pct: number; status: "ok" | "warn" | "bad" }) {
-  const r = 56;
-  const circumference = 2 * Math.PI * r;
-  const dash = Math.max(0, Math.min(1, pct)) * circumference;
-  const color =
-    status === "bad"  ? "var(--ao-bad)"  :
-    status === "warn" ? "var(--ao-warn)" :
-    "var(--ao-accent)";
-  const glowColor =
-    status === "bad"  ? "var(--ao-bad)"  :
-    status === "warn" ? "var(--ao-warn)" :
-    "var(--ao-accent-soft)";
-  return (
-    <div className="gauge">
-      <svg viewBox="0 0 140 140" aria-hidden="true">
-        <circle cx={70} cy={70} r={r} fill="none" stroke="var(--ao-bg-3)" strokeWidth={10} />
-        <circle
-          cx={70} cy={70} r={r} fill="none"
-          stroke={color} strokeWidth={10}
-          strokeLinecap="round"
-          strokeDasharray={`${dash} ${circumference}`}
-          className="origin-[70px_70px] -rotate-90"
-          style={{ filter: `drop-shadow(0 0 6px ${glowColor})` }}
-        />
-      </svg>
-      <div className="label">
-        <div className="pct">{Math.round(pct * 100)}%</div>
-        <div className="lbl">used</div>
-      </div>
-    </div>
-  );
-}
-
-function BudgetHero({
-  spentPeriod,
-  spentToday,
-  quotaUsd,
-  period,
-  forecast,
-  resetIn,
-}: {
-  spentPeriod: number;
-  spentToday: number;
-  quotaUsd: number;
-  period: LimitsPeriod;
-  forecast: number;
-  resetIn: string;
-}) {
-  const tracked = quotaUsd > 0;
-  const pct = tracked ? spentPeriod / quotaUsd : 0;
-  const status: "ok" | "warn" | "bad" = pct >= 1 ? "bad" : pct >= 0.8 ? "warn" : "ok";
-  const forecastPct = tracked ? forecast / quotaUsd : 0;
-
-  const periodLabel =
-    period === "daily" ? "Today" :
-    period === "month" ? "This month" :
-    "This week";
-
-  // Burn rate: today's spend as a daily rate
-  const burnRate = spentToday;
-
-  const forecastDelta = tracked ? forecast - quotaUsd : 0;
-
-  return (
-    <div className="budget-hero">
-      <div className="left">
-        <div className="kicker">
-          <span className="pulse" aria-hidden="true" />
-          {periodLabel}
-          <span className="text-[var(--ao-fg-3)] ml-1">· resets in {resetIn}</span>
-        </div>
-
-        <div className="big">
-          {fmtUSD(spentPeriod)}
-          {tracked ? (
-            <span className="cap">/ {fmtUSD(quotaUsd, 0)} cap</span>
-          ) : (
-            <span className="untracked">no cap · track-only</span>
-          )}
-        </div>
-
-        {tracked && (
-          <div className="progress" role="progressbar" aria-valuenow={Math.round(pct * 100)} aria-valuemin={0} aria-valuemax={100}>
-            <div
-              className={`fill${status === "ok" ? "" : ` ${status}`}`}
-              style={{ width: `${Math.min(100, pct * 100)}%` }}
-            />
-            {forecastPct > 0 && forecastPct < 1.02 && forecastPct > pct && (
-              <div
-                className="marker"
-                title="Forecast"
-                style={{ left: `${Math.min(98, forecastPct * 100)}%` }}
-              />
-            )}
-          </div>
-        )}
-
-        <div className="stats-row">
-          <div className="item">
-            <span className="l">Today</span>
-            <span className="v">{fmtUSD(spentToday)}</span>
-          </div>
-          <div className="item">
-            <span className="l">Burn rate</span>
-            <span className="v">
-              {fmtUSD(burnRate)}
-              <span className="muted text-[10px] ml-1">/day</span>
-            </span>
-          </div>
-          <div className="item">
-            <span className="l">Forecast end</span>
-            <span className="v">
-              {fmtUSD(forecast)}
-              {tracked && (
-                <span className={`delta${forecastDelta > 0 ? " bad" : ""}`}>
-                  {forecastDelta > 0 ? "↑" : "↓"} {fmtUSD(Math.abs(forecastDelta))}
-                </span>
-              )}
-            </span>
-          </div>
-          <div className="item">
-            <span className="l">Status</span>
-            <span className="v">
-              {!tracked ? (
-                <span className="badge neutral">tracking</span>
-              ) : status === "ok" ? (
-                <span className="badge ok">on track</span>
-              ) : status === "warn" ? (
-                <span className="badge warn">approaching</span>
-              ) : (
-                <span className="badge bad">over cap</span>
-              )}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <Gauge pct={tracked ? pct || 0.001 : 0.001} status={status} />
     </div>
   );
 }
@@ -488,7 +337,7 @@ export function ClaudeLimitsModal() {
   };
 
   // ---- Data computation ----
-  const runsQ = useRuns({ limit: 1000 });
+  const runsQ = useRuns({ limit: 500 });
   const allRuns = runsQ.data ?? [];
 
   const start = periodStart(localPeriod);
@@ -497,19 +346,6 @@ export function ClaudeLimitsModal() {
   const inPeriod = useMemo(
     () => allRuns.filter((r) => r.ts >= start && r.ts < end),
     [allRuns, start, end],
-  );
-
-  const spentPeriod = inPeriod.reduce((s, r) => s + (r.cost || 0), 0);
-
-  const todayStart = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }, []);
-
-  const spentToday = useMemo(
-    () => allRuns.filter((r) => r.ts >= todayStart).reduce((s, r) => s + (r.cost || 0), 0),
-    [allRuns, todayStart],
   );
 
   // Last 14 days bars
@@ -564,15 +400,6 @@ export function ClaudeLimitsModal() {
     return { agentRows: rows, totalAgentCost: total };
   }, [inPeriod]);
 
-  // Forecast (linear projection to end of period)
-  const forecast = useMemo(() => {
-    const periodMs  = end - start;
-    const elapsedMs = Math.max(1, Date.now() - start);
-    return spentPeriod * (periodMs / elapsedMs);
-  }, [spentPeriod, start, end]);
-
-  const resetIn = formatResetCountdown(end);
-
   return (
     <ModalShell
       open={open}
@@ -587,15 +414,23 @@ export function ClaudeLimitsModal() {
 
           {/* Body */}
           <div className="limits-body">
-            {/* Budget hero */}
-            <BudgetHero
-              spentPeriod={spentPeriod}
-              spentToday={spentToday}
-              quotaUsd={localQuota}
-              period={localPeriod}
-              forecast={forecast}
-              resetIn={resetIn}
-            />
+            {/* By model + top agents */}
+            <div className="lim-two-col">
+              <section className="lim-section">
+                <SectionHead
+                  title="By model"
+                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                />
+                <ByModel modelRows={modelRows} totalCost={totalModelCost} />
+              </section>
+              <section className="lim-section">
+                <SectionHead
+                  title="Top agents"
+                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                />
+                <TopAgents agentRows={agentRows} totalCost={totalAgentCost} />
+              </section>
+            </div>
 
             {/* Plan */}
             <section className="lim-section">
@@ -624,24 +459,6 @@ export function ClaudeLimitsModal() {
               <SectionHead title="Daily spend" sub="last 14 days" />
               <DailyBars last14={last14} />
             </section>
-
-            {/* By model + top agents */}
-            <div className="lim-two-col">
-              <section className="lim-section">
-                <SectionHead
-                  title="By model"
-                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
-                />
-                <ByModel modelRows={modelRows} totalCost={totalModelCost} />
-              </section>
-              <section className="lim-section">
-                <SectionHead
-                  title="Top agents"
-                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
-                />
-                <TopAgents agentRows={agentRows} totalCost={totalAgentCost} />
-              </section>
-            </div>
           </div>
 
           {/* Footer */}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRun, useRuns } from "@/modules/runs/hooks/use-runs";
 import { useCompareStore } from "@/lib/compare-store";
@@ -36,9 +37,9 @@ export function CompareModal() {
       title={t("title")}
       size="lg"
       footer={
-        <button type="button" className="btn" onClick={close}>
+        <Button onClick={close}>
           {t("close")}
-        </button>
+        </Button>
       }
     >
       <div

@@ -11,6 +11,7 @@ import { useAgents } from "@/modules/agents/hooks/use-agents";
 import { categorize } from "@/modules/agents/utils/categorize";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useAddInstance, useProject, useProjects } from "../hooks/use-projects";
+import { Button } from "@/components/ui/button";
 
 export type AddAgentModalProps = {
   open: boolean;
@@ -85,8 +86,8 @@ export function AddAgentModal({ open, projectId, onClose, onProjectChange }: Add
   if (!open) return null;
 
   const content = (
-    <div className="aa-backdrop" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
-      <div className="aa-modal" role="dialog" aria-modal="true">
+    <div className="aa-backdrop fixed inset-0 flex items-center justify-center p-[24px] bg-[rgba(8,6,5,0.72)] z-[200]" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className="relative bg-bg-1 border border-line flex flex-col overflow-hidden [width:min(820px,100%)] max-h-[calc(100vh-48px)] rounded-[16px] [box-shadow:0_32px_64px_-12px_rgba(0,0,0,0.7)] z-[1]" role="dialog" aria-modal="true">
         {targetId ? (
           <AgentPickerStep
             projectId={targetId}
@@ -115,25 +116,25 @@ function ProjectPickerStep({ onPick, onClose }: { onPick: (id: string) => void; 
 
   return (
     <>
-      <div className="aa-head">
-        <div className="crest"><Icon name="folder" size={15} /></div>
-        <div className="titles">
-          <div className="title">Choose a project</div>
-          <div className="sub">Select which project to add agents to</div>
+      <div className="flex items-center border-b border-line shrink-0 px-[22px] py-[18px] gap-[12px]">
+        <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-[34px] h-[34px] rounded-[9px] border border-[var(--acc-tint)]"><Icon name="folder" size={15} /></div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-txt text-[16px]">Choose a project</div>
+          <div className="text-txt-3 flex items-center font-[var(--font-mono)] text-[11.5px] mt-[2px] gap-[6px]">Select which project to add agents to</div>
         </div>
-        <button type="button" className="close" onClick={onClose} aria-label="Close">
+        <button type="button" className="grid place-items-center text-txt-3 bg-transparent border-none cursor-pointer shrink-0 w-[32px] h-[32px] rounded-[8px] hover:bg-bg-3 hover:text-txt" onClick={onClose} aria-label="Close">
           <Icon name="x" size={16} />
         </button>
       </div>
-      <div className="aa-body px-[22px] py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto px-[22px] py-4">
         {projectsQ.isLoading ? (
           <Skeleton width="100%" height={120} />
         ) : projects.length === 0 ? (
           <div className="p-6 text-center text-txt-3 text-[13px]">
             <p className="mb-3">No projects configured yet.</p>
-            <Link href={PAGE_ROUTES.settings} className="btn primary" onClick={onClose}>
+            <Button href={PAGE_ROUTES.settings} variant="primary" onClick={onClose}>
               Configure root directory
-            </Link>
+            </Button>
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -257,67 +258,66 @@ function AgentPickerStep({
 
   return (
     <>
-      <div className="aa-head">
-        <div className="crest"><Icon name="plus" size={16} /></div>
-        <div className="titles">
-          <div className="title">Add agent to office</div>
-          <div className="sub">
-            Adding to <span className="b">{projectLabel}</span>
+      <div className="flex items-center border-b border-line shrink-0 px-[22px] py-[18px] gap-[12px]">
+        <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-[34px] h-[34px] rounded-[9px] border border-[var(--acc-tint)]"><Icon name="plus" size={16} /></div>
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-txt text-[16px]">Add agent to office</div>
+          <div className="text-txt-3 flex items-center font-[var(--font-mono)] text-[11.5px] mt-[2px] gap-[6px]">
+            Adding to <span className="text-txt-2 font-semibold">{projectLabel}</span>
             <span className="text-txt-4">·</span>
-            <button type="button" className="switch-proj" onClick={onChangeProject}>Change project</button>
+            <button type="button" className="aa-switch-proj text-acc no-underline cursor-pointer bg-transparent border-none font-[inherit] p-0" onClick={onChangeProject}>Change project</button>
             <span className="text-txt-4">·</span>
             <span>click to stage, summon to commit</span>
           </div>
         </div>
-        <button type="button" className="close" onClick={onClose} aria-label="Close">
+        <button type="button" className="grid place-items-center text-txt-3 bg-transparent border-none cursor-pointer shrink-0 w-[32px] h-[32px] rounded-[8px] hover:bg-bg-3 hover:text-txt" onClick={onClose} aria-label="Close">
           <Icon name="x" size={16} />
         </button>
       </div>
 
-      <div className="aa-toolbar">
-        <div className="search">
+      <div className="flex items-center shrink-0 gap-[10px] px-[22px] pt-[14px] pb-[8px]">
+        <div className="aa-search flex-1 flex items-center bg-bg-2 border border-line text-txt-3 gap-[10px] px-[12px] py-[9px] rounded-[9px] transition-[border-color,box-shadow] duration-[120ms]">
           <Icon name="search" size={13} />
           <input
+            className="flex-1 bg-transparent border-0 outline-none text-txt text-[13px] font-[inherit]"
             autoFocus
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Filter by name, description, or skill…"
           />
         </div>
-        <div className="seg">
-          <button type="button" className={view === "all" ? "active" : ""} onClick={() => setView("all")}>All</button>
-          <button type="button" className={view === "available" ? "active" : ""} onClick={() => setView("available")}>Not in office</button>
+        <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
+          <button type="button" className={`aa-seg-btn text-txt-3 bg-transparent border-none cursor-pointer px-[10px] py-[5px] rounded-[5px] text-[12px] font-[var(--font-mono)] transition-[background,color] duration-[100ms]${view === "all" ? " bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]" : ""}`} onClick={() => setView("all")}>All</button>
+          <button type="button" className={`aa-seg-btn text-txt-3 bg-transparent border-none cursor-pointer px-[10px] py-[5px] rounded-[5px] text-[12px] font-[var(--font-mono)] transition-[background,color] duration-[100ms]${view === "available" ? " bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]" : ""}`} onClick={() => setView("available")}>Not in office</button>
         </div>
       </div>
 
-      <div className="aa-cat-row">
+      <div className="flex flex-wrap shrink-0 gap-[6px] px-[22px] pb-[12px]">
         {categories.map((c) => (
           <button
             key={c.id}
             type="button"
-            className={`aa-cat${catFilter === c.id ? " active" : ""}`}
+            className={`aa-cat inline-flex items-center bg-bg-2 border border-line rounded-full text-txt-3 cursor-pointer gap-[6px] px-[11px] py-[5px] text-[11.5px] font-[inherit] transition-[border-color,color] duration-[100ms] hover:text-txt hover:border-line-2${catFilter === c.id ? " bg-acc-faint text-acc border-[var(--acc-tint)]" : ""}`}
             onClick={() => setCatFilter(c.id)}
           >
-            {c.color && <span className="dot" style={{ background: c.color }} />}
+            {c.color && <span className="rounded-full shrink-0 w-[6px] h-[6px]" style={{ background: c.color }} />}
             {c.label}
-            <span className="pip">{c.count}</span>
+            <span className={`rounded-full font-[var(--font-mono)] text-[10px] px-[5px] py-0${catFilter === c.id ? " text-acc bg-[rgba(255,255,255,0.06)] border border-[var(--acc-tint)]" : " bg-bg-3 border border-line text-txt-2"}`}>{c.count}</span>
           </button>
         ))}
       </div>
 
-      <div className="aa-body">
+      <div className="flex-1 min-h-0 overflow-y-auto px-[22px] py-[4px] pb-[8px]">
         {error && (
-          <div
-            className="mb-[10px] text-status-error text-xs font-mono px-3 py-2 rounded-md bg-[color-mix(in_oklch,var(--error)_12%,transparent)]"
-          >
+          <div className="mb-[10px] text-status-error text-xs font-mono px-3 py-2 rounded-md bg-[color-mix(in_oklch,var(--error)_12%,transparent)]">
             {error}
           </div>
         )}
         {agentsQ.isLoading ? (
           <Skeleton width="100%" height={200} />
         ) : filtered.length === 0 ? (
-          <div className="aa-empty">
-            <div className="glyph"><Icon name="search" size={20} /></div>
+          <div className="text-center text-txt-3 flex flex-col items-center px-[20px] py-[50px]">
+            <div className="grid place-items-center bg-bg-3 border border-line text-txt-4 w-[50px] h-[50px] rounded-[12px] mx-auto mb-[14px]"><Icon name="search" size={20} /></div>
             <div className="text-sm text-txt-2">
               {q ? `No agents match "${q}"` : "No agents in this category"}
             </div>
@@ -326,10 +326,10 @@ function AgentPickerStep({
           <>
             {view === "all" && notInRoster.length > 0 && (
               <>
-                <div className="aa-section-head">
-                  <span className="label">Available</span>
-                  <span className="pip">{notInRoster.length}</span>
-                  <span className="line" />
+                <div className="flex items-center uppercase text-txt-4 gap-[10px] px-[4px] pt-[12px] pb-[8px] font-[var(--font-mono)] text-[10.5px] tracking-[0.1em]">
+                  <span className="text-txt-3 font-semibold">Available</span>
+                  <span className="bg-bg-3 border border-line text-txt-2 rounded-full normal-case font-normal px-[7px] py-[1px] tracking-[0] text-[10px]">{notInRoster.length}</span>
+                  <span className="flex-1 h-[1px] bg-[var(--line)]" />
                 </div>
                 {notInRoster.map((a) => (
                   <AgentRow
@@ -348,10 +348,10 @@ function AgentPickerStep({
             )}
             {view === "all" && inRoster.length > 0 && (
               <>
-                <div className="aa-section-head">
-                  <span className="label">Already in office</span>
-                  <span className="pip">{inRoster.length}</span>
-                  <span className="line" />
+                <div className="flex items-center uppercase text-txt-4 gap-[10px] px-[4px] pt-[12px] pb-[8px] font-[var(--font-mono)] text-[10.5px] tracking-[0.1em]">
+                  <span className="text-txt-3 font-semibold">Already in office</span>
+                  <span className="bg-bg-3 border border-line text-txt-2 rounded-full normal-case font-normal px-[7px] py-[1px] tracking-[0] text-[10px]">{inRoster.length}</span>
+                  <span className="flex-1 h-[1px] bg-[var(--line)]" />
                 </div>
                 {inRoster.map((a) => (
                   <AgentRow
@@ -385,22 +385,22 @@ function AgentPickerStep({
         )}
       </div>
 
-      <div className="aa-foot">
-        <div className="summary">
+      <div className="flex items-center border-t border-line bg-bg-2 shrink-0 gap-[14px] px-[22px] py-[12px]">
+        <div className="flex items-center flex-1 min-w-0 gap-[12px]">
           {stagedEntries.length === 0 ? (
-            <div className="text"><span className="empty">No agents staged yet</span></div>
+            <div className="font-[var(--font-mono)] text-[12px] text-txt-2"><span className="text-txt-4">No agents staged yet</span></div>
           ) : (
             <>
-              <div className="avs">
+              <div className="flex">
                 {stagedEntries.slice(0, 5).map(({ agent }) => (
-                  <div key={agent!.name} className="av" title={agent!.name}>
+                  <div key={agent!.name} className="grid place-items-center bg-bg-3 border border-line overflow-hidden w-[26px] h-[26px] rounded-[7px] -ml-[6px] first:ml-0 [box-shadow:0_0_0_2px_var(--bg-2)]" title={agent!.name}>
                     <AgentAvatar unit={unitForAgent(agent!.name, agent!.unit)} size={22} />
                   </div>
                 ))}
-                {stagedEntries.length > 5 && <div className="more">+{stagedEntries.length - 5}</div>}
+                {stagedEntries.length > 5 && <div className="grid place-items-center bg-bg-1 border border-line text-txt-3 -ml-[6px] [box-shadow:0_0_0_2px_var(--bg-2)] w-[26px] h-[26px] rounded-[7px] font-[var(--font-mono)] text-[11px]">+{stagedEntries.length - 5}</div>}
               </div>
-              <div className="text">
-                <span className="b">{totalStaged}</span> agent{totalStaged !== 1 ? "s" : ""} to summon
+              <div className="font-[var(--font-mono)] text-[12px] text-txt-2">
+                <span className="text-txt font-semibold">{totalStaged}</span> agent{totalStaged !== 1 ? "s" : ""} to summon
                 {totalStaged !== stagedEntries.length && (
                   <span className="text-txt-4"> · {stagedEntries.length} distinct</span>
                 )}
@@ -408,17 +408,17 @@ function AgentPickerStep({
             </>
           )}
         </div>
-        <div className="actions">
-          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+        <div className="flex gap-[8px]">
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <button
             type="button"
-            className={`btn-done${totalStaged === 0 ? " empty" : ""}`}
+            className={`aa-btn-done inline-flex items-center bg-acc text-white font-semibold border-none cursor-pointer gap-[6px] px-[16px] py-[8px] rounded-[8px] text-[13px] font-[inherit]${totalStaged === 0 ? " bg-bg-3 text-txt-3 cursor-default" : ""}`}
             onClick={handleSummon}
             disabled={addMut.isPending}
           >
             <Icon name="check" size={12} />
             {addMut.isPending ? "Adding…" : totalStaged === 0 ? "Done" : `Summon ${totalStaged}`}
-            <span className="kbd">⌘ ↵</span>
+            <span className="inline-block bg-[rgba(255,255,255,0.18)] ml-[4px] font-[var(--font-mono)] text-[9.5px] px-[5px] py-[1px] rounded-[3px]">⌘ ↵</span>
           </button>
         </div>
       </div>
@@ -446,42 +446,45 @@ function AgentRow({
   const unitSel = unitForAgent(name, unit);
 
   return (
-    <div className={`aa-row${added ? " added" : ""}`} style={catStyle(category)}>
-      <div className="av">
+    <div
+      className={`aa-row grid items-center bg-bg-2 border border-line gap-[14px] px-[14px] py-[12px] rounded-[12px] mb-[6px] transition-[background,border-color] duration-[120ms] hover:bg-bg-3 hover:border-line-2${added ? " added" : ""}`}
+      style={{ ...catStyle(category), gridTemplateColumns: "44px minmax(0,1fr) auto" }}
+    >
+      <div className="aa-row-av grid place-items-center bg-bg-3 border border-line relative overflow-hidden shrink-0 w-[44px] h-[44px] rounded-[11px]">
         <AgentAvatar unit={unitSel} size={36} />
       </div>
-      <div className="info">
-        <div className="row1">
-          <span className="name">{name}</span>
+      <div className="min-w-0">
+        <div className="flex items-center flex-wrap gap-[7px]">
+          <span className="font-bold text-txt text-[14.5px]">{name}</span>
           {defaultModel && (
-            <span className="model-tag">
-              <span className="d" style={{ background: modelColor(defaultModel) }} />
+            <span className="inline-flex items-center bg-bg-1 border border-line text-txt-2 gap-[5px] px-[6px] pr-[7px] py-[2px] rounded-[5px] font-[var(--font-mono)] text-[10.5px]">
+              <span className="rounded-full shrink-0 w-[4px] h-[4px]" style={{ background: modelColor(defaultModel) }} />
               {defaultModel.replace("claude-", "").replace(/-\d+(-\d+)?$/, "")}
             </span>
           )}
-          <span className="cat-tag">
-            <span className="dot" />
+          <span className="inline-flex items-center border font-semibold gap-[4px] px-[8px] py-[2px] rounded-[5px] font-[var(--font-mono)] text-[10.5px] tracking-[0.03em]" style={{ background: "var(--cat-bg,var(--bg-3))", borderColor: "var(--cat-border,var(--line))", color: "var(--cat-fg,var(--txt-2))" }}>
+            <span className="rounded-full shrink-0 w-[5px] h-[5px]" style={{ background: "var(--cat-color)" }} />
             {category.toLowerCase()}
           </span>
         </div>
-        {description && <div className="desc">{description}</div>}
+        {description && <div className="text-txt-3 overflow-hidden mt-[4px] text-[12.5px] leading-[1.5] line-clamp-2">{description}</div>}
         {inOffice && (
-          <div className="in-roster">
-            <span className="pip"><Icon name="check" size={9} /> in office</span>
+          <div className="inline-flex items-center text-txt-4 mt-[5px] font-[var(--font-mono)] text-[11px] gap-[6px]">
+            <span className="inline-flex items-center rounded-full bg-[rgba(34,197,94,0.10)] border border-[rgba(34,197,94,0.30)] text-[var(--working)] px-[6px] py-[1px] gap-[3px]"><Icon name="check" size={9} /> in office</span>
             <span>· already summoned {rosterCount}×</span>
           </div>
         )}
       </div>
-      <div className="aa-add-wrap">
+      <div className="flex items-center shrink-0 gap-[4px]">
         <button
           type="button"
-          className={`aa-add${added ? " added" : ""}`}
+          className={`aa-add inline-flex items-center bg-bg-3 border border-line text-txt-2 font-semibold whitespace-nowrap cursor-pointer shrink-0 gap-[6px] px-[14px] py-[8px] rounded-[8px] text-[12.5px] transition-[background,border-color,color] duration-[120ms] font-[inherit] hover:bg-acc hover:text-white hover:border-[var(--acc)]${added ? " added" : ""}`}
           onClick={onAdd}
         >
           {added ? (
             <>
               <Icon name="check" size={12} /> Added
-              <span className="badge">{inOffice ? rosterCount + stagedCount : stagedCount}</span>
+              <span className="rounded-full text-white inline-grid place-items-center bg-[var(--working)] px-[6px] font-[var(--font-mono)] text-[10px] min-w-[18px] h-[18px]">{inOffice ? rosterCount + stagedCount : stagedCount}</span>
             </>
           ) : (
             <><Icon name="plus" size={12} /> Add</>
