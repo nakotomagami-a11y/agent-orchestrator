@@ -322,15 +322,17 @@ function SettingsForm({
           <span className="ml-auto text-ao-fg-2 font-mono text-[11.5px]">avatar shown in the office floor and sidebar</span>
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
+          <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoIdentity size={15} /></div>
+            <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Avatar</div>
+            <span className="ml-auto text-[11.5px] font-mono text-ao-fg-3">{v.unit ? "custom selection" : "auto from name"}</span>
+          </div>
           <div className="p-[var(--ao-pad-card)]">
-            <div className="flex flex-col gap-[6px]">
-              <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Avatar</label>
-              <UnitPicker
-                value={v.unit}
-                onChange={(val) => setV((p) => ({ ...p, unit: val }))}
-                agentName={v.name}
-              />
-            </div>
+            <UnitPicker
+              value={v.unit}
+              onChange={(val) => setV((p) => ({ ...p, unit: val }))}
+              agentName={v.name}
+            />
           </div>
         </div>
       </div>
@@ -345,7 +347,7 @@ function SettingsForm({
           </span>
         </div>
 
-        <div className="bg-ao-bg-4 border border-ao-line-1 rounded-ao-md overflow-hidden">
+        <div className="ao-markdown-editor bg-ao-bg-4 border border-ao-line-1 rounded-ao-md overflow-hidden">
           <div className="flex gap-0.5 p-[6px] bg-black/[0.18] border-b border-[var(--ao-line-0)]">
             <button type="button" className={`inline-flex items-center gap-[6px] px-3 py-[5px] rounded-[6px] font-mono text-[11.5px] ${view === "write" ? "bg-ao-bg-2 text-ao-fg-0" : "text-ao-fg-2"}`} onClick={() => setView("write")}>
               <AoCode size={12} /> Write
@@ -412,30 +414,46 @@ function SettingsForm({
       )}
 
       {/* Save bar */}
-      <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[14px] bg-[linear-gradient(180deg,transparent,var(--ao-bg-1)_30%)] border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0">
+      <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[12px] bg-ao-bg-1 border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0 [box-shadow:0_-1px_0_var(--ao-line-0)]">
         {dirty ? (
-          <span className="inline-flex items-center gap-2 font-mono text-[12px] text-[var(--ao-warn)]">
-            <span className="w-[6px] h-[6px] rounded-full bg-[var(--ao-warn)] shadow-[0_0_8px_var(--ao-warn)] animate-[ao-pulse_1.6s_infinite]" /> Unsaved changes
+          <span className="inline-flex items-center gap-[7px] font-mono text-[12px] text-[var(--ao-warn)]">
+            <span className="w-[6px] h-[6px] rounded-full bg-[var(--ao-warn)] shadow-[0_0_8px_var(--ao-warn)] animate-[ao-pulse_1.6s_infinite] shrink-0" /> Unsaved changes
           </span>
         ) : (
-          <span className="text-[var(--ao-fg-3)] text-xs font-[var(--ao-font-mono)]">No changes</span>
+          <span className="text-[var(--ao-fg-3)] text-[12px] font-[var(--ao-font-mono)]">No changes</span>
         )}
-        <div className="ml-auto flex gap-2">
-          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-transparent border-transparent text-ao-fg-1 hover:bg-ao-bg-3 hover:text-ao-fg-0 disabled:opacity-50" onClick={handleDiscard} disabled={!dirty}>
+        <div className="ml-auto flex items-center gap-[6px]">
+          <button
+            type="button"
+            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium border border-transparent text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0 hover:border-ao-line-1 transition-[background,border-color,color] duration-[120ms] disabled:opacity-40"
+            onClick={handleDiscard}
+            disabled={!dirty}
+          >
             Discard
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-ao-bg-3 border border-[var(--ao-bad-soft)] text-[var(--ao-bad)] hover:bg-ao-bg-4 disabled:opacity-50"
+            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-[var(--ao-bad-soft)] border border-[rgba(217,83,79,0.28)] text-[var(--ao-bad)] hover:bg-[rgba(217,83,79,0.22)] transition-[background] duration-[120ms] disabled:opacity-40"
             onClick={onDelete}
             disabled={deleting}
           >
             <AoTrash size={12} /> Delete
           </button>
-          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-transparent border-transparent text-ao-fg-1 hover:bg-ao-bg-3 hover:text-ao-fg-0 disabled:opacity-50" onClick={handleDiscard} disabled={!dirty}>
+          <div className="w-px h-[18px] bg-ao-line-1 mx-[2px]" />
+          <button
+            type="button"
+            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 hover:bg-ao-bg-4 hover:border-ao-line-2 hover:text-ao-fg-0 transition-[background,border-color,color] duration-[120ms] disabled:opacity-40"
+            onClick={handleDiscard}
+            disabled={!dirty}
+          >
             <AoReset size={12} /> Revert
           </button>
-          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-[var(--ao-accent)] border border-transparent text-white hover:bg-[color-mix(in_oklab,var(--ao-accent)_90%,white)] disabled:opacity-50" onClick={handleSave} disabled={saving || !dirty}>
+          <button
+            type="button"
+            className="inline-flex items-center gap-[6px] px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-semibold bg-[var(--ao-accent)] text-white hover:bg-[color-mix(in_oklab,var(--ao-accent)_90%,white)] transition-[background] duration-[120ms] disabled:opacity-40"
+            onClick={handleSave}
+            disabled={saving || !dirty}
+          >
             <AoCheck size={13} /> Save changes
           </button>
         </div>
