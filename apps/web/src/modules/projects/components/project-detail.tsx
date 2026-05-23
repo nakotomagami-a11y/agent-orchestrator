@@ -14,6 +14,7 @@ import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { CodeEditor } from "@/components/ui/code-editor";
 import { DevServerButton, BuildButton } from "@/modules/office/components/office-toolbar";
 
 function relativeTime(ts: number): string {
@@ -310,48 +311,39 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">{t("project_detail.memory_card_sub", { project: project.meta.name })}</div>
             </div>
           </div>
-          <div className="!p-0">
-            <div className="bg-bg-0 border border-line overflow-hidden" style={{ borderRadius: "var(--r-md)", margin: "14px 18px" }}>
-              <div className="flex items-center border-b border-line bg-bg-2 gap-[8px] px-[10px] py-[7px]">
-                <span className="text-txt-3 bg-bg-1 border border-line font-[var(--font-mono)] text-[10px] px-[7px] py-[1px] rounded-[4px]">markdown</span>
-                <span className="ml-auto text-txt-4 font-[var(--font-mono)] text-[10.5px]">
-                  {memValue.length.toLocaleString()} chars · ~{Math.round(memValue.length / 4)} tokens
+          <div className="px-[18px] pt-[14px] pb-[4px] flex flex-col gap-[10px]">
+            <CodeEditor
+              value={memValue}
+              onChange={(v) => { setMemoryOverride(v); setMemoryDirty(true); }}
+              placeholder={t("project_detail.memory_placeholder")}
+              minHeight={200}
+            />
+            <div className="flex items-center gap-[12px] px-[2px] py-[8px]">
+              {memoryDirty ? (
+                <span className="inline-flex items-center gap-[6px] font-[var(--font-mono)] text-[11px]" style={{ color: "var(--queued)" }}>
+                  <span className="rounded-full w-[5px] h-[5px]" style={{ background: "var(--queued)", boxShadow: "0 0 5px var(--queued)" }} />
+                  unsaved changes
                 </span>
-              </div>
-              <textarea
-                className="w-full bg-transparent border-0 outline-none text-txt min-h-[140px] px-[16px] py-[14px] resize-y font-[var(--font-mono)] text-[12.5px] leading-[1.6] box-border block [&::placeholder]:text-txt-4"
-                value={memValue}
-                onChange={(e) => { setMemoryOverride(e.target.value); setMemoryDirty(true); }}
-                placeholder={t("project_detail.memory_placeholder")}
-                rows={10}
-              />
-              <div className="flex items-center border-t border-line bg-bg-1 gap-[12px] px-[12px] py-[10px]">
-                {memoryDirty ? (
-                  <span className="inline-flex items-center gap-[6px] font-[var(--font-mono)] text-[11px]" style={{ color: "var(--queued)" }}>
-                    <span className="rounded-full w-[5px] h-[5px]" style={{ background: "var(--queued)", boxShadow: "0 0 5px var(--queued)" }} />
-                    unsaved changes
-                  </span>
-                ) : (
-                  <span className="text-[11.5px] text-txt-3 font-mono">
-                    {memorySaving ? "Saving…" : "saved"}
-                  </span>
-                )}
-                <div className="ml-auto flex gap-[6px]">
-                  {memoryDirty && (
-                    <Button variant="ghost" size="sm" onClick={handleDiscardMemory}>
-                      Discard
-                    </Button>
-                  )}
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => void handleSaveMemory()}
-                    disabled={!memoryDirty || memorySaving}
-                  >
-                    <Icon name="check" size={12} />
-                    {t("common.save")}
+              ) : (
+                <span className="text-[11.5px] text-txt-3 font-mono">
+                  {memorySaving ? "Saving…" : "saved"}
+                </span>
+              )}
+              <div className="ml-auto flex gap-[6px]">
+                {memoryDirty && (
+                  <Button variant="ghost" size="sm" onClick={handleDiscardMemory}>
+                    Discard
                   </Button>
-                </div>
+                )}
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => void handleSaveMemory()}
+                  disabled={!memoryDirty || memorySaving}
+                >
+                  <Icon name="check" size={12} />
+                  {t("common.save")}
+                </Button>
               </div>
             </div>
           </div>
@@ -368,7 +360,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           </div>
           <div className="px-[18px] py-[14px]">
             <div className="grid gap-[10px] [grid-template-columns:1fr_1fr] max-[800px]:[grid-template-columns:1fr]">
-              <div className="flex flex-col bg-bg-0 border border-line gap-[10px] px-[16px] py-[14px]" style={{ borderRadius: "var(--r-md)" }}>
+              <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px]" style={{ borderRadius: "var(--r-md)" }}>
                 <div className="flex items-center gap-[10px]">
                   <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="download" size={14} /></div>
                   <div>
@@ -396,7 +388,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                 </div>
               </div>
 
-              <div className="flex flex-col bg-bg-0 border border-line gap-[10px] px-[16px] py-[14px]" style={{ borderRadius: "var(--r-md)" }}>
+              <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px]" style={{ borderRadius: "var(--r-md)" }}>
                 <div className="flex items-center gap-[10px]">
                   <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="upload" size={14} /></div>
                   <div>

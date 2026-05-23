@@ -140,7 +140,7 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
             </div>
           </div>
           <div className="ml-auto flex gap-2 items-center">
-            <span className="ao-badge ao-neutral">YAML</span>
+            <span className="inline-flex items-center gap-[5px] py-[3px] px-[9px] rounded-full text-[11px] font-semibold tracking-[0.06em] uppercase font-mono border bg-[var(--ao-bg-3)] text-[var(--ao-fg-1)] border-[var(--ao-line-1)]">YAML</span>
             <button type="button" className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2" onClick={() => setShowRaw(!showRaw)}>
               <AoCode size={13} /> {showRaw ? "Structured" : "View raw"}
             </button>

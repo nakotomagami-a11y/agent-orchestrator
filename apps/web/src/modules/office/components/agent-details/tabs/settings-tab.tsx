@@ -196,7 +196,7 @@ function SettingsForm({
               <div className="flex flex-col gap-[6px]">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Model</label>
                 <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
-                  <select className="ao-select flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px]" value={v.model} onChange={set("model")}>
+                  <select className="ao-select flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px] appearance-none pr-[30px]" value={v.model} onChange={set("model")}>
                     {MODEL_OPTS.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
                 </div>
@@ -204,7 +204,7 @@ function SettingsForm({
               <div className="flex flex-col gap-[6px]">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Effort</label>
                 <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
-                  <select className="ao-select flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px]" value={v.effort} onChange={set("effort")}>
+                  <select className="ao-select flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px] appearance-none pr-[30px]" value={v.effort} onChange={set("effort")}>
                     {EFFORT_OPTS.map((e) => <option key={e} value={e}>{e}</option>)}
                   </select>
                 </div>
@@ -264,7 +264,7 @@ function SettingsForm({
                   </span>
                 ))}
                 <input
-                  className="ao-add-chip bg-transparent border-0 outline-none flex-1 min-w-[100px] text-ao-fg-0 font-mono text-[12.5px]"
+                  className="bg-transparent border-0 outline-none flex-1 min-w-[100px] text-ao-fg-0 font-mono text-[12.5px] placeholder:text-ao-fg-3"
                   placeholder={skills.length === 0 ? "add a skill - frontend-design, research, …" : "+ add skill"}
                   value={skillInput}
                   onChange={(e) => setSkillInput(e.target.value)}
@@ -287,7 +287,7 @@ function SettingsForm({
                   </span>
                 ))}
                 <input
-                  className="ao-add-chip bg-transparent border-0 outline-none flex-1 min-w-[100px] text-ao-fg-0 font-mono text-[12.5px]"
+                  className="bg-transparent border-0 outline-none flex-1 min-w-[100px] text-ao-fg-0 font-mono text-[12.5px] placeholder:text-ao-fg-3"
                   placeholder="+ add tool"
                   value={toolInput}
                   onChange={(e) => setToolInput(e.target.value)}
@@ -347,7 +347,7 @@ function SettingsForm({
           </span>
         </div>
 
-        <div className="ao-markdown-editor bg-ao-bg-4 border border-ao-line-1 rounded-ao-md overflow-hidden">
+        <div className="ao-markdown-editor bg-ao-bg-4 border border-ao-line-1 rounded-[var(--ao-radius-md)] overflow-hidden">
           <div className="flex gap-0.5 p-[6px] bg-black/[0.18] border-b border-[var(--ao-line-0)]">
             <button type="button" className={`inline-flex items-center gap-[6px] px-3 py-[5px] rounded-[6px] font-mono text-[11.5px] ${view === "write" ? "bg-ao-bg-2 text-ao-fg-0" : "text-ao-fg-2"}`} onClick={() => setView("write")}>
               <AoCode size={12} /> Write
@@ -414,26 +414,26 @@ function SettingsForm({
       )}
 
       {/* Save bar */}
-      <div className="ao-save-bar">
+      <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[14px] bg-[linear-gradient(180deg,transparent,var(--ao-bg-1)_30%)] border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0">
         {dirty ? (
-          <div className="ao-dirty">
-            <span className="ao-led" />
+          <div className="inline-flex items-center gap-2 font-mono text-[12px] text-[var(--ao-warn)]">
+            <span className="w-[6px] h-[6px] rounded-full bg-[var(--ao-warn)] shadow-[0_0_8px_var(--ao-warn)] animate-[ao-pulse_1.6s_infinite]" />
             Unsaved changes
           </div>
         ) : (
-          <span className="ao-hint">No changes</span>
+          <span className="text-ao-fg-3 font-mono text-[11.5px]">No changes</span>
         )}
-        <div className="ao-right">
-          <button type="button" className="ao-btn ao-ghost" onClick={handleDiscard} disabled={!dirty}>
+        <div className="ml-auto flex gap-2">
+          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-transparent border border-transparent text-ao-fg-1 hover:bg-ao-bg-3 hover:text-ao-fg-0 disabled:opacity-50" onClick={handleDiscard} disabled={!dirty}>
             Discard
           </button>
-          <button type="button" className="ao-btn ao-danger" onClick={onDelete} disabled={deleting}>
+          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-[rgba(217,83,79,0.12)] border border-[rgba(217,83,79,0.35)] text-ao-bad hover:bg-[rgba(217,83,79,0.2)] disabled:opacity-50" onClick={onDelete} disabled={deleting}>
             <AoTrash size={12} /> Delete
           </button>
-          <button type="button" className="ao-btn" onClick={handleDiscard} disabled={!dirty}>
+          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-ao-bg-3 border border-ao-line-1 text-ao-fg-0 hover:bg-ao-bg-4 hover:border-ao-line-2 disabled:opacity-50" onClick={handleDiscard} disabled={!dirty}>
             <AoReset size={12} /> Revert
           </button>
-          <button type="button" className="ao-btn ao-primary" onClick={handleSave} disabled={saving || !dirty}>
+          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-ao-accent border border-transparent text-white hover:bg-[color-mix(in_oklab,var(--ao-accent)_90%,white)] disabled:opacity-50" onClick={handleSave} disabled={saving || !dirty}>
             <AoCheck size={13} /> Save changes
           </button>
         </div>

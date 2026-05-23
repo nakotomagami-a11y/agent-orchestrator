@@ -21,7 +21,6 @@ import {
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
-import "@/modules/summon/styles/agent-modal.css";
 
 type Tab = AgentTab;
 
@@ -100,21 +99,20 @@ export function AgentDetailsModal() {
     stream.phase === "streaming";
   const effectiveStatus = isStreamActive ? "working" : agent.status;
 
-  const statusDotClass = effectiveStatus === "working" || effectiveStatus === "thinking" ? "ao-working" : "ao-idle";
-  const ledClass = effectiveStatus === "working" || effectiveStatus === "thinking" ? "ao-working" : "ao-idle";
+  const isWorking = effectiveStatus === "working" || effectiveStatus === "thinking";
 
   const usage = stream.usage;
 
   return (
     <Portal>
       <div
-        className="ao-backdrop fixed inset-0 flex items-center justify-center p-8 z-[100]"
+        className="fixed inset-0 flex items-center justify-center p-8 z-[100] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(43,30,24,0.6),rgba(10,8,7,0.95)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(20,16,14,0.55)] after:pointer-events-none"
         role="presentation"
         onClick={closeInspector}
       >
         <div
           ref={ref}
-          className="ao-modal"
+          className="ao-modal relative w-full max-w-[1080px] h-[calc(100vh-64px)] max-h-[calc(100vh-64px)] bg-[var(--ao-bg-1)] border border-[var(--ao-line-1)] rounded-[var(--ao-radius-xl)] shadow-[var(--ao-shadow-modal)] flex flex-col overflow-hidden z-[1] text-[var(--ao-fg-0)] text-[14px] leading-[1.45] [-webkit-font-smoothing:antialiased]"
           role="dialog"
           aria-modal="true"
           aria-label={`Agent: ${agent.name}`}
@@ -127,13 +125,16 @@ export function AgentDetailsModal() {
                 key={t.id}
                 role="tab"
                 aria-selected={tab === t.id}
-                className={`ao-tab relative inline-flex items-center gap-2 px-[18px] h-full text-[13px] font-medium tracking-[0.01em] whitespace-nowrap transition-colors duration-[120ms] ${tab === t.id ? "ao-active text-ao-fg-0 font-semibold" : "text-ao-fg-2 hover:text-ao-fg-1"}`}
+                className={`relative inline-flex items-center gap-2 px-[18px] h-full text-[13px] font-medium tracking-[0.01em] whitespace-nowrap transition-colors duration-[120ms] ${tab === t.id ? "text-[var(--ao-fg-0)] font-semibold" : "text-[var(--ao-fg-2)] hover:text-[var(--ao-fg-1)]"}`}
                 onClick={() => changeTab(t.id)}
                 type="button"
               >
                 <span>{t.label}</span>
                 {t.id === "history" && runCount > 0 && (
                   <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-[6px] rounded-[9px] bg-ao-bg-3 text-ao-fg-1 text-[11px] font-semibold border border-ao-line-1">{runCount}</span>
+                )}
+                {tab === t.id && (
+                  <span className="absolute left-3 right-3 bottom-[-1px] h-[2px] bg-[var(--ao-accent)] rounded-[2px]" />
                 )}
               </button>
             ))}
@@ -149,10 +150,10 @@ export function AgentDetailsModal() {
           </div>
 
           {/* ── Body row: agent strip + content ── */}
-          <div className="ao-body-row">
+          <div className="flex flex-row flex-1 min-h-0 overflow-hidden">
           {/* Agent switcher strip - only shown when inside a project with multiple agents */}
           {rosterAgents.length > 1 && (
-            <div className="ao-agent-strip">
+            <div className="ao-agent-strip flex flex-col items-center gap-1 py-[10px] w-[52px] shrink-0 border-r border-[var(--ao-line-0)] overflow-y-auto [scrollbar-width:none]">
               {rosterAgents.map((a) => {
                 const inst = rosterInstances.find((r) => r.agentId === a.id);
                 const isActive = a.id === selectedId;
@@ -161,12 +162,12 @@ export function AgentDetailsModal() {
                     key={a.id}
                     type="button"
                     title={a.name}
-                    className={`ao-strip-btn${isActive ? " ao-strip-active" : ""}`}
+                    className={`relative w-[38px] h-[38px] rounded-[10px] border-2 cursor-pointer flex items-center justify-center transition-[background,border-color] duration-[120ms] shrink-0 hover:bg-[var(--ao-bg-2)] ${isActive ? "border-[var(--ao-accent)] bg-[var(--ao-bg-2)]" : "border-transparent bg-transparent"}`}
                     onClick={() => selectAgent(a.id, { tab, instanceId: inst?.instanceId ?? null })}
                   >
                     <AgentAvatar unit={a.unitChoice} size={30} label={a.name} />
                     {a.status === "working" || a.status === "thinking" ? (
-                      <span className="ao-strip-dot ao-working" />
+                      <span className="absolute bottom-[1px] right-[1px] w-2 h-2 rounded-full border-[1.5px] border-[var(--ao-bg-1)] bg-[var(--ao-ok)] animate-[ao-pulse_1.4s_ease-in-out_infinite]" />
                     ) : null}
                   </button>
                 );
@@ -174,15 +175,15 @@ export function AgentDetailsModal() {
             </div>
           )}
 
-          <div className="ao-content-col">
+          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           {/* ── Agent header ── */}
           <div className="flex items-center gap-[14px] px-6 py-4 border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
             <div className="relative w-[40px] h-[40px] rounded-[10px] bg-ao-bg-3 border border-ao-line-1 overflow-hidden shrink-0 grid place-items-center [image-rendering:pixelated]">
               <span className="text-[22px]">{agent.short[0]?.toUpperCase() ?? "?"}</span>
               <span className={`absolute right-[-2px] bottom-[-2px] w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
-                statusDotClass === "ao-working"
+                isWorking
                   ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]"
-                  : "bg-ao-fg-3"
+                  : "bg-[var(--ao-fg-3)]"
               }`} />
             </div>
             <div className="flex flex-col gap-0.5 min-w-0">
@@ -196,8 +197,8 @@ export function AgentDetailsModal() {
               </div>
             </div>
             <div className="ml-auto flex items-center gap-2">
-              <span className={`ao-chip-pill ${ledClass}`}>
-                <span className="ao-led" />
+              <span className="inline-flex items-center gap-[6px] h-[28px] px-3 rounded-[8px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] text-[var(--ao-fg-1)] font-mono text-[11.5px] tracking-[0.02em]">
+                <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${isWorking ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]" : "bg-[var(--ao-fg-3)]"}`} />
                 {effectiveStatus}
               </span>
               {tab === "conversation" && (
@@ -290,8 +291,8 @@ export function AgentDetailsModal() {
               />
             )}
           </div>
-          </div>{/* ao-content-col */}
-          </div>{/* ao-body-row */}
+          </div>{/* content-col */}
+          </div>{/* body-row */}
         </div>
       </div>
     </Portal>

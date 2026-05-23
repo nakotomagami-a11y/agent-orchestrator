@@ -41,7 +41,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
             <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoCpu size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Model &amp; runtime</div>
-            <span className="ml-auto ao-badge ao-ok ao-dot">ready</span>
+            <span className="ml-auto inline-flex items-center gap-[5px] py-[3px] px-[9px] rounded-full text-[11px] font-semibold tracking-[0.06em] uppercase font-mono border bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]"><span className="text-[7px]">●</span>ready</span>
           </div>
           <div className="p-[var(--ao-pad-card)]">
             <KV k="Model" v={agent.defaultModel ?? "default"} mono />
@@ -151,11 +151,11 @@ type PermState = "allow" | "ask" | "deny";
 
 function PermRow({ name, hint, state }: { name: string; hint: string; state: PermState }) {
   const cfg = {
-    allow: { badge: "ao-ok", label: "Allowed", Icon: AoCheck },
-    ask: { badge: "ao-warn", label: "Ask", Icon: AoQuestion },
-    deny: { badge: "ao-bad", label: "Denied", Icon: AoLock },
+    allow: { badgeCls: "bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]", label: "Allowed", Icon: AoCheck },
+    ask: { badgeCls: "bg-[var(--ao-warn-soft)] text-[var(--ao-warn)] border-[rgba(230,179,90,0.25)]", label: "Ask", Icon: AoQuestion },
+    deny: { badgeCls: "bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] border-[rgba(217,83,79,0.25)]", label: "Denied", Icon: AoLock },
   } as const;
-  const { badge, label, Icon } = cfg[state];
+  const { badgeCls, label, Icon } = cfg[state];
   return (
     <div className="flex items-center justify-between px-[var(--ao-pad-card)] py-3 border-t border-[var(--ao-line-0)] first:border-t-0 text-[13.5px]">
       <div className="flex items-center gap-3">
@@ -165,7 +165,7 @@ function PermRow({ name, hint, state }: { name: string; hint: string; state: Per
           <div className="text-ao-fg-2 text-[12px] font-mono mt-0.5">{hint}</div>
         </div>
       </div>
-      <span className={`ao-badge ${badge}`}>{label}</span>
+      <span className={`inline-flex items-center gap-[5px] py-[3px] px-[9px] rounded-full text-[11px] font-semibold tracking-[0.06em] uppercase font-mono border ${badgeCls}`}>{label}</span>
     </div>
   );
 }

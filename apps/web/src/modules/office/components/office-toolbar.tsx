@@ -9,6 +9,7 @@ import { useProject } from "@/modules/projects/hooks/use-projects";
 import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
 import type { OfficeView } from "../hooks/use-office-store";
 import type { DetectedCommand } from "@/app/api/projects/[id]/dev/route";
+import type { ProcessInfo } from "@/app/api/processes/route";
 
 type InstallState = "unknown" | "needed" | "installing" | "done";
 
@@ -22,18 +23,61 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   const [commands, setCommands] = useState<DetectedCommand[]>([]);
   const [states, setStates] = useState<Record<string, RunState>>({});
   const [install, setInstall] = useState<InstallState>("unknown");
+  const [hasPackageJson, setHasPackageJson] = useState(false);
   const [open, setOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
+  // Tracks whether we've already reconciled running processes for this mount
+  const reconciledRef = useRef(false);
 
   useEffect(() => {
     fetch(`/api/projects/${projectId}/dev`)
-      .then((r) => r.json() as Promise<{ hasNodeModules: boolean; commands: DetectedCommand[] }>)
-      .then(({ hasNodeModules, commands: cmds }) => {
-        setInstall(hasNodeModules ? "done" : "needed");
+      .then((r) => r.json() as Promise<{ hasPackageJson: boolean; hasNodeModules: boolean; commands: DetectedCommand[] }>)
+      .then(({ hasPackageJson: hasPkg, hasNodeModules, commands: cmds }) => {
+        setHasPackageJson(hasPkg);
+        // Only offer "Install" when there's actually a package.json to install from
+        setInstall(hasNodeModules ? "done" : hasPkg ? "needed" : "done");
         setCommands(cmds ?? []);
       })
       .catch(() => setInstall("done"));
   }, [projectId]);
+
+  // Reconcile UI state with already-running processes (survives page refresh)
+  useEffect(() => {
+    if (commands.length === 0 || reconciledRef.current) return;
+    reconciledRef.current = true;
+    fetch("/api/processes")
+      .then((r) => r.json() as Promise<ProcessInfo[]>)
+      .then((processes) => {
+        const mine = processes.filter((p) => p.projectId === projectId);
+        if (mine.length === 0) return;
+        setStates((prev) => {
+          const next = { ...prev };
+          for (const proc of mine) {
+            // Skip processes we're already tracking
+            const alreadyTracked = Object.values(next).some(
+              (s) => s.phase === "running" && s.pid === proc.pid
+            );
+            if (alreadyTracked) continue;
+            // Match the running process to the closest command by script name
+            const matched =
+              commands.find((cmd) => {
+                const scriptName = cmd.argv[cmd.argv.length - 1] ?? "";
+                return proc.cmd.includes(scriptName) || proc.cmd.includes(cmd.key);
+              }) ?? commands[0]!;
+            if (matched && (!next[matched.key] || next[matched.key]?.phase === "idle")) {
+              next[matched.key] = {
+                phase: "running",
+                pid: proc.pid,
+                port: proc.port,
+                url: `http://localhost:${proc.port}`,
+              };
+            }
+          }
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, [commands, projectId]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -97,6 +141,11 @@ export function DevServerButton({ projectId }: { projectId: string }) {
 
   const runningCount = Object.values(states).filter((s) => s.phase === "running").length;
   const busyInstall = install === "needed" || install === "installing";
+
+  // No package.json and no detected commands (e.g. non-JS project) — hide entirely
+  if (install !== "unknown" && install !== "installing" && !hasPackageJson && commands.length === 0) {
+    return null;
+  }
 
   // ── Install button ──────────────────────────────────────────────────────────
   const installBtn = install === "needed" ? (

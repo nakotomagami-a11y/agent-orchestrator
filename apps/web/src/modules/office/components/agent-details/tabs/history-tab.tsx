@@ -139,10 +139,10 @@ export function HistoryTab({ agentId }: { agentId: string }) {
           All
         </button>
         <button type="button" className={`inline-flex items-center gap-2 px-[14px] py-[9px] rounded-ao-md border text-[13px] transition-[color,border-color] duration-[120ms] ${filter === "ok" ? "bg-ao-accent-soft border-ao-accent-line text-ao-accent" : "bg-ao-bg-2 border-ao-line-1 text-ao-fg-1 hover:text-ao-fg-0 hover:border-ao-line-2"}`} onClick={() => setFilter("ok")}>
-          <span className="ao-badge ao-ok ao-dot text-[9px] px-[6px] py-px">ok</span>
+          <span className="inline-flex items-center gap-[5px] py-px px-[6px] rounded-full text-[9px] font-semibold tracking-[0.06em] uppercase font-mono border bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]"><span className="text-[7px]">●</span>ok</span>
         </button>
         <button type="button" className={`inline-flex items-center gap-2 px-[14px] py-[9px] rounded-ao-md border text-[13px] transition-[color,border-color] duration-[120ms] ${filter === "bad" ? "bg-ao-accent-soft border-ao-accent-line text-ao-accent" : "bg-ao-bg-2 border-ao-line-1 text-ao-fg-1 hover:text-ao-fg-0 hover:border-ao-line-2"}`} onClick={() => setFilter("bad")}>
-          <span className="ao-badge ao-bad ao-dot text-[9px] px-[6px] py-px">failed</span>
+          <span className="inline-flex items-center gap-[5px] py-px px-[6px] rounded-full text-[9px] font-semibold tracking-[0.06em] uppercase font-mono border bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] border-[rgba(217,83,79,0.25)]"><span className="text-[7px]">●</span>failed</span>
         </button>
         <div className="flex-1" />
         {confirmWipe ? (
@@ -288,7 +288,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                         <div className="flex flex-col font-mono text-[11px]">
                           <div className="text-ao-fg-2 uppercase tracking-[0.08em] text-[10.5px]">status</div>
                           <div className="text-ao-fg-0 text-[12px] mt-[2px]">
-                            <span className={`ao-badge ${r.status === "done" ? "ao-ok" : "ao-bad"}`}>
+                            <span className={`inline-flex items-center gap-[5px] py-[3px] px-[9px] rounded-full text-[11px] font-semibold tracking-[0.06em] uppercase font-mono border ${r.status === "done" ? "bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]" : "bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] border-[rgba(217,83,79,0.25)]"}`}>
                               {r.status === "done" ? "completed" : r.status}
                             </span>
                           </div>

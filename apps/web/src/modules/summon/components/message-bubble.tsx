@@ -341,7 +341,7 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
         <span className="text-ao-fg-0 font-medium">{name}</span>
         {arg && <span className="font-mono text-[11.5px] text-ao-fg-2 px-[6px] py-[1px] bg-ao-bg-3 border border-ao-line-1 rounded-[4px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[360px]">{arg}</span>}
         <span className="ml-auto flex items-center gap-2 text-ao-fg-3 font-mono text-[11px]">
-          <span className="ao-badge ao-ok ao-dot text-[9px] px-[6px] py-[1px]">ok</span>
+          <span className="inline-flex items-center gap-[5px] py-[1px] px-[6px] rounded-full text-[9px] font-semibold tracking-[0.06em] uppercase font-mono border bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]"><span className="text-[7px]">●</span>ok</span>
         </span>
       </div>
       {arg && (
@@ -378,8 +378,6 @@ export function ToolGroupRow({
   const [open, setOpen] = useState(false);
   const single = tools.length === 1;
   const first = tools[0]!;
-  const statusClass = running ? "ao-running" : "ao-ok";
-
   return (
     <div className="flex items-start gap-[12px] relative group/msg">
       {hideAvatar ? (
@@ -392,7 +390,7 @@ export function ToolGroupRow({
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-ao-line-1 rounded-[10px] bg-ao-bg-2 overflow-hidden${open ? " ao-open" : ""}`}>
           <div className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer select-none transition-[background] duration-[120ms] hover:bg-ao-bg-3" onClick={() => setOpen(!open)}>
-            <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${statusClass === "ao-running" ? "ao-running" : statusClass === "ao-ok" ? "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)]" : statusClass === "ao-bad" ? "bg-[var(--ao-bad)] shadow-[0_0_6px_rgba(217,83,79,0.5)]" : "bg-[var(--ao-warn)]"}`} />
+            <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${running ? "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)] animate-[ao-pulse_1.5s_infinite]" : "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)]"}`} />
             <span className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-ao-bg-3 text-ao-fg-1 shrink-0 border border-ao-line-1"><AoWrench size={13} /></span>
             <span className="text-[13px] text-ao-fg-0 font-medium flex items-center gap-2 flex-1 min-w-0">
               {single ? (
