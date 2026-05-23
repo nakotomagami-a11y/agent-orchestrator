@@ -414,46 +414,26 @@ function SettingsForm({
       )}
 
       {/* Save bar */}
-      <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[12px] bg-ao-bg-1 border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0 [box-shadow:0_-1px_0_var(--ao-line-0)]">
+      <div className="ao-save-bar">
         {dirty ? (
-          <span className="inline-flex items-center gap-[7px] font-mono text-[12px] text-[var(--ao-warn)]">
-            <span className="w-[6px] h-[6px] rounded-full bg-[var(--ao-warn)] shadow-[0_0_8px_var(--ao-warn)] animate-[ao-pulse_1.6s_infinite] shrink-0" /> Unsaved changes
-          </span>
+          <div className="ao-dirty">
+            <span className="ao-led" />
+            Unsaved changes
+          </div>
         ) : (
-          <span className="text-[var(--ao-fg-3)] text-[12px] font-[var(--ao-font-mono)]">No changes</span>
+          <span className="ao-hint">No changes</span>
         )}
-        <div className="ml-auto flex items-center gap-[6px]">
-          <button
-            type="button"
-            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0 [box-shadow:inset_0_0_0_1px_transparent] hover:[box-shadow:inset_0_0_0_1px_var(--ao-line-2)] transition-[background,color] duration-[120ms] disabled:opacity-40"
-            onClick={handleDiscard}
-            disabled={!dirty}
-          >
+        <div className="ao-right">
+          <button type="button" className="ao-btn ao-ghost" onClick={handleDiscard} disabled={!dirty}>
             Discard
           </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-[rgba(217,83,79,0.12)] [box-shadow:inset_0_0_0_1px_rgba(217,83,79,0.32)] text-[var(--ao-bad)] hover:bg-[rgba(217,83,79,0.2)] transition-[background] duration-[120ms] disabled:opacity-40"
-            onClick={onDelete}
-            disabled={deleting}
-          >
+          <button type="button" className="ao-btn ao-danger" onClick={onDelete} disabled={deleting}>
             <AoTrash size={12} /> Delete
           </button>
-          <div className="w-px h-[18px] bg-ao-line-2 mx-[1px]" />
-          <button
-            type="button"
-            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-ao-bg-3 [box-shadow:inset_0_0_0_1px_var(--ao-line-2)] text-ao-fg-1 hover:bg-ao-bg-4 hover:text-ao-fg-0 transition-[background,color] duration-[120ms] disabled:opacity-40"
-            onClick={handleDiscard}
-            disabled={!dirty}
-          >
+          <button type="button" className="ao-btn" onClick={handleDiscard} disabled={!dirty}>
             <AoReset size={12} /> Revert
           </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-[6px] px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-semibold bg-[var(--ao-accent)] text-white hover:bg-[color-mix(in_oklab,var(--ao-accent)_90%,white)] transition-[background] duration-[120ms] disabled:opacity-40"
-            onClick={handleSave}
-            disabled={saving || !dirty}
-          >
+          <button type="button" className="ao-btn ao-primary" onClick={handleSave} disabled={saving || !dirty}>
             <AoCheck size={13} /> Save changes
           </button>
         </div>

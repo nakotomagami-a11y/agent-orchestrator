@@ -2311,6 +2311,8 @@
 .ao-modal .ao-btn.ao-primary:hover { background: color-mix(in oklab, var(--ao-accent) 90%, white); }
 .ao-modal .ao-btn.ao-ghost { background: transparent; border-color: transparent; color: var(--ao-fg-1); }
 .ao-modal .ao-btn.ao-ghost:hover { background: var(--ao-bg-3); color: var(--ao-fg-0); }
+.ao-modal .ao-btn.ao-danger { background: rgba(217,83,79,0.12); border-color: rgba(217,83,79,0.35); color: var(--ao-bad); }
+.ao-modal .ao-btn.ao-danger:hover { background: rgba(217,83,79,0.2); }
 
 /* -------------------------------------------------------------- */
 /* Stream banner (diagnostic alerts)                               */
