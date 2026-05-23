@@ -108,7 +108,7 @@ export function Sidebar() {
   return (
     <aside
       className="bg-bg-2 border-r border-line grid min-h-0 overflow-hidden max-[1024px]:overflow-hidden max-[600px]:hidden"
-      style={{ gridTemplateRows: "auto auto 1fr auto" }}
+      style={{ gridTemplateRows: "auto 1fr auto" }}
       aria-label={t("app.name")}
     >
       <nav className="p-[6px] flex flex-col gap-[2px]" aria-label={t("nav.primary_label")}>
@@ -152,22 +152,57 @@ export function Sidebar() {
         <CommandPaletteNavButton />
       </nav>
 
-      <div className="grid min-h-0" style={{ gridTemplateRows: "auto 1fr" }}>
-        <div className="text-[10.5px] uppercase tracking-[0.08em] text-txt-3 font-semibold section-h-row" style={{ padding: "12px 14px 6px" }}>
-          <span>{t("sidebar.roster_label", { count: rosterRows.length })}</span>
-          <input
-            type="text"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            onFocus={() => setFilterFocused(true)}
-            onBlur={() => setFilterFocused(false)}
-            placeholder={t("common.search_placeholder")}
+      <div className="flex flex-col min-h-0">
+        {/* Roster header */}
+        <div className="flex items-center gap-[6px] px-[10px] py-[8px] border-b border-line shrink-0">
+          <span className="text-[11.5px] font-semibold text-txt tracking-[0.01em] flex-1">Roster</span>
+          <span className="font-[var(--font-mono)] text-[10px] bg-bg-3 border border-line text-txt-3 rounded-full px-[7px] py-[1px]">
+            {rosterRows.length}
+          </span>
+          <button
+            type="button"
+            onClick={() => { setFilterFocused((v) => !v); if (filterFocused) setFilter(""); }}
+            className={cn(
+              "w-[24px] h-[24px] grid place-items-center rounded-[5px] transition-[background,color] duration-[120ms]",
+              filterFocused || filter ? "bg-bg-3 text-acc" : "text-txt-3 hover:bg-bg-3 hover:text-txt",
+            )}
             aria-label={t("sidebar.filter_aria")}
-            className="ml-auto bg-bg-1 border border-line text-txt rounded-[6px] px-2 py-[3px] font-[var(--font-mono)] text-[11px] outline-none transition-[width] duration-[150ms] ease-in-out"
-            style={{ width: filterFocused ? 160 : 88 }}
-          />
+          >
+            <Icon name="search" size={12} />
+          </button>
         </div>
-        <div className="overflow-y-auto flex flex-col gap-[2px] min-h-0 pb-2 px-[6px]">
+
+        {/* Expandable search input */}
+        {(filterFocused || filter) && (
+          <div className="px-[8px] py-[6px] border-b border-line shrink-0">
+            <div className="flex items-center gap-[6px] bg-bg-1 border border-line rounded-[7px] px-[8px] focus-within:border-line-2">
+              <Icon name="search" size={11} className="text-txt-4 shrink-0" />
+              <input
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                type="text"
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                onBlur={() => { if (!filter) setFilterFocused(false); }}
+                onKeyDown={(e) => { if (e.key === "Escape") { setFilter(""); setFilterFocused(false); } }}
+                placeholder={t("common.search_placeholder")}
+                aria-label={t("sidebar.filter_aria")}
+                className="flex-1 bg-transparent border-0 outline-none text-txt text-[12px] py-[6px] font-[var(--font-mono)] placeholder:text-txt-4"
+              />
+              {filter && (
+                <button
+                  type="button"
+                  onClick={() => setFilter("")}
+                  className="w-[16px] h-[16px] grid place-items-center text-txt-4 hover:text-txt shrink-0"
+                >
+                  <Icon name="x" size={10} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="overflow-y-auto flex flex-col gap-[2px] min-h-0 pb-2 px-[6px] flex-1">
           {project && rosterRows.length === 0 ? (
             <div className="text-txt-3 px-[14px] py-3 text-[12px] leading-[1.4]">
               {t("sidebar.no_agents_in_project", { project: project.meta.name })}

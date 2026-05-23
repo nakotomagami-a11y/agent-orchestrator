@@ -36,8 +36,10 @@ export type DecoFamily =
   | "house"
   | "tower"
   | "castle"
+  | "campfire"
   | "water_rock"
   | "duck"
+  | "butterfly"
   | "mushroom"
   | "shrub"
   | "pumpkin"
@@ -103,7 +105,16 @@ export type DecorationKind =
   | "gold_mine_destroyed"
   | "cursed_chest"
   | "bridge_h"
-  | "bridge_v";
+  | "bridge_v"
+  // ── Campfire ─────────────────────────────────────────────────────────────
+  | "campfire"
+  // ── Butterflies ──────────────────────────────────────────────────────────
+  | "butterfly_blue"
+  | "butterfly_grey"
+  | "butterfly_pink"
+  | "butterfly_red"
+  | "butterfly_white"
+  | "butterfly_yellow";
 
 export interface DecorationDef {
   label: string;
@@ -482,6 +493,64 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/sheep.png",
     frameW: 128, frameH: 128, frames: 8,
     terrain: "land", category: "land", family: "sheep", animClass: "deco-bush",
+    anchor: "center",
+  },
+
+  // ─ Campfire (8 frames × 32×64, animated flicker). The sheet has 8
+  //   flame poses at 32px stride in a 256×64 image. Centred in the cell
+  //   via the (TILE - frameW) / 2 horizontal offset in OfficeMap. ──────
+  campfire: {
+    label: "Campfire",
+    src: "/decorations/campfire.png",
+    frameW: 32, frameH: 64, frames: 8,
+    terrain: "land", category: "land", family: "campfire", animClass: "deco-campfire",
+  },
+
+  // ─ Butterflies (5 frames × 16×16, animated flutter). Six colour
+  //   variants share the "butterfly" family - only one may occupy a
+  //   cell at a time, matching the sheep/duck behaviour. Centred so
+  //   they appear to hover over the tile rather than hang from its
+  //   top edge. ──────────────────────────────────────────────────────
+  butterfly_blue: {
+    label: "Butterfly (blue)",
+    src: "/decorations/butterfly_blue.png",
+    frameW: 16, frameH: 16, frames: 5,
+    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    anchor: "center",
+  },
+  butterfly_grey: {
+    label: "Butterfly (grey)",
+    src: "/decorations/butterfly_grey.png",
+    frameW: 16, frameH: 16, frames: 5,
+    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    anchor: "center",
+  },
+  butterfly_pink: {
+    label: "Butterfly (pink)",
+    src: "/decorations/butterfly_pink.png",
+    frameW: 16, frameH: 16, frames: 5,
+    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    anchor: "center",
+  },
+  butterfly_red: {
+    label: "Butterfly (red)",
+    src: "/decorations/butterfly_red.png",
+    frameW: 16, frameH: 16, frames: 5,
+    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    anchor: "center",
+  },
+  butterfly_white: {
+    label: "Butterfly (white)",
+    src: "/decorations/butterfly_white.png",
+    frameW: 16, frameH: 16, frames: 5,
+    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    anchor: "center",
+  },
+  butterfly_yellow: {
+    label: "Butterfly (yellow)",
+    src: "/decorations/butterfly_yellow.png",
+    frameW: 16, frameH: 16, frames: 5,
+    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
     anchor: "center",
   },
 

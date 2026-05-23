@@ -36,6 +36,12 @@ function looksLikeQuestion(text: string): boolean {
   return nonEmpty.slice(-5).some((l) => l.trimEnd().endsWith("?"));
 }
 
+function isAgentRow(row: RenderRow): boolean {
+  if (row.kind === "tool-chain") return true;
+  const k = row.item.kind;
+  return k === "agent-text" || k === "agent-tool" || k === "agent-thinking" || k === "agent-subagent";
+}
+
 function groupRows(items: ThreadItem[]): RenderRow[] {
   const rows: RenderRow[] = [];
   for (const item of items) {
@@ -92,9 +98,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   const [hasNewBelow, setHasNewBelow] = useState(false);
   // `visibleCount` is the windowed render slice. Starts at the most recent
   // VISIBLE_WINDOW items; user clicks "Load earlier" to widen the window.
-  const [visibleCount, setVisibleCount] = useState(() =>
-    Math.min(items.length, VISIBLE_WINDOW),
-  );
+  const [visibleCount, setVisibleCount] = useState(VISIBLE_WINDOW);
 
   // When the underlying transcript identity changes (agent / instance switch,
   // /clear, /branch), reset the visible window AND snap back to the latest
@@ -283,6 +287,10 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
           ) : null}
           <div className="chat-thread">
             {rows.map((row, idx) => {
+              const prevRow = rows[idx - 1] ?? null;
+              const curIsAgent = isAgentRow(row);
+              const hideAvatar = curIsAgent && prevRow !== null && isAgentRow(prevRow);
+
               if (row.kind === "single") {
                 const isQuestion = questionIds.has(row.item.id);
                 const lastYouText = row.item.kind === "system-error" && onSubmit
@@ -294,6 +302,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                     item={row.item}
                     agent={agent}
                     isQuestion={isQuestion}
+                    hideAvatar={hideAvatar}
                     onReply={isQuestion && onSubmit ? onSubmit : undefined}
                     onRerun={row.item.kind === "you" && onSubmit ? onSubmit : undefined}
                     onRetry={lastYouText ? () => onSubmit!(lastYouText) : undefined}
@@ -307,6 +316,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                   key={row.id}
                   tools={row.tools.map((t) => ({ id: t.id, name: t.name, arg: t.arg }))}
                   avatar={agent.short[0]?.toUpperCase() ?? "?"}
+                  hideAvatar={hideAvatar}
                   running={running}
                 />
               );

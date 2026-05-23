@@ -454,8 +454,8 @@ function handleStreamLine(run: LiveRun, line: string): void {
     if (evt.message.usage) {
       const ti = evt.message.usage.input_tokens;
       const to = evt.message.usage.output_tokens;
-      if (typeof ti === "number") run.tokensIn = ti;
-      if (typeof to === "number") run.tokensOut = to;
+      if (typeof ti === "number") run.tokensIn += ti;
+      if (typeof to === "number") run.tokensOut += to;
       broadcast(run, {
         name: "usage",
         data: { runId: run.id, tokensIn: run.tokensIn, tokensOut: run.tokensOut, cost: run.cost },

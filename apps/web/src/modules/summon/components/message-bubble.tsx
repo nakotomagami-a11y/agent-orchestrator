@@ -368,10 +368,12 @@ export function ToolGroupRow({
   tools,
   avatar,
   running = false,
+  hideAvatar = false,
 }: {
   tools: Array<{ id: string; name: string; arg?: string }>;
   avatar: string;
   running?: boolean;
+  hideAvatar?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const single = tools.length === 1;
@@ -380,9 +382,13 @@ export function ToolGroupRow({
 
   return (
     <div className="flex items-start gap-[12px] relative group/msg">
-      <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
-        <span className="text-base">{avatar}</span>
-      </div>
+      {hideAvatar ? (
+        <div className="w-[30px] shrink-0" aria-hidden />
+      ) : (
+        <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
+          <span className="text-base">{avatar}</span>
+        </div>
+      )}
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-ao-line-1 rounded-[10px] bg-ao-bg-2 overflow-hidden${open ? " ao-open" : ""}`}>
           <div className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer select-none transition-[background] duration-[120ms] hover:bg-ao-bg-3" onClick={() => setOpen(!open)}>
@@ -420,14 +426,18 @@ export function ToolGroupRow({
 }
 
 // ── Thinking row ──────────────────────────────────────────────────────────────
-function ThinkingRow({ text, avatar }: { text: string; avatar: string }) {
+function ThinkingRow({ text, avatar, hideAvatar = false }: { text: string; avatar: string; hideAvatar?: boolean }) {
   const [open, setOpen] = useState(false);
   const tokenEst = Math.max(1, Math.round(text.split(/\s+/).length * 1.3));
   return (
     <div className="flex items-start gap-[12px] relative group/msg">
-      <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
-        <span className="text-base">{avatar}</span>
-      </div>
+      {hideAvatar ? (
+        <div className="w-[30px] shrink-0" aria-hidden />
+      ) : (
+        <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
+          <span className="text-base">{avatar}</span>
+        </div>
+      )}
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-dashed border-ao-line-1 rounded-[10px] bg-white/[0.015]${open ? " ao-open" : ""}`}>
           <div className="flex items-center gap-[10px] px-[14px] py-[9px] cursor-pointer text-ao-fg-2 text-[12.5px] italic" onClick={() => setOpen(!open)}>
@@ -553,9 +563,11 @@ export type MessageBubbleProps = {
   onRerun?: (text: string) => void;
   /** Called when the user clicks Retry on an error card. */
   onRetry?: () => void;
+  /** When true, hides the avatar (consecutive messages from the same sender). */
+  hideAvatar?: boolean;
 };
 
-export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry }: MessageBubbleProps) {
+export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, hideAvatar }: MessageBubbleProps) {
   const avatar = agent.short[0]?.toUpperCase() ?? "?";
 
   switch (item.kind) {
@@ -582,16 +594,27 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       const showClarify = isQuestion && !item.streaming && !!onReply;
       return (
         <div className="flex items-start gap-[12px] relative group/msg">
-          <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
-            <span className="text-base">{avatar}</span>
-          </div>
-          <div className="flex-1 min-w-0 pt-0.5">
-            <div className="text-[12px] font-semibold text-ao-fg-1 flex items-center gap-2 mb-[6px]">
-              <span>{agent.name}</span>
-              {item.streaming ? (
-                <span className="text-ao-fg-3 font-mono text-[11px] font-normal text-[var(--ao-accent)]">typing…</span>
-              ) : null}
+          {hideAvatar ? (
+            <div className="w-[30px] shrink-0" aria-hidden />
+          ) : (
+            <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
+              <span className="text-base">{avatar}</span>
             </div>
+          )}
+          <div className="flex-1 min-w-0 pt-0.5">
+            {!hideAvatar && (
+              <div className="text-[12px] font-semibold text-ao-fg-1 flex items-center gap-2 mb-[6px]">
+                <span>{agent.name}</span>
+                {item.streaming ? (
+                  <span className="text-ao-fg-3 font-mono text-[11px] font-normal text-[var(--ao-accent)]">typing…</span>
+                ) : null}
+              </div>
+            )}
+            {hideAvatar && item.streaming && (
+              <div className="text-[12px] font-semibold text-ao-fg-1 flex items-center gap-2 mb-[6px]">
+                <span className="text-ao-fg-3 font-mono text-[11px] font-normal text-[var(--ao-accent)]">typing…</span>
+              </div>
+            )}
             <div className="ao-prose">
               <ProseBlock items={proseItems} streaming={item.streaming} />
             </div>
@@ -618,7 +641,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       return <SubAgentCard item={item} />;
 
     case "agent-thinking":
-      return <ThinkingRow text={item.text} avatar={avatar} />;
+      return <ThinkingRow text={item.text} avatar={avatar} hideAvatar={hideAvatar} />;
 
     case "system-error":
       return (

@@ -232,6 +232,89 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   return installBtn;
 }
 
+export function OpenFolderButton({ projectId }: { projectId: string }) {
+  function open() {
+    void fetch(`/api/projects/${projectId}/open-folder`, { method: "POST" });
+  }
+  return (
+    <Button variant="ghost" size="sm" onClick={open} title="Open project folder">
+      <Icon name="folder" size={12} /> Open folder
+    </Button>
+  );
+}
+
+type BuildPhase = "idle" | "building" | "done" | "error";
+
+export function BuildButton({ projectId }: { projectId: string }) {
+  const [hasBuild, setHasBuild] = useState(false);
+  const [phase, setPhase] = useState<BuildPhase>("idle");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/build`)
+      .then((r) => r.json() as Promise<{ hasBuild: boolean }>)
+      .then((d) => setHasBuild(d.hasBuild))
+      .catch(() => {});
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [projectId]);
+
+  async function startBuild() {
+    if (phase !== "idle") return;
+    setPhase("building");
+    try {
+      const res = await fetch(`/api/projects/${projectId}/build`, { method: "POST" });
+      if (!res.ok) { setPhase("error"); setTimeout(() => setPhase("idle"), 3000); return; }
+      const body = await res.json() as { pid?: number | null };
+      if (!body.pid) { setPhase("done"); setTimeout(() => setPhase("idle"), 2000); return; }
+
+      const pid = body.pid;
+      pollRef.current = setInterval(async () => {
+        const check = await fetch(`/api/processes/${pid}`).catch(() => null);
+        if (!check?.ok) return;
+        const data = await check.json() as { alive?: boolean };
+        if (!data.alive) {
+          clearInterval(pollRef.current!);
+          pollRef.current = null;
+          setPhase("done");
+          setTimeout(() => setPhase("idle"), 3000);
+        }
+      }, 2000);
+    } catch {
+      setPhase("error");
+      setTimeout(() => setPhase("idle"), 3000);
+    }
+  }
+
+  if (!hasBuild) return null;
+
+  if (phase === "building") {
+    return (
+      <Button variant="ghost" size="sm" disabled>
+        <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Building…
+      </Button>
+    );
+  }
+  if (phase === "done") {
+    return (
+      <Button variant="ghost" size="sm" disabled>
+        <Icon name="check" size={12} /> Built
+      </Button>
+    );
+  }
+  if (phase === "error") {
+    return (
+      <Button variant="ghost" size="sm" disabled>
+        <Icon name="x" size={12} /> Build failed
+      </Button>
+    );
+  }
+  return (
+    <Button variant="ghost" size="sm" onClick={() => { void startBuild(); }}>
+      <Icon name="zap" size={12} /> Build
+    </Button>
+  );
+}
+
 export type OfficeToolbarProps = {
   view: OfficeView;
   setView: (next: OfficeView) => void;
@@ -273,7 +356,11 @@ export function OfficeToolbar({ view, setView, agentCount, workingCount }: Offic
 
       <div className="ml-auto flex items-center gap-[8px]">
         {activeProjectId && project?.meta.cwd && (
-          <DevServerButton key={activeProjectId} projectId={activeProjectId} />
+          <>
+            <OpenFolderButton projectId={activeProjectId} />
+            <BuildButton key={`build-${activeProjectId}`} projectId={activeProjectId} />
+            <DevServerButton key={activeProjectId} projectId={activeProjectId} />
+          </>
         )}
         <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
           <button

@@ -631,6 +631,16 @@ body {
 .deco-duck         { animation: deco-duck         0.6s steps(3)  infinite; }
 .deco-tree         { animation: deco-tree         2.4s steps(8)  infinite; }
 .deco-cursed-chest { animation: deco-cursed-chest 1.8s steps(6)  infinite; }
+@keyframes deco-campfire {
+  from { background-position-x: 0; }
+  to   { background-position-x: -256px; }
+}
+@keyframes deco-butterfly {
+  from { background-position-x: 0; }
+  to   { background-position-x: -80px; }
+}
+.deco-campfire  { animation: deco-campfire  0.64s steps(8)  infinite; }
+.deco-butterfly { animation: deco-butterfly 0.7s  steps(5)  infinite; }
 
 /* Placed agents on the office floor — hover + drag affordance. */
 

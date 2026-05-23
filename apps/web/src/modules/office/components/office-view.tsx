@@ -15,7 +15,6 @@ import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { Button } from "@/components/ui/button";
-import type { OfficeFilter } from "./cards-office";
 import { useMemo } from "react";
 
 export function OfficeView() {
@@ -41,7 +40,6 @@ export function OfficeView() {
   const budgetDaily = quotaUsd === 0 ? undefined : quotaUsd;
 
   const [errorFilter, setErrorFilter] = useState(false);
-  const [officeFilter, setOfficeFilter] = useState<OfficeFilter>("all");
 
   const scopedAgents = useMemo(() => {
     const base = (() => {
@@ -121,8 +119,6 @@ export function OfficeView() {
             hasProject={!!project || !!activeProjectId}
             selectedId={selectedId}
             onSelect={selectFromFloor}
-            filter={officeFilter}
-            setFilter={setOfficeFilter}
             view={view}
             setView={setView}
             projectId={activeProjectId}

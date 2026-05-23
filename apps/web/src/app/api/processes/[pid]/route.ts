@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { NextResponse } from "next/server";
 import { deleteProcess } from "@/lib/server-process-store";
 
@@ -13,6 +13,15 @@ function readProcUid(pid: number): number | null {
   } catch {
     return null;
   }
+}
+
+export async function GET(_request: Request, { params }: Params): Promise<NextResponse> {
+  const rawPid = (await params).pid;
+  const pid = parseInt(rawPid, 10);
+  if (!Number.isInteger(pid) || pid <= 0 || String(pid) !== rawPid) {
+    return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  }
+  return NextResponse.json({ alive: existsSync(`/proc/${pid}/status`) });
 }
 
 export async function DELETE(_request: Request, { params }: Params): Promise<NextResponse> {

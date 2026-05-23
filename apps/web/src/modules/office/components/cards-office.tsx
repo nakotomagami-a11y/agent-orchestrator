@@ -14,7 +14,7 @@ import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import type { OfficeView } from "../hooks/use-office-store";
-import { DevServerButton } from "./office-toolbar";
+import { DevServerButton, BuildButton } from "./office-toolbar";
 
 export type OfficeFilter = "all" | "live" | "idle";
 
@@ -24,8 +24,6 @@ export type CardsOfficeProps = {
   hasProject: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
-  filter: OfficeFilter;
-  setFilter: (f: OfficeFilter) => void;
   view: OfficeView;
   setView: (v: OfficeView) => void;
   projectId: string | null;
@@ -40,8 +38,6 @@ export function CardsOffice({
   hasProject,
   selectedId,
   onSelect,
-  filter,
-  setFilter,
   view,
   setView,
   projectId,
@@ -66,9 +62,6 @@ export function CardsOffice({
 
   const sort = (list: OfficeAgent[]) =>
     [...list].sort((a, b) => (pinned.has(b.id) ? 1 : 0) - (pinned.has(a.id) ? 1 : 0));
-
-  const showLive = filter === "all" || filter === "live";
-  const showIdle = filter === "all" || filter === "idle";
 
   function renderBody() {
     if (isLoading) {
@@ -105,7 +98,7 @@ export function CardsOffice({
 
     return (
       <>
-        {workingCount > 0 && filter === "all" && (
+        {workingCount > 0 && (
           <div className="of-quickchat">
             <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-8 h-8 rounded-lg border border-[var(--acc-tint)]"><Icon name="activity" size={14} /></div>
             <div className="text-txt-2 flex-1 text-[13.5px]">
@@ -120,7 +113,7 @@ export function CardsOffice({
           </div>
         )}
 
-        {showLive && liveAgents.length > 0 && (
+        {liveAgents.length > 0 && (
           <>
             <div className="flex items-center gap-[10px] my-[6px] mb-3">
               <h2 className="font-semibold uppercase text-txt-3 flex items-center gap-2 m-0 text-[11.5px] tracking-[0.1em]">
@@ -144,7 +137,7 @@ export function CardsOffice({
           </>
         )}
 
-        {showIdle && idleAgents.length > 0 && (
+        {idleAgents.length > 0 && (
           <>
             <div className="flex items-center gap-[10px] my-[6px] mb-3">
               <h2 className="font-semibold uppercase text-txt-3 flex items-center gap-2 m-0 text-[11.5px] tracking-[0.1em]">
@@ -177,12 +170,6 @@ export function CardsOffice({
           </>
         )}
 
-        {filter === "live" && liveAgents.length === 0 && (
-          <div className="flex flex-col items-center gap-2 text-txt-3 text-center py-[60px] px-6 text-[14px]">
-            <div className="bg-bg-3 border border-line grid place-items-center text-txt-4 w-14 h-14 rounded-[14px] mx-auto mb-[14px]"><Icon name="activity" size={22} /></div>
-            <div>No agents are working right now.</div>
-          </div>
-        )}
       </>
     );
   }
@@ -210,34 +197,13 @@ export function CardsOffice({
           </h1>
         </div>
 
-        <div className="flex items-center gap-[6px] ml-[4px]">
-          <button
-            type="button"
-            className={cn("inline-flex items-center gap-[7px] bg-bg-2 border border-line rounded-full text-txt-2 cursor-pointer px-[12px] py-[6px] font-[var(--font-mono)] text-[12px] transition-[border-color,color,background] duration-[120ms] hover:text-txt hover:border-line-2", filter === "all" && "bg-acc-faint text-acc border-acc-tint")}
-            onClick={() => setFilter("all")}
-          >
-            All <span className={cn("bg-bg-3 border border-line text-txt-2 rounded-full px-[7px] text-[10.5px]", filter === "all" && "bg-acc-faint text-acc border-acc-tint")}>{agents.length}</span>
-          </button>
-          <button
-            type="button"
-            className={cn("inline-flex items-center gap-[7px] bg-bg-2 border border-line rounded-full text-txt-2 cursor-pointer px-[12px] py-[6px] font-[var(--font-mono)] text-[12px] transition-[border-color,color,background] duration-[120ms] hover:text-txt hover:border-line-2", filter === "live" && "bg-acc-faint text-acc border-acc-tint")}
-            onClick={() => setFilter("live")}
-          >
-            <span className="rounded-full w-[6px] h-[6px] inline-block" style={{ background: "var(--working)", boxShadow: "0 0 6px var(--working)" }} />
-            live <span className={cn("bg-bg-3 border border-line text-txt-2 rounded-full px-[7px] text-[10.5px]", filter === "live" && "bg-acc-faint text-acc border-acc-tint")}>{liveAgents.length}</span>
-          </button>
-          <button
-            type="button"
-            className={cn("inline-flex items-center gap-[7px] bg-bg-2 border border-line rounded-full text-txt-2 cursor-pointer px-[12px] py-[6px] font-[var(--font-mono)] text-[12px] transition-[border-color,color,background] duration-[120ms] hover:text-txt hover:border-line-2", filter === "idle" && "bg-acc-faint text-acc border-acc-tint")}
-            onClick={() => setFilter("idle")}
-          >
-            <span className="rounded-full w-[6px] h-[6px] inline-block bg-txt-4" />
-            idle <span className={cn("bg-bg-3 border border-line text-txt-2 rounded-full px-[7px] text-[10.5px]", filter === "idle" && "bg-acc-faint text-acc border-acc-tint")}>{idleAgents.length}</span>
-          </button>
-        </div>
-
         <div className="ml-auto flex items-center gap-[8px]">
-          {projectId && <DevServerButton projectId={projectId} />}
+          {projectId && (
+            <>
+              <BuildButton key={`build-${projectId}`} projectId={projectId} />
+              <DevServerButton key={projectId} projectId={projectId} />
+            </>
+          )}
           <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
             <button
               type="button"
