@@ -425,7 +425,7 @@ function SettingsForm({
         <div className="ml-auto flex items-center gap-[6px]">
           <button
             type="button"
-            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium border border-transparent text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0 hover:border-ao-line-1 transition-[background,border-color,color] duration-[120ms] disabled:opacity-40"
+            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0 [box-shadow:inset_0_0_0_1px_transparent] hover:[box-shadow:inset_0_0_0_1px_var(--ao-line-2)] transition-[background,color] duration-[120ms] disabled:opacity-40"
             onClick={handleDiscard}
             disabled={!dirty}
           >
@@ -433,16 +433,16 @@ function SettingsForm({
           </button>
           <button
             type="button"
-            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-[var(--ao-bad-soft)] border border-[rgba(217,83,79,0.28)] text-[var(--ao-bad)] hover:bg-[rgba(217,83,79,0.22)] transition-[background] duration-[120ms] disabled:opacity-40"
+            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-[rgba(217,83,79,0.12)] [box-shadow:inset_0_0_0_1px_rgba(217,83,79,0.32)] text-[var(--ao-bad)] hover:bg-[rgba(217,83,79,0.2)] transition-[background] duration-[120ms] disabled:opacity-40"
             onClick={onDelete}
             disabled={deleting}
           >
             <AoTrash size={12} /> Delete
           </button>
-          <div className="w-px h-[18px] bg-ao-line-1 mx-[2px]" />
+          <div className="w-px h-[18px] bg-ao-line-2 mx-[1px]" />
           <button
             type="button"
-            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 hover:bg-ao-bg-4 hover:border-ao-line-2 hover:text-ao-fg-0 transition-[background,border-color,color] duration-[120ms] disabled:opacity-40"
+            className="inline-flex items-center gap-[6px] px-[12px] py-[7px] rounded-[8px] text-[12.5px] font-medium bg-ao-bg-3 [box-shadow:inset_0_0_0_1px_var(--ao-line-2)] text-ao-fg-1 hover:bg-ao-bg-4 hover:text-ao-fg-0 transition-[background,color] duration-[120ms] disabled:opacity-40"
             onClick={handleDiscard}
             disabled={!dirty}
           >
