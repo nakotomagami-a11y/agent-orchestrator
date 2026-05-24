@@ -16,7 +16,7 @@ import {
 } from "./grass-colors";
 import { useFilter } from "@/hooks/use-filter";
 
-export type BuildTool = "grass" | "erase" | DecorationKind;
+export type BuildTool = "grass" | "erase" | "fill" | DecorationKind;
 
 export type OfficeBuildToolbarProps = {
   active: boolean;
@@ -45,7 +45,7 @@ export function OfficeBuildToolbar({
 
   // Keep tab in sync when a deco tool is selected externally
   useEffect(() => {
-    if (!tool) return;
+    if (!tool || tool === "grass" || tool === "erase" || tool === "fill") return;
     const kind = tool as DecorationKind;
     if (DECORATION_KINDS.includes(kind)) {
       setActiveTab(DECORATIONS[kind].category);
@@ -133,6 +133,16 @@ export function OfficeBuildToolbar({
             <Icon name="trash" size={16} />
             <span className="uppercase tracking-[0.06em] font-mono text-[9px]">erase</span>
             <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "erase" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>E</span>
+          </button>
+          <button
+            type="button"
+            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "fill" ? " bg-acc text-white" : ""}`}
+            onClick={() => onSelectTool("fill")}
+            title="Flood fill (F)"
+          >
+            <Icon name="paint-bucket" size={16} />
+            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">fill</span>
+            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "fill" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>F</span>
           </button>
         </div>
       </div>

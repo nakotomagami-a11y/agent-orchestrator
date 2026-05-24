@@ -16,6 +16,8 @@ export function useOfficePainting({
   const buildModeRef = useRef(false);
   const toolRef = useRef<BuildTool | null>(null);
   const onCellClickRef = useRef<(x: number, y: number) => void>(() => undefined);
+  // Dedup: skip onCellClick when the tile coord hasn't changed during a drag
+  const lastPaintedTile = useRef<{ x: number; y: number } | null>(null);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): boolean => {
@@ -29,6 +31,7 @@ export function useOfficePainting({
         !isOnOverlay
       ) {
         isPainting.current = true;
+        lastPaintedTile.current = null;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         const wx = (e.clientX - rect.left - panRef.current.x) / zoomRef.current;
@@ -36,6 +39,7 @@ export function useOfficePainting({
         const tx = Math.floor(wx / TILE);
         const ty = Math.floor(wy / TILE);
         if (tx >= 0 && tx < GRID_COLS && ty >= 0 && ty < GRID_ROWS) {
+          lastPaintedTile.current = { x: tx, y: ty };
           onCellClickRef.current(tx, ty);
         }
         return true;
@@ -54,7 +58,11 @@ export function useOfficePainting({
       const tx = Math.floor(wx / TILE);
       const ty = Math.floor(wy / TILE);
       if (tx >= 0 && tx < GRID_COLS && ty >= 0 && ty < GRID_ROWS) {
-        onCellClickRef.current(tx, ty);
+        const last = lastPaintedTile.current;
+        if (!last || last.x !== tx || last.y !== ty) {
+          lastPaintedTile.current = { x: tx, y: ty };
+          onCellClickRef.current(tx, ty);
+        }
       }
       return true;
     },
@@ -63,6 +71,7 @@ export function useOfficePainting({
 
   const onPointerUp = useCallback(() => {
     isPainting.current = false;
+    lastPaintedTile.current = null;
   }, []);
 
   return {

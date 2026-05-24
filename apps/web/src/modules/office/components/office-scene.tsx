@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { OfficeMap, TILE, type AgentPositions } from "./office-map";
+import { OfficeMap, TILE, type AgentPositions, type VisibleRange } from "./office-map";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
   DECORATIONS,
@@ -33,6 +33,7 @@ import {
   ZOOM_STEP,
 } from "../hooks/use-office-camera";
 import { useOfficePainting } from "../hooks/use-office-painting";
+import type { AgentInstance } from "@agent-office/shared/types";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -73,6 +74,45 @@ function makeSeedGrid(): boolean[][] {
   );
 }
 
+/**
+ * BFS flood-fill: turns connected water cells starting at (startX, startY)
+ * into grass. Returns the new grid and the number of cells filled.
+ */
+function floodFill(
+  grid: boolean[][],
+  startX: number,
+  startY: number,
+): [boolean[][], number] {
+  if (grid[startY]?.[startX] === true) return [grid, 0]; // already grass
+  const next = grid.map((row) => [...row]);
+  const queue: [number, number][] = [[startX, startY]];
+  const visited = new Set<string>();
+  let count = 0;
+  while (queue.length > 0) {
+    const [x, y] = queue.shift()!;
+    const key = `${x},${y}`;
+    if (visited.has(key)) continue;
+    visited.add(key);
+    if (x < 0 || x >= GRID_COLS || y < 0 || y >= GRID_ROWS) continue;
+    if (next[y]![x]) continue;
+    next[y]![x] = true;
+    count++;
+    queue.push([x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
+  }
+  return [next, count];
+}
+
+// Stable empty-array and empty-object fallbacks to avoid recreating them
+// on every render (which would defeat React.memo equality checks).
+const EMPTY_ROSTER: AgentInstance[] = [];
+const EMPTY_SPEND: Record<string, number> = {};
+
+type Snapshot = {
+  grid: boolean[][];
+  decorations: DecorationsMap;
+  agentPositions: AgentPositions;
+};
+
 export function OfficeScene({ projectId }: { projectId: string | null }) {
   const [grid, setGrid] = useState<boolean[][]>(() => makeSeedGrid());
   const [decorations, setDecorations] = useState<DecorationsMap>(() => ({}));
@@ -85,6 +125,19 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   const [pendingChanges, setPendingChanges] = useState(0);
   const [agentSearch, setAgentSearch] = useState("");
   const [useCustomMap, setUseCustomMap] = useState(false);
+  const [containerSize, setContainerSize] = useState<{ w: number; h: number } | null>(null);
+  // First corner of a shift-click rectangle selection (paint/erase tools only)
+  const [rectStart, setRectStart] = useState<{ x: number; y: number } | null>(null);
+
+  // Undo/redo session history (not server-synced, session-only)
+  const undoStack = useRef<Snapshot[]>([]);
+  const redoStack = useRef<Snapshot[]>([]);
+  // Keep a ref to current state so the keyboard handler can push to redo
+  // without capturing stale closure values.
+  const currentStateRef = useRef<Snapshot>({ grid, decorations, agentPositions });
+  useEffect(() => {
+    currentStateRef.current = { grid, decorations, agentPositions };
+  }, [grid, decorations, agentPositions]);
 
   const {
     zoom, panX, panY,
@@ -110,6 +163,30 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   // Sync painting refs with React state
   useEffect(() => { buildModeRef.current = buildMode; }, [buildMode, buildModeRef]);
   useEffect(() => { toolRef.current = tool; }, [tool, toolRef]);
+
+  // Track container size for viewport culling
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const { width, height } = entries[0]!.contentRect;
+      setContainerSize({ w: width, h: height });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [containerRef]);
+
+  // Visible cell range — only cells within this bounding box are rendered.
+  // Falls back to full grid until the ResizeObserver fires.
+  const visibleCellRange = useMemo<VisibleRange>(() => {
+    if (!containerSize) return { xMin: 0, xMax: GRID_COLS - 1, yMin: 0, yMax: GRID_ROWS - 1 };
+    const OVERSCAN = 2;
+    const xMin = Math.max(0, Math.floor(-panX / zoom / TILE) - OVERSCAN);
+    const xMax = Math.min(GRID_COLS - 1, Math.ceil((-panX + containerSize.w) / zoom / TILE) + OVERSCAN);
+    const yMin = Math.max(0, Math.floor(-panY / zoom / TILE) - OVERSCAN);
+    const yMax = Math.min(GRID_ROWS - 1, Math.ceil((-panY + containerSize.h) / zoom / TILE) + OVERSCAN);
+    return { xMin, xMax, yMin, yMax };
+  }, [panX, panY, zoom, containerSize]);
 
   // Load scene state from the server DB on mount.
   // Agent positions are always per-project when a project is active.
@@ -211,9 +288,9 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   const settingsQ = useSettings();
   const isMultiInstance = settingsQ.data?.features?.multiInstance === true;
   const projectQ = useProject(projectId);
-  const rosterInstances = projectQ.data?.meta.roster ?? [];
+  const rosterInstances = projectQ.data?.meta.roster ?? EMPTY_ROSTER;
   const spendQ = useProjectSpend(isMultiInstance ? projectId : null);
-  const spendByInstance = spendQ.data?.byInstance ?? {};
+  const spendByInstance = spendQ.data?.byInstance ?? EMPTY_SPEND;
 
   // Prune agentPositions entries whose agent no longer exists.
   useEffect(() => {
@@ -227,55 +304,119 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
     });
   }, [agentsById, sceneLoaded]);
 
+  // Auto-save effects — debounced 400ms so a 100-cell paint drag fires
+  // one PATCH after the brush lifts, not 100 individual requests.
   useEffect(() => {
     if (!sceneLoaded) return;
     const key = useCustomMap && projectId ? `office-grid:${projectId}` : "office-grid";
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [key]: JSON.stringify(grid) }),
-    }).catch(() => { /* best-effort */ });
+    const timer = setTimeout(() => {
+      fetch("/api/ui-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: JSON.stringify(grid) }),
+      }).catch(() => { /* best-effort */ });
+    }, 400);
+    return () => clearTimeout(timer);
   }, [grid, sceneLoaded, useCustomMap, projectId]);
 
   useEffect(() => {
     if (!sceneLoaded) return;
     const key = useCustomMap && projectId ? `office-decorations:${projectId}` : "office-decorations";
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [key]: JSON.stringify(decorations) }),
-    }).catch(() => { /* best-effort */ });
+    const timer = setTimeout(() => {
+      fetch("/api/ui-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: JSON.stringify(decorations) }),
+      }).catch(() => { /* best-effort */ });
+    }, 400);
+    return () => clearTimeout(timer);
   }, [decorations, sceneLoaded, useCustomMap, projectId]);
 
   useEffect(() => {
     if (!sceneLoaded) return;
     const key = projectId ? `office-agents:${projectId}` : "office-agents";
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [key]: JSON.stringify(agentPositions) }),
-    }).catch(() => { /* best-effort */ });
+    const timer = setTimeout(() => {
+      fetch("/api/ui-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: JSON.stringify(agentPositions) }),
+      }).catch(() => { /* best-effort */ });
+    }, 400);
+    return () => clearTimeout(timer);
   }, [agentPositions, sceneLoaded, projectId]);
 
   useEffect(() => {
     if (!sceneLoaded) return;
     const key = useCustomMap && projectId ? `office-grass-color:${projectId}` : "office-grass-color";
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [key]: grassColor }),
-    }).catch(() => { /* best-effort */ });
+    const timer = setTimeout(() => {
+      fetch("/api/ui-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [key]: grassColor }),
+      }).catch(() => { /* best-effort */ });
+    }, 400);
+    return () => clearTimeout(timer);
   }, [grassColor, sceneLoaded, useCustomMap, projectId]);
 
+  // Clear rectStart when the user switches tools
+  useEffect(() => { setRectStart(null); }, [tool]);
+
   const onCellClick = useCallback(
-    (x: number, y: number) => {
+    (x: number, y: number, shiftKey = false) => {
       const key = decorationKey(x, y);
       const cellHasGrass = grid[y]?.[x] === true;
 
       if (!tool) return;
 
+      // Shift-click rectangle fill for paint/erase terrain tools
+      if (shiftKey && rectStart && (tool === "grass" || tool === "erase")) {
+        undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+        redoStack.current = [];
+        const xMin = Math.min(rectStart.x, x);
+        const xMax = Math.max(rectStart.x, x);
+        const yMin = Math.min(rectStart.y, y);
+        const yMax = Math.max(rectStart.y, y);
+        if (tool === "grass") {
+          setGrid((prev) => {
+            const next = prev.map((row) => [...row]);
+            for (let cy = yMin; cy <= yMax; cy++)
+              for (let cx = xMin; cx <= xMax; cx++)
+                next[cy]![cx] = true;
+            return next;
+          });
+        } else {
+          setGrid((prev) => {
+            const next = prev.map((row) => [...row]);
+            for (let cy = yMin; cy <= yMax; cy++)
+              for (let cx = xMin; cx <= xMax; cx++)
+                next[cy]![cx] = false;
+            return next;
+          });
+          setDecorations((prev) => {
+            const next = { ...prev };
+            for (let cy = yMin; cy <= yMax; cy++)
+              for (let cx = xMin; cx <= xMax; cx++)
+                delete next[decorationKey(cx, cy)];
+            return next;
+          });
+          setAgentPositions((prev) => {
+            const next = { ...prev };
+            for (let cy = yMin; cy <= yMax; cy++)
+              for (let cx = xMin; cx <= xMax; cx++)
+                delete next[decorationKey(cx, cy)];
+            return next;
+          });
+        }
+        setPendingChanges((n) => n + (xMax - xMin + 1) * (yMax - yMin + 1));
+        setRectStart(null);
+        return;
+      }
+
       if (tool === "grass") {
         if (cellHasGrass) return;
+        undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+        redoStack.current = [];
+        setRectStart({ x, y });
         setGrid((prev) => {
           const next = prev.map((row) => [...row]);
           next[y]![x] = true;
@@ -296,9 +437,22 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         return;
       }
 
+      if (tool === "fill") {
+        if (cellHasGrass) return;
+        const [newGrid, count] = floodFill(grid, x, y);
+        if (count === 0) return;
+        undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+        redoStack.current = [];
+        setGrid(newGrid);
+        setPendingChanges((n) => n + count);
+        return;
+      }
+
       if (tool === "erase") {
         // Topmost first: agent → decoration (LIFO from stack) → terrain
         if (agentPositions[key]) {
+          undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+          redoStack.current = [];
           setAgentPositions((prev) => {
             const next = { ...prev };
             delete next[key];
@@ -311,6 +465,8 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         if (stack && stack.length > 0) {
           const popped = popDecoration(stack);
           if (popped) {
+            undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+            redoStack.current = [];
             setDecorations((prev) => {
               const next = { ...prev };
               if (popped.stack.length === 0) delete next[key];
@@ -333,6 +489,9 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
           return;
         }
         if (cellHasGrass) {
+          undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+          redoStack.current = [];
+          setRectStart({ x, y });
           setGrid((prev) => {
             const next = prev.map((row) => [...row]);
             next[y]![x] = false;
@@ -346,17 +505,23 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
       // Decoration tool: validate against terrain, refuse on bridge ramp tiles
       if (!isPlacementValid(tool, cellHasGrass)) return;
       if (hasBridgeCap(x, y, grid, decorations)) return;
+      undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+      redoStack.current = [];
       setDecorations((prev) => {
         const stack = applyPlacement(prev[key], tool);
         return { ...prev, [key]: stack };
       });
       setPendingChanges((n) => n + 1);
     },
-    [grid, decorations, agentPositions, tool],
+    [grid, decorations, agentPositions, tool, rectStart],
   );
 
   // Keep ref in sync so pointer handlers can call the latest version
   useEffect(() => { onCellClickRef.current = onCellClick; }, [onCellClick, onCellClickRef]);
+
+  // rAF throttle state for the hover-tile HUD update
+  const pointerRafRef = useRef<number | null>(null);
+  const lastHoverTileRef = useRef<{ x: number; y: number } | null>(null);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
@@ -368,15 +533,28 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const wx = (e.clientX - rect.left - panRef.current.x) / zoomRef.current;
-      const wy = (e.clientY - rect.top - panRef.current.y) / zoomRef.current;
-      const tx = Math.floor(wx / TILE);
-      const ty = Math.floor(wy / TILE);
-      const inBounds = tx >= 0 && tx < GRID_COLS && ty >= 0 && ty < GRID_ROWS;
-      setHoverTile(inBounds ? { x: tx, y: ty } : null);
-
       if (!paintPointerMove(e)) camPointerMove(e);
+
+      // Defer the HUD tile-coordinate update to rAF to avoid a
+      // getBoundingClientRect() forced-layout on every pointer event.
+      if (pointerRafRef.current !== null) return;
+      const clientX = e.clientX;
+      const clientY = e.clientY;
+      const el = e.currentTarget as HTMLElement;
+      pointerRafRef.current = requestAnimationFrame(() => {
+        pointerRafRef.current = null;
+        const rect = el.getBoundingClientRect();
+        const wx = (clientX - rect.left - panRef.current.x) / zoomRef.current;
+        const wy = (clientY - rect.top - panRef.current.y) / zoomRef.current;
+        const tx = Math.floor(wx / TILE);
+        const ty = Math.floor(wy / TILE);
+        const inBounds = tx >= 0 && tx < GRID_COLS && ty >= 0 && ty < GRID_ROWS;
+        const newTile = inBounds ? { x: tx, y: ty } : null;
+        const last = lastHoverTileRef.current;
+        if (newTile?.x === last?.x && newTile?.y === last?.y) return;
+        lastHoverTileRef.current = newTile;
+        setHoverTile(newTile);
+      });
     },
     [paintPointerMove, camPointerMove, panRef, zoomRef],
   );
@@ -384,6 +562,10 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   const onPointerUp = useCallback(() => {
     paintPointerUp();
     camPointerUp();
+    if (pointerRafRef.current !== null) {
+      cancelAnimationFrame(pointerRafRef.current);
+      pointerRafRef.current = null;
+    }
   }, [paintPointerUp, camPointerUp]);
 
   // Drop handler - invoked by OfficeMap when an agent is dropped on a
@@ -503,6 +685,48 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
     [buildMode, tool, selectAgent],
   );
 
+  // Keyboard shortcuts for build mode: tool selection (B/E/F), Escape to exit,
+  // and Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z for undo/redo.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const isCmd = e.metaKey || e.ctrlKey;
+
+      if (buildMode && isCmd && e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        const snapshot = undoStack.current.pop();
+        if (!snapshot) return;
+        redoStack.current.push(currentStateRef.current);
+        setGrid(snapshot.grid);
+        setDecorations(snapshot.decorations);
+        setAgentPositions(snapshot.agentPositions);
+        setRectStart(null);
+        setPendingChanges((n) => n + 1);
+        return;
+      }
+      if (buildMode && isCmd && ((e.key === "z" && e.shiftKey) || e.key === "y")) {
+        e.preventDefault();
+        const snapshot = redoStack.current.pop();
+        if (!snapshot) return;
+        undoStack.current.push(currentStateRef.current);
+        setGrid(snapshot.grid);
+        setDecorations(snapshot.decorations);
+        setAgentPositions(snapshot.agentPositions);
+        setRectStart(null);
+        setPendingChanges((n) => n + 1);
+        return;
+      }
+
+      if (isCmd || !buildMode) return;
+      if (e.key === "b" || e.key === "B") { e.preventDefault(); setTool("grass"); }
+      if (e.key === "e" || e.key === "E") { e.preventDefault(); setTool("erase"); }
+      if (e.key === "f" || e.key === "F") { e.preventDefault(); setTool("fill"); }
+      if (e.key === "Escape") { setBuildMode(false); setPendingChanges(0); undoStack.current = []; redoStack.current = []; }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [buildMode]);
+
   return (
     <div
       ref={containerRef}
@@ -539,11 +763,12 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
           rosterInstances={rosterInstances}
           isMultiInstance={isMultiInstance}
           spendByInstance={spendByInstance}
+          visibleRange={visibleCellRange}
         />
       </div>
 
       {/* Canvas tools - top-left: zoom + recenter */}
-      <div className="absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
+      <div className="canvas-tools absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
         <button
           type="button"
           className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
@@ -600,7 +825,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         const decoCount  = Object.values(decorations).reduce((s, stack) => s + (stack?.length ?? 0), 0);
         const placedCount = grassCount + decoCount;
         return (
-          <div className="absolute flex z-[10] pointer-events-none bottom-[14px] left-[14px] gap-[14px] px-[12px] py-[8px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] font-mono text-[10.5px] text-[rgba(138,128,121,0.9)] backdrop-blur-[10px]">
+          <div className="canvas-info absolute flex z-[10] pointer-events-none bottom-[14px] left-[14px] gap-[14px] px-[12px] py-[8px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] font-mono text-[10.5px] text-[rgba(138,128,121,0.9)] backdrop-blur-[10px]">
             <div className="item">
               <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Tile</div>
               <div className="text-[rgba(244,239,234,0.9)]">{hoverTile ? `${hoverTile.x}, ${hoverTile.y}` : "-"}</div>
@@ -613,6 +838,12 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
               <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Placed</div>
               <div className="text-[rgba(244,239,234,0.9)]">{placedCount} tiles</div>
             </div>
+            {buildMode && rectStart && (
+              <div className="item">
+                <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Rect</div>
+                <div className="text-[rgba(244,239,234,0.9)]">{rectStart.x},{rectStart.y} → shift+click</div>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -622,10 +853,12 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         <div className="build-actions-bar absolute flex items-center gap-[4px] z-[15] pointer-events-auto whitespace-nowrap rounded-full bottom-[14px] left-1/2 [transform:translateX(-50%)] p-[5px] bg-[rgba(26,22,20,0.92)] border border-[rgba(255,240,230,0.14)] shadow-[0_14px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-[12px]">
           <button
             type="button"
-            className="inline-flex items-center gap-[7px] rounded-full bg-acc text-white font-semibold px-[16px] py-[8px] text-[12.5px] transition-opacity duration-[120ms] hover:opacity-[0.88]"
-            onClick={() => { setBuildMode(false); setPendingChanges(0); }}
+            className="inline-flex items-center gap-[7px] rounded-full font-semibold px-[16px] py-[8px] text-[12.5px] transition-[background,color] duration-[120ms] bg-[rgba(255,240,230,0.08)] border border-[rgba(255,240,230,0.12)] text-[rgba(244,239,234,0.9)] hover:bg-[rgba(255,240,230,0.12)]"
+            onClick={() => { setBuildMode(false); setPendingChanges(0); undoStack.current = []; redoStack.current = []; }}
           >
-            <Icon name="x" size={13} /> Stop building
+            {pendingChanges > 0 && <span className="rounded-full shrink-0 w-[6px] h-[6px] bg-[#e6b35a] shadow-[0_0_6px_#e6b35a]" />}
+            <Icon name="check" size={13} />
+            Done{pendingChanges > 0 ? ` · ${pendingChanges} saved` : ""}
           </button>
           {projectId && (
             <>
@@ -635,26 +868,16 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
                 className={`inline-flex items-center gap-[5px] rounded-full bg-transparent cursor-pointer font-medium text-[12px] px-[11px] py-[5px] border border-[rgba(255,240,230,0.15)] text-[rgba(255,240,230,0.55)] transition-[background,color,border-color] duration-100 hover:bg-[rgba(255,240,230,0.07)] hover:text-[rgba(255,240,230,0.8)]${useCustomMap ? " !border-[rgba(233,84,32,0.5)] !bg-[rgba(233,84,32,0.12)] !text-[#e95420]" : ""}`}
                 title={
                   useCustomMap
-                    ? "Switch back to the shared map layout"
-                    : "Use a custom map layout for this project"
+                    ? "Switch back to the default shared layout (used by all projects)"
+                    : "Create a project-specific layout for this project"
                 }
                 onClick={useCustomMap ? disableCustomMap : enableCustomMap}
               >
                 <Icon name="map" size={12} />
-                {useCustomMap ? "Custom map" : "Shared map"}
+                {useCustomMap ? "Project layout" : "Default layout"}
               </button>
             </>
           )}
-          <div className="shrink-0 w-[1px] h-[20px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
-          <button
-            type="button"
-            className="inline-flex items-center gap-[6px] rounded-full font-medium text-[12px] px-[14px] py-[7px] bg-[rgba(255,240,230,0.06)] border border-[rgba(255,240,230,0.10)] text-[rgba(244,239,234,0.9)] transition-[background] duration-100 hover:bg-[rgba(255,240,230,0.10)]"
-            onClick={() => { setBuildMode(false); setPendingChanges(0); }}
-          >
-            {pendingChanges > 0 && <span className="rounded-full shrink-0 w-[6px] h-[6px] bg-[#e6b35a] shadow-[0_0_6px_#e6b35a]" />}
-            <Icon name="check" size={13} />
-            Save{pendingChanges > 0 ? ` · ${pendingChanges} changes` : ""}
-          </button>
         </div>
       )}
 
