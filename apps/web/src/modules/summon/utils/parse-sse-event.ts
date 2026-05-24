@@ -117,7 +117,17 @@ export function applySseEvent(
       error: null,
     }))
     .with({ name: "tool" }, ({ data }) => {
-      if (data.name === "Task") {
+      if (data.name === "Agent") {
+        // The Agent tool fires twice: once at content_block_start (input: {}) and
+        // once from the assistant event with the complete input. Skip the empty one
+        // — it carries no useful information, and creating a card from it produces
+        // a duplicate ghost item that the full-input card would immediately follow.
+        const isEmpty =
+          !data.input ||
+          (typeof data.input === "object" && !Array.isArray(data.input) && Object.keys(data.input as object).length === 0);
+        if (isEmpty) {
+          return { thread: prev.thread, usage: prev.usage, done: false, error: null };
+        }
         const { name, prompt } = extractSubagentInfo(data.input);
         return {
           thread: closeStreaming([
