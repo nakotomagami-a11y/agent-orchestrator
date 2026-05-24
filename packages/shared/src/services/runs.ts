@@ -26,7 +26,7 @@ export type SseEvent =
 
 export type SseEmit = (event: SseEvent) => void | Promise<void>;
 
-type ReplayableEvent = Extract<SseEvent, { name: "chunk" | "tool" | "usage" }>;
+type ReplayableEvent = Extract<SseEvent, { name: "chunk" | "tool" | "usage" | "subagent" }>;
 
 interface LiveRun {
   id: string;
@@ -365,7 +365,7 @@ export function killAllRuns(): void {
 }
 
 function broadcast(run: LiveRun, event: SseEvent): void {
-  if (event.name === "chunk" || event.name === "tool" || event.name === "usage") {
+  if (event.name === "chunk" || event.name === "tool" || event.name === "usage" || event.name === "subagent") {
     run.eventLog.push(event as ReplayableEvent);
   }
   for (const emit of run.subscribers) {
@@ -445,9 +445,8 @@ function handleStreamLine(run: LiveRun, line: string): void {
         data: { runId: run.id, name: toolName, input: ev.content_block.input },
       });
       db.insertToolCall(run.id, toolName, ev.content_block.input, Date.now());
-      if (toolName === "Task") {
-        spawnSubAgentRecord(run, ev.content_block.input);
-      }
+      // Do NOT call spawnSubAgentRecord here — input is always {} at content_block_start.
+      // Sub-agent records are created in the assistant event handler where input is complete.
       return;
     }
     return;
@@ -465,7 +464,7 @@ function handleStreamLine(run: LiveRun, line: string): void {
           data: { runId: run.id, name: toolName, input: block.input },
         });
         db.insertToolCall(run.id, toolName, block.input, Date.now());
-        if (toolName === "Task") {
+        if (toolName === "Agent") {
           spawnSubAgentRecord(run, block.input);
         }
       }
@@ -582,9 +581,18 @@ function bridgeChildToParent(parentRun: LiveRun, subRunId: string): void {
   childRun.subscribers.add(emit);
 }
 
+function extractChildAgentId(input: unknown, fallback: string): string {
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    const obj = input as Record<string, unknown>;
+    if (typeof obj.subagent_type === "string" && obj.subagent_type) return obj.subagent_type;
+  }
+  return fallback;
+}
+
 function spawnSubAgentRecord(parentRun: LiveRun, input: unknown): void {
   const subRunId = randomUUID();
   const prompt = extractTaskPrompt(input);
+  const childAgentId = extractChildAgentId(input, parentRun.agentId);
 
   parentRun.childRunIds.push(subRunId);
 
@@ -592,8 +600,8 @@ function spawnSubAgentRecord(parentRun: LiveRun, input: unknown): void {
   try {
     db.insertRun({
       id: subRunId,
-      agentId: parentRun.agentId,
-      agentName: parentRun.agentName,
+      agentId: childAgentId,
+      agentName: childAgentId,
       instanceId: parentRun.instanceId,
       instanceLabel: parentRun.instanceLabel,
       projectId: parentRun.projectId,
@@ -616,7 +624,7 @@ function spawnSubAgentRecord(parentRun: LiveRun, input: unknown): void {
       type: "subagent",
       parentRunId: parentRun.id,
       subRunId,
-      agentId: parentRun.agentId,
+      agentId: childAgentId,
       prompt,
       status: "running",
     },
