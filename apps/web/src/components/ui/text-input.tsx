@@ -15,10 +15,7 @@ export const TextInput = forwardRef<HTMLInputElement, TextInputProps>(function T
       ref={ref}
       type={type}
       aria-invalid={invalid || undefined}
-      className={cn("w-full h-8 px-[10px] bg-bg-1 rounded-[var(--r-md)] text-txt text-[13px] outline-none shadow-[var(--shadow-1)] [font:inherit]", className)}
-      style={{
-        border: `1px solid ${invalid ? "var(--error)" : "var(--line-2)"}`,
-      }}
+      className={cn("w-full h-8 px-[10px] bg-bg-1 rounded-[var(--r-md)] text-txt text-[13px] outline-none shadow-[var(--shadow-1)] [font:inherit] border", invalid ? "border-status-error" : "border-line-2", className)}
       onFocus={(e) => {
         e.currentTarget.style.borderColor = "var(--acc)";
         rest.onFocus?.(e);

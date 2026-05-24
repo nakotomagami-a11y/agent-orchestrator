@@ -92,9 +92,9 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end" }: Dropd
               onMouseEnter={() => setActiveIndex(i)}
               className={cn(
               "flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full",
+              item.destructive && "text-status-error",
               i === activeIndex && "bg-acc text-[var(--acc-ink)] shadow-[0_1px_0_rgba(0,0,0,0.06),0_2px_6px_rgba(233,84,32,0.30)]"
             )}
-              style={{ color: item.destructive ? "var(--error)" : undefined }}
             >
               {item.label}
             </button>

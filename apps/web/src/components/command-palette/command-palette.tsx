@@ -12,6 +12,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { cn } from "@/lib/cn";
 import { usePaletteStore } from "@/lib/palette-store";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
@@ -236,10 +237,7 @@ export function CommandPalette() {
                   data-active={isActive}
                   onClick={() => execute(cmd)}
                   onMouseEnter={() => setActiveIndex(idx)}
-                  style={{
-                    background: isActive ? "var(--bg-2)" : "transparent",
-                  }}
-                  className="flex items-center gap-[10px] px-[10px] py-2 rounded-[var(--r-md)] cursor-pointer select-none"
+                  className={cn("flex items-center gap-[10px] px-[10px] py-2 rounded-[var(--r-md)] cursor-pointer select-none", isActive ? "bg-bg-2" : "bg-transparent")}
                 >
                   <Icon name={cmd.icon} size={16} aria-hidden />
                   <span className="flex-1 text-[14px] text-[var(--txt)]">

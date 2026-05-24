@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/cn";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -560,7 +561,7 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
           <Icon
             name="chevron"
             size={13}
-            style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.18s" }}
+            className={cn("transition-transform duration-[180ms]", open && "rotate-90")}
           />
         </div>
       </div>

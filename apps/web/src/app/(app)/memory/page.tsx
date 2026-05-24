@@ -93,7 +93,7 @@ function NavItem({ scope, label, icon, selected, hasContent, onSelect, depth = 0
         boxShadow: selected ? "inset 2px 0 0 var(--acc)" : "inset 2px 0 0 transparent",
       }}
     >
-      <Icon name={icon} size={12} className="shrink-0" style={{ opacity: selected ? 1 : 0.55 }} />
+      <Icon name={icon} size={12} className={cn("shrink-0", selected ? "opacity-100" : "opacity-[0.55]")} />
       <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1">{label}</span>
       {hasContent && (
         <span

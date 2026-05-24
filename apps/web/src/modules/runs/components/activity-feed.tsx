@@ -688,7 +688,7 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
           {projectId ? "· run history for this project" : "· run history across all agents"}
         </span>
         <div className="ml-auto flex items-center gap-2">
-          <div className="flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden" style={{ borderRadius: "var(--r-md)" }}>
+          <div className="flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden rounded-md">
             {(["today", "week", "month", "all"] as const).map((s) => (
               <button
                 key={s}

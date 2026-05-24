@@ -214,7 +214,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-[28px] pt-[22px] pb-[48px] gap-[16px] [&>*]:shrink-0">
 
         {/* HERO */}
-        <div className="relative overflow-hidden border border-line bg-bg-1" style={{ borderRadius: "var(--r-lg)" }}>
+        <div className="relative overflow-hidden border border-line bg-bg-1 rounded-lg">
           {/* Ambient gradient using avatar color */}
           <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 80% at 100% 0%, rgba(90,139,111,0.18) 0%, transparent 70%)" }} />
 
@@ -228,8 +228,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                 <div className="flex items-center gap-[10px] flex-wrap">
                   <h2 className="font-bold m-0 text-[20px] tracking-[-0.01em] text-txt">{project.meta.name}</h2>
                   {projectWorkingCount > 0 && (
-                    <span className="inline-flex items-center gap-[5px] px-[8px] py-[2px] rounded-full text-[10px] font-semibold font-[var(--font-mono)] tracking-[0.03em]" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)", color: "var(--working)" }}>
-                      <span className="w-[5px] h-[5px] rounded-full animate-pulse" style={{ background: "var(--working)" }} />
+                    <span className="inline-flex items-center gap-[5px] px-[8px] py-[2px] rounded-full text-[10px] font-semibold font-[var(--font-mono)] tracking-[0.03em] text-status-working" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                      <span className="w-[5px] h-[5px] rounded-full animate-pulse bg-status-working" />
                       {projectWorkingCount} active
                     </span>
                   )}
@@ -266,7 +266,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                 <span className="text-[11px] text-txt-3 font-[var(--font-mono)]">agents</span>
               </div>
               {projectWorkingCount > 0 && (
-                <div className="flex items-baseline gap-[5px] px-[20px] border-l border-[rgba(255,255,255,0.06)]" style={{ color: "var(--working)" }}>
+                <div className="flex items-baseline gap-[5px] px-[20px] border-l border-[rgba(255,255,255,0.06)] text-status-working">
                   <span className="text-[22px] font-bold tabular-nums leading-none">{projectWorkingCount}</span>
                   <span className="text-[11px] font-[var(--font-mono)] opacity-70">working</span>
                 </div>
@@ -309,20 +309,20 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     {(gitStatusQ.data.added > 0 || gitStatusQ.data.removed > 0) && (
                       <span className="flex items-center gap-[4px]">
                         {gitStatusQ.data.added > 0 && (
-                          <span style={{ color: "var(--working)" }}>+{gitStatusQ.data.added}</span>
+                          <span className="text-status-working">+{gitStatusQ.data.added}</span>
                         )}
                         {gitStatusQ.data.removed > 0 && (
-                          <span style={{ color: "var(--error)" }}>-{gitStatusQ.data.removed}</span>
+                          <span className="text-status-error">-{gitStatusQ.data.removed}</span>
                         )}
                       </span>
                     )}
                     {gitStatusQ.data.behind > 0 && (
-                      <span className="flex items-center gap-[3px]" style={{ color: "var(--warn, #e6b35a)" }}>
+                      <span className="flex items-center gap-[3px] text-[var(--warn,#e6b35a)]">
                         ↓ {gitStatusQ.data.behind} behind
                       </span>
                     )}
                     {gitStatusQ.data.ahead > 0 && (
-                      <span className="flex items-center gap-[3px]" style={{ color: "var(--working)" }}>
+                      <span className="flex items-center gap-[3px] text-status-working">
                         ↑ {gitStatusQ.data.ahead} ahead
                       </span>
                     )}
@@ -337,7 +337,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         </div>
 
         {/* ACTIVITY */}
-        <section className="bg-bg-1 border border-line overflow-hidden" style={{ borderRadius: "var(--r-lg)" }}>
+        <section className="bg-bg-1 border border-line overflow-hidden rounded-lg">
           <div className="flex items-center border-b border-line gap-[12px] px-[18px] py-[12px]">
             <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="zap" size={14} /></div>
             <div className="flex-1 min-w-0">
@@ -349,7 +349,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         </section>
 
         {/* MEMORY */}
-        <section className="bg-bg-1 border border-line overflow-hidden" style={{ borderRadius: "var(--r-lg)" }}>
+        <section className="bg-bg-1 border border-line overflow-hidden rounded-lg">
           <div className="flex items-center border-b border-line gap-[12px] px-[18px] py-[12px]">
             <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="memory" size={14} /></div>
             <div className="flex-1 min-w-0">
@@ -366,8 +366,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
             />
             <div className="flex items-center gap-[12px] px-[2px] py-[8px]">
               {memoryDirty ? (
-                <span className="inline-flex items-center gap-[6px] font-[var(--font-mono)] text-[11px]" style={{ color: "var(--queued)" }}>
-                  <span className="rounded-full w-[5px] h-[5px]" style={{ background: "var(--queued)", boxShadow: "0 0 5px var(--queued)" }} />
+                <span className="inline-flex items-center gap-[6px] font-[var(--font-mono)] text-[11px] text-status-queued">
+                  <span className="rounded-full w-[5px] h-[5px] bg-status-queued" style={{ boxShadow: "0 0 5px var(--queued)" }} />
                   unsaved changes
                 </span>
               ) : (
@@ -396,7 +396,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         </section>
 
         {/* BACKUP */}
-        <section className="bg-bg-1 border border-line overflow-hidden" style={{ borderRadius: "var(--r-lg)" }}>
+        <section className="bg-bg-1 border border-line overflow-hidden rounded-lg">
           <div className="flex items-center border-b border-line gap-[12px] px-[18px] py-[12px]">
             <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="archive" size={14} /></div>
             <div className="flex-1 min-w-0">
@@ -406,7 +406,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           </div>
           <div className="px-[18px] py-[14px]">
             <div className="grid gap-[10px] [grid-template-columns:1fr_1fr] max-[800px]:[grid-template-columns:1fr]">
-              <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px]" style={{ borderRadius: "var(--r-md)" }}>
+              <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px] rounded-md">
                 <div className="flex items-center gap-[10px]">
                   <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="download" size={14} /></div>
                   <div>
@@ -434,7 +434,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                 </div>
               </div>
 
-              <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px]" style={{ borderRadius: "var(--r-md)" }}>
+              <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px] rounded-md">
                 <div className="flex items-center gap-[10px]">
                   <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="upload" size={14} /></div>
                   <div>
@@ -443,8 +443,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   </div>
                 </div>
                 <div
-                  className="flex flex-col items-center justify-center bg-bg-1 text-txt-3 gap-[6px] py-[20px] rounded-[8px] font-[var(--font-mono)] text-[11.5px] cursor-pointer"
-                  style={{ border: "1px dashed var(--line-2)" }}
+                  className="flex flex-col items-center justify-center bg-bg-1 text-txt-3 gap-[6px] py-[20px] rounded-[8px] font-[var(--font-mono)] text-[11.5px] cursor-pointer border border-dashed border-line-2"
                   onClick={() => fileRef.current?.click()}
                 >
                   <Icon name="upload" size={18} />
@@ -478,11 +477,11 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         </section>
 
         {/* DANGER ZONE */}
-        <section className="overflow-hidden" style={{ border: "1px solid rgba(239,68,68,0.25)", borderRadius: "var(--r-lg)", background: "rgba(239,68,68,0.03)" }}>
-          <div className="flex items-center gap-[12px] px-[18px] py-[12px]" style={{ borderBottom: "1px solid rgba(239,68,68,0.18)" }}>
-            <div className="grid place-items-center shrink-0 w-[28px] h-[28px] rounded-[7px] border" style={{ color: "var(--error)", background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)" }}><Icon name="shield" size={14} /></div>
+        <section className="overflow-hidden rounded-lg" style={{ border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.03)" }}>
+          <div className="flex items-center gap-[12px] px-[18px] py-[12px] border-b border-b-[rgba(239,68,68,0.18)]">
+            <div className="grid place-items-center shrink-0 w-[28px] h-[28px] rounded-[7px] border text-status-error" style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)" }}><Icon name="shield" size={14} /></div>
             <div className="flex-1 min-w-0">
-              <h3 className="flex items-center font-bold m-0 text-[13px] gap-[8px]" style={{ color: "var(--error)" }}>Danger zone</h3>
+              <h3 className="flex items-center font-bold m-0 text-[13px] gap-[8px] text-status-error">Danger zone</h3>
               <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">destructive actions - they cannot be undone</div>
             </div>
           </div>

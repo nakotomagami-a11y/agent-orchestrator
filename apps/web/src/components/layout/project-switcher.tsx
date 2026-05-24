@@ -280,11 +280,7 @@ export function ProjectSwitcher() {
                   type="button"
                   disabled={createProject.isPending}
                   onClick={submitCreate}
-                  className="flex-1 px-2 py-1 text-xs bg-acc border-0 rounded cursor-pointer text-[var(--acc-fg,#fff)] font-[inherit]"
-                  style={{
-                    cursor: createProject.isPending ? "default" : "pointer",
-                    opacity: createProject.isPending ? 0.6 : 1,
-                  }}
+                  className={cn("flex-1 px-2 py-1 text-xs bg-acc border-0 rounded cursor-pointer text-[var(--acc-fg,#fff)] font-[inherit]", createProject.isPending && "opacity-60 cursor-default")}
                 >
                   {createProject.isPending
                     ? t("project_switcher.new_project_creating")

@@ -229,7 +229,7 @@ export function CodeEditor({
       </div>
 
       {view === "write" ? (
-        <div style={{ display: "flex", height: editorH }}>
+        <div className="flex" style={{ height: editorH }}>
           {/* ── Gutter ── */}
           <div
             aria-hidden
@@ -255,7 +255,8 @@ export function CodeEditor({
             <pre
               aria-hidden
               dangerouslySetInnerHTML={{ __html: preHtml }}
-              style={{ ...LAYER, color: "var(--txt)", zIndex: 0, pointerEvents: "none" }}
+              className="text-txt pointer-events-none"
+              style={{ ...LAYER, zIndex: 0 }}
             />
             <textarea
               value={value}
