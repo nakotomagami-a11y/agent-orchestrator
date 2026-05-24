@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 
 // ── Expanded-state context ────────────────────────────────────────────────────
 // A stable Map<id, open> lives in ChatThread (via useRef) so that collapsible
@@ -527,6 +529,16 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
     item.status === "error" ? "text-[10px] font-medium px-[7px] py-[1px] rounded-full border border-transparent err" :
     "text-[10px] font-medium px-[7px] py-[1px] rounded-full border border-transparent running";
 
+  const isRunning = item.status === "running" || item.status === "queued" || item.status === "cancelling";
+  const liveHint = isRunning
+    ? (item.currentTool ? `using ${item.currentTool}` : item.lastOutputLine ?? null)
+    : null;
+
+  const totalTok =
+    item.tokensIn !== undefined || item.tokensOut !== undefined
+      ? (item.tokensIn ?? 0) + (item.tokensOut ?? 0)
+      : null;
+
   return (
     <div className="my-1 ml-[14px] border-l-2 border-l-[#3b7de8] px-[14px] py-[10px] bg-[linear-gradient(90deg,rgba(59,125,232,0.09)_0%,transparent_72%)] rounded-[0_10px_10px_0]">
       <div className="flex items-center gap-[10px] cursor-pointer select-none" onClick={toggle} role="button" aria-expanded={open}>
@@ -539,6 +551,9 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
             {item.name}
             <span className={badgeClass}>{item.status}</span>
           </div>
+          {liveHint && (
+            <div className="font-mono text-[10.5px] text-ao-fg-3 mt-[3px] truncate max-w-[420px]">{liveHint}</div>
+          )}
         </div>
         <div className="ml-auto flex items-center gap-2 text-ao-fg-3 font-mono text-[11px] shrink-0">
           {duration && <span>{duration}</span>}
@@ -550,8 +565,28 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
         </div>
       </div>
       {open && (
-        <div className="mt-[10px] px-3 py-[10px] bg-[var(--ao-bg-1)] border border-ao-line-1 rounded-[6px] font-mono text-[11.5px] text-ao-fg-1 leading-[1.55] whitespace-pre-wrap break-words">
-          {item.prompt}
+        <div className="mt-[10px] flex flex-col gap-[8px]">
+          <div className="px-3 py-[10px] bg-[var(--ao-bg-1)] border border-ao-line-1 rounded-[6px] font-mono text-[11.5px] text-ao-fg-1 leading-[1.55] whitespace-pre-wrap break-words">
+            {item.prompt}
+          </div>
+          {(totalTok !== null || item.cost !== undefined || item.subRunId) && (
+            <div className="flex items-center gap-[10px] font-mono text-[11px] text-ao-fg-3">
+              {totalTok !== null && <span>{totalTok.toLocaleString()} tok</span>}
+              {item.cost !== undefined && item.cost > 0 && (
+                <span>${item.cost.toFixed(4)}</span>
+              )}
+              {item.subRunId && (
+                <Link
+                  href={PAGE_ROUTES.run(item.subRunId)}
+                  className="ml-auto inline-flex items-center gap-[4px] text-[var(--ao-accent)] no-underline hover:underline text-[11px]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  View transcript
+                  <Icon name="chevron" size={10} className="rotate-[-90deg]" />
+                </Link>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

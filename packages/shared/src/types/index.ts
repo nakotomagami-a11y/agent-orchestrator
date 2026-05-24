@@ -90,6 +90,8 @@ export interface PersistedRun {
   instanceLabel?: string;
   /** Claude CLI session ID - pass as --resume on the next turn. */
   sessionId?: string;
+  /** Set for sub-agent runs spawned by a Task tool call. */
+  parentRunId?: string;
 }
 
 export interface AgentInstance {
@@ -168,7 +170,7 @@ export interface SummonRequest {
   resumeSessionId?: string;
 }
 
-export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "attached";
+export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "attached" | "subagent" | "subagent-update";
 
 export interface SseChunkEvent { runId: string; text: string }
 export interface SseToolEvent { runId: string; name: string; input?: unknown }
@@ -185,13 +187,37 @@ export interface SseAttachedEvent {
   startTs: number;
 }
 
+export type SubAgentStatus = "queued" | "running" | "cancelling" | "done" | "error" | "cancelled" | "timeout";
+
+export interface SseSubAgentEvent {
+  type: "subagent";
+  parentRunId: string;
+  subRunId: string;
+  agentId: string;
+  prompt: string;
+  status: SubAgentStatus;
+}
+
+export interface SseSubAgentUpdateEvent {
+  type: "subagent-update";
+  subRunId: string;
+  status: SubAgentStatus;
+  currentTool?: string;
+  tokensIn: number;
+  tokensOut: number;
+  cost: number;
+  lastOutputLine?: string;
+}
+
 export type RunStreamEvent =
   | { name: "attached"; data: SseAttachedEvent }
   | { name: "chunk"; data: SseChunkEvent }
   | { name: "tool"; data: SseToolEvent }
   | { name: "usage"; data: SseUsageEvent }
   | { name: "done"; data: SseDoneEvent }
-  | { name: "error"; data: SseErrorEvent };
+  | { name: "error"; data: SseErrorEvent }
+  | { name: "subagent"; data: SseSubAgentEvent }
+  | { name: "subagent-update"; data: SseSubAgentUpdateEvent };
 
 // ─── Pipeline types ──────────────────────────────────────────────────────────
 

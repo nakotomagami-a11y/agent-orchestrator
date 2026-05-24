@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { match } from "ts-pattern";
 import type { RunStreamEvent } from "@agent-office/shared/types";
-import type { ThreadItem, UsageMeter } from "./thread-types";
+import type { SubAgentStatus, ThreadItem, UsageMeter } from "./thread-types";
 
 export interface ApplyResult {
   thread: ThreadItem[];
@@ -41,6 +41,28 @@ const doneSchema = z.object({
 });
 const errorSchema = z.object({ runId: z.string(), message: z.string() });
 
+const subAgentStatusSchema = z.enum(["queued", "running", "cancelling", "done", "error", "cancelled", "timeout"]);
+
+const subagentSchema = z.object({
+  type: z.literal("subagent"),
+  parentRunId: z.string(),
+  subRunId: z.string(),
+  agentId: z.string(),
+  prompt: z.string(),
+  status: subAgentStatusSchema,
+});
+
+const subagentUpdateSchema = z.object({
+  type: z.literal("subagent-update"),
+  subRunId: z.string(),
+  status: subAgentStatusSchema,
+  currentTool: z.string().optional(),
+  tokensIn: z.number(),
+  tokensOut: z.number(),
+  cost: z.number(),
+  lastOutputLine: z.string().optional(),
+});
+
 const eventSchemas = {
   attached: attachedSchema,
   chunk: chunkSchema,
@@ -48,6 +70,8 @@ const eventSchemas = {
   usage: usageSchema,
   done: doneSchema,
   error: errorSchema,
+  subagent: subagentSchema,
+  "subagent-update": subagentUpdateSchema,
 } as const;
 
 export type SseEventName = keyof typeof eventSchemas;
@@ -115,6 +139,57 @@ export function applySseEvent(
         error: null,
       };
     })
+    .with({ name: "subagent" }, ({ data }) => {
+      // Find the most recent agent-subagent item without a subRunId (created by the tool event)
+      // and attach the subRunId to it, or create a new one if not found.
+      const thread = [...prev.thread];
+      let existingIdx = -1;
+      for (let i = thread.length - 1; i >= 0; i--) {
+        const it = thread[i]!;
+        if (it.kind === "agent-subagent" && !it.subRunId && it.status === "running") {
+          existingIdx = i;
+          break;
+        }
+      }
+      if (existingIdx !== -1) {
+        const existing = thread[existingIdx]!;
+        if (existing.kind === "agent-subagent") {
+          thread[existingIdx] = { ...existing, subRunId: data.subRunId, status: data.status as SubAgentStatus };
+        }
+      } else {
+        thread.push({
+          kind: "agent-subagent" as const,
+          id: newId(),
+          name: data.agentId,
+          prompt: data.prompt,
+          status: data.status as SubAgentStatus,
+          startTs: Date.now(),
+          subRunId: data.subRunId,
+        });
+      }
+      return { thread, usage: prev.usage, done: false, error: null };
+    })
+    .with({ name: "subagent-update" }, ({ data }) => {
+      const thread = prev.thread.map((it) => {
+        if (it.kind !== "agent-subagent" || it.subRunId !== data.subRunId) return it;
+        const now = Date.now();
+        const durationMs =
+          data.status !== "running" && data.status !== "queued" && data.status !== "cancelling"
+            ? now - it.startTs
+            : it.durationMs;
+        return {
+          ...it,
+          status: data.status as SubAgentStatus,
+          currentTool: data.currentTool,
+          tokensIn: data.tokensIn,
+          tokensOut: data.tokensOut,
+          cost: data.cost,
+          lastOutputLine: data.lastOutputLine,
+          durationMs,
+        };
+      });
+      return { thread, usage: prev.usage, done: false, error: null };
+    })
     .with({ name: "usage" }, ({ data }) => ({
       thread: prev.thread,
       usage: { tokensIn: data.tokensIn, tokensOut: data.tokensOut, cost: data.cost },
@@ -124,8 +199,8 @@ export function applySseEvent(
     .with({ name: "done" }, ({ data }) => {
       const now = Date.now();
       const finalized = prev.thread.map((it) =>
-        it.kind === "agent-subagent" && it.status === "running"
-          ? { ...it, status: "done" as const, durationMs: now - it.startTs }
+        it.kind === "agent-subagent" && (it.status === "running" || it.status === "queued" || it.status === "cancelling")
+          ? { ...it, status: "done" as SubAgentStatus, durationMs: now - it.startTs }
           : it,
       );
       // Use server-provided durationMs when available; fall back to client-side
@@ -158,8 +233,8 @@ export function applySseEvent(
     .with({ name: "error" }, ({ data }) => {
       const now = Date.now();
       const finalized = prev.thread.map((it) =>
-        it.kind === "agent-subagent" && it.status === "running"
-          ? { ...it, status: "error" as const, durationMs: now - it.startTs }
+        it.kind === "agent-subagent" && (it.status === "running" || it.status === "queued" || it.status === "cancelling")
+          ? { ...it, status: "error" as SubAgentStatus, durationMs: now - it.startTs }
           : it,
       );
       return {

@@ -28,6 +28,10 @@ export function pushRun(run: PersistedRun): void {
   });
 }
 
+export function getChildRuns(parentRunId: string): PersistedRun[] {
+  return db.getChildRuns(parentRunId);
+}
+
 export function deleteRunsForInstance(projectId: string, instanceId: string): number {
   return db.deleteRunsForInstance(projectId, instanceId);
 }

@@ -7,7 +7,7 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
-import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseToolEvent, SseUsageEvent } from "../types/index";
+import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseSubAgentEvent, SseSubAgentUpdateEvent, SseToolEvent, SseUsageEvent, SubAgentStatus } from "../types/index";
 import { log } from "./log";
 import { buildAugmentedPath } from "./paths";
 import { pushRun } from "./store";
@@ -20,7 +20,9 @@ export type SseEvent =
   | { name: "tool"; data: SseToolEvent }
   | { name: "usage"; data: SseUsageEvent }
   | { name: "done"; data: SseDoneEvent }
-  | { name: "error"; data: SseErrorEvent };
+  | { name: "error"; data: SseErrorEvent }
+  | { name: "subagent"; data: SseSubAgentEvent }
+  | { name: "subagent-update"; data: SseSubAgentUpdateEvent };
 
 export type SseEmit = (event: SseEvent) => void | Promise<void>;
 
@@ -56,6 +58,10 @@ interface LiveRun {
   lastActivityAt: number;
   /** Ordered log of chunk/tool/usage events for full replay to late subscribers. */
   eventLog: ReplayableEvent[];
+  /** Parent run ID if this is a sub-agent run. */
+  parentRunId?: string;
+  /** IDs of child runs spawned by Task tool calls. */
+  childRunIds: string[];
 }
 
 const IDLE_TIMEOUT_MS = 10 * 60_000; // kill runs with no stdout for 10 min
@@ -138,6 +144,7 @@ export function getLiveRunAsPersistedRun(runId: string): PersistedRun | undefine
     instanceId: r.instanceId,
     instanceLabel: r.instanceLabel,
     sessionId: r.sessionId,
+    parentRunId: r.parentRunId,
   };
 }
 
@@ -176,6 +183,7 @@ export interface StartRunOpts {
   instanceId?: string;
   instanceLabel?: string;
   args: string[];
+  parentRunId?: string;
 }
 
 export function startRun(opts: StartRunOpts): { runId: string } {
@@ -210,6 +218,8 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     stderrBuf: "",
     lastActivityAt: Date.now(),
     eventLog: [],
+    parentRunId: opts.parentRunId,
+    childRunIds: [],
   };
   liveRuns.set(runId, run);
 
@@ -227,6 +237,7 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     effort: opts.effort,
     cwd: opts.cwd,
     startedAt: run.startTs,
+    parentRunId: opts.parentRunId,
   });
 
   log.info("run.start", { runId, agent: opts.agentId, cwd: opts.cwd });
@@ -428,11 +439,15 @@ function handleStreamLine(run: LiveRun, line: string): void {
       return;
     }
     if (ev.type === "content_block_start" && ev.content_block?.type === "tool_use") {
+      const toolName = ev.content_block.name ?? "tool";
       broadcast(run, {
         name: "tool",
-        data: { runId: run.id, name: ev.content_block.name ?? "tool", input: ev.content_block.input },
+        data: { runId: run.id, name: toolName, input: ev.content_block.input },
       });
-      db.insertToolCall(run.id, ev.content_block.name ?? "tool", ev.content_block.input, Date.now());
+      db.insertToolCall(run.id, toolName, ev.content_block.input, Date.now());
+      if (toolName === "Task") {
+        spawnSubAgentRecord(run, ev.content_block.input);
+      }
       return;
     }
     return;
@@ -444,11 +459,15 @@ function handleStreamLine(run: LiveRun, line: string): void {
         run.output += block.text;
         broadcast(run, { name: "chunk", data: { runId: run.id, text: block.text } });
       } else if (block.type === "tool_use") {
+        const toolName = block.name ?? "tool";
         broadcast(run, {
           name: "tool",
-          data: { runId: run.id, name: block.name ?? "tool", input: block.input },
+          data: { runId: run.id, name: toolName, input: block.input },
         });
-        db.insertToolCall(run.id, block.name ?? "tool", block.input, Date.now());
+        db.insertToolCall(run.id, toolName, block.input, Date.now());
+        if (toolName === "Task") {
+          spawnSubAgentRecord(run, block.input);
+        }
       }
     }
     if (evt.message.usage) {
@@ -499,6 +518,116 @@ function handleStreamLine(run: LiveRun, line: string): void {
   }
 }
 
+function extractTaskPrompt(input: unknown): string {
+  if (input && typeof input === "object" && !Array.isArray(input)) {
+    const obj = input as Record<string, unknown>;
+    if (typeof obj.prompt === "string") return obj.prompt.trim();
+    if (typeof obj.description === "string") return obj.description.trim();
+  }
+  if (typeof input === "string") return input.trim();
+  return JSON.stringify(input);
+}
+
+const SUB_AGENT_THROTTLE_MS = 500;
+
+function bridgeChildToParent(parentRun: LiveRun, subRunId: string): void {
+  const childRun = liveRuns.get(subRunId);
+  if (!childRun) return;
+
+  let lastEmitTs = 0;
+
+  const emit: SseEmit = (event) => {
+    if (event.name === "chunk" || event.name === "tool" || event.name === "usage" || event.name === "done" || event.name === "error") {
+      const now = Date.now();
+      const status: SubAgentStatus =
+        event.name === "done"
+          ? (event.data as { exitCode: number }).exitCode === 0 ? "done" : "error"
+          : event.name === "error"
+            ? "error"
+            : childRun.status === "running" ? "running" : "done";
+
+      const lastLine = childRun.output
+        ? childRun.output.trimEnd().split("\n").pop()?.trim() ?? undefined
+        : undefined;
+
+      const currentTool = event.name === "tool"
+        ? (event.data as { name: string }).name
+        : undefined;
+
+      const isDone = event.name === "done" || event.name === "error";
+
+      if (!isDone && now - lastEmitTs < SUB_AGENT_THROTTLE_MS) return;
+      lastEmitTs = now;
+
+      broadcast(parentRun, {
+        name: "subagent-update",
+        data: {
+          type: "subagent-update",
+          subRunId,
+          status,
+          currentTool,
+          tokensIn: childRun.tokensIn,
+          tokensOut: childRun.tokensOut,
+          cost: childRun.cost,
+          lastOutputLine: lastLine,
+        },
+      });
+
+      if (isDone) {
+        childRun.subscribers.delete(emit);
+      }
+    }
+  };
+
+  childRun.subscribers.add(emit);
+}
+
+function spawnSubAgentRecord(parentRun: LiveRun, input: unknown): void {
+  const subRunId = randomUUID();
+  const prompt = extractTaskPrompt(input);
+
+  parentRun.childRunIds.push(subRunId);
+
+  // Insert a placeholder row so the run detail page can be navigated to.
+  try {
+    db.insertRun({
+      id: subRunId,
+      agentId: parentRun.agentId,
+      agentName: parentRun.agentName,
+      instanceId: parentRun.instanceId,
+      instanceLabel: parentRun.instanceLabel,
+      projectId: parentRun.projectId,
+      sessionId: undefined,
+      status: "running",
+      prompt,
+      model: parentRun.model,
+      effort: parentRun.effort,
+      cwd: parentRun.cwd,
+      startedAt: Date.now(),
+      parentRunId: parentRun.id,
+    });
+  } catch (err) {
+    log.warn("subagent.insert_failed", { parentRunId: parentRun.id, err: String(err) });
+  }
+
+  broadcast(parentRun, {
+    name: "subagent",
+    data: {
+      type: "subagent",
+      parentRunId: parentRun.id,
+      subRunId,
+      agentId: parentRun.agentId,
+      prompt,
+      status: "running",
+    },
+  });
+
+  // Attempt to bridge if the child run is already live (unlikely at this point,
+  // but possible if the same process created it). Normally the child registers
+  // itself into liveRuns via its own startRun call after we emit the event.
+  bridgeChildToParent(parentRun, subRunId);
+}
+
 function finalizeRun(run: LiveRun, exitCode: number): void {
   if (run.status !== "running") return;
   run.status = exitCode === 0 ? "done" : "error";
@@ -527,6 +656,7 @@ function finalizeRun(run: LiveRun, exitCode: number): void {
     instanceId: run.instanceId,
     instanceLabel: run.instanceLabel,
     sessionId: run.sessionId,
+    parentRunId: run.parentRunId,
   };
 
   // Persist best-effort - a DB failure must never swallow the broadcast below.

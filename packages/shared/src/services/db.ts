@@ -164,6 +164,13 @@ const MIGRATIONS: Array<(db: Database.Database) => void> = [
       CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs (started_at DESC);
     `);
   },
+  // v3 → v4: parent_run_id for sub-agent tracking
+  (db) => {
+    db.exec(`
+      ALTER TABLE runs ADD COLUMN parent_run_id TEXT REFERENCES runs(id);
+      CREATE INDEX IF NOT EXISTS idx_runs_parent ON runs (parent_run_id);
+    `);
+  },
 ];
 
 function createSchema(db: Database.Database): void {
@@ -173,6 +180,7 @@ function createSchema(db: Database.Database): void {
     if (v < 1) { MIGRATIONS[0]!(db); v = 1; db.pragma("user_version = 1"); }
     if (v < 2) { MIGRATIONS[1]!(db); v = 2; db.pragma("user_version = 2"); }
     if (v < 3) { MIGRATIONS[2]!(db); v = 3; db.pragma("user_version = 3"); }
+    if (v < 4) { MIGRATIONS[3]!(db); v = 4; db.pragma("user_version = 4"); }
   })();
 }
 
@@ -289,13 +297,14 @@ export interface RunInsert {
   instanceId?: string; instanceLabel?: string; projectId?: string;
   sessionId?: string; status: string; prompt: string;
   model: string; effort: string; cwd?: string; startedAt: number;
+  parentRunId?: string;
 }
 
 export function insertRun(r: RunInsert): void {
   getDb().prepare(`
-    INSERT OR IGNORE INTO runs (id, agent_id, agent_name, instance_id, instance_label, project_id, session_id, status, prompt, output, model, effort, cwd, started_at)
-    VALUES (@id, @agentId, @agentName, @instanceId, @instanceLabel, @projectId, @sessionId, @status, @prompt, '', @model, @effort, @cwd, @startedAt)
-  `).run({ ...r, instanceId: r.instanceId ?? "default", instanceLabel: r.instanceLabel ?? null, projectId: r.projectId ?? null, sessionId: r.sessionId ?? null, cwd: r.cwd ?? null });
+    INSERT OR IGNORE INTO runs (id, agent_id, agent_name, instance_id, instance_label, project_id, session_id, status, prompt, output, model, effort, cwd, started_at, parent_run_id)
+    VALUES (@id, @agentId, @agentName, @instanceId, @instanceLabel, @projectId, @sessionId, @status, @prompt, '', @model, @effort, @cwd, @startedAt, @parentRunId)
+  `).run({ ...r, instanceId: r.instanceId ?? "default", instanceLabel: r.instanceLabel ?? null, projectId: r.projectId ?? null, sessionId: r.sessionId ?? null, cwd: r.cwd ?? null, parentRunId: r.parentRunId ?? null });
 }
 
 export interface RunUpdate {
@@ -326,6 +335,7 @@ interface RunRow {
   status: string; exit_code: number | null; prompt: string; output: string;
   tokens_in: number; tokens_out: number; cost_usd: number; dur_ms: number | null;
   model: string; effort: string; cwd: string | null; started_at: number; ended_at: number | null;
+  parent_run_id: string | null;
 }
 
 function rowToRun(row: RunRow): PersistedRun {
@@ -339,6 +349,7 @@ function rowToRun(row: RunRow): PersistedRun {
     tokensIn: row.tokens_in, tokensOut: row.tokens_out, cost: row.cost_usd,
     durMs: row.dur_ms ?? (row.ended_at != null ? row.ended_at - row.started_at : 0), model: row.model, effort: row.effort,
     cwd: row.cwd ?? undefined, ts: row.started_at,
+    parentRunId: row.parent_run_id ?? undefined,
   };
 }
 
@@ -386,6 +397,13 @@ export function getSpendByInstanceForProject(projectId: string): Record<string, 
 export function getRun(id: string): PersistedRun | null {
   const row = getDb().prepare("SELECT * FROM runs WHERE id = ?").get(id) as RunRow | undefined;
   return row ? rowToRun(row) : null;
+}
+
+export function getChildRuns(parentRunId: string): PersistedRun[] {
+  const rows = getDb().prepare(
+    "SELECT * FROM runs WHERE parent_run_id = ? ORDER BY started_at ASC"
+  ).all(parentRunId) as RunRow[];
+  return rows.map(rowToRun);
 }
 
 export function deleteRunsForInstance(projectId: string, instanceId: string): number {

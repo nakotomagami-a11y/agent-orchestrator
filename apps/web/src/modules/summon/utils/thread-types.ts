@@ -2,12 +2,14 @@
 // these directly - keeping them denormalised here means components don't have
 // to know anything about the wire format.
 
+export type SubAgentStatus = "queued" | "running" | "cancelling" | "done" | "error" | "cancelled" | "timeout";
+
 export type ThreadItem =
   | { kind: "you"; id: string; text: string }
   | { kind: "agent-text"; id: string; text: string; streaming: boolean }
   | { kind: "agent-tool"; id: string; name: string; arg?: string }
   | { kind: "agent-thinking"; id: string; text: string }
-  | { kind: "agent-subagent"; id: string; name: string; prompt: string; status: "running" | "done" | "error"; startTs: number; durationMs?: number }
+  | { kind: "agent-subagent"; id: string; name: string; prompt: string; status: SubAgentStatus; startTs: number; durationMs?: number; subRunId?: string; currentTool?: string; tokensIn?: number; tokensOut?: number; cost?: number; lastOutputLine?: string }
   | { kind: "system-error"; id: string; message: string }
   | { kind: "system-done"; id: string; exitCode: number; durationMs?: number; tokensIn?: number; tokensOut?: number; cost?: number };
 

@@ -12,6 +12,8 @@ const EVENT_NAMES: readonly SseEventName[] = [
   "usage",
   "done",
   "error",
+  "subagent",
+  "subagent-update",
 ] as const;
 
 /**
