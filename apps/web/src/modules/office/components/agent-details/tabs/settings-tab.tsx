@@ -16,6 +16,7 @@ import {
 } from "@/modules/summon/components/ao-icons";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { BodyHistoryPanel } from "@/modules/agents/components/body-history-panel";
+import { highlightMd } from "@/components/ui/code-editor";
 
 
 const TOOL_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
@@ -134,6 +135,22 @@ function SettingsForm({
   }, [resetRef, handleDiscard]);
 
   const promptLines = v.body.split("\n");
+  const promptH = Math.max(320, promptLines.length * 20 + 24);
+
+  const AO_LAYER: React.CSSProperties = {
+    position: "absolute",
+    top: 0, right: 0, bottom: 0, left: 0,
+    margin: 0,
+    padding: "12px 14px",
+    fontFamily: "var(--ao-font-mono)",
+    fontSize: "12.5px",
+    lineHeight: "1.6",
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    overflowWrap: "break-word",
+    tabSize: 2,
+    overflow: "hidden",
+  };
 
   const AVAIL_TOOLS = ["Read", "Write", "Edit", "Bash", "WebFetch", "WebSearch", "Agent"];
 
@@ -348,26 +365,73 @@ function SettingsForm({
         </div>
 
         <div className="ao-markdown-editor bg-ao-bg-4 border border-ao-line-1 rounded-[var(--ao-radius-md)] overflow-hidden">
-          <div className="flex gap-0.5 p-[6px] bg-black/[0.18] border-b border-[var(--ao-line-0)]">
-            <button type="button" className={`inline-flex items-center gap-[6px] px-3 py-[5px] rounded-[6px] font-mono text-[11.5px] ${view === "write" ? "bg-ao-bg-2 text-ao-fg-0" : "text-ao-fg-2"}`} onClick={() => setView("write")}>
-              <AoCode size={12} /> Write
-            </button>
-            <button type="button" className={`inline-flex items-center gap-[6px] px-3 py-[5px] rounded-[6px] font-mono text-[11.5px] ${view === "preview" ? "bg-ao-bg-2 text-ao-fg-0" : "text-ao-fg-2"}`} onClick={() => setView("preview")}>
-              <AoEye size={12} /> Preview
-            </button>
-            <div className="ml-auto flex gap-0.5">
-              <button type="button" className="w-[28px] inline-flex items-center justify-center p-0 rounded-[6px] text-ao-fg-2 hover:text-ao-fg-0" aria-label="heading" onClick={() => setV((p) => ({ ...p, body: p.body + "\n## " }))}><AoHeading size={13} /></button>
-              <button type="button" className="w-[28px] inline-flex items-center justify-center p-0 rounded-[6px] text-ao-fg-2 hover:text-ao-fg-0" aria-label="bold" onClick={() => setV((p) => ({ ...p, body: p.body + "****" }))}><AoBold size={13} /></button>
-              <button type="button" className="w-[28px] inline-flex items-center justify-center p-0 rounded-[6px] text-ao-fg-2 hover:text-ao-fg-0" aria-label="italic" onClick={() => setV((p) => ({ ...p, body: p.body + "**" }))}><AoItalic size={13} /></button>
-              <button type="button" className="w-[28px] inline-flex items-center justify-center p-0 rounded-[6px] text-ao-fg-2 hover:text-ao-fg-0" aria-label="link" onClick={() => setV((p) => ({ ...p, body: p.body + "[](url)" }))}><AoLink size={13} /></button>
-              <button type="button" className="w-[28px] inline-flex items-center justify-center p-0 rounded-[6px] text-ao-fg-2 hover:text-ao-fg-0" aria-label="code" onClick={() => setV((p) => ({ ...p, body: p.body + "``" }))}><AoCode size={13} /></button>
+          {/* ── Toolbar ── */}
+          <div className="flex items-center gap-[6px] px-[8px] py-[7px] bg-[rgba(0,0,0,0.22)] border-b border-[var(--ao-line-0)]">
+            {/* View tab switcher */}
+            <div className="flex items-center gap-[2px] p-[3px] bg-[rgba(0,0,0,0.28)] rounded-[7px]">
+              <button
+                type="button"
+                onClick={() => setView("write")}
+                className={`inline-flex items-center gap-[5px] px-[10px] py-[4px] rounded-[5px] font-mono text-[11.5px] transition-[background,color,box-shadow] duration-[100ms] ${
+                  view === "write"
+                    ? "bg-ao-bg-2 text-ao-fg-0 shadow-[0_1px_3px_rgba(0,0,0,0.35)]"
+                    : "text-ao-fg-3 hover:text-ao-fg-1 hover:bg-[rgba(255,255,255,0.05)] active:bg-[rgba(255,255,255,0.08)]"
+                }`}
+              >
+                <AoCode size={11} /> Write
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("preview")}
+                className={`inline-flex items-center gap-[5px] px-[10px] py-[4px] rounded-[5px] font-mono text-[11.5px] transition-[background,color,box-shadow] duration-[100ms] ${
+                  view === "preview"
+                    ? "bg-ao-bg-2 text-ao-fg-0 shadow-[0_1px_3px_rgba(0,0,0,0.35)]"
+                    : "text-ao-fg-3 hover:text-ao-fg-1 hover:bg-[rgba(255,255,255,0.05)] active:bg-[rgba(255,255,255,0.08)]"
+                }`}
+              >
+                <AoEye size={11} /> Preview
+              </button>
             </div>
+
+            {/* Divider */}
+            <div className="w-px h-[16px] shrink-0 bg-[var(--ao-line-0)] mx-[2px]" />
+
+            {/* Format buttons */}
+            <div className="flex items-center gap-[1px]">
+              {([
+                { icon: <AoHeading size={13} />, label: "Heading", action: () => setV((p) => ({ ...p, body: p.body + "\n## " })) },
+                { icon: <AoBold size={13} />,    label: "Bold",    action: () => setV((p) => ({ ...p, body: p.body + "****" })) },
+                { icon: <AoItalic size={13} />,  label: "Italic",  action: () => setV((p) => ({ ...p, body: p.body + "**" })) },
+                { icon: <AoLink size={13} />,    label: "Link",    action: () => setV((p) => ({ ...p, body: p.body + "[](url)" })) },
+                { icon: <AoCode size={13} />,    label: "Code",    action: () => setV((p) => ({ ...p, body: p.body + "``" })) },
+              ] as { icon: React.ReactNode; label: string; action: () => void }[]).map(({ icon, label, action }) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-label={label}
+                  title={label}
+                  onClick={action}
+                  className="w-[30px] h-[28px] inline-flex items-center justify-center rounded-[5px] text-ao-fg-3 border border-transparent transition-[background,color,border-color] duration-[80ms] hover:text-ao-fg-0 hover:bg-[rgba(255,255,255,0.07)] hover:border-[var(--ao-line-0)] active:bg-[rgba(255,255,255,0.12)] active:text-ao-fg-0"
+                >
+                  {icon}
+                </button>
+              ))}
+            </div>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* History toggle */}
             <button
               type="button"
-              className={`ml-auto text-[11px] px-[8px] py-[3px] rounded-[4px] border transition-colors ${historyOpen ? "border-[var(--ao-accent)] text-[var(--ao-accent)]" : "border-[var(--ao-line)] text-[var(--ao-fg-3)] hover:text-[var(--ao-fg-2)]"}`}
               onClick={() => setHistoryOpen((o) => !o)}
               aria-expanded={historyOpen}
               aria-label="Toggle prompt version history"
+              className={`inline-flex items-center gap-[5px] px-[10px] py-[4px] rounded-[5px] font-mono text-[11.5px] border transition-[background,color,border-color,box-shadow] duration-[100ms] ${
+                historyOpen
+                  ? "bg-[var(--ao-accent-soft)] border-[var(--ao-accent-line)] text-[var(--ao-accent)] shadow-[0_0_0_2px_var(--ao-accent-softer)]"
+                  : "border-[var(--ao-line-0)] text-ao-fg-3 hover:text-ao-fg-1 hover:bg-[rgba(255,255,255,0.05)] hover:border-[var(--ao-line-1)] active:bg-[rgba(255,255,255,0.08)]"
+              }`}
             >
               History
             </button>
@@ -386,17 +450,34 @@ function SettingsForm({
           )}
 
           {view === "write" ? (
-            <div className="ao-editor">
+            <div className="ao-editor" style={{ height: promptH }}>
               <div className="ao-gutter">
                 {promptLines.map((_, i) => <div key={i}>{i + 1}</div>)}
               </div>
-              <textarea
-                className="ao-code resize-none"
-                value={v.body}
-                onChange={(e) => setV((p) => ({ ...p, body: e.target.value }))}
-                spellCheck={false}
-                style={{ height: Math.max(200, promptLines.length * 20) }}
-              />
+              <div style={{ position: "relative" }}>
+                <pre
+                  aria-hidden
+                  dangerouslySetInnerHTML={{ __html: v.body ? highlightMd(v.body, "var(--ao-accent)") : "\n" }}
+                  style={{ ...AO_LAYER, color: "var(--ao-fg-0)", zIndex: 0, pointerEvents: "none" }}
+                />
+                <textarea
+                  value={v.body}
+                  onChange={(e) => setV((p) => ({ ...p, body: e.target.value }))}
+                  spellCheck={false}
+                  style={{
+                    ...AO_LAYER,
+                    zIndex: 1,
+                    color: "transparent",
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    WebkitTextFillColor: "transparent" as any,
+                    caretColor: "var(--ao-fg-0)",
+                    background: "transparent",
+                    border: "none",
+                    outline: "none",
+                    resize: "none",
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <div className="ao-preview">
@@ -414,7 +495,7 @@ function SettingsForm({
       )}
 
       {/* Save bar */}
-      <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[14px] bg-[linear-gradient(180deg,transparent,var(--ao-bg-1)_30%)] border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0">
+      <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[14px] bg-[var(--ao-bg-1)] border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0">
         {dirty ? (
           <div className="inline-flex items-center gap-2 font-mono text-[12px] text-[var(--ao-warn)]">
             <span className="w-[6px] h-[6px] rounded-full bg-[var(--ao-warn)] shadow-[0_0_8px_var(--ao-warn)] animate-[ao-pulse_1.6s_infinite]" />

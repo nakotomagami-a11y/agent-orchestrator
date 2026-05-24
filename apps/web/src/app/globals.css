@@ -1,12 +1,91 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@source "../**/*.{ts,tsx}";
 
 /* ─────────────────────────────────────────────────────────────────
    Agent Office — Yaru / Modern GNOME
-   CSS variables, keyframes, scrollbars, color-mix rules, and nested
-   content selectors only. Everything else is inline Tailwind.
    ───────────────────────────────────────────────────────────────── */
+
+/* Dark mode — applied when [data-theme="dark"] is on any ancestor */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ── Theme tokens — replaces tailwind.config.ts ── */
+@theme {
+  /* Font families (Next.js injects --font-sans/--font-mono via html class; this is the fallback) */
+  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", monospace;
+
+  /* Colors — app palette (resolved via :root CSS vars) */
+  --color-bg-0:   var(--bg-0);
+  --color-bg-1:   var(--bg-1);
+  --color-bg-2:   var(--bg-2);
+  --color-bg-3:   var(--bg-3);
+  --color-bg-elev: var(--bg-elev);
+
+  --color-line:        var(--line);
+  --color-line-2:      var(--line-2);
+  --color-line-strong: var(--line-strong);
+
+  --color-txt:   var(--txt);
+  --color-txt-2: var(--txt-2);
+  --color-txt-3: var(--txt-3);
+  --color-txt-4: var(--txt-4);
+
+  --color-acc:       var(--acc);
+  --color-acc-hover: var(--acc-hover);
+  --color-acc-faint: var(--acc-faint);
+  --color-acc-tint:  var(--acc-tint);
+  --color-acc-ink:   var(--acc-ink);
+
+  --color-status-working:  var(--working);
+  --color-status-done:     var(--done);
+  --color-status-idle:     var(--idle);
+  --color-status-queued:   var(--queued);
+  --color-status-error:    var(--error);
+  --color-status-thinking: var(--thinking);
+
+  /* Colors — ao-modal palette (scoped to .ao-modal, inherited by children) */
+  --color-ao-bg-0: var(--ao-bg-0);
+  --color-ao-bg-1: var(--ao-bg-1);
+  --color-ao-bg-2: var(--ao-bg-2);
+  --color-ao-bg-3: var(--ao-bg-3);
+  --color-ao-bg-4: var(--ao-bg-4);
+  --color-ao-line-1: var(--ao-line-1);
+  --color-ao-line-2: var(--ao-line-2);
+  --color-ao-fg-0: var(--ao-fg-0);
+  --color-ao-fg-1: var(--ao-fg-1);
+  --color-ao-fg-2: var(--ao-fg-2);
+  --color-ao-fg-3: var(--ao-fg-3);
+  --color-ao-accent:      var(--ao-accent);
+  --color-ao-accent-soft: var(--ao-accent-soft);
+  --color-ao-accent-line: var(--ao-accent-line);
+  --color-ao-ok:       var(--ao-ok);
+  --color-ao-ok-soft:  var(--ao-ok-soft);
+  --color-ao-warn:     var(--ao-warn);
+  --color-ao-warn-soft: var(--ao-warn-soft);
+  --color-ao-bad:      var(--ao-bad);
+  --color-ao-bad-soft: var(--ao-bad-soft);
+
+  /* Border radius */
+  --radius-sm: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
+  --radius-xl: var(--r-xl);
+  --radius-ao-sm: var(--ao-radius-sm);
+  --radius-ao-md: var(--ao-radius-md);
+  --radius-ao-lg: var(--ao-radius-lg);
+  --radius-ao-xl: var(--ao-radius-xl);
+
+  /* Box shadows — defined directly to avoid self-referencing var() */
+  --shadow-1: 0 1px 0 rgba(40,30,25,0.04), 0 1px 2px rgba(40,30,25,0.06);
+  --shadow-2: 0 2px 6px rgba(40,30,25,0.06), 0 8px 24px rgba(40,30,25,0.08);
+  --shadow-3: 0 8px 24px rgba(40,30,25,0.10), 0 24px 64px rgba(40,30,25,0.14);
+  --shadow-window: 0 1px 0 rgba(255,255,255,0.5) inset,
+                   0 20px 50px rgba(40,30,25,0.18),
+                   0 4px 14px rgba(40,30,25,0.10);
+
+  /* Breakpoints */
+  --breakpoint-mobile: 600px;
+}
 
 :root {
   --yaru-orange:    #E95420;
@@ -50,12 +129,6 @@
   --r-lg: 14px;
   --r-xl: 20px;
 
-  --shadow-1: 0 1px 0 rgba(40,30,25,0.04), 0 1px 2px rgba(40,30,25,0.06);
-  --shadow-2: 0 2px 6px rgba(40,30,25,0.06), 0 8px 24px rgba(40,30,25,0.08);
-  --shadow-3: 0 8px 24px rgba(40,30,25,0.10), 0 24px 64px rgba(40,30,25,0.14);
-  --shadow-window: 0 1px 0 rgba(255,255,255,0.5) inset,
-                   0 20px 50px rgba(40,30,25,0.18),
-                   0 4px 14px rgba(40,30,25,0.10);
 }
 
 [data-theme="dark"] {
