@@ -44,20 +44,22 @@
   --color-status-thinking: var(--thinking);
 
   /* Colors — ao-modal palette
-     Literal values here (not var() refs) so Tailwind utility classes
-     like border-ao-line-1 resolve correctly at :root level. The raw
-     --ao-* vars are kept on .ao-modal for arbitrary-value syntax usage. */
-  --color-ao-bg-0: #14100e;
-  --color-ao-bg-1: #1c1815;
-  --color-ao-bg-2: #221d1a;
-  --color-ao-bg-3: #2a2421;
-  --color-ao-bg-4: #322b27;
-  --color-ao-line-1: rgba(255, 245, 235, 0.10);
-  --color-ao-line-2: rgba(255, 245, 235, 0.16);
-  --color-ao-fg-0: #f4eee7;
-  --color-ao-fg-1: #d2c7bd;
-  --color-ao-fg-2: #9b9089;
-  --color-ao-fg-3: #6d655f;
+     Surface, line, and foreground tokens resolve via theme-aware CSS
+     vars defined on :root (light) and [data-theme="dark"] (dark) so
+     Tailwind utility classes like `bg-ao-bg-1` and `text-ao-fg-0` flip
+     automatically with the active theme. Accent and status colours
+     stay literal because they're identical across themes. */
+  --color-ao-bg-0:   var(--ao-bg-0);
+  --color-ao-bg-1:   var(--ao-bg-1);
+  --color-ao-bg-2:   var(--ao-bg-2);
+  --color-ao-bg-3:   var(--ao-bg-3);
+  --color-ao-bg-4:   var(--ao-bg-4);
+  --color-ao-line-1: var(--ao-line-1);
+  --color-ao-line-2: var(--ao-line-2);
+  --color-ao-fg-0:   var(--ao-fg-0);
+  --color-ao-fg-1:   var(--ao-fg-1);
+  --color-ao-fg-2:   var(--ao-fg-2);
+  --color-ao-fg-3:   var(--ao-fg-3);
   --color-ao-accent:      #E95420;
   --color-ao-accent-soft: rgba(233, 84, 32, 0.14);
   --color-ao-accent-line: rgba(233, 84, 32, 0.32);
@@ -132,6 +134,24 @@
   --r-lg: 14px;
   --r-xl: 20px;
 
+  /* ao-modal palette — light values. Warm cream backgrounds and
+     near-black foregrounds, harmonising with the app's cream gradient. */
+  --ao-bg-0:   #f1ebe3;
+  --ao-bg-1:   #fbf6ef;
+  --ao-bg-2:   #f5efe6;
+  --ao-bg-3:   #ece5dc;
+  --ao-bg-4:   #e3dbd1;
+  --ao-line-0: rgba(30, 26, 24, 0.06);
+  --ao-line-1: rgba(30, 26, 24, 0.10);
+  --ao-line-2: rgba(30, 26, 24, 0.18);
+  --ao-fg-0:   #1E1A18;
+  --ao-fg-1:   #4A4340;
+  --ao-fg-2:   #6d655f;
+  --ao-fg-3:   #8A8079;
+  --ao-shadow-modal:
+    0 0 0 1px rgba(30, 26, 24, 0.06),
+    0 30px 60px -20px rgba(30, 26, 24, 0.18),
+    0 50px 120px -40px rgba(30, 26, 24, 0.22);
 }
 
 [data-theme="dark"] {
@@ -156,6 +176,25 @@
   --shadow-window: 0 1px 0 rgba(255,255,255,0.04) inset,
                    0 20px 50px rgba(0,0,0,0.45),
                    0 4px 14px rgba(0,0,0,0.25);
+
+  /* ao-modal palette — dark values (the original hard-coded values,
+     relocated from .ao-modal so they participate in the theme cascade). */
+  --ao-bg-0:   #14100e;
+  --ao-bg-1:   #1c1815;
+  --ao-bg-2:   #221d1a;
+  --ao-bg-3:   #2a2421;
+  --ao-bg-4:   #322b27;
+  --ao-line-0: rgba(255, 245, 235, 0.06);
+  --ao-line-1: rgba(255, 245, 235, 0.10);
+  --ao-line-2: rgba(255, 245, 235, 0.16);
+  --ao-fg-0:   #f4eee7;
+  --ao-fg-1:   #d2c7bd;
+  --ao-fg-2:   #9b9089;
+  --ao-fg-3:   #6d655f;
+  --ao-shadow-modal:
+    0 0 0 1px rgba(255,245,235,0.06),
+    0 30px 60px -20px rgba(0,0,0,0.6),
+    0 50px 120px -40px rgba(0,0,0,0.8);
 }
 
 * { box-sizing: border-box; }
@@ -442,22 +481,14 @@ body {
    ───────────────────────────────────────────────────────────────── */
 
 .ao-modal {
+  /* Structural and theme-agnostic tokens only. The surface, line, fg,
+     and shadow tokens (--ao-bg-*, --ao-line-*, --ao-fg-*,
+     --ao-shadow-modal) live at :root (light) and [data-theme="dark"]
+     (dark) so the modal automatically follows the active app theme. */
   --ao-accent: #E95420;
   --ao-accent-soft: rgba(233, 84, 32, 0.14);
   --ao-accent-softer: rgba(233, 84, 32, 0.08);
   --ao-accent-line: rgba(233, 84, 32, 0.32);
-  --ao-bg-0: #14100e;
-  --ao-bg-1: #1c1815;
-  --ao-bg-2: #221d1a;
-  --ao-bg-3: #2a2421;
-  --ao-bg-4: #322b27;
-  --ao-line-0: rgba(255, 245, 235, 0.06);
-  --ao-line-1: rgba(255, 245, 235, 0.10);
-  --ao-line-2: rgba(255, 245, 235, 0.16);
-  --ao-fg-0: #f4eee7;
-  --ao-fg-1: #d2c7bd;
-  --ao-fg-2: #9b9089;
-  --ao-fg-3: #6d655f;
   --ao-ok: #4eb96f;
   --ao-ok-soft: rgba(78, 185, 111, 0.14);
   --ao-warn: #e6b35a;
@@ -468,10 +499,6 @@ body {
   --ao-radius-md: 10px;
   --ao-radius-lg: 14px;
   --ao-radius-xl: 20px;
-  --ao-shadow-modal:
-    0 0 0 1px rgba(255,245,235,0.06),
-    0 30px 60px -20px rgba(0,0,0,0.6),
-    0 50px 120px -40px rgba(0,0,0,0.8);
   --ao-font-sans: var(--font-sans, "Ubuntu Sans", "Ubuntu", system-ui, sans-serif);
   --ao-font-mono: var(--font-mono, "Ubuntu Mono", ui-monospace, monospace);
   --ao-pad-card: 18px;
