@@ -187,15 +187,22 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   }, [containerRef]);
 
   // Visible cell range — only cells within this bounding box are rendered.
-  // Falls back to full grid until the ResizeObserver fires.
+  // Falls back to full grid until the ResizeObserver fires. The ref gives
+  // useMemo a stable object to return when computed tile indices are unchanged,
+  // so OfficeMap (memo'd) skips re-rendering on every pan pointer event.
+  const prevVisibleRangeRef = useRef<VisibleRange>({ xMin: 0, xMax: GRID_COLS - 1, yMin: 0, yMax: GRID_ROWS - 1 });
   const visibleCellRange = useMemo<VisibleRange>(() => {
-    if (!containerSize) return { xMin: 0, xMax: GRID_COLS - 1, yMin: 0, yMax: GRID_ROWS - 1 };
+    if (!containerSize) return prevVisibleRangeRef.current;
     const OVERSCAN = 2;
     const xMin = Math.max(0, Math.floor(-panX / zoom / TILE) - OVERSCAN);
     const xMax = Math.min(GRID_COLS - 1, Math.ceil((-panX + containerSize.w) / zoom / TILE) + OVERSCAN);
     const yMin = Math.max(0, Math.floor(-panY / zoom / TILE) - OVERSCAN);
     const yMax = Math.min(GRID_ROWS - 1, Math.ceil((-panY + containerSize.h) / zoom / TILE) + OVERSCAN);
-    return { xMin, xMax, yMin, yMax };
+    const prev = prevVisibleRangeRef.current;
+    if (prev.xMin === xMin && prev.xMax === xMax && prev.yMin === yMin && prev.yMax === yMax) return prev;
+    const next: VisibleRange = { xMin, xMax, yMin, yMax };
+    prevVisibleRangeRef.current = next;
+    return next;
   }, [panX, panY, zoom, containerSize]);
 
   // Load scene state from the server DB on mount.

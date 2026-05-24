@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import {
@@ -351,6 +351,64 @@ function isToolValidAt(
   return true;
 }
 
+type GridCellProps = {
+  x: number;
+  y: number;
+  isHovered: boolean;
+  isValid: boolean;
+  isEditable: boolean;
+  onEnter: (x: number, y: number) => void;
+  onLeave: (x: number, y: number) => void;
+  onClick: (x: number, y: number, shiftKey: boolean) => void;
+  onDragOver: (x: number, y: number, e: React.DragEvent<HTMLButtonElement>, isValid: boolean) => void;
+  onDragLeave: (x: number, y: number) => void;
+  onDrop: (x: number, y: number, e: React.DragEvent<HTMLButtonElement>) => void;
+};
+
+/** Memoised overlay cell for build mode. Isolating hover into a prop means
+ *  only the 2 cells that change (old hover → new hover) re-render per cursor
+ *  move instead of the entire visible grid. All callbacks are stable refs. */
+const GridCell = memo(function GridCell({
+  x,
+  y,
+  isHovered,
+  isValid,
+  isEditable,
+  onEnter,
+  onLeave,
+  onClick,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: GridCellProps) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => onClick(x, y, e.shiftKey)}
+      onMouseEnter={() => onEnter(x, y)}
+      onMouseLeave={() => onLeave(x, y)}
+      onDragOver={(e) => onDragOver(x, y, e, isValid)}
+      onDragLeave={() => onDragLeave(x, y)}
+      onDrop={(e) => onDrop(x, y, e)}
+      className="absolute p-0 transition-[background] duration-[80ms] ease-[ease]"
+      style={{
+        left: x * TILE,
+        top: y * TILE,
+        width: TILE,
+        height: TILE,
+        background: isHovered
+          ? isValid
+            ? "rgba(34, 197, 94, 0.28)"
+            : "rgba(239, 68, 68, 0.28)"
+          : "transparent",
+        border: isEditable ? "1px dashed rgba(255, 255, 255, 0.25)" : "none",
+        cursor: isEditable ? (isValid ? "pointer" : "not-allowed") : "default",
+      }}
+      aria-label={`Cell ${x},${y}`}
+    />
+  );
+});
+
 function OfficeMapInner({
   grid,
   decorations,
@@ -374,6 +432,53 @@ function OfficeMapInner({
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
   const setDragging = useOfficeDragStore((s) => s.setDragging);
+
+  // Ref updated every render so stable cell callbacks always see current
+  // grid/props without being recreated (which would defeat GridCell.memo).
+  const cellStateRef = useRef({ grid, decorations, agentPositions, dragging, tool, editable, onCellClick, onAgentDrop });
+  cellStateRef.current = { grid, decorations, agentPositions, dragging, tool, editable, onCellClick, onAgentDrop };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableOnEnter = useCallback((x: number, y: number) => setHover({ x, y }), []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableOnLeave = useCallback((x: number, y: number) => {
+    setHover((h) => (h?.x === x && h.y === y ? null : h));
+  }, []);
+  const stableOnClick = useCallback((x: number, y: number, shiftKey: boolean) => {
+    const s = cellStateRef.current;
+    if (!s.editable) return;
+    s.onCellClick?.(x, y, shiftKey);
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableOnDragOver = useCallback((x: number, y: number, e: React.DragEvent, isValid: boolean) => {
+    if (!cellStateRef.current.dragging) return;
+    if (Array.from(e.dataTransfer.types).includes(AGENT_DRAG_MIME)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = isValid ? "move" : "none";
+      setHover({ x, y });
+    }
+  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const stableOnDragLeave = useCallback((x: number, y: number) => {
+    setHover((h) => (h?.x === x && h.y === y ? null : h));
+  }, []);
+  const stableOnDrop = useCallback((x: number, y: number, e: React.DragEvent) => {
+    e.preventDefault();
+    const { grid: g, decorations: d, agentPositions: ap, onAgentDrop: drop } = cellStateRef.current;
+    const raw = e.dataTransfer.getData(AGENT_DRAG_MIME);
+    if (!raw) return;
+    try {
+      const ref = JSON.parse(raw) as DragRef;
+      const isGrass = g[y]?.[x] === true;
+      if (!isGrass) {
+        const stack = d[decorationKey(x, y)];
+        if (!stack || !stack.some((k) => familyOf(k) === "bridge")) return;
+      }
+      const existing = ap[decorationKey(x, y)];
+      if (existing && dragRefKey(existing) !== dragRefKey(ref)) return;
+      drop?.(x, y, ref);
+    } catch { /* malformed drag payload */ }
+  }, []);
 
   // Pre-compute per-agent instance index for badge rendering.
   const instanceIndexMap = useMemo(() => {
@@ -780,71 +885,33 @@ function OfficeMapInner({
       {/* Cell overlay - present when in build mode OR while an agent is
           being dragged. Outside build mode we still need cells to be
           drop targets so users can drop an agent without entering build
-          mode first. Culled to visibleRange to keep DOM count low. */}
+          mode first. Culled to visibleRange to keep DOM count low.
+          GridCell is memoised: only the 2 cells changing hover state
+          re-render per cursor move instead of the whole visible grid. */}
       {editable || dragging
         ? Array.from({ length: yEnd - yStart + 1 }).flatMap((_, i) => {
             const y = yStart + i;
             return Array.from({ length: xEnd - xStart + 1 }).map((_, j) => {
               const x = xStart + j;
-              const isHover = hover?.x === x && hover.y === y;
-              // Validity during a drag is the agent rule; otherwise the
-              // currently-armed build tool rule.
               const valid = dragging
                 ? isAgentDropValid(x, y, dragging)
                 : tool
                   ? isToolValidAt(tool, x, y, grid, decorations)
                   : false;
-              const bg = isHover
-                ? valid
-                  ? "rgba(34, 197, 94, 0.28)"
-                  : "rgba(239, 68, 68, 0.28)"
-                : "transparent";
               return (
-                <button
+                <GridCell
                   key={`cell-${x}-${y}`}
-                  type="button"
-                  onClick={(e) => {
-                    if (!editable) return;
-                    onCellClick?.(x, y, e.shiftKey);
-                  }}
-                  onMouseEnter={() => setHover({ x, y })}
-                  onMouseLeave={() => setHover((h) => (h?.x === x && h.y === y ? null : h))}
-                  onDragOver={(e) => {
-                    if (!dragging) return;
-                    if (Array.from(e.dataTransfer.types).includes(AGENT_DRAG_MIME)) {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = valid ? "move" : "none";
-                      setHover({ x, y });
-                    }
-                  }}
-                  onDragLeave={() =>
-                    setHover((h) => (h?.x === x && h.y === y ? null : h))
-                  }
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    const raw = e.dataTransfer.getData(AGENT_DRAG_MIME);
-                    if (!raw) return;
-                    try {
-                      const ref = JSON.parse(raw) as DragRef;
-                      if (!isAgentDropValid(x, y, ref)) return;
-                      onAgentDrop?.(x, y, ref);
-                    } catch {
-                      /* malformed payload - ignore */
-                    }
-                  }}
-                  className="absolute p-0 transition-[background] duration-[80ms] ease-[ease]"
-                  style={{
-                    left: x * TILE,
-                    top: y * TILE,
-                    width: TILE,
-                    height: TILE,
-                    background: bg,
-                    border: editable
-                      ? "1px dashed rgba(255, 255, 255, 0.25)"
-                      : "none",
-                    cursor: editable ? (valid ? "pointer" : "not-allowed") : "default",
-                  }}
-                  aria-label={`Cell ${x},${y}`}
+                  x={x}
+                  y={y}
+                  isHovered={hover?.x === x && hover.y === y}
+                  isValid={valid}
+                  isEditable={editable}
+                  onEnter={stableOnEnter}
+                  onLeave={stableOnLeave}
+                  onClick={stableOnClick}
+                  onDragOver={stableOnDragOver}
+                  onDragLeave={stableOnDragLeave}
+                  onDrop={stableOnDrop}
                 />
               );
             });
