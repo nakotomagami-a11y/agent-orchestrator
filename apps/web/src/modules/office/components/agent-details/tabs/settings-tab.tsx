@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -130,7 +130,23 @@ function SettingsForm({
   }, [resetRef, handleDiscard]);
 
   const promptLines = v.body.split("\n");
-  const promptH = Math.max(320, promptLines.length * 20 + 24);
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
+  const preRef = useRef<HTMLPreElement | null>(null);
+  const [promptH, setPromptH] = useState(320);
+
+  // Measure both the highlight <pre> and the <textarea> after each body
+  // change. Both share the AO_LAYER style + content, but their content
+  // rendering can differ slightly (escaped entities, trailing newline
+  // handling) so we take the max + a small safety pad. This keeps the
+  // textarea from needing its own scroll, which would steal wheel events.
+  useLayoutEffect(() => {
+    const pre = preRef.current;
+    const ta = taRef.current;
+    const preH = pre?.scrollHeight ?? 0;
+    const taH = ta?.scrollHeight ?? 0;
+    const measured = Math.max(preH, taH);
+    setPromptH(Math.max(320, measured + 8));
+  }, [v.body]);
 
   const AO_LAYER: React.CSSProperties = {
     position: "absolute",
@@ -451,11 +467,13 @@ function SettingsForm({
               </div>
               <div style={{ position: "relative" }}>
                 <pre
+                  ref={preRef}
                   aria-hidden
                   dangerouslySetInnerHTML={{ __html: v.body ? highlightMd(v.body, "var(--ao-accent)") : "\n" }}
                   style={{ ...AO_LAYER, color: "var(--ao-fg-0)", zIndex: 0, pointerEvents: "none" }}
                 />
                 <textarea
+                  ref={taRef}
                   value={v.body}
                   onChange={(e) => setV((p) => ({ ...p, body: e.target.value }))}
                   spellCheck={false}
@@ -470,6 +488,7 @@ function SettingsForm({
                     border: "none",
                     outline: "none",
                     resize: "none",
+                    overflow: "hidden",
                   }}
                 />
               </div>
@@ -488,6 +507,10 @@ function SettingsForm({
           {serverError ?? errors.join(" · ")}
         </div>
       )}
+
+      {/* Buffer so the sticky save bar below never grazes the last line of
+          the prompt editor when the user has scrolled to the bottom. */}
+      <div aria-hidden className="h-[24px] shrink-0" />
 
       {/* Save bar */}
       <div className="sticky bottom-0 flex items-center gap-3 px-6 py-[14px] bg-[var(--ao-bg-1)] border-t border-ao-line-1 mt-4 -mx-6 -mb-6 shrink-0">
