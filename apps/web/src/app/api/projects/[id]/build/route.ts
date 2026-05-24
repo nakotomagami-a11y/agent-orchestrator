@@ -1,6 +1,6 @@
 import { spawn, execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { join, basename } from "node:path";
+import { join, basename, isAbsolute } from "node:path";
 import { NextResponse } from "next/server";
 import { projects } from "@agent-office/shared/services";
 import { validateIdParam, notFound } from "@/lib/api-helpers";
@@ -25,9 +25,11 @@ function detectTerminal(): string | null {
   return null;
 }
 
+const shellQuote = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
+
 function spawnInTerminal(title: string, cwd: string, argv: string[]) {
-  const cmdStr = argv.map((a) => /[\s"'\\$`!]/.test(a) ? `'${a.replace(/'/g, "'\\''")}'` : a).join(" ");
-  const shell = `cd ${JSON.stringify(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
+  const cmdStr = argv.map((a) => /[\s"'\\$`!]/.test(a) ? shellQuote(a) : a).join(" ");
+  const shell = `cd ${shellQuote(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
 
   const termBin = detectTerminal();
   if (!termBin) {
@@ -93,7 +95,7 @@ export async function GET(_req: Request, { params }: Params) {
   if (!project) return notFound();
 
   const cwd = project.meta.cwd;
-  if (!cwd || !existsSync(cwd)) return NextResponse.json({ hasBuild: false });
+  if (!cwd || !isAbsolute(cwd) || !existsSync(cwd)) return NextResponse.json({ hasBuild: false });
 
   const pm = detectPackageManager(cwd);
   const argv = detectBuildCommand(cwd, pm);
@@ -108,7 +110,7 @@ export async function POST(_req: Request, { params }: Params) {
   if (!project) return notFound();
 
   const cwd = project.meta.cwd;
-  if (!cwd || !existsSync(cwd)) {
+  if (!cwd || !isAbsolute(cwd) || !existsSync(cwd)) {
     return NextResponse.json({ error: "Working directory not found" }, { status: 400 });
   }
 

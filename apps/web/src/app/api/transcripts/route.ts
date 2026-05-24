@@ -1,36 +1,53 @@
 import { NextResponse } from "next/server";
 import { db } from "@agent-office/shared/services";
-
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const agentId = searchParams.get("agentId");
-  if (!agentId) return NextResponse.json({ error: "missing agentId" }, { status: 400 });
-  const instanceId = searchParams.get("instanceId");
-  if (instanceId === null) {
-    return NextResponse.json(db.listAgentTranscripts(agentId));
-  }
-  const transcript = db.getTranscript(agentId, instanceId || "default");
-  return NextResponse.json(transcript);
-}
+import { badRequest, validateIdParam, readBoundedText } from "@/lib/api-helpers";
 
 const TRANSCRIPT_MAX_BYTES = 5 * 1024 * 1024;
 
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const rawAgentId = searchParams.get("agentId");
+  if (!rawAgentId) return badRequest("missing agentId");
+  const { value: agentId, error: agentIdErr } = validateIdParam(rawAgentId);
+  if (agentIdErr) return agentIdErr;
+
+  const rawInstanceId = searchParams.get("instanceId");
+  if (rawInstanceId === null) {
+    return NextResponse.json(db.listAgentTranscripts(agentId));
+  }
+  const instanceId = rawInstanceId || "default";
+  if (instanceId !== "default") {
+    const { error } = validateIdParam(instanceId);
+    if (error) return error;
+  }
+  const transcript = db.getTranscript(agentId, instanceId);
+  return NextResponse.json(transcript);
+}
+
 export async function PUT(request: Request) {
   const { searchParams } = new URL(request.url);
-  const agentId = searchParams.get("agentId");
-  const instanceId = searchParams.get("instanceId") ?? "default";
-  if (!agentId) return NextResponse.json({ error: "missing agentId" }, { status: 400 });
-  const contentLength = request.headers.get("content-length");
-  if (contentLength !== null && parseInt(contentLength, 10) > TRANSCRIPT_MAX_BYTES) {
-    return NextResponse.json({ error: "payload_too_large", maxBytes: TRANSCRIPT_MAX_BYTES }, { status: 413 });
+  const rawAgentId = searchParams.get("agentId");
+  if (!rawAgentId) return badRequest("missing agentId");
+  const { value: agentId, error: agentIdErr } = validateIdParam(rawAgentId);
+  if (agentIdErr) return agentIdErr;
+
+  const rawInstanceId = searchParams.get("instanceId") ?? "default";
+  const instanceId = rawInstanceId || "default";
+  if (instanceId !== "default") {
+    const { error } = validateIdParam(instanceId);
+    if (error) return error;
   }
+
+  const { text, error: bodyErr } = await readBoundedText(request, TRANSCRIPT_MAX_BYTES);
+  if (bodyErr) return bodyErr;
+
   let body: { items?: string; activeRunId?: string | null; sessionId?: string | null };
-  try { body = await request.json() as typeof body; } catch {
-    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  try { body = JSON.parse(text) as typeof body; } catch {
+    return badRequest("invalid_json");
   }
   if (typeof body.items === "string") {
     try { JSON.parse(body.items); } catch {
-      return NextResponse.json({ error: "items_not_valid_json" }, { status: 400 });
+      return badRequest("items_not_valid_json");
     }
   }
   db.saveTranscript(agentId, instanceId, body.items ?? "[]", body.activeRunId ?? null, body.sessionId ?? null);
@@ -39,9 +56,17 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url);
-  const agentId = searchParams.get("agentId");
-  const instanceId = searchParams.get("instanceId") ?? "default";
-  if (!agentId) return NextResponse.json({ error: "missing agentId" }, { status: 400 });
+  const rawAgentId = searchParams.get("agentId");
+  if (!rawAgentId) return badRequest("missing agentId");
+  const { value: agentId, error: agentIdErr } = validateIdParam(rawAgentId);
+  if (agentIdErr) return agentIdErr;
+
+  const rawInstanceId = searchParams.get("instanceId") ?? "default";
+  const instanceId = rawInstanceId || "default";
+  if (instanceId !== "default") {
+    const { error } = validateIdParam(instanceId);
+    if (error) return error;
+  }
   db.clearTranscript(agentId, instanceId);
   return NextResponse.json({ ok: true });
 }

@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { agents, db, projects } from "@agent-office/shared/services";
 import { AGENTS_DIR, isValidIdSegment } from "@agent-office/shared/services/paths";
 import { ensureDir, writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
+import { readBoundedText } from "@/lib/api-helpers";
+
+const IMPORT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB
 
 interface SaveFile {
   version: 1;
@@ -26,8 +29,11 @@ function isSaveFile(data: unknown): data is SaveFile {
 }
 
 export async function POST(request: Request) {
+  const { text, error: bodyErr } = await readBoundedText(request, IMPORT_MAX_BYTES);
+  if (bodyErr) return bodyErr;
+
   let raw: unknown;
-  try { raw = await request.json(); } catch {
+  try { raw = JSON.parse(text); } catch {
     return NextResponse.json({ error: "invalid_json" }, { status: 400 });
   }
 

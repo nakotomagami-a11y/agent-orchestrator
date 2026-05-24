@@ -1,6 +1,6 @@
 import { spawn, execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join, basename } from "node:path";
+import { join, basename, isAbsolute } from "node:path";
 import * as net from "node:net";
 import { NextResponse } from "next/server";
 import { projects } from "@agent-office/shared/services";
@@ -177,7 +177,7 @@ function spawnInTerminal(title: string, cwd: string, argv: string[], port: numbe
     '[ -d "$HOME/.bun/bin" ] && export PATH="$HOME/.bun/bin:$PATH"',
   ].join("; ") + "; ";
 
-  const shell = `${pathSetup}${portExport}cd ${JSON.stringify(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
+  const shell = `${pathSetup}${portExport}cd ${safeArg(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
 
   // Pass the server's PATH through to the terminal so anything already on PATH
   // (e.g. nvm-managed node) is available without an extra source step.
@@ -221,7 +221,7 @@ export async function GET(_req: Request, { params }: Params) {
   if (!project) return notFound();
 
   const cwd = project.meta.cwd;
-  if (!cwd || !existsSync(cwd)) {
+  if (!cwd || !isAbsolute(cwd) || !existsSync(cwd)) {
     return NextResponse.json({ hasNodeModules: false, pm: "npm", commands: [] });
   }
 
@@ -240,11 +240,17 @@ export async function POST(req: Request, { params }: Params) {
   if (!project) return notFound();
 
   const cwd = project.meta.cwd;
-  if (!cwd || !existsSync(cwd)) {
+  if (!cwd || !isAbsolute(cwd) || !existsSync(cwd)) {
     return NextResponse.json({ error: "Working directory not found" }, { status: 400 });
   }
 
-  const body = await req.json().catch(() => ({})) as { commandKey?: string };
+  let body: { commandKey?: string } = {};
+  const contentType = req.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    try { body = await req.json() as { commandKey?: string }; } catch {
+      return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+    }
+  }
   const pm = detectPackageManager(cwd);
   const commands = detectDevCommands(cwd, pm);
 

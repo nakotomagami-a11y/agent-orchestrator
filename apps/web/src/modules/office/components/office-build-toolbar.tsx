@@ -109,9 +109,6 @@ export function OfficeBuildToolbar({
             <div className="font-bold text-[14px] text-txt">Build</div>
             <div className="text-txt-3 text-[11px] mt-[1px] font-mono">painting decor · agent-office</div>
           </div>
-          <button type="button" className="ml-auto grid place-items-center bg-transparent text-txt-3 cursor-pointer shrink-0 w-[26px] h-[26px] rounded-[6px] border border-transparent transition-[color,border-color,background] duration-100 hover:text-txt hover:border-line hover:bg-bg-2" title="Help">
-            <Icon name="help-circle" size={13} />
-          </button>
         </div>
         <div className="flex gap-[3px] mt-[10px] bg-bg-2 border border-line p-[3px] rounded-[8px]">
           <button
@@ -268,11 +265,6 @@ export function OfficeBuildToolbar({
                 "pick a tile from the palette"
               )}
             </div>
-          </div>
-          <div className="flex gap-[3px]">
-            <button type="button" title="Pin tile" className="w-[28px] h-[28px] grid place-items-center bg-bg-3 border border-line text-txt-3 rounded-[5px] transition-[color,border-color] duration-100 hover:text-txt hover:border-line-2">
-              <Icon name="pin" size={13} />
-            </button>
           </div>
         </div>
       </div>

@@ -67,6 +67,70 @@ function migrateKind(raw: string): DecorationKind | null {
   return raw in DECORATIONS ? (raw as DecorationKind) : null;
 }
 
+function parseGrid(raw: string): boolean[][] | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (
+      Array.isArray(parsed) &&
+      parsed.length === GRID_ROWS &&
+      parsed.every(
+        (row): row is boolean[] =>
+          Array.isArray(row) &&
+          row.length === GRID_COLS &&
+          row.every((cell) => typeof cell === "boolean"),
+      )
+    ) {
+      return parsed;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+function parseDecorations(raw: string): DecorationsMap | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const out: DecorationsMap = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (typeof value === "string") {
+        const migrated = migrateKind(value);
+        if (migrated) out[key] = [migrated];
+        continue;
+      }
+      if (Array.isArray(value)) {
+        const arr: DecorationKind[] = [];
+        for (const v of value) {
+          if (typeof v !== "string") continue;
+          const migrated = migrateKind(v);
+          if (migrated) arr.push(migrated);
+        }
+        if (arr.length > 0) out[key] = arr;
+      }
+    }
+    return out;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function parseAgentPositions(raw: string): AgentPositions | null {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const out: AgentPositions = {};
+    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+      if (
+        value && typeof value === "object" && !Array.isArray(value) &&
+        typeof (value as { agentId?: unknown }).agentId === "string"
+      ) {
+        const v = value as { agentId: string; instanceId?: unknown };
+        out[key] = { agentId: v.agentId, instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined };
+      }
+    }
+    return out;
+  } catch { /* ignore */ }
+  return null;
+}
+
 /** Default grid is empty - users build their own island. */
 function makeSeedGrid(): boolean[][] {
   return Array.from({ length: GRID_ROWS }, () =>
@@ -224,64 +288,16 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         const agentKey = projectId              ? `office-agents:${projectId}`        : "office-agents";
 
         if (data[gridKey]) {
-          try {
-            const parsed = JSON.parse(data[gridKey]) as unknown;
-            if (
-              Array.isArray(parsed) &&
-              parsed.length === GRID_ROWS &&
-              parsed.every(
-                (row): row is boolean[] =>
-                  Array.isArray(row) &&
-                  row.length === GRID_COLS &&
-                  row.every((cell) => typeof cell === "boolean"),
-              )
-            ) {
-              setGrid(parsed);
-            }
-          } catch { /* ignore */ }
+          const g = parseGrid(data[gridKey]);
+          if (g) setGrid(g);
         }
         if (data[decoKey]) {
-          try {
-            const parsed = JSON.parse(data[decoKey]) as unknown;
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-              const out: DecorationsMap = {};
-              for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-                if (typeof value === "string") {
-                  const migrated = migrateKind(value);
-                  if (migrated) out[key] = [migrated];
-                  continue;
-                }
-                if (Array.isArray(value)) {
-                  const arr: DecorationKind[] = [];
-                  for (const v of value) {
-                    if (typeof v !== "string") continue;
-                    const migrated = migrateKind(v);
-                    if (migrated) arr.push(migrated);
-                  }
-                  if (arr.length > 0) out[key] = arr;
-                }
-              }
-              setDecorations(out);
-            }
-          } catch { /* ignore */ }
+          const d = parseDecorations(data[decoKey]);
+          if (d) setDecorations(d);
         }
         if (data[agentKey]) {
-          try {
-            const parsed = JSON.parse(data[agentKey]) as unknown;
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-              const out: AgentPositions = {};
-              for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-                if (
-                  value && typeof value === "object" && !Array.isArray(value) &&
-                  typeof (value as { agentId?: unknown }).agentId === "string"
-                ) {
-                  const v = value as { agentId: string; instanceId?: unknown };
-                  out[key] = { agentId: v.agentId, instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined };
-                }
-              }
-              setAgentPositions(out);
-            }
-          } catch { /* ignore */ }
+          const ap = parseAgentPositions(data[agentKey]);
+          if (ap) setAgentPositions(ap);
         }
         if (data[grassKey]) {
           const gc = data[grassKey];
@@ -632,68 +648,22 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
           .then((r) => r.json())
           .then((data: Record<string, string>) => {
             if (data["office-grid"]) {
-              try {
-                const parsed = JSON.parse(data["office-grid"]) as unknown;
-                if (
-                  Array.isArray(parsed) &&
-                  parsed.length === GRID_ROWS &&
-                  parsed.every(
-                    (row): row is boolean[] =>
-                      Array.isArray(row) &&
-                      row.length === GRID_COLS &&
-                      row.every((cell) => typeof cell === "boolean"),
-                  )
-                ) {
-                  setGrid(parsed);
-                }
-              } catch { /* ignore */ }
+              const g = parseGrid(data["office-grid"]);
+              setGrid(g ?? makeSeedGrid());
             } else {
               setGrid(makeSeedGrid());
             }
             if (data["office-decorations"]) {
-              try {
-                const parsed = JSON.parse(data["office-decorations"]) as unknown;
-                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-                  const out: DecorationsMap = {};
-                  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-                    if (typeof value === "string") {
-                      const migrated = migrateKind(value);
-                      if (migrated) out[key] = [migrated];
-                      continue;
-                    }
-                    if (Array.isArray(value)) {
-                      const arr: DecorationKind[] = [];
-                      for (const v of value) {
-                        if (typeof v !== "string") continue;
-                        const migrated = migrateKind(v);
-                        if (migrated) arr.push(migrated);
-                      }
-                      if (arr.length > 0) out[key] = arr;
-                    }
-                  }
-                  setDecorations(out);
-                }
-              } catch { /* ignore */ }
+              const d = parseDecorations(data["office-decorations"]);
+              setDecorations(d ?? {});
             } else {
               setDecorations({});
             }
             // Also reload agent positions from the global (non-project-specific) key
             const agentKey = `office-agents:${projectId}`;
             if (data[agentKey]) {
-              try {
-                const parsed = JSON.parse(data[agentKey]) as unknown;
-                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-                  const out: AgentPositions = {};
-                  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-                    if (value && typeof value === "object" && !Array.isArray(value) &&
-                        typeof (value as { agentId?: unknown }).agentId === "string") {
-                      const v = value as { agentId: string; instanceId?: unknown };
-                      out[key] = { agentId: v.agentId, instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined };
-                    }
-                  }
-                  setAgentPositions(out);
-                }
-              } catch { /* ignore */ }
+              const ap = parseAgentPositions(data[agentKey]);
+              setAgentPositions(ap ?? {});
             } else {
               setAgentPositions({});
             }

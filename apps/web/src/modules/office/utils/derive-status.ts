@@ -4,6 +4,10 @@
 //   - Latest run for an agent within last 90s → use that run's status
 //   - "running" obviously trumps; otherwise "done" / "error" stick for 90s
 //   - Fallback: "idle"
+//
+// Note: "thinking" (AgentStatus) is not produced here because PersistedRun
+// only exposes "running" | "done" | "error". Real-time thinking state comes
+// from SSE events in the chat panel, not from stored run records.
 
 import { match } from "ts-pattern";
 import type { AgentStatus, PersistedRun } from "@agent-office/shared/types";

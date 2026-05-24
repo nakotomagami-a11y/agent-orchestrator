@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
+import { isAbsolute } from "node:path";
 import { projects } from "@agent-office/shared/services";
 import { notFound, validateIdParam } from "@/lib/api-helpers";
 
@@ -31,7 +32,7 @@ export async function GET(_req: Request, { params }: Params) {
   if (!project) return notFound();
 
   const cwd = project.meta.cwd;
-  if (!cwd) {
+  if (!cwd || !isAbsolute(cwd)) {
     return NextResponse.json<GitStatus>({ isGit: false, added: 0, removed: 0, filesChanged: 0, ahead: 0, behind: 0 });
   }
 

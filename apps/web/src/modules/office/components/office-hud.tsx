@@ -78,7 +78,10 @@ export function OfficeHud({
       ) : null}
       <div className="flex-1" />
       {budgetDaily ? (
-        <div className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1">
+        <div
+          className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1 transition-[background,border-color] duration-300"
+          style={spendStyle(spendToday, budgetDaily)}
+        >
           {t("office.budget_daily")} <b>${budgetDaily.toFixed(2)}/day</b>
         </div>
       ) : null}

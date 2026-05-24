@@ -16,5 +16,8 @@ export async function POST(request: Request) {
       errors.push({ id: item.id, error: String(e) });
     }
   }
-  return NextResponse.json({ written, errors });
+  const status = written.length === 0 && errors.length > 0 ? 500
+               : errors.length > 0 ? 207
+               : 200;
+  return NextResponse.json({ written, errors }, { status });
 }

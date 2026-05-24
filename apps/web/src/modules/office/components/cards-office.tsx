@@ -285,7 +285,6 @@ function OfficeCard({
 
   const stateLabel =
     agent.taskKind === "tool" ? "doing now" :
-    agent.taskKind === "think" ? "thinking" :
     "status";
 
   const stateText = agent.task ?? "Idle - ready when you are";

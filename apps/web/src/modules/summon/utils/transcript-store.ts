@@ -35,15 +35,15 @@ export async function loadTranscript(key: string): Promise<Transcript | null> {
   try {
     const res = await fetch(`/api/transcripts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`);
     if (!res.ok) return null;
-    const data = await res.json() as { items: string; active_run_id?: string | null; activeRunId?: string | null; session_id?: string | null; sessionId?: string | null; updated_at?: number; updatedAt?: number } | null;
+    const data = await res.json() as { items: string; activeRunId?: string | null; sessionId?: string | null; updatedAt?: number } | null;
     if (!data) return null;
     let items: ThreadItem[] = [];
     try { items = JSON.parse(data.items) as ThreadItem[]; } catch { items = []; }
     return {
       items,
-      activeRunId: data.activeRunId ?? data.active_run_id ?? null,
-      sessionId: data.sessionId ?? data.session_id ?? null,
-      updatedAt: data.updatedAt ?? data.updated_at ?? Date.now(),
+      activeRunId: data.activeRunId ?? null,
+      sessionId: data.sessionId ?? null,
+      updatedAt: data.updatedAt ?? Date.now(),
     };
   } catch {
     return null;

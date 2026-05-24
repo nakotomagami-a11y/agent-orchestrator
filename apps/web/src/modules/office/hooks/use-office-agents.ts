@@ -8,16 +8,12 @@ import { API_ROUTES } from "@agent-office/shared/config/routes";
 import type { ApiAgent, PersistedRun } from "@agent-office/shared/types";
 import { POLL } from "@/lib/polling";
 import { unitForAgent, type UnitSelection } from "@/components/ui/unit-sprite.utils";
-import { agentHash, paletteForAgent, shortName } from "../utils/sprite-palette";
-import { deriveDeskCoords, type DeskCoords } from "../utils/desk-layout";
+import { shortName } from "../utils/sprite-palette";
 import { statusFromRuns, type AgentStatusInfo } from "../utils/derive-status";
 
 export interface OfficeAgent extends ApiAgent {
   id: string;
   short: string;
-  desk: DeskCoords;
-  /** Legacy palette (skin/hair/shirt) - still used to colour the iso-office chair. */
-  sprite: ReturnType<typeof paletteForAgent>["sprite"];
   /** Tiny Swords avatar selection: explicit override, else hashed from name. */
   unitChoice: UnitSelection;
   status: AgentStatusInfo["status"];
@@ -50,15 +46,12 @@ export function useOfficeAgents(): OfficeAgentsResult & { isLoading: boolean } {
   >(() => {
     const rawAgents = agentsQuery.data ?? [];
     const rawRuns = runsQuery.data ?? [];
-    const agents = rawAgents.map<OfficeAgent>((a, idx) => {
-      const hash = agentHash(a.name);
+    const agents = rawAgents.map<OfficeAgent>((a) => {
       const status = statusFromRuns(a.name, rawRuns);
       return {
         ...a,
         id: a.name,
         short: shortName(a.name),
-        desk: deriveDeskCoords(idx, hash),
-        sprite: paletteForAgent(a.name).sprite,
         unitChoice: unitForAgent(a.name, a.unit),
         status: status.status,
         task: status.task,

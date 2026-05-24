@@ -3,7 +3,9 @@ import { join } from "node:path";
 import { agents } from "@agent-office/shared/services";
 import { AGENTS_DIR } from "@agent-office/shared/services/paths";
 import { writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
-import { notFound, validateIdParam } from "@/lib/api-helpers";
+import { notFound, validateIdParam, readBoundedText } from "@/lib/api-helpers";
+
+const BODY_MAX_BYTES = 1 * 1024 * 1024; // 1 MB
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -46,8 +48,8 @@ export async function PUT(request: Request, { params }: Params) {
   const { value: id, error } = validateIdParam((await params).id);
   if (error) return error;
 
-  // Read the incoming body text
-  const newBody = await request.text();
+  const { text: newBody, error: bodyErr } = await readBoundedText(request, BODY_MAX_BYTES);
+  if (bodyErr) return bodyErr;
 
   // Back up the current body before overwriting
   const current = agents.readAgent(id);

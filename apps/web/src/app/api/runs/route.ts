@@ -8,14 +8,14 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const { data: q, error } = validateQuery(runsQuerySchema, url.searchParams);
   if (error) return error;
-  const limit = q.limit ?? 50;
+  const limit = Math.min(q.limit ?? 50, 500);
 
   // Snapshot both sources synchronously before any filtering to minimise the
   // window in which a run can transition from live→persisted and appear in both
   // lists. better-sqlite3 is synchronous so both calls execute without yielding.
   const liveRunning = runsService.getRunningRuns();
   const liveIds = new Set(liveRunning.map((r) => r.id));
-  const persisted = store.getRuns({ agentId: q.agent, projectId: q.project, instanceId: q.instance, limit: limit + liveRunning.length });
+  const persisted = store.getRuns({ agentId: q.agent, projectId: q.project, instanceId: q.instance, limit: Math.min(limit + liveRunning.length, 500) });
   const all = [...liveRunning, ...persisted.filter((r) => !liveIds.has(r.id))];
 
   // Live runs are not pre-filtered by the DB query so apply the same filters.
