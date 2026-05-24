@@ -64,7 +64,6 @@ export default function Home() {
             <a href="#features">Features</a>
             <a href="#specs">Specs</a>
             <a href="#faq">FAQ</a>
-            <a href="/docs">Docs</a>
           </div>
           <div className="right">
             <span className="beta-pill"><span className="led"></span> Closed Beta</span>
@@ -518,7 +517,6 @@ export default function Home() {
           </div>
           <div className="footer-col">
             <h6>Resources</h6>
-            <a href="/docs">Documentation</a>
             <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>Changelog</a>
             <a href="https://agent-orchestrator-landing.vercel.app/" target="_blank" rel="noreferrer">Case study</a>
             <a href="#" style={{ opacity: 0.35, cursor: 'default', pointerEvents: 'none' as const }}>Roadmap</a>

@@ -350,7 +350,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
             </div>
             </div>
           ) : null}
-          <div className="max-w-[760px] mx-auto px-2 pb-4 flex items-center gap-3">
+          <div className="max-w-[760px] mx-auto px-2 pb-4 mt-5 flex items-center gap-3">
             <LiveStatus phase={phase} hint={phaseHint} />
             {phaseStats && phase !== "idle" && phase !== "done" && phase !== "aborted" && (
               <span className="font-mono text-[11.5px] text-ao-fg-3 whitespace-nowrap shrink-0">{phaseStats}</span>

@@ -298,7 +298,7 @@ export function Sidebar() {
         <div className="flex items-center gap-[6px] px-[10px] py-[8px] border-b border-line shrink-0">
           <span className="text-[11.5px] font-semibold text-txt tracking-[0.01em] flex-1">Roster</span>
           <span className="font-[var(--font-mono)] text-[10px] bg-bg-3 border border-line text-txt-3 rounded-full px-[7px] py-[1px]">
-            {isMultiInstance ? visibleGroups.length : filtered.length}
+            {project ? visibleGroups.length : filtered.length}
           </span>
           <button
             type="button"
@@ -352,8 +352,8 @@ export function Sidebar() {
             <div className="text-txt-3 px-[14px] py-3 text-[12px] leading-[1.4]">
               {t("sidebar.no_agent_definitions")}
             </div>
-          ) : isMultiInstance && project ? (
-            // Multi-instance mode: render grouped rows
+          ) : project ? (
+            // Project active: always render grouped rows (multi-instance or not)
             <>
               {(visibleGroups as typeof rosterGroups).map((group) => (
                 <RosterGroup
@@ -519,73 +519,55 @@ function RosterEntry({
 
   const onDragEnd = () => setDragging(null);
 
+  const ledClass = cn(
+    "absolute -bottom-[2px] -right-[2px] w-[8px] h-[8px] rounded-full border-[2px] border-bg-2",
+    (agent.status === "working" || agent.status === "thinking") && "bg-[var(--working)] shadow-[0_0_5px_var(--working)]",
+    (agent.status === "queued" || agent.status === "done") && "bg-[var(--queued)]",
+    agent.status === "error" && "bg-[var(--error)]",
+    !["working","thinking","queued","done","error"].includes(agent.status) && "bg-txt-4",
+  );
+
   return (
     <div
       className={cn(
-        "group relative cursor-grab grid items-center gap-[10px] rounded-[var(--r-sm)] cursor-pointer hover:bg-bg-3 [grid-template-columns:32px_1fr_auto] px-[8px] py-[6px]",
-        selected ? "bg-acc-faint" : ""
+        "group relative cursor-grab flex items-center gap-[10px]",
+        "rounded-[8px] hover:bg-bg-3 px-[6px] py-[6px]",
+        selected ? "bg-acc-faint" : "",
       )}
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
+      onClick={onSelect}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onSelect(); }}
       title={t("sidebar.row_open_chat_title")}
     >
-      {/* Span the parent `.roster-row` grid so name + status get
-          room instead of being squashed into the 32px avatar slot.
-          Reset the button's own visual chrome, then build a 3-col
-          grid inside that mirrors the original layout. */}
-      <button
-        type="button"
-        onClick={onSelect}
-        title={t("sidebar.row_open_chat_title")}
-        className="bg-transparent border-none text-left cursor-pointer grid items-center w-full min-w-0 col-span-full text-inherit font-[inherit] p-0 m-0 [grid-template-columns:32px_1fr_auto] gap-[10px]"
-      >
-        <div className="w-[32px] h-[32px] relative">
-          <AgentAvatar unit={agent.unitChoice} size={32} />
-        </div>
-        <div className="min-w-0">
-          <div className="text-[12.5px] font-medium text-txt overflow-hidden text-ellipsis whitespace-nowrap">
-            {displayName}
-          </div>
-          <div className="text-[10.5px] text-txt-3 font-[var(--font-mono)] overflow-hidden text-ellipsis whitespace-nowrap">
-            {agent.status === "idle"
-              ? t("sidebar.status_ready")
-              : agent.status === "done"
-                ? t("sidebar.status_done", { label: agent.taskKind || t("sidebar.status_done_default") })
-                : agent.status === "queued"
-                  ? t("sidebar.status_queued")
-                  : agent.status === "error"
-                    ? t("sidebar.status_needs_attention")
-                    : agent.task ?? agent.status}
-          </div>
-        </div>
-        <span
-          className={cn(
-            "inline-block w-[8px] h-[8px] rounded-full",
-            agent.status === "working" && "bg-[var(--working)] shadow-[0_0_0_3px_rgba(34,197,94,0.25)] animate-[pulseDot_1.8s_infinite_ease-in-out]",
-            agent.status === "done" && "bg-[var(--done)]",
-            agent.status === "queued" && "bg-[var(--queued)]",
-            agent.status === "error" && "bg-[var(--error)]",
-            agent.status === "thinking" && "bg-[var(--thinking)] animate-[pulseDot_1.8s_infinite_ease-in-out]",
-            !["working","done","queued","error","thinking"].includes(agent.status) && "bg-[var(--txt-4)]",
-          )}
-          title={agent.status}
-        />
-      </button>
-      {canRemove ? (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          aria-label={t("sidebar.remove_from_project_aria", { name: displayName })}
-          title={t("sidebar.remove_from_project_title")}
-          className="absolute right-[6px] top-1/2 -translate-y-1/2 w-[22px] h-[22px] bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 cursor-pointer opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-[var(--error)] hover:border-[var(--error)] transition-opacity duration-[120ms]"
-        >
-          <Icon name="x" size={11} />
-        </button>
-      ) : null}
+      {/* Avatar + LED badge */}
+      <div className="relative shrink-0 w-[30px] h-[30px]">
+        <AgentAvatar unit={agent.unitChoice} size={30} className="rounded-[8px] border border-line" />
+        <span className={ledClass} />
+      </div>
+
+      {/* Name */}
+      <span className="flex-1 min-w-0 text-[14px] font-semibold text-txt overflow-hidden text-ellipsis whitespace-nowrap">
+        {displayName}
+      </span>
+
+      {/* Remove button on hover */}
+      <div className="relative shrink-0 w-[20px] h-[20px]">
+        {canRemove && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            aria-label={t("sidebar.remove_from_project_aria", { name: displayName })}
+            title={t("sidebar.remove_from_project_title")}
+            className="absolute inset-0 bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 cursor-pointer opacity-0 group-hover:opacity-100 hover:text-[var(--error)] hover:border-[var(--error)] transition-opacity duration-[120ms]"
+          >
+            <Icon name="x" size={10} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

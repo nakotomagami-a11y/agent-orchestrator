@@ -2,19 +2,25 @@
 
 import { useState } from "react";
 import { Icon } from "./icon";
+import { highlight } from "./highlight";
 
 export type CodeBlockProps = {
   body: string;
-  /** Language hint shown in the header. */
   lang?: string;
-  /** Optional file/title shown in the header. */
   title?: string;
   copyLabel?: string;
   copiedLabel?: string;
 };
 
-export function CodeBlock({ body, lang, title, copyLabel = "Copy", copiedLabel = "Copied" }: CodeBlockProps) {
+export function CodeBlock({
+  body,
+  lang,
+  title,
+  copyLabel = "Copy",
+  copiedLabel = "Copied",
+}: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
+
   const onCopy = async () => {
     try {
       await navigator.clipboard.writeText(body);
@@ -24,16 +30,34 @@ export function CodeBlock({ body, lang, title, copyLabel = "Copy", copiedLabel =
       /* clipboard unavailable */
     }
   };
+
+  const highlighted = highlight(body, lang ?? "");
+  const lineCount = body.split("\n").length;
+
   return (
-    <pre className="code-block bg-[#2C001E] text-[#F4EFEA] font-[var(--font-mono)] text-[12.5px] leading-[1.55] p-[12px_14px] rounded-[10px] overflow-auto">
+    <pre className="code-block bg-[#1c1714] font-mono text-[12.5px] leading-[1.65] rounded-[10px] overflow-x-auto">
       <div className="head">
-        <span>{title ?? lang ?? "code"}</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#C7BFB7]">
+          {lang ?? "code"}
+        </span>
+        {title && (
+          <>
+            <span className="text-[rgba(255,255,255,0.25)] select-none">/</span>
+            <span className="text-[rgba(255,255,255,0.45)] text-[10px]">{title}</span>
+          </>
+        )}
+        <span className="ml-auto text-[10px] text-[rgba(255,255,255,0.25)] font-mono mr-2 select-none">
+          {lineCount} {lineCount === 1 ? "line" : "lines"}
+        </span>
         <button type="button" className="cp" onClick={onCopy}>
-          <Icon name="copy" size={11} />
+          <Icon name={copied ? "check" : "copy"} size={11} />
           {copied ? copiedLabel : copyLabel}
         </button>
       </div>
-      <code>{body}</code>
+      <code
+        className="block text-[#e8ddd5] p-[14px_16px]"
+        dangerouslySetInnerHTML={{ __html: highlighted }}
+      />
     </pre>
   );
 }
