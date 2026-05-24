@@ -25,7 +25,7 @@ export function CodeBlock({ body, lang, title, copyLabel = "Copy", copiedLabel =
     }
   };
   return (
-    <pre className="code-block">
+    <pre className="code-block bg-[#2C001E] text-[#F4EFEA] font-[var(--font-mono)] text-[12.5px] leading-[1.55] p-[12px_14px] rounded-[10px] overflow-auto">
       <div className="head">
         <span>{title ?? lang ?? "code"}</span>
         <button type="button" className="cp" onClick={onCopy}>

@@ -86,7 +86,7 @@ export function AddAgentModal({ open, projectId, onClose, onProjectChange }: Add
   if (!open) return null;
 
   const content = (
-    <div className="aa-backdrop fixed inset-0 flex items-center justify-center p-[24px] bg-[rgba(8,6,5,0.72)] z-[200]" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+    <div className="fixed inset-0 flex items-center justify-center p-[24px] bg-[rgba(8,6,5,0.72)] z-[200] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(10px)] after:[-webkit-backdrop-filter:blur(10px)] after:pointer-events-none" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
       <div className="relative bg-bg-1 border border-line flex flex-col overflow-hidden [width:min(820px,100%)] max-h-[calc(100vh-48px)] rounded-[16px] [box-shadow:0_32px_64px_-12px_rgba(0,0,0,0.7)] z-[1]" role="dialog" aria-modal="true">
         {targetId ? (
           <AgentPickerStep
@@ -265,7 +265,7 @@ function AgentPickerStep({
           <div className="text-txt-3 flex items-center font-[var(--font-mono)] text-[11.5px] mt-[2px] gap-[6px]">
             Adding to <span className="text-txt-2 font-semibold">{projectLabel}</span>
             <span className="text-txt-4">·</span>
-            <button type="button" className="aa-switch-proj text-acc no-underline cursor-pointer bg-transparent border-none font-[inherit] p-0" onClick={onChangeProject}>Change project</button>
+            <button type="button" className="text-acc no-underline cursor-pointer bg-transparent border-none font-[inherit] p-0 hover:underline" onClick={onChangeProject}>Change project</button>
             <span className="text-txt-4">·</span>
             <span>click to stage, summon to commit</span>
           </div>
@@ -276,7 +276,7 @@ function AgentPickerStep({
       </div>
 
       <div className="flex items-center shrink-0 gap-[10px] px-[22px] pt-[14px] pb-[8px]">
-        <div className="aa-search flex-1 flex items-center bg-bg-2 border border-line text-txt-3 gap-[10px] px-[12px] py-[9px] rounded-[9px] transition-[border-color,box-shadow] duration-[120ms]">
+        <div className="flex-1 flex items-center bg-bg-2 border border-line text-txt-3 gap-[10px] px-[12px] py-[9px] rounded-[9px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-[var(--acc-tint)] focus-within:[box-shadow:0_0_0_3px_var(--acc-faint)]">
           <Icon name="search" size={13} />
           <input
             className="flex-1 bg-transparent border-0 outline-none text-txt text-[13px] font-[inherit]"
@@ -447,10 +447,10 @@ function AgentRow({
 
   return (
     <div
-      className={`aa-row grid items-center bg-bg-2 border border-line gap-[14px] px-[14px] py-[12px] rounded-[12px] mb-[6px] transition-[background,border-color] duration-[120ms] hover:bg-bg-3 hover:border-line-2${added ? " added" : ""}`}
+      className={`grid items-center border gap-[14px] px-[14px] py-[12px] rounded-[12px] mb-[6px] transition-[background,border-color] duration-[120ms] hover:bg-bg-3 hover:border-line-2${added ? " border-[rgba(34,197,94,0.30)] [background:linear-gradient(90deg,rgba(34,197,94,0.05),transparent_60%)]" : " bg-bg-2 border-line"}`}
       style={{ ...catStyle(category), gridTemplateColumns: "44px minmax(0,1fr) auto" }}
     >
-      <div className="aa-row-av grid place-items-center bg-bg-3 border border-line relative overflow-hidden shrink-0 w-[44px] h-[44px] rounded-[11px]">
+      <div className={`grid place-items-center bg-bg-3 relative overflow-hidden shrink-0 w-[44px] h-[44px] rounded-[11px] border before:content-[''] before:absolute before:inset-0 before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.08),transparent_60%)] before:pointer-events-none${added ? " border-[rgba(34,197,94,0.35)]" : " border-line"}`}>
         <AgentAvatar unit={unitSel} size={36} />
       </div>
       <div className="min-w-0">
@@ -478,7 +478,7 @@ function AgentRow({
       <div className="flex items-center shrink-0 gap-[4px]">
         <button
           type="button"
-          className={`aa-add inline-flex items-center bg-bg-3 border border-line text-txt-2 font-semibold whitespace-nowrap cursor-pointer shrink-0 gap-[6px] px-[14px] py-[8px] rounded-[8px] text-[12.5px] transition-[background,border-color,color] duration-[120ms] font-[inherit] hover:bg-acc hover:text-white hover:border-[var(--acc)]${added ? " added" : ""}`}
+          className={`inline-flex items-center font-semibold whitespace-nowrap cursor-pointer shrink-0 gap-[6px] py-[8px] rounded-[8px] text-[12.5px] transition-[background,border-color,color] duration-[120ms] font-[inherit] border${added ? " bg-[rgba(34,197,94,0.10)] border-[rgba(34,197,94,0.30)] text-[var(--working)] pl-[10px] pr-[14px] hover:bg-[rgba(34,197,94,0.18)] hover:border-[rgba(34,197,94,0.45)] hover:text-[var(--working)]" : " bg-bg-3 border-line text-txt-2 px-[14px] hover:bg-acc hover:text-white hover:border-[var(--acc)]"}`}
           onClick={onAdd}
         >
           {added ? (

@@ -25,7 +25,7 @@ export function RunRow({ run }: RunRowProps) {
 
   return (
     <div
-      className="run-row flex items-center border-b border-line"
+      className="group flex items-center border-b border-line"
     >
       {/* The link carries the primary run content */}
       <Link
@@ -56,7 +56,7 @@ export function RunRow({ run }: RunRowProps) {
         <Button
           variant="ghost"
           size="sm"
-          className="run-row-fork opacity-0 transition-opacity duration-[120ms]"
+          className="opacity-0 transition-opacity duration-[120ms] group-hover:opacity-100 group-focus-within:opacity-100"
           title="Fork run"
           aria-label={`Fork run ${run.id}`}
           onClick={() => openCompare(run.id)}

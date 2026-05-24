@@ -97,10 +97,10 @@ function MarkdownEditor({ value, onChange, hasError }: { value: string; onChange
   return (
     <div className={`markdown-editor${hasError ? " error" : ""}`}>
       <div className="tabs">
-        <button type="button" className={view === "write" ? "active" : ""} onClick={() => setView("write")}>
+        <button type="button" className={view === "write" ? "active text-txt [border-bottom-color:var(--acc)]" : "hover:text-txt"} onClick={() => setView("write")}>
           <Icon name="pen" size={12} /> Write
         </button>
-        <button type="button" className={view === "preview" ? "active" : ""} onClick={() => setView("preview")}>
+        <button type="button" className={view === "preview" ? "active text-txt [border-bottom-color:var(--acc)]" : "hover:text-txt"} onClick={() => setView("preview")}>
           <Icon name="play" size={12} /> Preview
         </button>
         <div className="ml-auto flex gap-[2px]">
@@ -139,13 +139,13 @@ function SectionCard({ n, title, sub, complete, children }: {
 }) {
   return (
     <section className="bg-bg-2 border border-line overflow-hidden rounded-[14px]">
-      <div className="flex items-center border-b border-line gap-[12px] px-[18px] py-[14px]">
+      <div className="na-section-head flex items-center border-b border-line gap-[12px] px-[18px] py-[14px]">
         <div className="grid place-items-center bg-acc-faint border text-acc font-bold shrink-0 w-[22px] h-[22px] rounded-[6px] border-[var(--acc-tint)] font-[var(--font-mono)] text-[11px]">{n}</div>
         <div className="flex-1 min-w-0">
           <h3 className="text-txt font-bold m-0 text-[14px]">{title}</h3>
           <div className="text-txt-3 font-[var(--font-mono)] text-[11.5px] mt-[2px]">{sub}</div>
         </div>
-        <div className={`check${complete ? "" : " empty"}`}>
+        <div className={`check${complete ? "" : " empty bg-transparent text-txt-4 border-[var(--line)]"}`}>
           {complete
             ? <Icon name="check" size={11} />
             : <span className="w-1 h-1 rounded-[2px] bg-current block" />}
@@ -183,7 +183,7 @@ function ChipPicker({ chips, suggestions, onAdd, onRemove, placeholder }: {
 
   return (
     <>
-      <div className="chip-picker flex flex-wrap items-center bg-bg-1 border border-line rounded-[7px] gap-[5px] min-h-[38px] px-[8px] py-[5px] cursor-text" onClick={() => inputRef.current?.focus()}>
+      <div className="flex flex-wrap items-center bg-bg-1 border border-line rounded-[7px] gap-[5px] min-h-[38px] px-[8px] py-[5px] cursor-text focus-within:border-[var(--acc-tint)]" onClick={() => inputRef.current?.focus()}>
         {chips.map((chip) => (
           <span key={chip} className="inline-flex items-center bg-bg-3 border border-line text-txt gap-[5px] px-[6px] pr-[6px] py-[3px] rounded-[5px] text-[12px] font-[var(--font-mono)]">
             {chip}
@@ -316,7 +316,7 @@ export function NewAgentForm() {
           <SectionCard n="1" title="Identity" sub="how this agent is named and described" complete={sec1Done}>
             <div className="grid items-start gap-[18px]" style={{ gridTemplateColumns: "96px 1fr" }}>
               <div className="flex flex-col items-center gap-[6px]">
-                <div className="id-avatar-av grid place-items-center bg-bg-3 border border-line relative overflow-hidden w-[84px] h-[84px] rounded-[16px] [box-shadow:0_10px_30px_-10px_rgba(0,0,0,0.5)]">
+                <div className="grid place-items-center bg-bg-3 border border-line relative overflow-hidden w-[84px] h-[84px] rounded-[16px] [box-shadow:0_10px_30px_-10px_rgba(0,0,0,0.5)] before:content-[''] before:absolute before:inset-0 before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.06),transparent_60%)] before:pointer-events-none">
                   <AgentAvatar unit={unit} size={56} label={values.name || "Agent avatar"} />
                 </div>
                 <button type="button" className="inline-flex items-center text-txt-3 cursor-pointer bg-transparent border-none font-[var(--font-mono)] text-[10.5px] gap-[4px] hover:text-acc">
@@ -327,7 +327,7 @@ export function NewAgentForm() {
               <div className="grid gap-[14px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
                 <div className="flex flex-col gap-[5px] [grid-column:1/-1]">
                   <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px]">Name</label>
-                  <div className={`field-input flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms]${errFor("name") ? " border-[var(--error)]" : ""}`}>
+                  <div className={`flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms] focus-within:border-[var(--acc-tint)]${errFor("name") ? " border-[var(--error)]" : ""}`}>
                     <input
                       className="flex-1 bg-transparent border-none outline-none text-txt text-[13px] font-[inherit] py-[9px]"
                       value={values.name}
@@ -344,7 +344,7 @@ export function NewAgentForm() {
 
                 <div className="flex flex-col gap-[5px]">
                   <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px]">ID (slug) <span className="text-acc">·</span></label>
-                  <div className={`field-input flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms]${errFor("id") ? " border-[var(--error)]" : ""}`}>
+                  <div className={`flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms] focus-within:border-[var(--acc-tint)]${errFor("id") ? " border-[var(--error)]" : ""}`}>
                     <span className="text-txt-3 shrink-0 font-[var(--font-mono)] text-[11px] select-none">~/.claude/agents/</span>
                     <input
                       className="flex-1 bg-transparent border-none outline-none text-txt text-[12px] font-[var(--font-mono)] py-[9px]"
@@ -364,7 +364,7 @@ export function NewAgentForm() {
                       {values.desc.length}/{DESC_MAX}
                     </span>
                   </label>
-                  <div className={`field-input flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms]${errFor("desc") ? " border-[var(--error)]" : ""}`}>
+                  <div className={`flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms] focus-within:border-[var(--acc-tint)]${errFor("desc") ? " border-[var(--error)]" : ""}`}>
                     <input
                       className="flex-1 bg-transparent border-none outline-none text-txt text-[13px] font-[inherit] py-[9px]"
                       value={values.desc}
@@ -390,12 +390,12 @@ export function NewAgentForm() {
                   <button
                     key={m.id}
                     type="button"
-                    className={`model-card text-left bg-bg-1 border border-line cursor-pointer flex flex-col px-[14px] py-[12px] rounded-[10px] transition-[background,border-color] duration-[120ms] gap-[4px] font-[inherit] hover:bg-bg-3 hover:border-line-2${values.model === m.id ? " active" : ""}`}
+                    className={`model-card text-left bg-bg-1 border border-line cursor-pointer flex flex-col px-[14px] py-[12px] rounded-[10px] transition-[background,border-color] duration-[120ms] gap-[4px] font-[inherit] hover:bg-bg-3 hover:border-line-2${values.model === m.id ? " active border-[var(--acc-tint)] [box-shadow:inset_0_0_0_1px_var(--acc-tint)]" : ""}`}
                     onClick={() => set("model", m.id)}
                   >
                     <div className={`row1 flex items-center gap-[8px] font-bold text-[14px]${values.model === m.id ? " text-acc" : " text-txt"}`}>
                       {m.name}
-                      <span className={`badge ${m.badge} ml-auto rounded-full bg-bg-3 border border-line text-txt-3 font-[var(--font-mono)] text-[10px] px-[6px] py-[1px] tracking-[0.04em]`}>{m.badge}</span>
+                      <span className={`ml-auto rounded-full border font-[var(--font-mono)] text-[10px] px-[6px] py-[1px] tracking-[0.04em]${m.badge === "fast" ? " bg-[rgba(34,197,94,0.10)] border-[rgba(34,197,94,0.30)] text-[var(--working)]" : m.badge === "smart" ? " bg-[rgba(199,146,234,0.10)] border-[rgba(199,146,234,0.30)] text-[#c792ea]" : " bg-[rgba(255,203,107,0.10)] border-[rgba(255,203,107,0.30)] text-[#ffcb6b]"}`}>{m.badge}</span>
                     </div>
                     <div className="text-txt-3 font-[var(--font-mono)] text-[11px]">{m.full} · {m.price}</div>
                     <div className={`text-[11.5px] leading-[1.5]${values.model === m.id ? " desc" : " text-txt-3"}`}>{m.desc}</div>
@@ -427,7 +427,7 @@ export function NewAgentForm() {
               {/* Room */}
               <div className="flex flex-col gap-[5px]">
                 <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px]">Room <span className="text-txt-4 normal-case tracking-[0] font-[var(--font-sans)]">· optional</span></label>
-                <div className="field-input flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms]">
+                <div className="flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms] focus-within:border-[var(--acc-tint)]">
                   <input
                     className="flex-1 bg-transparent border-none outline-none text-txt text-[13px] font-[inherit] py-[9px]"
                     value={values.room}
@@ -543,10 +543,10 @@ export function NewAgentForm() {
       </div>
 
       {/* Save bar */}
-      <div className="na-savebar absolute flex items-center pointer-events-none left-0 right-0 bottom-0 px-[28px] py-[14px] z-[4]">
+      <div className="absolute flex items-center pointer-events-none left-0 right-0 bottom-0 px-[28px] py-[14px] z-[4] [background:linear-gradient(180deg,transparent,var(--bg-1)_22%)]">
         <div className="flex-1 flex items-center bg-bg-2 border border-line-2 pointer-events-auto gap-[14px] px-[18px] py-[12px] rounded-[14px] [box-shadow:0_14px_40px_-10px_rgba(0,0,0,0.5)]">
           <span className="inline-flex items-center shrink-0 gap-[8px] font-[var(--font-mono)] text-[12px] text-[#f59e0b]">
-            {dirtyCount > 0 && <span className="na-savebar-led w-[6px] h-[6px] rounded-full bg-[#f59e0b] [box-shadow:0_0_8px_#f59e0b] [animation:pulse_1.4s_infinite]" />}
+            {dirtyCount > 0 && <span className="w-[6px] h-[6px] rounded-full bg-[#f59e0b] [box-shadow:0_0_8px_#f59e0b] animate-[pulse_1.4s_infinite]" />}
             {dirtyCount > 0 ? `${dirtyCount} unsaved field${dirtyCount !== 1 ? "s" : ""}` : "No changes"}
           </span>
           <span className="text-txt-4 flex-1 font-[var(--font-mono)] text-[11px]">

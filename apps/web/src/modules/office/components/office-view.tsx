@@ -78,7 +78,7 @@ export function OfficeView() {
           workingCount={workingCount}
         />
       )}
-      <div className="office">
+      <div className="relative overflow-hidden flex-1 min-h-0 [background:radial-gradient(ellipse_at_50%_0%,rgba(233,84,32,0.05),transparent_60%),var(--bg-1)]">
         {view === "iso" ? (
           <>
             <OfficeHud

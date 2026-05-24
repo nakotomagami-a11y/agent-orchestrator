@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 /* ─────────────────────────────────────────────────────────────────
-   Agent Office — Yaru / Modern GNOME (ported from design-source/v3)
-   Fonts injected via next/font as --font-sans / --font-mono.
+   Agent Office — Yaru / Modern GNOME
+   CSS variables, keyframes, scrollbars, color-mix rules, and nested
+   content selectors only. Everything else is inline Tailwind.
    ───────────────────────────────────────────────────────────────── */
 
 :root {
@@ -107,198 +108,15 @@ body {
 }
 
 
-/* ── Sidebar ── */
-
-
-.roster-row .st.working { background: var(--working); box-shadow: 0 0 0 3px rgba(34,197,94,0.25); animation: pulseDot 1.8s infinite ease-in-out; }
-.roster-row .st.done    { background: var(--done); }
-.roster-row .st.queued  { background: var(--queued); }
-.roster-row .st.error   { background: var(--error); }
-.roster-row .st.thinking{ background: var(--thinking); animation: pulseDot 1.8s infinite ease-in-out; }
-.roster-row:hover .roster-row-remove,
-.roster-row:focus-within .roster-row-remove { opacity: 1; }
-.roster-row-remove:hover { color: var(--error); border-color: var(--error); }
-
-
-/* ── Main area ── */
-
-
-/* ── Office (Isometric room) ── */
-.office {
-  @apply relative overflow-hidden flex-1 min-h-0;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(233,84,32,0.05), transparent 60%),
-    var(--bg-1);
-}
-.workstation:hover { filter: brightness(1.04); }
-.workstation.selected { filter: drop-shadow(0 4px 6px rgba(233,84,32,0.25)); }
-
-/* ── Office HUD ── */
-
-/* ── Canvas tools (top-left zoom + controls bar) — inlined to office-scene.tsx ── */
-.canvas-tools .agent-search::placeholder { color: rgba(199, 191, 183, 0.4); }
-.canvas-tools .agent-search::-webkit-search-cancel-button { @apply cursor-pointer; }
-
-/* ── Canvas info (bottom-left HUD strip) — inlined to office-scene.tsx ── */
-
-/* ── Build actions bar (bottom-center, build mode only) — inlined to office-scene.tsx ── */
-
-/* ── Build panel — inlined to office-build-toolbar.tsx ── */
-/* bp-head-crest color-mix border */
-.bp-head-crest {
-  border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent);
-}
-
-/* brush-sizes active color-mix border */
+/* ─── Build panel — color-mix borders (Tailwind v3 can't express these) ─── */
+.bp-head-crest { border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent); }
 .brush-sizes button.active { border-color: color-mix(in srgb, var(--acc) 30%, transparent); }
-
-/* biome-swatch active ::after pseudo-element */
-.biome-swatch.active::after {
-  content: "";
-  @apply absolute inset-[3px];
-  border-radius: 4px;
-  border: 1.5px solid rgba(255,255,255,0.6);
-}
-
-/* bp-search focus-within color-mix border */
 .bp-search:focus-within { border-color: color-mix(in srgb, var(--acc) 30%, transparent); }
-.bp-search input::placeholder { @apply text-txt-3; }
-
-/* bp-cat active underline — pseudo-element, must stay as CSS */
-.bp-cat.active::after {
-  content: "";
-  @apply absolute;
-  left: 6px; right: 6px;
-  bottom: -1px; height: 2px;
-  background: var(--acc);
-  border-radius: 2px 2px 0 0;
-}
-
-/* bp-toggle.on color-mix border */
 .bp-toggle.on { border-color: color-mix(in srgb, var(--acc) 30%, transparent); }
-
-/* Build panel container */
-
-/* Entry button (inactive build mode) */
-
-/* Help button in panel header */
-
-/* Tile cell in palette grid — color-mix border for active state */
 .tile-cell.active { border-color: color-mix(in srgb, var(--acc) 30%, transparent); }
 
-/* Empty state in tile grid */
 
-/* Inspector */
-
-/* ── Chat ── */
-.chat { display: grid; grid-template-rows: auto 1fr auto; min-height: 0; height: 100%; flex: 1; background: var(--bg-1); }
-.chat-head {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 18px;
-  border-bottom: 1px solid var(--line);
-}
-.chat-head .av { width: 40px; height: 40px; }
-.chat-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
-.chat-head .sub { font-size: 11.5px; color: var(--txt-3); font-family: var(--font-mono); }
-.chat-head .pill {
-  font-family: var(--font-mono); font-size: 10.5px;
-  display: inline-flex; align-items: center;
-  height: 26px; padding: 0 9px; border-radius: 8px;
-  background: var(--bg-2); color: var(--txt-2);
-  border: 1px solid var(--line);
-}
-.chat-head .pill.working { background: var(--acc-faint); color: var(--acc); border-color: rgba(233,84,32,0.2); }
-.chat-head .right { margin-left: auto; display: flex; gap: 6px; }
-
-.chat-tabs {
-  padding: 0 18px;
-  border-bottom: 1px solid var(--line);
-  display: flex; gap: 4px;
-  background: var(--bg-1);
-}
-.chat-tab {
-  height: 38px; padding: 0 12px;
-  background: transparent; border: none; cursor: pointer;
-  font-family: inherit; font-size: 13px; color: var(--txt-3);
-  font-weight: 500;
-  border-bottom: 2px solid transparent;
-  display: inline-flex; align-items: center; gap: 6px;
-}
-.chat-tab:hover { color: var(--txt); }
-.chat-tab.on { color: var(--txt); border-bottom-color: var(--acc); }
-.chat-tab .count {
-  font-family: var(--font-mono); font-size: 10.5px;
-  padding: 1px 6px; border-radius: 999px;
-  background: var(--bg-2); color: var(--txt-3);
-}
-
-.chat-scroll-wrap { position: relative; min-height: 0; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-.chat-scroll { overflow-y: auto; overscroll-behavior: contain; padding: 18px 16px 20px; flex: 1; }
-.chat-thread { max-width: 760px; margin: 0 auto; padding: 0 8px; display: flex; flex-direction: column; gap: 20px; }
-
-/* Floating "Jump to latest" pill. The wrapper handles the sticky anchoring
-   and centring; the button is just the visual chip. Pointer events are
-   blocked on the wrapper so the empty centring strip never eats clicks
-   on the messages behind it. */
-@keyframes jump-pill-in {
-  from { opacity: 0; transform: translateY(6px) scale(0.96); }
-  to   { opacity: 1; transform: translateY(0)   scale(1); }
-}
-.chat-jump-latest-wrap {
-  position: absolute;
-  bottom: 16px;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 2;
-}
-.chat-jump-latest {
-  pointer-events: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 7px 14px 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--bg-1);
-  color: var(--txt);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.01em;
-  box-shadow: var(--shadow-1);
-  cursor: pointer;
-  animation: jump-pill-in 140ms ease both;
-  transition: color 100ms ease, background 100ms ease, border-color 100ms ease, box-shadow 100ms ease;
-}
-.chat-jump-latest:hover { box-shadow: var(--shadow-2); }
-.chat-jump-latest:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) {
-  .chat-jump-latest { animation: none; transition: none; }
-}
-
-
-.bubble-prose {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  color: var(--txt);
-  font-size: 14px; line-height: 1.55;
-  white-space: pre-wrap;
-  max-width: 100%;
-}
-.bubble-prose code { font-family: var(--font-mono); font-size: 12.5px; background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; }
-
-.code-block {
-  background: #2C001E;
-  color: #F4EFEA;
-  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55;
-  padding: 12px 14px;
-  border-radius: 10px;
-  overflow: auto;
-}
+/* ─── Code block — syntax highlighting for dynamically generated HTML ─── */
 .code-block .hl-k { color: #ffa896; }
 .code-block .hl-s { color: #98c379; }
 .code-block .hl-c { color: #7a7a7a; font-style: italic; }
@@ -307,74 +125,123 @@ body {
 .code-block .hl-i { color: #c7bfb7; }
 .code-block .head {
   display: flex; align-items: center; gap: 8px;
-  margin: -12px -14px 8px;
-  padding: 6px 14px;
+  margin: -12px -14px 8px; padding: 6px 14px;
   background: rgba(255,255,255,0.04);
   border-bottom: 1px solid rgba(255,255,255,0.06);
   font-size: 11px; color: #C7BFB7;
 }
 .code-block .head .cp {
   margin-left: auto; background: transparent; border: 1px solid rgba(255,255,255,0.12);
-  color: #C7BFB7; cursor: pointer; padding: 2px 8px; border-radius: 4px; font-family: inherit; font-size: 11px;
+  color: #C7BFB7; cursor: pointer; padding: 2px 8px; border-radius: 4px;
+  font-family: inherit; font-size: 11px;
 }
 
-/* ── Composer ── */
-.composer-box:focus-within { border-color: var(--acc); }
-.composer-box textarea::placeholder { color: var(--txt-4); }
 
-.slash-popup {
-  @apply absolute bg-bg-1 border border-line;
-  bottom: calc(100% + 8px);
-  left: 24px; right: 24px;
-  max-width: 380px;
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-2);
-  padding: 4px;
-  z-index: 20;
-}
-.slash-popup .item {
-  @apply cursor-pointer flex items-center gap-[10px];
-  padding: 8px 10px;
-  border-radius: 6px;
-}
-.slash-popup .item:hover, .slash-popup .item.on { @apply bg-bg-2; }
-.slash-popup .cmd { @apply text-acc font-semibold; font-family: var(--font-mono); font-size: 12px; }
-.slash-popup .desc { @apply text-txt-2; font-size: 12px; }
-
-.thread-empty {
-  @apply text-center flex flex-col gap-[20px] items-center;
-  max-width: 760px; margin: 60px auto 0;
-  padding: 0 24px;
-}
-.thread-empty .greet h2 { @apply font-bold; margin: 6px 0 4px; font-size: 22px; letter-spacing: -0.02em; }
-.thread-empty .greet p  { @apply text-txt-3; margin: 0; font-size: 13px; }
-.thread-empty .sug-grid { @apply grid gap-[8px]; grid-template-columns: 1fr 1fr; width: 100%; margin-top: 12px; }
-.thread-empty .sug {
-  @apply text-left cursor-pointer bg-bg-1 border border-line text-txt-2;
-  border-radius: 12px;
-  padding: 12px 14px;
-  font-size: 13px;
-  transition: all 120ms;
-}
-.thread-empty .sug:hover { border-color: var(--acc); color: var(--txt); transform: translateY(-1px); box-shadow: var(--shadow-1); }
-.thread-empty .sug .lbl {
-  @apply text-acc uppercase font-semibold;
-  font-size: 10.5px;
-  font-family: var(--font-mono);
-  letter-spacing: 0.06em;
-  margin-bottom: 4px;
+/* ─── Drag-and-drop (color-mix background) ─── */
+.composer-box.drag-over { border-color: var(--acc); border-style: dashed; }
+.drag-overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: var(--acc); pointer-events: none; font-weight: 500; gap: 8px;
+  background: color-mix(in srgb, var(--bg-1) 85%, transparent);
+  border-radius: 14px; font-size: 13px; z-index: 10;
 }
 
-/* ── Pip strip ── */
-.pip {
-  @apply inline-flex items-center gap-[8px] bg-bg-1 border border-line rounded-full cursor-pointer;
-  padding: 5px 10px;
-  font-size: 11.5px;
-  box-shadow: var(--shadow-1);
-}
-.pip:hover { border-color: var(--acc); }
 
-/* ── Animations ── */
+/* ─── Scrollbars ─── */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--line-strong); background-clip: padding-box; border: 2px solid transparent; }
+
+
+/* ─── Cards — color-mix modifier states ─── */
+.desk-card.working { border-color: var(--working) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--working) 18%, transparent) !important; }
+
+.of-section-head h2 .pip.live {
+  background: color-mix(in srgb, var(--working) 10%, transparent);
+  border-color: color-mix(in srgb, var(--working) 30%, transparent);
+  color: var(--working);
+}
+.of-card.live {
+  border-color: color-mix(in srgb, var(--working) 30%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--working) 10%, transparent);
+}
+.of-card.live::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 30% at 0% 0%, color-mix(in srgb, var(--working) 10%, transparent), transparent 60%);
+}
+.of-card.error { border-color: color-mix(in srgb, var(--error) 30%, transparent); }
+.of-card.selected {
+  border-color: color-mix(in srgb, var(--acc) 30%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--acc) 10%, transparent);
+  background-image: radial-gradient(ellipse 60% 30% at 0% 0%, color-mix(in srgb, var(--acc) 10%, transparent), transparent 60%);
+}
+.of-card .status-chip.live {
+  background: color-mix(in srgb, var(--working) 10%, transparent);
+  border-color: color-mix(in srgb, var(--working) 30%, transparent);
+  color: var(--working);
+}
+.of-card .status-chip.busy {
+  background: color-mix(in srgb, var(--thinking) 10%, transparent);
+  border-color: color-mix(in srgb, var(--thinking) 30%, transparent);
+  color: var(--thinking);
+}
+.of-card .status-chip.error {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+  border-color: color-mix(in srgb, var(--error) 30%, transparent);
+  color: var(--error);
+}
+.of-card.live .state-box {
+  border-color: color-mix(in srgb, var(--working) 25%, transparent);
+  background: color-mix(in srgb, var(--working) 4%, var(--bg-1));
+}
+.of-card .state-box .progress .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--working), color-mix(in oklab, var(--working) 70%, white));
+  border-radius: 999px;
+  animation: of-pulse 1.2s infinite;
+}
+.of-card.add-card:hover { background: var(--acc-faint); border-color: var(--acc-tint); transform: none; box-shadow: none; }
+
+
+/* ─── Activity — color-mix rules ─── */
+.act-live-run {
+  display: grid; align-items: center; position: relative; overflow: hidden;
+  gap: 14px; padding: 11px 14px;
+  background: color-mix(in srgb, var(--working) 6%, var(--bg-2));
+  border: 1px solid color-mix(in srgb, var(--working) 22%, var(--line));
+  border-radius: 10px;
+}
+.act-live-run::before {
+  content: ""; position: absolute; left: 0; bottom: 0;
+  height: 2px; width: var(--progress, 60%);
+  background: var(--working); box-shadow: 0 0 8px var(--working); transition: width 0.3s ease;
+}
+.hcell.l1 { background: color-mix(in oklab, var(--acc) 18%, var(--bg-3)); border-color: color-mix(in oklab, var(--acc) 24%, var(--line)); }
+.hcell.l2 { background: color-mix(in oklab, var(--acc) 38%, var(--bg-2)); border-color: color-mix(in oklab, var(--acc) 34%, var(--line)); }
+.hcell.l3 { background: color-mix(in oklab, var(--acc) 62%, var(--bg-2)); border-color: color-mix(in oklab, var(--acc) 44%, var(--line)); }
+.act-row.open { background: var(--bg-2); border-color: color-mix(in srgb, var(--acc) 40%, var(--line)); border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; }
+.act-row-cost-fill { height: 100%; background: linear-gradient(90deg, var(--acc), color-mix(in oklab, var(--acc) 70%, white)); border-radius: 2px; }
+.act-detail { border: 1px solid color-mix(in srgb, var(--acc) 40%, var(--line)); border-top: none; }
+
+
+/* ─── New-agent form — color-mix rules ─── */
+.na-section-head .check {
+  display: grid; place-items: center; border-radius: 999px; flex-shrink: 0;
+  width: 22px; height: 22px;
+  background: color-mix(in srgb, var(--working) 10%, transparent);
+  color: var(--working); border: 1px solid rgba(34,197,94,0.30);
+}
+.model-card.active .desc { color: color-mix(in oklab, var(--acc) 50%, var(--txt-2)); }
+.pm-desc { color: color-mix(in oklab, var(--acc) 60%, var(--txt-2)); }
+.tip-card { background: color-mix(in srgb, var(--acc) 6%, var(--bg-2)); }
+
+
+/* ─── Add-agent modal — color-mix rule ─── */
+.aa-btn-done:not(.cursor-default):hover { background: color-mix(in oklab, var(--acc) 88%, white); }
+
+
+/* ─── @keyframes ─── */
 @keyframes pulseDot {
   0%, 100% { box-shadow: 0 0 0 0 rgba(233,84,32,0.5); }
   50%      { box-shadow: 0 0 0 6px rgba(233,84,32,0); }
@@ -394,218 +261,34 @@ body {
   25%      { transform: translate(0.5px, 0); }
   75%      { transform: translate(-0.5px, 0); }
 }
-
-.sprite-stage { @apply inline-block; width: 100%; height: 100%; }
-.sprite-stage.bob    > * { animation: bob 2.4s infinite ease-in-out; transform-origin: center bottom; }
-.sprite-stage.typing > * { animation: typeShake 0.18s infinite linear; }
-
-.eye { transform-origin: center; animation: blinkEye 4s infinite ease-in-out; }
-
-
-@keyframes ao-skel-pulse {
-  0%, 100% { background-position: 0% 0; }
-  50%      { background-position: 100% 0; }
-}
-
-/* ── EmptyState ── */
-
-/* ── StatusDot ── */
-
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
-::-webkit-scrollbar-thumb:hover { background: var(--line-strong); background-clip: padding-box; border: 2px solid transparent; }
-
-/* Cards office grid */
-.cards-office {
-  /* Top padding clears the absolutely-positioned `.office-hud` chips */
-  @apply overflow-auto grid;
-  padding: 64px 18px 18px;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-  align-content: start;
-}
-/* .desk-card.working uses color-mix — cannot be expressed as a Tailwind utility */
-.desk-card.working { border-color: var(--working) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--working) 18%, transparent) !important; }
-
-/* Ghost loading state — disable interactions while busy */
-.cards-office[aria-busy="true"] { @apply pointer-events-none; }
-
-/* ── Run row fork button ── */
-.run-row:hover .run-row-fork,
-.run-row:focus-within .run-row-fork { opacity: 1 !important; }
-/* ============================================================
-   Office — cards view
-   ============================================================ */
-
-/* Quick-chat callout */
-.of-quickchat {
-  @apply flex items-center gap-[12px] border;
-  padding: 14px 16px;
-  background: linear-gradient(90deg, var(--acc-faint), transparent 70%);
-  border-color: var(--acc-tint);
-  border-radius: 12px;
-  margin-bottom: 18px;
-}
-/* Section header */
-.of-section-head h2 .pip.live {
-  background: color-mix(in srgb, var(--working) 10%, transparent);
-  border-color: color-mix(in srgb, var(--working) 30%, transparent);
-  color: var(--working);
-}
-
-/* ---- Cards ---- */
-
-/* modifier states for .of-card that use color-mix or pseudo-elements */
-.of-card.live {
-  border-color: color-mix(in srgb, var(--working) 30%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--working) 10%, transparent);
-}
-.of-card.live::before {
-  content: "";
-  @apply absolute inset-0 pointer-events-none;
-  background: radial-gradient(ellipse 60% 30% at 0% 0%, color-mix(in srgb, var(--working) 10%, transparent), transparent 60%);
-}
-.of-card.error { border-color: color-mix(in srgb, var(--error) 30%, transparent); }
-.of-card.selected {
-  border-color: color-mix(in srgb, var(--acc) 30%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--acc) 10%, transparent);
-  background-image: radial-gradient(ellipse 60% 30% at 0% 0%, color-mix(in srgb, var(--acc) 10%, transparent), transparent 60%);
-}
-.of-card.pinned { border-color: var(--acc-tint); }
-.of-card.pinned::after {
-  content: "";
-  @apply absolute;
-  top: 0; right: 0;
-  width: 0; height: 0;
-  border-style: solid;
-  border-width: 0 20px 20px 0;
-  border-color: transparent var(--acc) transparent transparent;
-  border-radius: 0 14px 0 0;
-}
-
-/* av pseudo shimmer */
-.of-card .av::before {
-  content: "";
-  @apply absolute inset-0 pointer-events-none;
-  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.10), transparent 60%);
-  border-radius: inherit;
-}
-
-/* status-chip color-mix states */
-.of-card .status-chip.live {
-  background: color-mix(in srgb, var(--working) 10%, transparent);
-  border-color: color-mix(in srgb, var(--working) 30%, transparent);
-  color: var(--working);
-}
-.of-card .status-chip.busy {
-  background: color-mix(in srgb, var(--thinking) 10%, transparent);
-  border-color: color-mix(in srgb, var(--thinking) 30%, transparent);
-  color: var(--thinking);
-}
-.of-card .status-chip.error {
-  background: color-mix(in srgb, var(--error) 10%, transparent);
-  border-color: color-mix(in srgb, var(--error) 30%, transparent);
-  color: var(--error);
-}
-
-/* state-box live color-mix */
-.of-card.live .state-box {
-  border-color: color-mix(in srgb, var(--working) 25%, transparent);
-  background: color-mix(in srgb, var(--working) 4%, var(--bg-1));
-}
-
-/* progress bar gradient + animation */
-.of-card .state-box .progress .fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--working), color-mix(in oklab, var(--working) 70%, white));
-  border-radius: 999px;
-  animation: of-pulse 1.2s infinite;
+@keyframes jump-pill-in {
+  from { opacity: 0; transform: translateY(6px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
 @keyframes of-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
-
-/* typing dots animation */
-.of-card .state-box .typing span {
-  @apply rounded-full;
-  width: 4px; height: 4px;
-  background: currentColor;
-  animation: of-typing 1.2s infinite;
-  opacity: 0.4;
-}
-.of-card .state-box .typing span:nth-child(2) { animation-delay: 0.15s; }
-.of-card .state-box .typing span:nth-child(3) { animation-delay: 0.3s; }
 @keyframes of-typing {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-3px); opacity: 1; }
 }
-
-/* Add card */
-.of-card.add-card {
-  @apply bg-transparent items-center justify-center text-center;
-  border-style: dashed;
-  min-height: 220px;
-  color: var(--txt-3);
-}
-.of-card.add-card .ico {
-  @apply bg-acc-faint grid place-items-center text-acc;
-  width: 44px; height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--acc-tint);
-  margin: 0 auto 10px;
-}
-.of-card.add-card:hover { background: var(--acc-faint); border-color: var(--acc-tint); transform: none; box-shadow: none; }
-
-/* Empty state */
-
-
-/* ============================================================
-   Project switcher — redesigned dropdown
-   ============================================================ */
-
-.ps-item.active::before {
-  @apply absolute;
-  content: "";
-  left: 0; top: 6px; bottom: 6px;
-  width: 3px;
-  background: var(--acc);
-  border-radius: 0 2px 2px 0;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-.page-transition {
-  animation: page-fade-in 160ms ease-out;
+@keyframes ao-skel-pulse {
+  0%, 100% { background-position: 0% 0; }
+  50%      { background-position: 100% 0; }
 }
 @keyframes page-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
-
 @keyframes water-foam {
   from { background-position-x: 0; }
   to   { background-position-x: -3072px; }
 }
-.water-foam {
-  animation: water-foam 1.6s steps(16) infinite;
-}
-
-/* Decoration animations. Each cycles through the sprite sheet's frames
-   via background-position-x, with steps() to snap between frames. */
 @keyframes deco-bush {
   from { background-position-x: 0; }
   to   { background-position-x: -1024px; }
@@ -626,11 +309,6 @@ body {
   from { background-position-x: 0; }
   to   { background-position-x: -384px; }
 }
-.deco-bush         { animation: deco-bush         1.6s steps(8)  infinite; }
-.deco-water-rock   { animation: deco-water-rock   1.6s steps(16) infinite; }
-.deco-duck         { animation: deco-duck         0.6s steps(3)  infinite; }
-.deco-tree         { animation: deco-tree         2.4s steps(8)  infinite; }
-.deco-cursed-chest { animation: deco-cursed-chest 1.8s steps(6)  infinite; }
 @keyframes deco-campfire {
   from { background-position-x: 0; }
   to   { background-position-x: -256px; }
@@ -639,263 +317,54 @@ body {
   from { background-position-x: 0; }
   to   { background-position-x: -80px; }
 }
-.deco-campfire  { animation: deco-campfire  0.64s steps(8)  infinite; }
-.deco-butterfly { animation: deco-butterfly 0.7s  steps(5)  infinite; }
-
-/* Placed agents on the office floor — hover + drag affordance. */
-
-
-
-/* Drag-and-drop attachment */
-.composer-box.drag-over {
-  border-color: var(--acc);
-  border-style: dashed;
-}
-.drag-overlay {
-  @apply absolute inset-0 flex items-center justify-center text-acc pointer-events-none font-medium;
-  gap: 8px;
-  background: color-mix(in srgb, var(--bg-1) 85%, transparent);
-  border-radius: 14px;
-  font-size: 13px;
-  z-index: 10;
-}
-
-/* ── Workstation (iso-office) ── */
-
-/* ── Activity page — unconvertible rules only ── */
-
-/* live-led ping animation */
-.live-led::after {
-  content: ""; position: absolute; inset: -4px; border-radius: 50%;
-  border: 1px solid var(--working); opacity: 0.5;
-  animation: act-ping 1.6s ease-out infinite;
-}
 @keyframes act-ping {
   0% { transform: scale(0.6); opacity: 0.6; }
   100% { transform: scale(1.6); opacity: 0; }
 }
 
-/* live run card — color-mix background/border + ::before progress bar */
-.act-live-run {
-  @apply grid items-center relative overflow-hidden;
-  gap: 14px; padding: 11px 14px;
-  background: color-mix(in srgb, var(--working) 6%, var(--bg-2));
-  border: 1px solid color-mix(in srgb, var(--working) 22%, var(--line));
-  border-radius: 10px;
-}
-.act-live-run::before {
-  content: ""; position: absolute; left: 0; bottom: 0;
-  height: 2px; width: var(--progress, 60%);
-  background: var(--working);
-  box-shadow: 0 0 8px var(--working);
-  transition: width 0.3s ease;
+
+/* ─── Reduced motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .chat-jump-latest { animation: none; transition: none; }
 }
 
-/* heatmap cell level colors — color-mix */
-.hcell.l1 { background: color-mix(in oklab, var(--acc) 18%, var(--bg-3)); border-color: color-mix(in oklab, var(--acc) 24%, var(--line)); }
-.hcell.l2 { background: color-mix(in oklab, var(--acc) 38%, var(--bg-2)); border-color: color-mix(in oklab, var(--acc) 34%, var(--line)); }
-.hcell.l3 { background: color-mix(in oklab, var(--acc) 62%, var(--bg-2)); border-color: color-mix(in oklab, var(--acc) 44%, var(--line)); }
-.hcell.l4 { background: var(--acc); border-color: var(--acc); }
-.act-heatmap-grid .hcell:hover { transform: scale(1.2); z-index: 2; box-shadow: var(--shadow-1); }
-.act-heatmap-grid .hcell.now { outline: 2px solid var(--txt); outline-offset: 1px; }
 
-/* filter search focus-within */
-.act-filter-search:focus-within { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-faint); }
-
-/* filter chip hover/active */
-.act-f-chip:hover { @apply text-txt; border-color: var(--acc); }
-.act-f-chip.on { @apply bg-acc-faint text-acc; border-color: var(--acc-tint); }
-
-/* scope seg active button */
-.act-scope-seg button.on { @apply bg-bg-3 text-txt; box-shadow: inset 0 0 0 1px var(--line); }
-
-/* run row hover / open state */
-.act-row:hover { @apply bg-bg-2; border-color: var(--line-2); }
-.act-row:hover .act-row-actions { opacity: 1; }
-.act-row.open { @apply bg-bg-2; border-color: color-mix(in srgb, var(--acc) 40%, var(--line)); border-bottom-left-radius: 0; border-bottom-right-radius: 0; margin-bottom: 0; }
-.act-row.open .act-row-chev { @apply text-acc; transform: rotate(180deg); }
-
-/* sdot running animation */
-.sdot.running { animation: pulseDot 1.2s infinite; }
-
-/* cost bar fill — linear-gradient */
-.act-row-cost-fill { @apply h-full; background: linear-gradient(90deg, var(--acc), color-mix(in oklab, var(--acc) 70%, white)); border-radius: 2px; }
-
-/* row actions — positioned, opacity revealed by hover */
-.act-row-actions { @apply absolute flex bg-bg-1 border border-line opacity-0; right: 34px; top: 50%; transform: translateY(-50%); gap: 2px; padding: 2px; border-radius: 8px; transition: opacity 0.14s; }
-
-/* detail panel — color-mix border */
-.act-detail { border: 1px solid color-mix(in srgb, var(--acc) 40%, var(--line)); border-top: none; }
-
-/* ─────────────────────────────────────────────────────────────────
-   New-agent form (na-*)
-   ───────────────────────────────────────────────────────────────── */
-
-/* na-section-head check uses color-mix — keep only unconvertible states */
-.na-section-head .check {
-  @apply grid place-items-center rounded-full border shrink-0;
-  width: 22px; height: 22px;
-  background: color-mix(in srgb, var(--working) 10%, transparent);
-  color: var(--working);
-  border-color: rgba(34,197,94,0.30);
-}
-.na-section-head .check.empty {
-  @apply bg-transparent text-txt-4;
-  border-color: var(--line);
-}
-
-/* id-avatar ::before shimmer — pseudo-element, keep */
-.id-avatar-av::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.06), transparent 60%);
-  pointer-events: none;
-}
-
-/* field-input focus-within */
-.field-input:focus-within { border-color: var(--acc-tint); }
-
-/* model-card active desc uses color-mix */
-.model-card.active { border-color: var(--acc-tint); box-shadow: inset 0 0 0 1px var(--acc-tint); }
-.model-card.active .desc { color: color-mix(in oklab, var(--acc) 50%, var(--txt-2)); }
-
-/* badge colors — static rgba */
-.badge.fast  { background: rgba(34,197,94,0.10); border-color: rgba(34,197,94,0.30); color: var(--working); }
-.badge.smart { background: rgba(199,146,234,0.10); border-color: rgba(199,146,234,0.30); color: #c792ea; }
-.badge.deep  { background: rgba(255,203,107,0.10); border-color: rgba(255,203,107,0.30); color: #ffcb6b; }
-
-/* chip-picker focus-within */
-.chip-picker:focus-within { border-color: var(--acc-tint); }
-
-/* permission-seg active .pm-desc uses color-mix */
-.pm-desc { color: color-mix(in oklab, var(--acc) 60%, var(--txt-2)); }
-
-/* tip-card background uses color-mix */
-.tip-card { background: color-mix(in srgb, var(--acc) 6%, var(--bg-2)); }
-
-/* markdown-editor active tab underline and hover */
-.markdown-editor .tabs button.active { @apply text-txt; border-bottom-color: var(--acc); }
-.markdown-editor .tabs button:hover:not(.active) { @apply text-txt; }
-
-/* na-savebar background gradient */
-.na-savebar { background: linear-gradient(180deg, transparent, var(--bg-1) 22%); }
-/* na-savebar-led pulse animation */
-.na-savebar-led { animation: pulse 1.4s infinite; }
-
-/* ─────────────────────────────────────────────────────────────────
-   Add-agent modal (aa-*)
-   ───────────────────────────────────────────────────────────────── */
-
-/* aa-backdrop ::after — backdrop-filter pseudo-element */
-.aa-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  pointer-events: none;
-}
-
-/* aa-switch-proj hover */
-.aa-switch-proj:hover { text-decoration: underline; }
-
-/* aa-search focus-within */
-.aa-search:focus-within {
-  border-color: var(--acc-tint);
-  box-shadow: 0 0 0 3px var(--acc-faint);
-}
-
-/* aa-row .added — background gradient */
-.aa-row.added { border-color: rgba(34,197,94,0.30); background: linear-gradient(90deg, rgba(34,197,94,0.05), transparent 60%); }
-.aa-row.added .aa-row-av { border-color: rgba(34,197,94,0.35); }
-
-/* aa-row-av ::before shimmer */
-.aa-row-av::before {
-  content: "";
-  position: absolute; inset: 0;
-  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,0.08), transparent 60%);
-  pointer-events: none;
-}
-
-/* aa-add .added — rgba colors */
-.aa-add.added {
-  background: rgba(34,197,94,0.10);
-  border-color: rgba(34,197,94,0.30);
-  color: var(--working);
-  padding-left: 10px;
-}
-.aa-add.added:hover { background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.45); color: var(--working); }
-
-/* aa-btn-done hover — color-mix */
-.aa-btn-done:not(.cursor-default):hover { background: color-mix(in oklab, var(--acc) 88%, white); }
-
-/* ── Project detail (ps-*) ──────────────────────────────────────────────── */
-.ps-hero::before {
-  content: ""; position: absolute; inset: 0;
-  background: radial-gradient(ellipse 400px 220px at 100% 0%, var(--acc-faint), transparent 70%);
-  pointer-events: none;
-}
-
-/* === RESPONSIVE === */
-
-/* ── App shell — sidebar, win-body, titlebar, main ── */
-
+/* ─── Responsive ─── */
 @media (max-width: 600px) {
   .gnome-window { inset: 0; border-radius: 0; }
   .main { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 }
-
-/* ── Office page ── */
-
 @media (max-width: 600px) {
   .of-card-actions { display: none !important; }
 }
-
-/* ── Activity page ── */
-
 @media (max-width: 600px) {
   .act-row { grid-template-columns: 26px 1fr 18px; }
   .act-live-run { grid-template-columns: 32px 1fr; }
   .act-heatmap-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .act-heatmap-grid, .act-heatmap-foot { min-width: 560px; }
 }
-
-/* ── New Agent form ── */
-
 @media (max-width: 600px) {
-  .na-savebar { position: fixed; bottom: calc(64px + env(safe-area-inset-bottom)); }
   .model-cards { grid-template-columns: 1fr; }
   .permission-seg { grid-template-columns: 1fr; }
 }
-
-/* ── Agent modal ── */
-/* not found: .backdrop, .modal, .tabbar, .msg-actions
-   — these classes do not exist in this stylesheet; rules deferred to component author */
-
-/* ── Limits, Servers, Add-Agent modals ── */
-/* not found: .limits-backdrop, .limits-modal, .srv-modal, .srv-card
-   — these classes do not exist in this stylesheet; rules deferred to component author */
-/* not found: .budget-hero, .two-col, .plan-grid, .behavior
-   — these classes do not exist in this stylesheet; rules deferred to component author */
-
 @media (max-width: 600px) {
-  .aa-modal {
-    width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; border: none;
-  }
+  .aa-modal { width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; border: none; }
 }
-
-/* ── Shared form grids ── */
-
 @media (max-width: 760px) {
-  /* not found: .grid-2, .two-col, .plan-grid — these classes do not exist in this stylesheet */
-  /* .field-grid already has an identical @media (max-width: 760px) rule above; kept for completeness */
   .field-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Agent modal — exceptions that can't be expressed as inline Tailwind ── */
 
-/* CSS custom properties scoped to .ao-modal */
+/* ─────────────────────────────────────────────────────────────────
+   Agent modal — CSS variable scope + nested-content selectors only
+   ───────────────────────────────────────────────────────────────── */
+
 .ao-modal {
   --ao-accent: #E95420;
   --ao-accent-soft: rgba(233, 84, 32, 0.14);
@@ -936,11 +405,10 @@ body {
   --ao-header-h: 72px;
 }
 
-
-/* ao-agent-strip scrollbar hide */
+/* ao-agent-strip scrollbar */
 .ao-agent-strip::-webkit-scrollbar { display: none; }
 
-/* Keyframes */
+/* ao-* keyframes */
 @keyframes ao-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
@@ -966,12 +434,8 @@ body {
   to   { opacity: 1; }
 }
 
-/* ao-prose — generated markdown HTML, can't use inline classes on inner nodes */
-.ao-modal .ao-prose {
-  color: var(--ao-fg-0);
-  font-size: 14px;
-  line-height: 1.65;
-}
+/* ao-prose — generated markdown HTML, cannot use inline classes on inner nodes */
+.ao-modal .ao-prose { color: var(--ao-fg-0); font-size: 14px; line-height: 1.65; }
 .ao-modal .ao-prose p { margin: 0 0 12px; }
 .ao-modal .ao-prose p:last-child { margin-bottom: 0; }
 .ao-modal .ao-prose h3 { font-size: 14.5px; font-weight: 700; margin: 18px 0 8px; color: var(--ao-fg-0); }
@@ -981,63 +445,29 @@ body {
 .ao-modal .ao-prose strong { color: var(--ao-fg-0); font-weight: 700; }
 .ao-modal .ao-prose em { color: var(--ao-fg-1); font-style: italic; }
 .ao-modal .ao-prose code {
-  background: rgba(255,255,255,0.06);
-  padding: 1px 5px;
-  border-radius: 4px;
-  font-family: var(--ao-font-mono);
-  font-size: 12.5px;
-  color: var(--ao-accent);
+  background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px;
+  font-family: var(--ao-font-mono); font-size: 12.5px; color: var(--ao-accent);
 }
 
 /* ao-codeblock — generated code block HTML */
-.ao-modal .ao-codeblock {
-  margin: 12px 0 14px;
-  border: 1px solid var(--ao-line-1);
-  border-radius: 10px;
-  overflow: hidden;
-  background: #0e0b09;
-}
+.ao-modal .ao-codeblock { margin: 12px 0 14px; border: 1px solid var(--ao-line-1); border-radius: 10px; overflow: hidden; background: #0e0b09; }
 .ao-modal .ao-codeblock .ao-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: rgba(255,255,255,0.02);
-  border-bottom: 1px solid var(--ao-line-0);
-  font-family: var(--ao-font-mono);
-  font-size: 11px;
-  color: var(--ao-fg-2);
-  letter-spacing: 0.04em;
+  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--ao-line-0);
+  font-family: var(--ao-font-mono); font-size: 11px; color: var(--ao-fg-2); letter-spacing: 0.04em;
 }
 .ao-modal .ao-codeblock .ao-head .ao-lang { color: var(--ao-fg-1); }
 .ao-modal .ao-codeblock .ao-head .ao-dot { width: 3px; height: 3px; background: var(--ao-fg-3); border-radius: 50%; }
 .ao-modal .ao-codeblock .ao-head .ao-actions { margin-left: auto; display: flex; gap: 2px; }
 .ao-modal .ao-codeblock .ao-head .ao-actions button {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 3px 8px;
-  border-radius: 5px;
-  color: var(--ao-fg-2);
-  font-size: 11px;
-  font-family: var(--ao-font-mono);
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: 5px; color: var(--ao-fg-2); font-size: 11px;
+  font-family: var(--ao-font-mono); border: 0; background: transparent; cursor: pointer; padding: 0;
 }
-.ao-modal .ao-codeblock .ao-head .ao-actions button:hover {
-  background: rgba(255,255,255,0.05);
-  color: var(--ao-fg-0);
-}
+.ao-modal .ao-codeblock .ao-head .ao-actions button:hover { background: rgba(255,255,255,0.05); color: var(--ao-fg-0); }
 .ao-modal .ao-codeblock pre {
-  margin: 0;
-  padding: 12px 14px;
-  font-family: var(--ao-font-mono);
-  font-size: 12.5px;
-  line-height: 1.6;
-  color: #e2dccf;
-  overflow-x: auto;
+  margin: 0; padding: 12px 14px; font-family: var(--ao-font-mono);
+  font-size: 12.5px; line-height: 1.6; color: #e2dccf; overflow-x: auto;
 }
 .ao-modal .ao-codeblock .tk-key { color: #c792ea; }
 .ao-modal .ao-codeblock .tk-str { color: #c3e88d; }
@@ -1046,80 +476,47 @@ body {
 .ao-modal .ao-codeblock .tk-typ { color: #82aaff; }
 .ao-modal .ao-codeblock .tk-fn  { color: #ffcb6b; }
 
-/* ao-cursor — streaming cursor, inline-block with animation */
+/* ao-cursor — streaming cursor */
 .ao-modal .ao-cursor {
-  display: inline-block;
-  width: 7px;
-  height: 1.05em;
-  background: var(--ao-accent);
-  margin-left: 2px;
-  vertical-align: text-bottom;
+  display: inline-block; width: 7px; height: 1.05em;
+  background: var(--ao-accent); margin-left: 2px; vertical-align: text-bottom;
   animation: ao-cursor-blink 1.05s step-end infinite;
 }
 
 /* ao-shimmer */
-.ao-modal .ao-shimmer {
-  color: var(--ao-fg-2);
-  animation: ao-shimmer 1.4s ease-in-out infinite;
-}
+.ao-modal .ao-shimmer { color: var(--ao-fg-2); animation: ao-shimmer 1.4s ease-in-out infinite; }
 
-/* ao-editor/ao-gutter/ao-code — complex grid editor layout */
+/* ao-markdown-editor — complex grid layout */
 .ao-modal .ao-markdown-editor .ao-editor {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  font-family: var(--ao-font-mono);
-  font-size: 12.5px;
-  line-height: 1.6;
-  min-height: 320px;
+  display: grid; grid-template-columns: 44px 1fr;
+  font-family: var(--ao-font-mono); font-size: 12.5px; line-height: 1.6; min-height: 320px;
 }
 .ao-modal .ao-markdown-editor .ao-gutter {
-  text-align: right;
-  padding: 12px 8px 12px 0;
-  color: var(--ao-fg-3);
-  border-right: 1px solid var(--ao-line-0);
-  user-select: none;
-  background: rgba(0,0,0,0.1);
+  text-align: right; padding: 12px 8px 12px 0; color: var(--ao-fg-3);
+  border-right: 1px solid var(--ao-line-0); user-select: none; background: rgba(0,0,0,0.1);
 }
 .ao-modal .ao-markdown-editor .ao-gutter div { font-size: 11.5px; }
 .ao-modal .ao-markdown-editor .ao-code textarea,
 .ao-modal .ao-markdown-editor textarea.ao-code {
-  background: transparent;
-  border: 0;
-  outline: 0;
-  width: 100%;
-  color: var(--ao-fg-0);
-  font-family: var(--ao-font-mono);
-  font-size: 12.5px;
-  line-height: 1.6;
-  padding: 12px 14px;
-  white-space: pre;
-  overflow: auto;
+  background: transparent; border: 0; outline: 0; width: 100%; color: var(--ao-fg-0);
+  font-family: var(--ao-font-mono); font-size: 12.5px; line-height: 1.6;
+  padding: 12px 14px; white-space: pre; overflow: auto;
 }
-
-/* ao-preview — markdown preview inside editor */
 .ao-modal .ao-markdown-editor .ao-preview {
-  padding: 14px 18px;
-  min-height: 320px;
-  color: var(--ao-fg-0);
-  font-size: 13.5px;
-  line-height: 1.6;
-  font-family: var(--ao-font-sans);
+  padding: 14px 18px; min-height: 320px; color: var(--ao-fg-0);
+  font-size: 13.5px; line-height: 1.6; font-family: var(--ao-font-sans);
 }
 .ao-modal .ao-markdown-editor .ao-preview h1 { font-size: 18px; margin: 0 0 8px; }
 .ao-modal .ao-markdown-editor .ao-preview h2 { font-size: 15px; margin: 14px 0 6px; }
 .ao-modal .ao-markdown-editor .ao-preview code {
-  background: rgba(255,255,255,0.06);
-  padding: 0 4px;
-  border-radius: 3px;
-  font-family: var(--ao-font-mono);
-  font-size: 12px;
-  color: var(--ao-accent);
+  background: rgba(255,255,255,0.06); padding: 0 4px; border-radius: 3px;
+  font-family: var(--ao-font-mono); font-size: 12px; color: var(--ao-accent);
 }
 .ao-modal .ao-markdown-editor .ao-preview p { margin: 0 0 10px; color: var(--ao-fg-1); }
 .ao-modal .ao-markdown-editor .ao-preview ul { margin: 0 0 10px; padding-left: 20px; color: var(--ao-fg-1); }
 .ao-modal .ao-markdown-editor .ao-preview ul li { margin-bottom: 3px; }
 
-/* ao-select — appearance:none with custom arrow */
+/* ao-select — appearance:none with CSS custom arrow (no Tailwind equivalent) */
 .ao-modal .ao-select {
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, var(--ao-fg-2) 50%),
@@ -1133,9 +530,5 @@ body {
 /* ao-modal scrollbar */
 .ao-modal .ao-modal-body::-webkit-scrollbar { width: 10px; }
 .ao-modal .ao-modal-body::-webkit-scrollbar-thumb {
-  background: var(--ao-bg-4);
-  border-radius: 5px;
-  border: 2px solid var(--ao-bg-1);
+  background: var(--ao-bg-4); border-radius: 5px; border: 2px solid var(--ao-bg-1);
 }
-
-

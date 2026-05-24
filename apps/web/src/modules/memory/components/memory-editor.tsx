@@ -1,6 +1,6 @@
 "use client";
 
-import { Textarea } from "@/components/ui/textarea";
+import { CodeEditor } from "@/components/ui/code-editor";
 import { Button } from "@/components/ui/button";
 import { useMemoryDraft } from "../hooks/use-memory-draft";
 
@@ -29,12 +29,11 @@ export function MemoryEditor({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <Textarea
+      <CodeEditor
         value={draft.draft}
-        onChange={(e) => draft.setDraft(e.target.value)}
-        rows={rows}
+        onChange={(v) => draft.setDraft(v)}
         placeholder={placeholder}
-        aria-label={label}
+        minHeight={rows * 22}
       />
       <div className="flex items-center justify-end gap-2.5">
         <span

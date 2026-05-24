@@ -39,25 +39,22 @@ export function PixelSprite({
     : { "aria-hidden": true };
 
   return (
-    <div
-      className={cn(
-        "sprite-stage",
-        animate && "bob",
-        action === "typing" && "typing",
-        className,
-      )}
-    >
+    <div className={cn("inline-block w-full h-full", className)}>
       <svg
         width={size}
         height={heightPx}
         viewBox={`0 0 ${SPRITE_W} ${SPRITE_H}`}
         shapeRendering="crispEdges"
+        className={cn(
+          animate && action !== "typing" && "animate-[bob_2.4s_infinite_ease-in-out] [transform-origin:center_bottom]",
+          action === "typing" && "animate-[typeShake_0.18s_infinite_linear] [transform-origin:center_bottom]",
+        )}
         {...ariaProps}
       >
         {cells.map((c, i) => (
           <rect key={i} x={c.x} y={c.y} width={c.w} height={c.h} fill={c.fill} />
         ))}
-        <g className={animate ? "eye" : undefined}>
+        <g className={animate ? "[transform-origin:center] animate-[blinkEye_4s_infinite_ease-in-out]" : undefined}>
           <rect x={9} y={9} width={1} height={1} fill="#1E1A18" />
           <rect x={14} y={9} width={1} height={1} fill="#1E1A18" />
         </g>

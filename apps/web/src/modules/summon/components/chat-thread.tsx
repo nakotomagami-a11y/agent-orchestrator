@@ -240,29 +240,29 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   }, []);
 
   return (
-    <div className="chat-scroll-wrap">
-    <div className="chat-scroll" ref={scrollRef}>
+    <div className="relative min-h-0 flex-1 overflow-hidden flex flex-col">
+    <div className="overflow-y-auto overscroll-contain px-[16px] pt-[18px] pb-[20px] flex-1" ref={scrollRef}>
       {items.length === 0 && phase === "idle" ? (
-        <div className="thread-empty">
+        <div className="text-center flex flex-col gap-[20px] items-center max-w-[760px] mx-auto mt-[60px] px-[24px]">
           <div
             className="w-[72px] h-[72px] rounded-[16px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] grid place-items-center text-[36px] font-bold text-[var(--ao-fg-1)] shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] shrink-0"
             aria-hidden
           >
             {agent.short[0]?.toUpperCase() ?? "?"}
           </div>
-          <div className="greet">
-            <h2>Hi, I&apos;m {agent.name}.</h2>
-            <p>{agent.description || "Ready when you are - pick a starter or ask anything."}</p>
+          <div>
+            <h2 className="font-bold mt-[6px] mb-[4px] text-[22px] tracking-[-0.02em]">Hi, I&apos;m {agent.name}.</h2>
+            <p className="text-[var(--txt-3)] m-0 text-[13px]">{agent.description || "Ready when you are - pick a starter or ask anything."}</p>
           </div>
-          <div className="sug-grid">
+          <div className="grid gap-2 grid-cols-2 w-full mt-3">
             {SUGGESTIONS.map((s) => (
               <button
                 key={s.lbl}
                 type="button"
-                className="sug"
+                className="text-left cursor-pointer bg-[var(--bg-1)] border border-[var(--line)] text-[var(--txt-2)] rounded-[12px] px-[14px] py-3 text-[13px] transition-all duration-[120ms] hover:border-[var(--acc)] hover:text-[var(--txt)] hover:-translate-y-px hover:shadow-[var(--shadow-1)]"
                 onClick={() => onPickSuggestion?.(s.text)}
               >
-                <div className="lbl">{s.lbl}</div>
+                <div className="text-[var(--acc)] uppercase font-semibold text-[10.5px] font-[var(--font-mono)] tracking-[0.06em] mb-1">{s.lbl}</div>
                 {s.text}
               </button>
             ))}
@@ -285,7 +285,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
               </Button>
             </div>
           ) : null}
-          <div className="chat-thread">
+          <div className="max-w-[760px] mx-auto px-2 flex flex-col gap-[20px]">
             {rows.map((row, idx) => {
               const prevRow = rows[idx - 1] ?? null;
               const curIsAgent = isAgentRow(row);
@@ -355,10 +355,10 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
       )}
     </div>
     {!followTail ? (
-      <div className="chat-jump-latest-wrap" aria-live="polite">
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center pointer-events-none z-[2]" aria-live="polite">
         <button
           type="button"
-          className="chat-jump-latest"
+          className="pointer-events-auto inline-flex items-center gap-[5px] py-[7px] pl-[12px] pr-[14px] rounded-full border border-[var(--line)] bg-[var(--bg-1)] text-[var(--txt)] text-[12px] font-medium tracking-[0.01em] shadow-[var(--shadow-1)] cursor-pointer animate-[jump-pill-in_140ms_ease_both] transition-[color,background,border-color,box-shadow] duration-[100ms] hover:shadow-[var(--shadow-2)] focus-visible:outline-2 focus-visible:outline-[var(--acc)] focus-visible:outline-offset-2"
           data-new={hasNewBelow}
           onClick={jumpToBottom}
           aria-label={t("jump_to_latest_aria")}

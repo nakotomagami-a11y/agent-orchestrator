@@ -12,7 +12,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
   return (
     <div
       key={pathname}
-      className="page-transition flex-1 min-h-0 flex flex-col"
+      className="animate-[page-fade-in_160ms_ease-out] flex-1 min-h-0 flex flex-col"
     >
       {children}
     </div>

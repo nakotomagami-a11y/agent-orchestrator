@@ -9,7 +9,7 @@ export type CardsOfficeGhostProps = {
 export function CardsOfficeGhost({ count = 6 }: CardsOfficeGhostProps) {
   return (
     <ul
-      className="cards-office list-none m-0"
+      className="overflow-auto grid p-[64px_18px_18px] [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))] gap-[14px] [align-content:start] list-none m-0"
       aria-busy="true"
       aria-label="Loading agents"
       role="status"

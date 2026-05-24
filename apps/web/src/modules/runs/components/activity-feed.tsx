@@ -110,7 +110,7 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
   return (
     <section className="flex flex-col gap-[8px]">
       <div className="flex items-center uppercase text-txt-3 gap-[10px] font-[var(--font-mono)] text-[10.5px] tracking-[0.1em]">
-        <span className="live-led shrink-0 relative rounded-full w-[7px] h-[7px]" style={{ background: "var(--working)" }} />
+        <span className="shrink-0 relative rounded-full w-[7px] h-[7px] after:content-[''] after:absolute after:inset-[-4px] after:rounded-full after:border after:border-[var(--working)] after:opacity-50 after:animate-[act-ping_1.6s_ease-out_infinite]" style={{ background: "var(--working)" }} />
         Live now
         <span className="bg-bg-2 border border-line text-txt-2 rounded-full normal-case px-[8px] py-[1px] tracking-[0]">{runs.length}</span>
         <span className="flex-1 h-[1px] bg-[var(--line)]" />
@@ -360,7 +360,7 @@ function Heatmap({ runs }: { runs: PersistedRun[] }) {
             <div className="hcell l1 w-[10px] h-[10px] rounded-[2px]" />
             <div className="hcell l2 w-[10px] h-[10px] rounded-[2px]" />
             <div className="hcell l3 w-[10px] h-[10px] rounded-[2px]" />
-            <div className="hcell l4 w-[10px] h-[10px] rounded-[2px]" />
+            <div className="hcell w-[10px] h-[10px] rounded-[2px] bg-[var(--acc)] border-[var(--acc)]" />
           </div>
           more
         </div>
@@ -374,7 +374,11 @@ function Heatmap({ runs }: { runs: PersistedRun[] }) {
               {row.map((v, h) => (
                 <div
                   key={h}
-                  className={`hcell bg-bg-3 border border-line cursor-pointer relative h-[16px] rounded-[2px] transition-transform duration-[100ms] ${lvl(v)} ${d === nowDay && h === nowHour ? "now" : ""}`}
+                  className={cn(
+                    "hcell bg-bg-3 border border-line cursor-pointer relative h-[16px] rounded-[2px] transition-transform duration-[100ms] hover:scale-[1.2] hover:z-[2] hover:[box-shadow:var(--shadow-1)]",
+                    lvl(v) === "l4" ? "bg-[var(--acc)] border-[var(--acc)]" : lvl(v),
+                    d === nowDay && h === nowHour && "outline outline-2 outline-[var(--txt)] outline-offset-[1px]",
+                  )}
                   title={`${dayLabels[d]} ${String(h).padStart(2, "0")}:00 - ${v} run${v === 1 ? "" : "s"}`}
                 />
               ))}
@@ -421,7 +425,7 @@ function FilterBar({
 
   return (
     <div className="flex items-center flex-wrap gap-[8px]">
-      <div className="act-filter-search flex-1 flex items-center bg-bg-1 border border-line-2 text-txt-3 min-w-[220px] gap-[10px] px-[13px] py-[8px] rounded-[10px] [box-shadow:var(--shadow-1)]">
+      <div className="flex-1 flex items-center bg-bg-1 border border-line-2 text-txt-3 min-w-[220px] gap-[10px] px-[13px] py-[8px] rounded-[10px] [box-shadow:var(--shadow-1)] focus-within:border-[var(--acc)] focus-within:[box-shadow:0_0_0_3px_var(--acc-faint)]">
         <Icon name="search" size={14} />
         <input
           value={filters.query}
@@ -433,27 +437,27 @@ function FilterBar({
       </div>
 
       <button
-        className={cn("act-f-chip inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)]", filters.statuses.includes("done") && "on")}
+        className={cn("inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)] hover:text-[var(--txt)] hover:border-[var(--acc)]", filters.statuses.includes("done") && "bg-[var(--acc-faint)] text-[var(--acc)] border-[var(--acc-tint)]")}
         onClick={() => toggleStatus("done")}
         type="button"
       >
-        <span className="dot rounded-full w-[6px] h-[6px] bg-current text-[#22c55e]" />
+        <span className="rounded-full w-[6px] h-[6px] bg-current text-[#22c55e]" />
         done
       </button>
       <button
-        className={cn("act-f-chip inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)]", filters.statuses.includes("error") && "on")}
+        className={cn("inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)] hover:text-[var(--txt)] hover:border-[var(--acc)]", filters.statuses.includes("error") && "bg-[var(--acc-faint)] text-[var(--acc)] border-[var(--acc-tint)]")}
         onClick={() => toggleStatus("error")}
         type="button"
       >
-        <span className="dot rounded-full w-[6px] h-[6px] bg-current text-[#ef4444]" />
+        <span className="rounded-full w-[6px] h-[6px] bg-current text-[#ef4444]" />
         error
       </button>
       <button
-        className={cn("act-f-chip inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)]", filters.statuses.includes("running") && "on")}
+        className={cn("inline-flex items-center bg-bg-1 border border-line-2 text-txt-2 cursor-pointer gap-[6px] px-[11px] py-[7px] rounded-[8px] text-[12.5px] [box-shadow:var(--shadow-1)] hover:text-[var(--txt)] hover:border-[var(--acc)]", filters.statuses.includes("running") && "bg-[var(--acc-faint)] text-[var(--acc)] border-[var(--acc-tint)]")}
         onClick={() => toggleStatus("running")}
         type="button"
       >
-        <span className="dot rounded-full w-[6px] h-[6px] bg-current text-[#E95420]" />
+        <span className="rounded-full w-[6px] h-[6px] bg-current text-[#E95420]" />
         live
       </button>
     </div>
@@ -492,7 +496,7 @@ function FeedRow({
   return (
     <>
       <div
-        className={cn("act-row grid items-center bg-bg-1 border border-line cursor-pointer relative gap-[12px] px-[14px] py-[11px] rounded-[10px] mb-[5px] transition-[background,border-color] duration-[100ms] [box-shadow:var(--shadow-1)]", isOpen && "open")}
+        className={cn("act-row group grid items-center bg-bg-1 border border-line cursor-pointer relative gap-[12px] px-[14px] py-[11px] rounded-[10px] mb-[5px] transition-[background,border-color] duration-[100ms] [box-shadow:var(--shadow-1)] hover:bg-[var(--bg-2)] hover:border-[var(--line-2)]", isOpen && "open")}
         style={{ gridTemplateColumns: "28px minmax(0,1fr) 100px auto auto auto 18px" }}
         onClick={onToggle}
         role="button"
@@ -501,7 +505,7 @@ function FeedRow({
       >
         <div className="act-row-av grid place-items-center bg-bg-2 border border-line font-bold text-txt-2 uppercase relative shrink-0 w-[26px] h-[26px] rounded-[6px] text-[13px] font-[var(--font-mono)]">
           {agentInitial(run.agentName)}
-          <span className={cn("sdot absolute rounded-full bottom-[-2px] right-[-2px] w-[8px] h-[8px] [border:2px_solid_var(--bg-1)]", dotCls === "error" ? "[background:var(--error)]" : "[background:var(--working)]", dotCls)} />
+          <span className={cn("absolute rounded-full bottom-[-2px] right-[-2px] w-[8px] h-[8px] [border:2px_solid_var(--bg-1)]", dotCls === "error" ? "bg-[var(--error)]" : "bg-[var(--working)]", dotCls === "running" && "animate-[pulseDot_1.2s_infinite]")} />
         </div>
 
         <div className="min-w-0">
@@ -528,12 +532,12 @@ function FeedRow({
         <span className="text-txt-3 whitespace-nowrap font-[var(--font-mono)] text-[11.5px]">{fmtTok(tokens)} tok</span>
         <span className="text-txt-3 whitespace-nowrap font-[var(--font-mono)] text-[11.5px]">{formatRelative(run.ts)}</span>
 
-        <span className={cn("act-row-chev text-txt-4 transition-transform duration-[180ms]", isOpen && "text-acc rotate-180")}>
+        <span className={cn("text-txt-4 transition-transform duration-[180ms]", isOpen && "text-[var(--acc)] rotate-180")}>
           <Icon name="chevron-down" size={14} />
         </span>
 
         <div
-          className="act-row-actions absolute flex bg-bg-1 border border-line opacity-0 gap-[2px] p-[2px] rounded-[8px] transition-[opacity] duration-[140ms]"
+          className="absolute flex bg-bg-1 border border-line opacity-0 gap-[2px] p-[2px] rounded-[8px] transition-[opacity] duration-[140ms] group-hover:opacity-100"
           style={{ right: 34, top: "50%", transform: "translateY(-50%)" }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -684,11 +688,11 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
           {projectId ? "· run history for this project" : "· run history across all agents"}
         </span>
         <div className="ml-auto flex items-center gap-2">
-          <div className="act-scope-seg flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden" style={{ borderRadius: "var(--r-md)" }}>
+          <div className="flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden" style={{ borderRadius: "var(--r-md)" }}>
             {(["today", "week", "month", "all"] as const).map((s) => (
               <button
                 key={s}
-                className={cn("bg-transparent border-none cursor-pointer text-txt-3 px-[11px] py-[4px] rounded-[6px] text-[12px] font-[var(--font-mono)]", scope === s && "on")}
+                className={cn("bg-transparent border-none cursor-pointer text-txt-3 px-[11px] py-[4px] rounded-[6px] text-[12px] font-[var(--font-mono)]", scope === s && "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]")}
                 onClick={() => setScope(s)}
                 type="button"
               >

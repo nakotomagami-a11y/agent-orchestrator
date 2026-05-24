@@ -10,6 +10,7 @@ import { useAgents } from "@/modules/agents/hooks/use-agents";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { useMemory, type MemoryScope } from "@/modules/memory/hooks/use-memory";
 import { useMemoryDraft } from "@/modules/memory/hooks/use-memory-draft";
+import { CodeEditor } from "@/components/ui/code-editor";
 import { cn } from "@/lib/cn";
 import type { IconName } from "@/components/ui/icon";
 
@@ -33,7 +34,6 @@ type ScopeEditorProps = {
 
 function ScopeEditor({ scope, saveFnRef, onSaveState, onContentLoaded }: ScopeEditorProps) {
   const t = useTranslations("memory_page");
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Stabilize memory.save so useMemoryDraft doesn't thrash
   const memory = useMemory(scope);
@@ -62,58 +62,27 @@ function ScopeEditor({ scope, saveFnRef, onSaveState, onContentLoaded }: ScopeEd
     }
   }, [memory.isLoading, memory.content, scope]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-      e.preventDefault();
-      if (draft.isDirty && !draft.isSaving) void draft.save();
-    }
-  };
-
-  const charCount = draft.draft.length;
-  const tokenEstimate = Math.round(charCount / 4);
-
   return (
     <div className="flex flex-col h-full min-h-0 p-[20px]">
-      <div className="flex-1 min-h-0 flex flex-col bg-bg-0 border-x border-b border-line rounded-[10px] overflow-hidden">
-        {/* Editor toolbar */}
-        <div className="flex items-center gap-[8px] px-[14px] py-[8px] border-b border-line bg-bg-1 shrink-0">
-          <Icon
-            name={scope.kind === "global" ? "memory" : scope.kind === "project" ? "folder" : "cpu"}
-            size={12}
-            className="text-txt-3 shrink-0"
-          />
-          <span className="font-semibold text-[12.5px] text-txt">
-            {scope.kind === "global" ? t("global_label") : scope.kind === "project" ? scope.name : scope.name}
-          </span>
-          <span className="font-[var(--font-mono)] text-[10px] text-txt-4 bg-bg-2 border border-line px-[6px] py-[1px] rounded-[4px]">markdown</span>
-          <span className="ml-auto font-[var(--font-mono)] text-[10.5px] text-txt-4">
-            {charCount > 0 ? `${charCount.toLocaleString()} chars · ~${tokenEstimate.toLocaleString()} tokens` : "empty"}
-          </span>
+      {memory.isLoading ? (
+        <div className="flex flex-col gap-[6px]">
+          <Skeleton width="80%" height={14} />
+          <Skeleton width="60%" height={14} />
+          <Skeleton width="70%" height={14} />
         </div>
-
-        {/* Content */}
-        {memory.isLoading ? (
-          <div className="p-[16px] flex flex-col gap-[6px]">
-            <Skeleton width="80%" height={14} />
-            <Skeleton width="60%" height={14} />
-            <Skeleton width="70%" height={14} />
-          </div>
-        ) : memory.loadError ? (
-          <div className="m-[14px] px-[14px] py-3 border border-[var(--error)] rounded-md text-[13px] bg-[rgba(239,68,68,0.08)] text-[var(--error)]">
-            {memory.loadError.message}
-          </div>
-        ) : (
-          <textarea
-            ref={textareaRef}
-            value={draft.draft}
-            onChange={(e) => draft.setDraft(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t("no_content")}
-            aria-label={scope.kind === "global" ? t("global_label") : scope.name}
-            className="flex-1 min-h-0 resize-none font-[var(--font-mono)] text-[12.5px] bg-transparent border-0 outline-none text-txt leading-[1.75] p-[16px] placeholder:text-txt-4"
-          />
-        )}
-      </div>
+      ) : memory.loadError ? (
+        <div className="px-[14px] py-3 border border-[var(--error)] rounded-md text-[13px] bg-[rgba(239,68,68,0.08)] text-[var(--error)]">
+          {memory.loadError.message}
+        </div>
+      ) : (
+        <CodeEditor
+          value={draft.draft}
+          onChange={(v) => { draft.setDraft(v); }}
+          placeholder={t("no_content")}
+          minHeight={320}
+          className="flex-1"
+        />
+      )}
     </div>
   );
 }

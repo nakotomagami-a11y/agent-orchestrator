@@ -12,6 +12,7 @@ import {
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
 import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
@@ -378,19 +379,22 @@ export function Composer({
     >
       <div className="max-w-[760px] mx-auto relative">
         {slashOpen && filteredSlash.length > 0 ? (
-          <div className="slash-popup" role="listbox" aria-label="Slash commands">
+          <div className="absolute bg-[var(--bg-1)] border border-[var(--line)] bottom-[calc(100%+8px)] left-[24px] right-[24px] max-w-[380px] rounded-[10px] shadow-[0_2px_6px_rgba(40,30,25,0.06),0_8px_24px_rgba(40,30,25,0.08)] p-1 z-[20]" role="listbox" aria-label="Slash commands">
             {filteredSlash.map((s, i) => (
               <button
                 key={s.cmd}
                 type="button"
                 role="option"
                 aria-selected={i === slashIdx}
-                className={"item" + (i === slashIdx ? " on" : "")}
+                className={cn(
+                  "cursor-pointer flex items-center gap-[10px] px-[10px] py-2 rounded-[6px] w-full",
+                  i === slashIdx ? "bg-[var(--bg-2)]" : "hover:bg-[var(--bg-2)]",
+                )}
                 onMouseEnter={() => setSlashIdx(i)}
                 onClick={() => insertSlash(s.cmd)}
               >
-                <span className="cmd">{s.cmd}</span>
-                <span className="desc">{t(s.descKey)}</span>
+                <span className="text-[var(--acc)] font-semibold font-[var(--font-mono)] text-[12px]">{s.cmd}</span>
+                <span className="text-[var(--txt-2)] text-[12px]">{t(s.descKey)}</span>
               </button>
             ))}
           </div>
@@ -398,7 +402,7 @@ export function Composer({
 
         {promptsOpen ? (
           <div
-            className="slash-popup overflow-y-auto max-w-full left-0 right-0 max-h-[200px]"
+            className="absolute bg-[var(--bg-1)] border border-[var(--line)] bottom-[calc(100%+8px)] left-0 right-0 max-w-full max-h-[200px] rounded-[10px] shadow-[0_2px_6px_rgba(40,30,25,0.06),0_8px_24px_rgba(40,30,25,0.08)] p-1 z-[20] overflow-y-auto"
             role="listbox"
             aria-label={t("composer.saved_prompts_aria")}
           >
@@ -413,12 +417,15 @@ export function Composer({
                   type="button"
                   role="option"
                   aria-selected={i === promptsIdx}
-                  className={"item flex-col items-start gap-0.5" + (i === promptsIdx ? " on" : "")}
+                  className={cn(
+                    "cursor-pointer flex flex-col items-start gap-0.5 px-[10px] py-2 rounded-[6px] w-full",
+                    i === promptsIdx ? "bg-[var(--bg-2)]" : "hover:bg-[var(--bg-2)]",
+                  )}
                   onMouseEnter={() => setPromptsIdx(i)}
                   onClick={() => selectPrompt(p.body)}
                 >
                   <span className="font-semibold text-txt text-[12px]">{p.title}</span>
-                  <span className="desc">
+                  <span className="text-[var(--txt-2)] text-[12px]">
                     {p.body.length > 60 ? p.body.slice(0, 57) + "…" : p.body}
                   </span>
                 </button>
@@ -428,7 +435,7 @@ export function Composer({
         ) : null}
 
         <div
-          className={"composer-box bg-bg-1 border-[1.5px] border-line-2 rounded-[16px] [box-shadow:var(--shadow-1)] transition-[border-color] duration-[160ms]" + (dragOver ? " drag-over" : "")}
+          className={"bg-bg-1 border-[1.5px] border-line-2 rounded-[16px] [box-shadow:var(--shadow-1)] transition-[border-color] duration-[160ms] focus-within:border-[var(--acc)]" + (dragOver ? " drag-over" : "")}
           aria-label={dragOver ? t("composer.drop_to_attach") : undefined}
         >
           {dragOver ? (

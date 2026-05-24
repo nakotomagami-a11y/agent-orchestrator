@@ -148,25 +148,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Bush 1",
     src: "/decorations/bush.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
+    terrain: "land", category: "land", family: "bush", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
   },
   bush2: {
     label: "Bush 2",
     src: "/decorations/bush2.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
+    terrain: "land", category: "land", family: "bush", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
   },
   bush3: {
     label: "Bush 3",
     src: "/decorations/bush3.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
+    terrain: "land", category: "land", family: "bush", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
   },
   bush4: {
     label: "Bush 4",
     src: "/decorations/bush4.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", family: "bush", animClass: "deco-bush",
+    terrain: "land", category: "land", family: "bush", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
   },
 
   // ─ Rocks (static, 64×64) - overlays, coexist with anything ─────────
@@ -228,25 +228,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Tree 1",
     src: "/decorations/tree.png",
     frameW: 192, frameH: 256, frames: 8,
-    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "animate-[deco-tree_2.4s_steps(8)_infinite]",
   },
   tree2: {
     label: "Tree 2",
     src: "/decorations/tree2.png",
     frameW: 192, frameH: 256, frames: 8,
-    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "animate-[deco-tree_2.4s_steps(8)_infinite]",
   },
   tree3: {
     label: "Tree 3",
     src: "/decorations/tree3.png",
     frameW: 192, frameH: 192, frames: 8,
-    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "animate-[deco-tree_2.4s_steps(8)_infinite]",
   },
   tree4: {
     label: "Tree 4",
     src: "/decorations/tree4.png",
     frameW: 192, frameH: 192, frames: 8,
-    terrain: "land", category: "land", family: "tree", animClass: "deco-tree",
+    terrain: "land", category: "land", family: "tree", animClass: "animate-[deco-tree_2.4s_steps(8)_infinite]",
   },
 
   // ─ Buildings (static). Houses are 128×192; tower 128×256; castle
@@ -333,7 +333,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/cursed_chest.png",
     frameW: 64, frameH: 64, frames: 6,
     terrain: "land", category: "buildings", family: "cursed_chest",
-    animClass: "deco-cursed-chest",
+    animClass: "animate-[deco-cursed-chest_1.8s_steps(6)_infinite]",
   },
   tower: {
     label: "Tower",
@@ -353,25 +353,25 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Water rock 1",
     src: "/decorations/water-rock.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "animate-[deco-water-rock_1.6s_steps(16)_infinite]",
   },
   water_rock2: {
     label: "Water rock 2",
     src: "/decorations/water-rock2.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "animate-[deco-water-rock_1.6s_steps(16)_infinite]",
   },
   water_rock3: {
     label: "Water rock 3",
     src: "/decorations/water-rock3.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "animate-[deco-water-rock_1.6s_steps(16)_infinite]",
   },
   water_rock4: {
     label: "Water rock 4",
     src: "/decorations/water-rock4.png",
     frameW: 64, frameH: 64, frames: 16,
-    terrain: "water", category: "water", family: "water_rock", animClass: "deco-water-rock",
+    terrain: "water", category: "water", family: "water_rock", animClass: "animate-[deco-water-rock_1.6s_steps(16)_infinite]",
   },
 
   // ─ Duck (3 frames × 32×32, quick wobble) ────────────────────────────
@@ -379,7 +379,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Duck",
     src: "/decorations/duck.png",
     frameW: 32, frameH: 32, frames: 3,
-    terrain: "water", category: "water", family: "duck", animClass: "deco-duck",
+    terrain: "water", category: "water", family: "duck", animClass: "animate-[deco-duck_0.6s_steps(3)_infinite]",
   },
 
   // ─ Mushrooms (static 64×64, three sizes) ────────────────────────────
@@ -492,7 +492,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Sheep",
     src: "/decorations/sheep.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", family: "sheep", animClass: "deco-bush",
+    terrain: "land", category: "land", family: "sheep", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
     anchor: "center",
   },
 
@@ -503,7 +503,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Campfire",
     src: "/decorations/campfire.png",
     frameW: 32, frameH: 64, frames: 8,
-    terrain: "land", category: "land", family: "campfire", animClass: "deco-campfire",
+    terrain: "land", category: "land", family: "campfire", animClass: "animate-[deco-campfire_0.64s_steps(8)_infinite]",
   },
 
   // ─ Butterflies (5 frames × 16×16, animated flutter). Six colour
@@ -515,42 +515,42 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Butterfly (blue)",
     src: "/decorations/butterfly_blue.png",
     frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
   },
   butterfly_grey: {
     label: "Butterfly (grey)",
     src: "/decorations/butterfly_grey.png",
     frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
   },
   butterfly_pink: {
     label: "Butterfly (pink)",
     src: "/decorations/butterfly_pink.png",
     frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
   },
   butterfly_red: {
     label: "Butterfly (red)",
     src: "/decorations/butterfly_red.png",
     frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
   },
   butterfly_white: {
     label: "Butterfly (white)",
     src: "/decorations/butterfly_white.png",
     frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
   },
   butterfly_yellow: {
     label: "Butterfly (yellow)",
     src: "/decorations/butterfly_yellow.png",
     frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "deco-butterfly",
+    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
   },
 

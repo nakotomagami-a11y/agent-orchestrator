@@ -16,16 +16,27 @@ export type DetectedCommand = {
   cwd?: string; // override project root (e.g. nested Flutter app)
 };
 
+// Module-level set prevents two concurrent POST requests from picking the same port
+// in the window between "port is free" check and the process actually binding it.
+const reservedPorts = new Set<number>();
+
 async function findFreePort(start = 3001): Promise<number> {
   for (let p = start; p < start + 100; p++) {
     if (p === 5173) continue;
+    if (reservedPorts.has(p)) continue;
     const free = await new Promise<boolean>((resolve) => {
       const s = net.createServer();
       s.once("error", () => resolve(false));
       s.once("listening", () => { s.close(() => resolve(true)); });
       s.listen(p, "127.0.0.1");
     });
-    if (free) return p;
+    if (free) {
+      reservedPorts.add(p);
+      // Release the reservation after 30 s — by then the process has bound the port
+      // (or failed), so subsequent findFreePort calls won't see it as free anyway.
+      setTimeout(() => reservedPorts.delete(p), 30_000);
+      return p;
+    }
   }
   throw new Error("No free port found in range 3001–3100");
 }
@@ -150,13 +161,27 @@ function detectTerminal(): string | null {
 function spawnInTerminal(title: string, cwd: string, argv: string[], port: number | null) {
   const portExport = port !== null ? `export PORT=${port}; ` : "";
   const cmdStr = argv.map((a) => /[\s"'\\$`!]/.test(a) ? `'${a.replace(/'/g, "'\\''")}'` : a).join(" ");
-  const shell = `${portExport}cd ${JSON.stringify(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
+
+  // Terminals start bash with a minimal PATH that often lacks nvm/pnpm/bun.
+  // Explicitly prepend the canonical install locations so package managers are
+  // found even when the terminal's login/rc files haven't been sourced.
+  const pathSetup = [
+    '[ -d "$HOME/.local/share/pnpm" ] && export PATH="$HOME/.local/share/pnpm:$PATH"',
+    'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"',
+    '[ -d "$HOME/.bun/bin" ] && export PATH="$HOME/.bun/bin:$PATH"',
+  ].join("; ") + "; ";
+
+  const shell = `${pathSetup}${portExport}cd ${JSON.stringify(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
+
+  // Pass the server's PATH through to the terminal so anything already on PATH
+  // (e.g. nvm-managed node) is available without an extra source step.
+  const spawnEnv = { ...process.env, ...(port !== null ? { PORT: String(port) } : {}) };
 
   const termBin = detectTerminal();
   if (!termBin) {
     // Fallback: run directly (no visible terminal)
     const [bin, ...args] = argv;
-    const child = spawn(bin!, args, { cwd, env: { ...process.env, ...(port !== null ? { PORT: String(port) } : {}) }, detached: true, stdio: "ignore" });
+    const child = spawn(bin!, args, { cwd, env: spawnEnv, detached: true, stdio: "ignore" });
     child.unref();
     return child;
   }
@@ -177,7 +202,7 @@ function spawnInTerminal(title: string, cwd: string, argv: string[], port: numbe
     termArgs = ["-e", "bash", "-c", shell];
   }
 
-  const child = spawn(termBin, termArgs, { detached: true, stdio: "ignore" });
+  const child = spawn(termBin, termArgs, { detached: true, stdio: "ignore", env: spawnEnv });
   child.unref();
   return child;
 }
@@ -195,9 +220,10 @@ export async function GET(_req: Request, { params }: Params) {
   }
 
   const pm = detectPackageManager(cwd);
+  const hasPackageJson = existsSync(join(cwd, "package.json"));
   const hasNodeModules = existsSync(join(cwd, "node_modules"));
   const commands = detectDevCommands(cwd, pm);
-  return NextResponse.json({ hasNodeModules, pm, commands });
+  return NextResponse.json({ hasPackageJson, hasNodeModules, pm, commands });
 }
 
 export async function POST(req: Request, { params }: Params) {

@@ -302,7 +302,7 @@ function RosterEntry({
   return (
     <div
       className={cn(
-        "relative cursor-grab grid items-center gap-[10px] rounded-[var(--r-sm)] cursor-pointer hover:bg-bg-3",
+        "group relative cursor-grab grid items-center gap-[10px] rounded-[var(--r-sm)] cursor-pointer hover:bg-bg-3",
         selected ? "bg-acc-faint" : ""
       )}
       style={{ gridTemplateColumns: "32px 1fr auto", padding: "6px 8px" }}
@@ -341,7 +341,18 @@ function RosterEntry({
                     : agent.task ?? agent.status}
           </div>
         </div>
-        <span className={"inline-block w-[8px] h-[8px] rounded-full st " + agent.status} title={agent.status} />
+        <span
+          className={cn(
+            "inline-block w-[8px] h-[8px] rounded-full",
+            agent.status === "working" && "bg-[var(--working)] shadow-[0_0_0_3px_rgba(34,197,94,0.25)] animate-[pulseDot_1.8s_infinite_ease-in-out]",
+            agent.status === "done" && "bg-[var(--done)]",
+            agent.status === "queued" && "bg-[var(--queued)]",
+            agent.status === "error" && "bg-[var(--error)]",
+            agent.status === "thinking" && "bg-[var(--thinking)] animate-[pulseDot_1.8s_infinite_ease-in-out]",
+            !["working","done","queued","error","thinking"].includes(agent.status) && "bg-[var(--txt-4)]",
+          )}
+          title={agent.status}
+        />
       </button>
       {canRemove ? (
         <button
@@ -352,7 +363,7 @@ function RosterEntry({
           }}
           aria-label={t("sidebar.remove_from_project_aria", { name: displayName })}
           title={t("sidebar.remove_from_project_title")}
-          className="absolute bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 cursor-pointer opacity-0 hover:text-[var(--error)] hover:border-[var(--error)] transition-opacity duration-[120ms]"
+          className="absolute bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 cursor-pointer opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:text-[var(--error)] hover:border-[var(--error)] transition-opacity duration-[120ms]"
           style={{ right: 6, top: "50%", transform: "translateY(-50%)", width: 22, height: 22 }}
         >
           <Icon name="x" size={11} />

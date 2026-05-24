@@ -160,7 +160,7 @@ export function OfficeBuildToolbar({
         <div className="bp-search flex items-center gap-[8px] bg-bg-2 border border-line text-txt-3 px-[10px] py-[6px] rounded-[7px] text-[12.5px]">
           <Icon name="search" size={13} />
           <input
-            className="flex-1 bg-transparent border-0 outline-none text-txt text-[12px]"
+            className="flex-1 bg-transparent border-0 outline-none text-txt text-[12px] placeholder:text-[var(--txt-3)]"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search tiles…"
@@ -188,7 +188,7 @@ export function OfficeBuildToolbar({
                 type="button"
                 role="tab"
                 aria-selected={activeTab === id}
-                className={`bp-cat relative text-txt-3 font-medium cursor-pointer py-[7px] px-2 pb-[9px] text-[11.5px] transition-[color] duration-100 hover:text-txt ${activeTab === id ? "active text-txt font-semibold" : ""}`}
+                className={`bp-cat relative text-txt-3 font-medium cursor-pointer py-[7px] px-2 pb-[9px] text-[11.5px] transition-[color] duration-100 hover:text-txt ${activeTab === id ? "active text-txt font-semibold after:content-[''] after:absolute after:left-[6px] after:right-[6px] after:bottom-[-1px] after:h-[2px] after:bg-[var(--acc)] after:rounded-[2px_2px_0_0]" : ""}`}
                 onClick={() => setActiveTab(id)}
               >
                 {label}
@@ -335,7 +335,7 @@ function GrassColorSwatch({
       type="button"
       onClick={onClick}
       title={def.label}
-      className={`biome-swatch flex-1 relative cursor-pointer overflow-hidden h-[32px] rounded-[6px] transition-[transform,border-color] duration-100 hover:[transform:translateY(-1px)] hover:border-[var(--line-2)]${selected ? " active border-[var(--acc)] shadow-[0_0_0_2px_var(--acc-faint)]" : " border-[1.5px] border-[var(--line)]"}`}
+      className={`biome-swatch flex-1 relative cursor-pointer overflow-hidden h-[32px] rounded-[6px] transition-[transform,border-color] duration-100 hover:[transform:translateY(-1px)] hover:border-[var(--line-2)]${selected ? " active border-[var(--acc)] shadow-[0_0_0_2px_var(--acc-faint)] after:content-[''] after:absolute after:inset-[3px] after:rounded-[4px] after:border-[1.5px] after:border-[rgba(255,255,255,0.6)]" : " border-[1.5px] border-[var(--line)]"}`}
       aria-pressed={selected}
       aria-label={`Island color: ${def.label}`}
       style={{

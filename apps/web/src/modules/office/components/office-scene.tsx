@@ -529,7 +529,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
       </div>
 
       {/* Canvas tools - top-left: zoom + recenter */}
-      <div className="canvas-tools absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
+      <div className="absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
         <button
           type="button"
           className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
@@ -569,7 +569,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
           <>
             <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
             <input
-              className="agent-search bg-transparent border-none outline-none text-[rgba(199,191,183,0.9)] font-mono text-[11px] w-[110px] px-[4px] py-[2px] focus:text-[#f4efea]"
+              className="bg-transparent border-none outline-none text-[rgba(199,191,183,0.9)] font-mono text-[11px] w-[110px] px-[4px] py-[2px] focus:text-[#f4efea] placeholder:text-[rgba(199,191,183,0.4)]"
               type="search"
               placeholder="Find agent…"
               value={agentSearch}

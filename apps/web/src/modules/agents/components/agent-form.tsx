@@ -176,7 +176,7 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
       </Card>
 
       {serverError ? (
-        <div className="bubble-prose !bg-[var(--error)] !text-white !border-none" role="alert">
+        <div className="px-[14px] py-3 rounded-[14px] bg-[var(--error)] border-0 text-white text-[14px] leading-[1.55] whitespace-pre-wrap max-w-full" role="alert">
           {serverError}
         </div>
       ) : null}

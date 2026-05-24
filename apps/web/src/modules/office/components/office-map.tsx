@@ -431,7 +431,7 @@ export function OfficeMap({
       {foam.map((f) => (
         <div
           key={`foam-${f.x}-${f.y}`}
-          className="water-foam"
+          className="animate-[water-foam_1.6s_steps(16)_infinite]"
           style={foamStyle(f.x, f.y)}
         />
       ))}

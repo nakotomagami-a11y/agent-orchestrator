@@ -506,7 +506,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   })();
 
   return (
-    <div className="chat" role="region" aria-label={`Chat with ${agent.name}`}>
+    <div className="grid min-h-0 h-full flex-1 bg-[var(--bg-1)]" style={{ gridTemplateRows: "auto 1fr auto" }} role="region" aria-label={`Chat with ${agent.name}`}>
       {!noHeader && (
         <ChatHead
           agent={agent}

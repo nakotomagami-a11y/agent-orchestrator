@@ -377,9 +377,9 @@ function ProjectRow({
       onMouseEnter={onHover}
       onClick={e => { e.preventDefault(); onSelect(); }}
       className={cn(
-        "ps-item flex items-center relative cursor-pointer text-txt no-underline gap-[10px] px-[10px] py-2 rounded-[var(--r-sm)] transition-[background] duration-[100ms] hover:bg-bg-3",
+        "flex items-center relative cursor-pointer text-txt no-underline gap-[10px] px-[10px] py-2 rounded-[var(--r-sm)] transition-[background] duration-[100ms] hover:bg-bg-3",
         highlighted && "bg-bg-3",
-        selected && "active bg-acc-faint"
+        selected && "bg-acc-faint before:content-[''] before:absolute before:left-0 before:top-[6px] before:bottom-[6px] before:w-[3px] before:bg-[var(--acc)] before:rounded-[0_2px_2px_0]"
       )}
     >
       {projectId ? (

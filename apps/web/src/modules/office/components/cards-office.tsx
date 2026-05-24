@@ -99,7 +99,7 @@ export function CardsOffice({
     return (
       <>
         {workingCount > 0 && (
-          <div className="of-quickchat">
+          <div className="flex items-center gap-[12px] border border-[var(--acc-tint)] px-[16px] py-[14px] [background:linear-gradient(90deg,var(--acc-faint),transparent_70%)] rounded-[12px] mb-[18px]">
             <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-8 h-8 rounded-lg border border-[var(--acc-tint)]"><Icon name="activity" size={14} /></div>
             <div className="text-txt-2 flex-1 text-[13.5px]">
               <span className="text-txt font-semibold">{workingCount} agent{workingCount === 1 ? "" : "s"} working</span>
@@ -157,9 +157,9 @@ export function CardsOffice({
                   onPin={togglePin}
                 />
               ))}
-              <button type="button" className="of-card add-card" onClick={() => setAddOpen(true)}>
+              <button type="button" className="add-card bg-transparent flex items-center justify-center text-center border-dashed border border-line min-h-[220px] text-[var(--txt-3)] rounded-[14px] cursor-pointer" onClick={() => setAddOpen(true)}>
                 <div>
-                  <div className="ico"><Icon name="plus" size={18} /></div>
+                  <div className="bg-[var(--acc-faint)] grid place-items-center text-[var(--acc)] w-[44px] h-[44px] rounded-[12px] border border-[var(--acc-tint)] mx-auto mb-[10px]"><Icon name="plus" size={18} /></div>
                   <div className="font-semibold text-txt text-[14px]">Add an agent</div>
                   <div className="font-mono text-[11px] text-txt-3 mt-1">
                     summon from your roster
@@ -308,7 +308,7 @@ function OfficeCard({
         isLive && "live",
         isError && "error",
         selected && "selected",
-        pinned && "pinned",
+        pinned && "border-[var(--acc-tint)] after:content-[''] after:absolute after:top-0 after:right-0 after:w-0 after:h-0 after:[border-style:solid] after:[border-width:0_20px_20px_0] after:[border-color:transparent_var(--acc)_transparent_transparent] after:[border-radius:0_14px_0_0]",
       )}
       onClick={() => onSelect(agent.id)}
       role="button"
@@ -316,7 +316,7 @@ function OfficeCard({
       onKeyDown={e => e.key === "Enter" && onSelect(agent.id)}
     >
       <div className="grid items-center gap-[12px] [grid-template-columns:48px_1fr_auto]">
-        <div className="bg-bg-3 border border-line grid place-items-center relative overflow-visible w-[48px] h-[48px] rounded-[12px]">
+        <div className="bg-bg-3 border border-line grid place-items-center relative overflow-visible w-[48px] h-[48px] rounded-[12px] before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.10),transparent_60%)] before:rounded-[inherit]">
           <AgentAvatar unit={agent.unitChoice} size={42} />
           <span className={cn(
             "absolute rounded-full w-[14px] h-[14px] bottom-[-2px] right-[-2px] border-2 border-bg-2",
@@ -364,7 +364,11 @@ function OfficeCard({
         )}>
           {stateText}
           {agent.status === "thinking" && (
-            <span className="typing inline-flex gap-[2px] align-[-1px] ml-[4px]"><span /><span /><span /></span>
+            <span className="inline-flex gap-[2px] align-[-1px] ml-[4px]">
+              <span className="rounded-[999px] w-[4px] h-[4px] bg-current animate-[of-typing_1.2s_infinite] opacity-40" />
+              <span className="rounded-[999px] w-[4px] h-[4px] bg-current animate-[of-typing_1.2s_infinite] opacity-40 [animation-delay:0.15s]" />
+              <span className="rounded-[999px] w-[4px] h-[4px] bg-current animate-[of-typing_1.2s_infinite] opacity-40 [animation-delay:0.3s]" />
+            </span>
           )}
         </div>
       </div>
