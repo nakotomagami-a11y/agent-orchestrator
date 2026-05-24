@@ -477,6 +477,7 @@ function handleStreamLine(run: LiveRun, line: string): void {
         name: "error",
         data: { runId: run.id, message: `Rate limited by Anthropic API${limitType}.${resetMsg}` },
       });
+      if (run.status === "running") finalizeRun(run, 1);
     }
     return;
   }

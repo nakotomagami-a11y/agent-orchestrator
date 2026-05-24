@@ -23,10 +23,8 @@ export function appendRun(opts: {
   });
 }
 
-export function getRecentMessages(key: string, limit = 8): db.HistoryMessage[] {
-  const [agentId, ...rest] = key.split("::");
-  const instanceId = rest.join("::") || "default";
-  return db.getRecentMessages(agentId ?? key, instanceId, limit);
+export function getRecentMessages(agentId: string, instanceId: string, limit = 8): db.HistoryMessage[] {
+  return db.getRecentMessages(agentId, instanceId, limit);
 }
 
 export function formatPriorContext(messages: db.HistoryMessage[]): string {
@@ -46,5 +44,7 @@ export function formatPriorContext(messages: db.HistoryMessage[]): string {
 
 export function historyNote(agentId: string, instanceId: string): string {
   const dbPath = DB_PATH.replace(homedir(), "~");
-  return `${dbPath} - query: sqlite3 "${dbPath}" "SELECT role, content FROM messages WHERE agent_id='${agentId}' AND instance_id='${instanceId}' ORDER BY ts DESC LIMIT 20"`;
+  const safeAgentId = agentId.replace(/'/g, "''");
+  const safeInstanceId = instanceId.replace(/'/g, "''");
+  return `${dbPath} - query: sqlite3 "${dbPath}" "SELECT role, content FROM messages WHERE agent_id='${safeAgentId}' AND instance_id='${safeInstanceId}' ORDER BY ts DESC LIMIT 20"`;
 }

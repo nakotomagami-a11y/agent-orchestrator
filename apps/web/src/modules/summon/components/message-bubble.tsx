@@ -1,26 +1,32 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
-import {
-  AoBot,
-  AoCheck,
-  AoChevronRight,
-  AoClose,
-  AoCode,
-  AoCornerDown,
-  AoFolder,
-  AoGlobe,
-  AoList,
-  AoPen,
-  AoReset,
-  AoSearch,
-  AoSend,
-  AoSparkle,
-  AoTerminal,
-  AoWrench,
-} from "@/modules/summon/components/ao-icons";
+import { Icon, type IconName } from "@/components/ui/icon";
+
+// ── Expanded-state context ────────────────────────────────────────────────────
+// A stable Map<id, open> lives in ChatThread (via useRef) so that collapsible
+// sections survive re-renders and remounts during streaming.
+export const ExpandedStateContext = createContext<{
+  get: (id: string) => boolean;
+  set: (id: string, val: boolean) => void;
+} | null>(null);
+
+function useExpandedState(id: string): [boolean, () => void] {
+  const ctx = useContext(ExpandedStateContext);
+  const ctxRef = useRef(ctx);
+  ctxRef.current = ctx;
+  const [open, setOpen] = useState(() => ctx?.get(id) ?? false);
+  const toggle = useCallback(() => {
+    setOpen((prev) => {
+      const next = !prev;
+      ctxRef.current?.set(id, next);
+      return next;
+    });
+  }, [id]);
+  return [open, toggle];
+}
 
 // ── Duration formatter ────────────────────────────────────────────────────────
 function fmtDuration(ms: number): string {
@@ -206,20 +212,20 @@ function copyText(text: string) {
 }
 
 // ── Tool icon map ─────────────────────────────────────────────────────────────
-const TOOL_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
-  Read: AoFolder,
-  Write: AoPen,
-  Edit: AoPen,
-  Bash: AoTerminal,
-  Grep: AoSearch,
-  WebFetch: AoGlobe,
-  WebSearch: AoSearch,
-  Agent: AoList,
+const TOOL_ICONS: Record<string, IconName> = {
+  Read: "folder",
+  Write: "edit",
+  Edit: "edit",
+  Bash: "terminal-ao",
+  Grep: "search",
+  WebFetch: "globe",
+  WebSearch: "search",
+  Agent: "list",
 };
 
 function ToolIcon({ name, size = 13 }: { name: string; size?: number }) {
-  const C = TOOL_ICONS[name] ?? AoWrench;
-  return <C size={size} />;
+  const iconName = TOOL_ICONS[name] ?? "wrench";
+  return <Icon name={iconName} size={size} />;
 }
 
 // ── Code block ────────────────────────────────────────────────────────────────
@@ -233,7 +239,7 @@ function CodeBlock({ lang, body }: { lang: string; body: string }) {
         <span>{lines} {lines === 1 ? "line" : "lines"}</span>
         <div className="ao-actions">
           <button type="button" onClick={() => copyText(body)}>
-            <AoCode size={12} /> copy
+            <Icon name="code" size={12} /> copy
           </button>
         </div>
       </div>
@@ -313,8 +319,8 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
         onClick={handleCopy}
       >
         {copied
-          ? <AoCheck size={13} className="text-[var(--ao-ok)]" />
-          : <AoCode size={13} />}
+          ? <Icon name="check" size={13} className="text-[var(--ao-ok)]" />
+          : <Icon name="code" size={13} />}
       </button>
       {onRerun && (
         <button
@@ -324,7 +330,7 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
           title="Rerun"
           onClick={() => onRerun(text)}
         >
-          <AoReset size={13} />
+          <Icon name="refresh" size={13} />
         </button>
       )}
     </div>
@@ -351,7 +357,7 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
               className="flex items-center gap-2 px-[10px] py-[5px] font-mono text-[10.5px] text-ao-fg-2 uppercase tracking-[0.08em] cursor-pointer hover:text-ao-fg-0"
               onClick={() => setShowIn(!showIn)}
             >
-              <AoChevronRight size={11} className="transition-transform duration-[180ms] [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]" />
+              <Icon name="chevron" size={11} className="transition-transform duration-[180ms] [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]" />
               input
               <span className="ml-auto text-ao-fg-3 normal-case tracking-normal">{arg.length} chars</span>
             </div>
@@ -365,17 +371,19 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
 
 // ── Tool group row (exported - used by chat-thread for grouped tool chains) ───
 export function ToolGroupRow({
+  id,
   tools,
   avatar,
   running = false,
   hideAvatar = false,
 }: {
+  id: string;
   tools: Array<{ id: string; name: string; arg?: string }>;
   avatar: string;
   running?: boolean;
   hideAvatar?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, toggle] = useExpandedState(id);
   const single = tools.length === 1;
   const first = tools[0]!;
   return (
@@ -389,9 +397,9 @@ export function ToolGroupRow({
       )}
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-ao-line-1 rounded-[10px] bg-ao-bg-2 overflow-hidden${open ? " ao-open" : ""}`}>
-          <div className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer select-none transition-[background] duration-[120ms] hover:bg-ao-bg-3" onClick={() => setOpen(!open)}>
+          <div className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer select-none transition-[background] duration-[120ms] hover:bg-ao-bg-3" onClick={toggle}>
             <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${running ? "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)] animate-[ao-pulse_1.5s_infinite]" : "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)]"}`} />
-            <span className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-ao-bg-3 text-ao-fg-1 shrink-0 border border-ao-line-1"><AoWrench size={13} /></span>
+            <span className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-ao-bg-3 text-ao-fg-1 shrink-0 border border-ao-line-1"><Icon name="wrench" size={13} /></span>
             <span className="text-[13px] text-ao-fg-0 font-medium flex items-center gap-2 flex-1 min-w-0">
               {single ? (
                 <>
@@ -408,7 +416,7 @@ export function ToolGroupRow({
                 </>
               )}
             </span>
-            <span className="text-ao-fg-3 transition-transform duration-[180ms] [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]"><AoChevronRight size={14} /></span>
+            <span className="text-ao-fg-3 transition-transform duration-[180ms] [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]"><Icon name="chevron" size={14} /></span>
           </div>
           {open && (
             <div className="border-t border-[var(--ao-line-0)] p-0">
@@ -424,8 +432,8 @@ export function ToolGroupRow({
 }
 
 // ── Thinking row ──────────────────────────────────────────────────────────────
-function ThinkingRow({ text, avatar, hideAvatar = false }: { text: string; avatar: string; hideAvatar?: boolean }) {
-  const [open, setOpen] = useState(false);
+function ThinkingRow({ id, text, avatar, hideAvatar = false }: { id: string; text: string; avatar: string; hideAvatar?: boolean }) {
+  const [open, toggle] = useExpandedState(id);
   const tokenEst = Math.max(1, Math.round(text.split(/\s+/).length * 1.3));
   return (
     <div className="flex items-start gap-[12px] relative group/msg">
@@ -438,12 +446,12 @@ function ThinkingRow({ text, avatar, hideAvatar = false }: { text: string; avata
       )}
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-dashed border-ao-line-1 rounded-[10px] bg-white/[0.015]${open ? " ao-open" : ""}`}>
-          <div className="flex items-center gap-[10px] px-[14px] py-[9px] cursor-pointer text-ao-fg-2 text-[12.5px] italic" onClick={() => setOpen(!open)}>
-            <span className="text-ao-fg-3"><AoSparkle size={13} /></span>
+          <div className="flex items-center gap-[10px] px-[14px] py-[9px] cursor-pointer text-ao-fg-2 text-[12.5px] italic" onClick={toggle}>
+            <span className="text-ao-fg-3"><Icon name="sparkle" size={13} /></span>
             <span>Thinking…</span>
             <span className="ml-auto flex items-center gap-2 font-mono text-[11px] text-ao-fg-3 not-italic">
               <span>~{tokenEst} tokens</span>
-              <AoChevronRight size={12} className="transition-transform duration-[180ms] text-ao-fg-3 [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]" />
+              <Icon name="chevron" size={12} className="transition-transform duration-[180ms] text-ao-fg-3 [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]" />
             </span>
           </div>
           {open && <div className="border-t border-dashed border-ao-line-1 px-[14px] py-[10px] font-mono text-[12px] leading-[1.6] text-ao-fg-1 whitespace-pre-wrap">{text}</div>}
@@ -472,7 +480,7 @@ function ClarifyInput({ onReply }: { onReply: (text: string) => void }) {
         <span className="font-mono ml-auto normal-case tracking-normal">↵ send</span>
       </div>
       <div className="flex items-center gap-2 pl-[14px] py-2 pr-[10px] bg-[var(--ao-bg-1)] border border-ao-line-1 rounded-[8px] focus-within:border-[rgba(230,179,90,0.5)] focus-within:[box-shadow:0_0_0_3px_rgba(230,179,90,0.10)]">
-        <AoCornerDown size={13} className="text-[var(--ao-fg-3)] shrink-0" />
+        <Icon name="corner-down" size={13} className="text-[var(--ao-fg-3)] shrink-0" />
         <input
           ref={inputRef}
           className="flex-1 bg-transparent border-0 outline-none text-ao-fg-0 text-[13.5px]"
@@ -489,7 +497,7 @@ function ClarifyInput({ onReply }: { onReply: (text: string) => void }) {
           className="inline-flex items-center gap-[6px] px-3 py-[6px] bg-[var(--ao-warn)] text-[#2a1d05] rounded-[6px] font-semibold text-[12.5px]"
           onClick={send}
         >
-          <AoSend size={11} /> Reply
+          <Icon name="send" size={11} /> Reply
         </button>
       </div>
     </div>
@@ -498,7 +506,7 @@ function ClarifyInput({ onReply }: { onReply: (text: string) => void }) {
 
 // ── SubAgentCard ──────────────────────────────────────────────────────────────
 function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subagent" }> }) {
-  const [open, setOpen] = useState(false);
+  const [open, toggle] = useExpandedState(item.id);
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -521,9 +529,9 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
 
   return (
     <div className="my-1 ml-[14px] border-l-2 border-l-[#3b7de8] px-[14px] py-[10px] bg-[linear-gradient(90deg,rgba(59,125,232,0.09)_0%,transparent_72%)] rounded-[0_10px_10px_0]">
-      <div className="flex items-center gap-[10px] cursor-pointer select-none" onClick={() => setOpen((o) => !o)} role="button" aria-expanded={open}>
+      <div className="flex items-center gap-[10px] cursor-pointer select-none" onClick={toggle} role="button" aria-expanded={open}>
         <div className="w-6 h-6 rounded-full bg-[linear-gradient(135deg,#3b7de8_0%,#1e56c0_100%)] grid place-items-center text-white shrink-0" aria-hidden>
-          <AoBot size={13} />
+          <Icon name="bot-ao" size={13} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-mono text-[10px] tracking-[0.08em] uppercase text-[#74a8f0] mb-[2px]">spawned sub-agent</div>
@@ -534,7 +542,8 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
         </div>
         <div className="ml-auto flex items-center gap-2 text-ao-fg-3 font-mono text-[11px] shrink-0">
           {duration && <span>{duration}</span>}
-          <AoChevronRight
+          <Icon
+            name="chevron"
             size={13}
             style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.18s" }}
           />
@@ -630,6 +639,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
     case "agent-tool":
       return (
         <ToolGroupRow
+          id={item.id}
           tools={[{ id: item.id, name: item.name, arg: item.arg }]}
           avatar={avatar}
         />
@@ -639,16 +649,16 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       return <SubAgentCard item={item} />;
 
     case "agent-thinking":
-      return <ThinkingRow text={item.text} avatar={avatar} hideAvatar={hideAvatar} />;
+      return <ThinkingRow id={item.id} text={item.text} avatar={avatar} hideAvatar={hideAvatar} />;
 
     case "system-error":
       return (
         <div className="border border-[rgba(217,83,79,0.30)] border-l-[3px] border-l-[var(--ao-bad)] rounded-[8px] px-[14px] py-3 bg-[rgba(217,83,79,0.05)] flex items-start gap-[10px]">
-          <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><AoClose size={13} /></div>
+          <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><Icon name="x" size={13} /></div>
           <div className="flex-1">
             <div className="font-semibold text-ao-fg-0 text-[13.5px]">Run error</div>
             <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono">{item.message}</div>
-            <button onClick={onRetry} disabled={!onRetry} className="mt-2 text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"><AoReset size={11} /> Retry</button>
+            <button onClick={onRetry} disabled={!onRetry} className="mt-2 text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"><Icon name="refresh" size={11} /> Retry</button>
           </div>
         </div>
       );
@@ -663,7 +673,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
           <span className="flex-1 h-[1px] bg-[var(--ao-line-0)]" />
           <span className="inline-flex items-center gap-[6px] px-3 py-[5px] bg-ao-bg-2 border border-ao-line-1 rounded-full font-mono text-[11px] text-ao-fg-2">
             <span className="text-[var(--ao-ok)] inline-flex items-center gap-1">
-              <AoCheck size={11} />
+              <Icon name="check" size={11} />
               {item.exitCode === 0 ? "Done" : `Exited ${item.exitCode}`}
             </span>
             {item.durationMs !== undefined && (

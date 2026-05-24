@@ -22,7 +22,7 @@ export function getDb(): Database.Database {
   // Any run still "running" at open time is orphaned from a previous crash/kill.
   const now = Date.now();
   db.prepare(
-    "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=@now-started_at WHERE status='running'"
+    "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=MAX(0, @now-started_at) WHERE status='running'"
   ).run({ now });
   // Any pipeline still running was interrupted by the restart - mark it so the UI can surface a recovery banner.
   db.prepare("UPDATE pipelines SET status='error', ended_at=@now, interrupted=1 WHERE status='running'").run({ now });
@@ -30,10 +30,9 @@ export function getDb(): Database.Database {
   return db;
 }
 
-function createSchema(db: Database.Database): void {
-  const current = (db.pragma("user_version", { simple: true }) as number) ?? 0;
-
-  if (current === 0) {
+const MIGRATIONS: Array<(db: Database.Database) => void> = [
+  // v0 → v1: initial schema
+  (db) => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS runs (
         id TEXT PRIMARY KEY,
@@ -130,10 +129,9 @@ function createSchema(db: Database.Database): void {
         INSERT INTO messages_fts(rowid, content) VALUES (new.rowid, new.content);
       END;
     `);
-    db.pragma("user_version = 1");
-  }
-
-  if (current < 2) {
+  },
+  // v1 → v2: pipelines tables
+  (db) => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS pipelines (
         id TEXT PRIMARY KEY,
@@ -159,8 +157,23 @@ function createSchema(db: Database.Database): void {
       CREATE INDEX IF NOT EXISTS idx_pipeline_steps_pipeline ON pipeline_steps(pipeline_id);
       CREATE INDEX IF NOT EXISTS idx_pipelines_project ON pipelines(project_id, created_at DESC);
     `);
-    db.pragma("user_version = 2");
-  }
+  },
+  // v2 → v3: index on started_at for unfiltered quota queries
+  (db) => {
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_runs_started_at ON runs (started_at DESC);
+    `);
+  },
+];
+
+function createSchema(db: Database.Database): void {
+  const current = (db.pragma("user_version", { simple: true }) as number) ?? 0;
+  db.transaction(() => {
+    let v = current;
+    if (v < 1) { MIGRATIONS[0]!(db); v = 1; db.pragma("user_version = 1"); }
+    if (v < 2) { MIGRATIONS[1]!(db); v = 2; db.pragma("user_version = 2"); }
+    if (v < 3) { MIGRATIONS[2]!(db); v = 3; db.pragma("user_version = 3"); }
+  })();
 }
 
 // ─── One-time JSONL → SQLite migration ───────────────────────────────────────
@@ -303,7 +316,7 @@ export function updateRun(id: string, u: RunUpdate): void {
 export function markRunAborted(id: string): void {
   const now = Date.now();
   getDb().prepare(
-    "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=@now-started_at WHERE id=@id AND status='running'"
+    "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=MAX(0, @now-started_at) WHERE id=@id AND status='running'"
   ).run({ now, id });
 }
 
@@ -345,6 +358,13 @@ export function listRuns(opts: ListRunsOpts = {}): PersistedRun[] {
   return rows.map(rowToRun);
 }
 
+export function getSumCostSince(sinceTimestamp: number): number {
+  const row = getDb().prepare(
+    "SELECT COALESCE(SUM(cost_usd), 0) as total FROM runs WHERE started_at >= ?"
+  ).get(sinceTimestamp) as { total: number };
+  return row.total;
+}
+
 export function getRun(id: string): PersistedRun | null {
   const row = getDb().prepare("SELECT * FROM runs WHERE id = ?").get(id) as RunRow | undefined;
   return row ? rowToRun(row) : null;
@@ -355,18 +375,27 @@ export function deleteRunsForInstance(projectId: string, instanceId: string): nu
   const runIds = (db.prepare("SELECT id FROM runs WHERE project_id = ? AND instance_id = ?").all(projectId, instanceId) as { id: string }[]).map(r => r.id);
   if (runIds.length === 0) return 0;
   const placeholders = runIds.map(() => "?").join(",");
-  db.prepare(`DELETE FROM tool_calls WHERE run_id IN (${placeholders})`).run(...runIds);
-  db.prepare(`DELETE FROM messages WHERE run_id IN (${placeholders})`).run(...runIds);
-  const result = db.prepare("DELETE FROM runs WHERE project_id = ? AND instance_id = ?").run(projectId, instanceId);
-  return result.changes;
+  const deleteToolCalls = db.prepare(`DELETE FROM tool_calls WHERE run_id IN (${placeholders})`);
+  const deleteMessages = db.prepare(`DELETE FROM messages WHERE run_id IN (${placeholders})`);
+  const deleteRuns = db.prepare("DELETE FROM runs WHERE project_id = ? AND instance_id = ?");
+  let changes = 0;
+  db.transaction(() => {
+    deleteToolCalls.run(...runIds);
+    deleteMessages.run(...runIds);
+    changes = deleteRuns.run(projectId, instanceId).changes;
+  })();
+  return changes;
 }
 
 export function deleteRunsByAgent(agentId: string): number {
   const db = getDb();
-  db.prepare("DELETE FROM tool_calls WHERE run_id IN (SELECT id FROM runs WHERE agent_id = ?)").run(agentId);
-  db.prepare("DELETE FROM messages WHERE agent_id = ?").run(agentId);
-  const result = db.prepare("DELETE FROM runs WHERE agent_id = ?").run(agentId);
-  return result.changes;
+  let changes = 0;
+  db.transaction(() => {
+    db.prepare("DELETE FROM tool_calls WHERE run_id IN (SELECT id FROM runs WHERE agent_id = ?)").run(agentId);
+    db.prepare("DELETE FROM messages WHERE agent_id = ?").run(agentId);
+    changes = db.prepare("DELETE FROM runs WHERE agent_id = ?").run(agentId).changes;
+  })();
+  return changes;
 }
 
 // ─── Message operations ────────────────────────────────────────────────────────

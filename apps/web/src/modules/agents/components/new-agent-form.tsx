@@ -13,11 +13,15 @@ import {
   slugifyId,
   toBody,
   validateForm,
+  parseCsv,
+  toCsv,
 } from "../utils/agent-form";
 import { useCreateAgent } from "../hooks/use-agents";
 import { useInstalledSkills } from "@/modules/skills/hooks/use-skills";
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/ui/code-editor";
+import { MODEL_FULL, EFFORT_OPTS } from "@agent-office/shared/config/agent-opts";
+import { UNIT_FACTIONS, UNIT_KINDS, formatUnit } from "@/components/ui/unit-sprite.utils";
 
 const TOOL_SUGGESTIONS = [
   { id: "Read",      desc: "Read files" },
@@ -31,30 +35,20 @@ const TOOL_SUGGESTIONS = [
 ];
 
 const MODELS = [
-  { id: "haiku",  name: "haiku",  full: "claude-haiku-4-5",  badge: "fast",  price: "$0.25/Mt", desc: "Light tasks, snappy. Good for orchestration." },
-  { id: "sonnet", name: "sonnet", full: "claude-sonnet-4-6", badge: "smart", price: "$3.00/Mt", desc: "Balanced - the default for most agents." },
-  { id: "opus",   name: "opus",   full: "claude-opus-4-7",   badge: "deep",  price: "$15.00/Mt", desc: "Hardest reasoning. Slow. Use sparingly." },
+  { id: "haiku",  name: "haiku",  full: MODEL_FULL["haiku"]!,  badge: "fast",  price: "$0.25/Mt", desc: "Light tasks, snappy. Good for orchestration." },
+  { id: "sonnet", name: "sonnet", full: MODEL_FULL["sonnet"]!, badge: "smart", price: "$3.00/Mt", desc: "Balanced - the default for most agents." },
+  { id: "opus",   name: "opus",   full: MODEL_FULL["opus"]!,   badge: "deep",  price: "$15.00/Mt", desc: "Hardest reasoning. Slow. Use sparingly." },
 ] as const;
 
-const EFFORTS = [
-  { id: "low",    bars: 1 },
-  { id: "medium", bars: 2 },
-  { id: "high",   bars: 3 },
-  { id: "xhigh",  bars: 4 },
-] as const;
+const EFFORT_BARS: Record<string, number> = { low: 1, medium: 2, high: 3, xhigh: 4, max: 5 };
+const EFFORTS = EFFORT_OPTS.map((id) => ({ id, bars: EFFORT_BARS[id] ?? 1 }));
 
 type Model = typeof MODELS[number]["id"];
-type Effort = typeof EFFORTS[number]["id"];
+type Effort = (typeof EFFORT_OPTS)[number];
 type Perm = "auto" | "ask" | "deny";
 
 const DESC_MAX = 240;
 
-function parseCsv(v: string): string[] {
-  return v.split(",").map((s) => s.trim()).filter(Boolean);
-}
-function toCsv(arr: string[]): string {
-  return arr.join(", ");
-}
 function countDirty(values: AgentFormValues): number {
   return (Object.keys(EMPTY_FORM) as (keyof AgentFormValues)[]).filter(
     (k) => values[k] !== EMPTY_FORM[k]
@@ -152,7 +146,7 @@ function ChipPicker({ chips, suggestions, onAdd, onRemove, placeholder }: {
 function Bars({ count }: { count: number }) {
   return (
     <span className="flex items-end gap-[2px] mb-[4px]">
-      {[1, 2, 3, 4].map((i) => (
+      {[1, 2, 3, 4, 5].map((i) => (
         <span key={i} className="w-[3px] bg-current rounded-[1px]" style={{ height: i * 3 + 2, opacity: i <= count ? 1 : 0.22 }} />
       ))}
     </span>
@@ -174,6 +168,12 @@ export function NewAgentForm() {
   const set = useCallback(<K extends keyof AgentFormValues>(key: K, val: AgentFormValues[K]) => {
     setValues((v) => ({ ...v, [key]: val }));
   }, []);
+
+  const rerollUnit = useCallback(() => {
+    const faction = UNIT_FACTIONS[Math.floor(Math.random() * UNIT_FACTIONS.length)]!;
+    const kind = UNIT_KINDS[Math.floor(Math.random() * UNIT_KINDS.length)]!;
+    set("unit", formatUnit({ faction, kind }));
+  }, [set]);
 
   const errFor = (field: keyof AgentFormValues) => errors.find((e) => e.field === field)?.message;
 
@@ -249,7 +249,7 @@ export function NewAgentForm() {
                 <div className="grid place-items-center bg-bg-3 border border-line relative overflow-hidden w-[84px] h-[84px] rounded-[16px] [box-shadow:0_10px_30px_-10px_rgba(0,0,0,0.5)] before:content-[''] before:absolute before:inset-0 before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.06),transparent_60%)] before:pointer-events-none">
                   <AgentAvatar unit={unit} size={56} label={values.name || "Agent avatar"} />
                 </div>
-                <button type="button" className="inline-flex items-center text-txt-3 cursor-pointer bg-transparent border-none font-[var(--font-mono)] text-[10.5px] gap-[4px] hover:text-acc">
+                <button type="button" className="inline-flex items-center text-txt-3 cursor-pointer bg-transparent border-none font-[var(--font-mono)] text-[10.5px] gap-[4px] hover:text-acc" onClick={rerollUnit}>
                   <Icon name="refresh" size={11} /> auto
                 </button>
               </div>
@@ -338,7 +338,7 @@ export function NewAgentForm() {
               {/* Effort */}
               <div className="flex flex-col gap-[5px]">
                 <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px]">Effort</label>
-                <div className="effort-slider grid bg-bg-1 border border-line gap-[4px] p-[4px] rounded-[8px]" style={{ gridTemplateColumns: "repeat(4,1fr)" }}>
+                <div className="effort-slider grid bg-bg-1 border border-line gap-[4px] p-[4px] rounded-[8px]" style={{ gridTemplateColumns: "repeat(5,1fr)" }}>
                   {EFFORTS.map((e) => (
                     <button
                       key={e.id}

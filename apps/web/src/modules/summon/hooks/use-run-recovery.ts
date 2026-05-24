@@ -1,0 +1,252 @@
+"use client";
+
+import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import type { QueryClient } from "@tanstack/react-query";
+import type { UseRunStreamResult } from "./use-run-stream";
+import type { ThreadItem } from "../utils/thread-types";
+import { saveTranscript } from "../utils/transcript-store";
+import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
+import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { queryKeys } from "@agent-office/shared/hooks/query-keys";
+import type { PersistedRun } from "@agent-office/shared/types";
+
+export type ResumeError =
+  | { kind: "missing"; message: string }
+  | { kind: "transient"; message: string; status?: number };
+
+export type RecoveredRun = {
+  runId: string;
+  partialChars: number;
+  tokensOut: number;
+  cost: number;
+  exitCode: number;
+};
+
+export interface UseRunRecoveryParams {
+  activeRunId: string | null;
+  setActiveRunId: (id: string | null) => void;
+  thread: ThreadItem[];
+  setThread: Dispatch<SetStateAction<ThreadItem[]>>;
+  stream: UseRunStreamResult;
+  transcriptLoaded: boolean;
+  sessionId: string | null;
+  setSessionId: (id: string | null) => void;
+  tKey: string;
+  qc: QueryClient;
+}
+
+export interface UseRunRecoveryResult {
+  resumeProbed: boolean;
+  resumeError: ResumeError | null;
+  setResumeError: (err: ResumeError | null) => void;
+  recovered: RecoveredRun | null;
+  setRecovered: (r: RecoveredRun | null) => void;
+  retryResume: () => void;
+  dismissResume: () => void;
+  // Resets all internal state — call this from the agent/instance switch effect.
+  resetRecovery: () => void;
+  // Exposes the refs so callers (doSubmit, newThread) can reset them directly.
+  runStartIndexRef: MutableRefObject<number | null>;
+  fallbackAttemptedRef: MutableRefObject<string | null>;
+}
+
+/**
+ * Manages the three recovery effects that handle run resumption after a page
+ * reload, server restart, or SSE reconnect:
+ *
+ * 1. Resume probe — fetches the stored activeRunId once on mount to decide
+ *    whether to re-attach the stream or fall back to persisted output.
+ * 2. Stream splice — splices live SSE items into the canonical thread at the
+ *    correct index tracked by runStartIndexRef.
+ * 3. Done/error fallback — when the SSE stream ends, clears the run slot and
+ *    fetches persisted output if the stream delivered nothing.
+ *
+ * The refs are owned here and exposed so ChatPanel's submit / newThread
+ * handlers can reset them without causing extra state round-trips.
+ */
+export function useRunRecovery({
+  activeRunId,
+  setActiveRunId,
+  thread,
+  setThread,
+  stream,
+  transcriptLoaded,
+  sessionId,
+  setSessionId,
+  tKey,
+  qc,
+}: UseRunRecoveryParams): UseRunRecoveryResult {
+  const [resumeProbed, setResumeProbed] = useState(false);
+  const [resumeError, setResumeError] = useState<ResumeError | null>(null);
+  const [recovered, setRecovered] = useState<RecoveredRun | null>(null);
+  const [resumeAttempt, setResumeAttempt] = useState(0);
+
+  const runStartIndexRef = useRef<number | null>(null);
+  const fallbackAttemptedRef = useRef<string | null>(null);
+
+  // ── Probe a stored runId once - drop it if the server has no record ──
+  useEffect(() => {
+    if (resumeProbed) return;
+    if (!activeRunId) {
+      setResumeProbed(true);
+      return;
+    }
+    let cancelled = false;
+    setResumeError(null);
+    apiFetch<PersistedRun>(API_ROUTES.run(activeRunId))
+      .then((run) => {
+        if (cancelled) return;
+        if (run.status !== "running") {
+          if (run.output && run.output.trim().length > 0) {
+            setThread((prev) => [
+              ...prev,
+              { kind: "agent-text", id: `r_${activeRunId}`, text: run.output, streaming: false },
+            ]);
+          }
+          if (run.status === "error" && (run.exitCode === 130 || run.exitCode === -1)) {
+            setRecovered({
+              runId: run.id,
+              partialChars: run.output?.length ?? 0,
+              tokensOut: run.tokensOut,
+              cost: run.cost,
+              exitCode: run.exitCode ?? -1,
+            });
+          }
+          setActiveRunId(null);
+        } else {
+          // Still running - mark where this run's output goes in the thread.
+          // Only set if the parent hasn't already written the authoritative value.
+          if (runStartIndexRef.current === null) {
+            runStartIndexRef.current = thread.length;
+          }
+        }
+        setResumeProbed(true);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        if (err instanceof ApiError && err.status === 404) {
+          setResumeError({ kind: "missing", message: err.message || "not_found" });
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          const status = err instanceof ApiError ? err.status : undefined;
+          setResumeError({ kind: "transient", message: msg || "couldn't reach server", status });
+        }
+        setResumeProbed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // thread intentionally omitted - only fire once per runId/attempt.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeRunId, resumeProbed, resumeAttempt]);
+
+  // ── Splice live stream items into the canonical thread ──
+  useEffect(() => {
+    const startIdx = runStartIndexRef.current;
+    if (startIdx === null) return;
+    if (stream.thread.length === 0 && stream.phase !== "done" && stream.phase !== "error") return;
+    setThread((prev) => {
+      const safeIdx = Math.min(startIdx, prev.length);
+      return [...prev.slice(0, safeIdx), ...stream.thread];
+    });
+  }, [stream.thread, stream.phase, setThread]);
+
+  // ── On done/error: clear the run slot, fall back if no text arrived ──
+  useEffect(() => {
+    if (stream.phase !== "done" && stream.phase !== "error") return;
+    if (!activeRunId) return;
+    const runId = activeRunId;
+    const startIdx = runStartIndexRef.current;
+
+    const hasText = stream.thread.some(
+      (it) => it.kind === "agent-text" && it.text.trim().length > 0,
+    );
+    const hasStreamedFeedback = hasText || stream.thread.some((it) => it.kind === "system-error");
+    const shouldFallback =
+      stream.phase === "done" && !hasStreamedFeedback && fallbackAttemptedRef.current !== runId;
+
+    runStartIndexRef.current = null;
+    fallbackAttemptedRef.current = runId;
+    setActiveRunId(null);
+    qc.invalidateQueries({ queryKey: queryKeys.runs.all });
+
+    if (stream.phase === "done" && stream.sessionId) {
+      setSessionId(stream.sessionId);
+      void saveTranscript(tKey, thread, null, stream.sessionId);
+    }
+
+    if (!shouldFallback) return;
+    apiFetch<PersistedRun>(API_ROUTES.run(runId))
+      .then((run) => {
+        setThread((prev) => {
+          if (startIdx === null) return prev;
+          const before = prev.slice(0, startIdx);
+          const after = prev.slice(startIdx);
+          if (run.output && run.output.trim().length > 0) {
+            return [
+              ...before,
+              { kind: "agent-text", id: `r_${runId}`, text: run.output, streaming: false },
+              ...after,
+            ];
+          }
+          const msg =
+            run.status === "error"
+              ? `Run ended with no output (exit ${run.exitCode ?? 1}). ${run.exitCode === 1 ? "The model may be rate-limited or an internal error occurred." : "Try again."}`
+              : "Run completed but the agent produced no response. Try sending your message again.";
+          return [...before, { kind: "system-error", id: `e_${runId}`, message: msg }, ...after];
+        });
+      })
+      .catch(() => {
+        setThread((prev) => {
+          if (startIdx === null) return prev;
+          const before = prev.slice(0, startIdx);
+          const after = prev.slice(startIdx);
+          return [
+            ...before,
+            {
+              kind: "system-error",
+              id: `e_${runId}`,
+              message:
+                "Response unavailable - the server may have restarted. Retry to try again.",
+            },
+            ...after,
+          ];
+        });
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream.phase, stream.thread, stream.sessionId, activeRunId, qc, sessionId, transcriptLoaded]);
+
+  const retryResume = () => {
+    setResumeError(null);
+    setResumeProbed(false);
+    setResumeAttempt((n) => n + 1);
+  };
+
+  const dismissResume = () => {
+    setResumeError(null);
+    setActiveRunId(null);
+    setResumeProbed(true);
+  };
+
+  const resetRecovery = () => {
+    setResumeProbed(false);
+    setResumeError(null);
+    setRecovered(null);
+    setResumeAttempt(0);
+    runStartIndexRef.current = null;
+    fallbackAttemptedRef.current = null;
+  };
+
+  return {
+    resumeProbed,
+    resumeError,
+    setResumeError,
+    recovered,
+    setRecovered,
+    retryResume,
+    dismissResume,
+    resetRecovery,
+    runStartIndexRef,
+    fallbackAttemptedRef,
+  };
+}

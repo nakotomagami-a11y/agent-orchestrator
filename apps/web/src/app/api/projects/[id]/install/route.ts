@@ -1,9 +1,12 @@
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
 import { NextResponse } from "next/server";
 import { projects } from "@agent-office/shared/services";
 import { validateIdParam, notFound } from "@/lib/api-helpers";
+
+const execFileAsync = promisify(execFile);
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -27,11 +30,13 @@ export async function POST(_req: Request, { params }: Params) {
   }
 
   const pm = detectPackageManager(cwd);
-  const result = spawnSync(pm, ["install"], { cwd, encoding: "utf8", timeout: 120_000 });
 
-  if (result.status !== 0) {
+  try {
+    await execFileAsync(pm, ["install"], { cwd, timeout: 120_000 });
+  } catch (err: unknown) {
+    const e = err as { stderr?: string; message?: string };
     return NextResponse.json(
-      { error: result.stderr?.slice(-2000) || "Install failed" },
+      { error: (e.stderr ?? e.message ?? "Install failed").slice(-2000) },
       { status: 500 },
     );
   }

@@ -1,14 +1,29 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { agents, projects, runs, summon } from "@agent-office/shared/services";
+import { agents, db, projects, runs, summon } from "@agent-office/shared/services";
 import { validateBody } from "@/lib/validation";
 import { broadcastRequestSchema } from "@/lib/validation-schemas";
 import { badRequest } from "@/lib/api-helpers";
+import { parseLimits, periodStart } from "@/lib/claude-limits";
 
 export async function POST(request: Request) {
   const raw: unknown = await request.json();
   const { data: req, error } = validateBody(broadcastRequestSchema, raw);
   if (error) return error;
+
+  const limits = parseLimits(db.getUiSetting("claude-limits"));
+  if (limits.hardCap === "block" && limits.quotaUsd > 0) {
+    const spent = db.getSumCostSince(periodStart(limits.period));
+    if (spent >= limits.quotaUsd) {
+      return NextResponse.json(
+        {
+          error: "quota_exceeded",
+          detail: `${limits.period.charAt(0).toUpperCase() + limits.period.slice(1)} spend cap of $${limits.quotaUsd.toFixed(2)} reached`,
+        },
+        { status: 402 },
+      );
+    }
+  }
 
   const project = projects.readProject(req.projectId);
   if (!project) return badRequest(`unknown project: ${req.projectId}`);

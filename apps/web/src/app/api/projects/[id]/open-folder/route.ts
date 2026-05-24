@@ -7,10 +7,10 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function POST(_req: Request, { params }: Params) {
   const { id } = await params;
-  const err = validateIdParam(id);
-  if (err) return err;
+  const { value, error } = validateIdParam(id);
+  if (error) return error;
 
-  const project = projects.get(id);
+  const project = projects.readProject(value);
   if (!project) return notFound("Project");
 
   const cwd = project.meta.cwd;

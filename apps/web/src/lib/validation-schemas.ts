@@ -12,6 +12,7 @@ export const agentBodySchema = z.object({
   effort: z.string().default("medium"),
   body: z.string().default(""),
   room: z.string().optional(),
+  unit: z.string().optional(),
 });
 
 export const agentBodyListSchema = z.array(agentBodySchema);
@@ -82,7 +83,7 @@ export const skillInstallSchema = z.object({
   source: z.string().min(1),
   ref: z.string().min(1),
   path: z.string().min(1),
-  name: z.string().min(1),
+  name: z.string().min(1).regex(/^[A-Za-z0-9._-]+$/),
 });
 
 export const promptPostSchema = z.object({

@@ -147,20 +147,26 @@ function detectDevCommands(cwd: string, pm: string): DetectedCommand[] {
   return commands;
 }
 
+let _cachedTerminal: string | null | undefined = undefined;
+
 function detectTerminal(): string | null {
+  if (_cachedTerminal !== undefined) return _cachedTerminal;
   const names = ["gnome-terminal", "xterm", "x-terminal-emulator", "konsole", "xfce4-terminal", "alacritty", "kitty"];
   for (const name of names) {
     try {
       const p = execFileSync("which", [name], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-      if (p) return p;
+      if (p) { _cachedTerminal = p; return p; }
     } catch { /* not found */ }
   }
+  _cachedTerminal = null;
   return null;
 }
 
+const safeArg = (a: string) => `'${a.replace(/'/g, "'\\''")}'`;
+
 function spawnInTerminal(title: string, cwd: string, argv: string[], port: number | null) {
   const portExport = port !== null ? `export PORT=${port}; ` : "";
-  const cmdStr = argv.map((a) => /[\s"'\\$`!]/.test(a) ? `'${a.replace(/'/g, "'\\''")}'` : a).join(" ");
+  const cmdStr = argv.map(safeArg).join(" ");
 
   // Terminals start bash with a minimal PATH that often lacks nvm/pnpm/bun.
   // Explicitly prepend the canonical install locations so package managers are

@@ -1,20 +1,16 @@
 "use client";
 
 import type { OfficeAgent } from "../../../hooks/use-office-agents";
-import {
-  AoIdentity, AoCpu, AoSparkle, AoWrench, AoShield,
-  AoCheck, AoLock, AoQuestion, AoBook,
-  AoFolder, AoSearch, AoTerminal, AoGlobe, AoList, AoPen,
-} from "@/modules/summon/components/ao-icons";
+import { Icon, type IconName } from "@/components/ui/icon";
 
-const TOOL_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
-  Read: AoFolder,
-  Write: AoPen,
-  Edit: AoPen,
-  Bash: AoTerminal,
-  WebFetch: AoGlobe,
-  WebSearch: AoSearch,
-  Agent: AoList,
+const TOOL_ICONS: Record<string, IconName> = {
+  Read: "folder",
+  Write: "edit",
+  Edit: "edit",
+  Bash: "terminal-ao",
+  WebFetch: "globe",
+  WebSearch: "search",
+  Agent: "list",
 };
 
 export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
@@ -24,7 +20,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
         {/* Identity */}
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoIdentity size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="identity" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Identity</div>
             <div className="ml-auto text-[11.5px] text-ao-fg-2 font-mono">~/.claude/agents/{agent.id}.md</div>
           </div>
@@ -39,7 +35,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
         {/* Model & runtime */}
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoCpu size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="cpu" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Model &amp; runtime</div>
             <span className="ml-auto inline-flex items-center gap-[5px] py-[3px] px-[9px] rounded-full text-[11px] font-semibold tracking-[0.06em] uppercase font-mono border bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]"><span className="text-[7px]">●</span>ready</span>
           </div>
@@ -53,7 +49,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
         {/* Skills */}
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoSparkle size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="sparkle" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Skills</div>
             <div className="ml-auto text-[11.5px] text-ao-fg-2 font-mono">{agent.skills.length} attached</div>
           </div>
@@ -64,7 +60,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
               <div className="flex flex-wrap gap-[8px]">
                 {agent.skills.map((s) => (
                   <span key={s} className="inline-flex items-center gap-[6px] py-[5px] pl-[8px] pr-[10px] rounded-full bg-ao-bg-3 border border-ao-line-1 text-ao-fg-0 text-[12.5px] font-mono">
-                    <span className="w-[14px] h-[14px] grid place-items-center text-ao-fg-2"><AoBook size={12} /></span>
+                    <span className="w-[14px] h-[14px] grid place-items-center text-ao-fg-2"><Icon name="book" size={12} /></span>
                     {s}
                   </span>
                 ))}
@@ -76,7 +72,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
         {/* Tools */}
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoWrench size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="wrench" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Tools allowed</div>
             <div className="ml-auto text-[11.5px] text-ao-fg-2 font-mono">{agent.tools.length} enabled</div>
           </div>
@@ -86,10 +82,10 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
             ) : (
               <div className="flex flex-wrap gap-[8px]">
                 {agent.tools.map((t) => {
-                  const ToolIcon = TOOL_ICONS[t] ?? AoWrench;
+                  const iconName = TOOL_ICONS[t] ?? "wrench";
                   return (
                     <span key={t} className="inline-flex items-center gap-[6px] py-[5px] pl-[8px] pr-[10px] rounded-full bg-ao-bg-3 border border-ao-line-1 text-ao-fg-0 text-[12.5px] font-mono">
-                      <span className="w-[14px] h-[14px] grid place-items-center text-ao-fg-2"><ToolIcon size={12} /></span>
+                      <span className="w-[14px] h-[14px] grid place-items-center text-ao-fg-2"><Icon name={iconName} size={12} /></span>
                       {t}
                     </span>
                   );
@@ -103,7 +99,7 @@ export function ConfigurationTab({ agent }: { agent: OfficeAgent }) {
       {/* Permissions */}
       <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden mt-[var(--ao-gap-section)]">
         <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-          <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoShield size={15} /></div>
+          <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="shield" size={15} /></div>
           <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Permissions</div>
           <div className="ml-auto text-[11.5px] text-ao-fg-2 font-mono">workspace policy applies</div>
         </div>
@@ -151,15 +147,15 @@ type PermState = "allow" | "ask" | "deny";
 
 function PermRow({ name, hint, state }: { name: string; hint: string; state: PermState }) {
   const cfg = {
-    allow: { badgeCls: "bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]", label: "Allowed", Icon: AoCheck },
-    ask: { badgeCls: "bg-[var(--ao-warn-soft)] text-[var(--ao-warn)] border-[rgba(230,179,90,0.25)]", label: "Ask", Icon: AoQuestion },
-    deny: { badgeCls: "bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] border-[rgba(217,83,79,0.25)]", label: "Denied", Icon: AoLock },
+    allow: { badgeCls: "bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]", label: "Allowed", iconName: "check" as IconName },
+    ask: { badgeCls: "bg-[var(--ao-warn-soft)] text-[var(--ao-warn)] border-[rgba(230,179,90,0.25)]", label: "Ask", iconName: "help-circle" as IconName },
+    deny: { badgeCls: "bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] border-[rgba(217,83,79,0.25)]", label: "Denied", iconName: "lock" as IconName },
   } as const;
-  const { badgeCls, label, Icon } = cfg[state];
+  const { badgeCls, label, iconName } = cfg[state];
   return (
     <div className="flex items-center justify-between px-[var(--ao-pad-card)] py-3 border-t border-[var(--ao-line-0)] first:border-t-0 text-[13.5px]">
       <div className="flex items-center gap-3">
-        <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon size={12} /></div>
+        <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name={iconName} size={12} /></div>
         <div>
           <div className="text-ao-fg-0 font-medium">{name}</div>
           <div className="text-ao-fg-2 text-[12px] font-mono mt-0.5">{hint}</div>

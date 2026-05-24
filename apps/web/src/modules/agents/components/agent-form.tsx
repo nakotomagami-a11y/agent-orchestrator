@@ -14,6 +14,7 @@ import { EMPTY_FORM, type AgentFormValues, type FormError, slugifyId, toBody, va
 import { useCreateAgent, useDeleteAgent, useWriteAgent } from "../hooks/use-agents";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { Button } from "@/components/ui/button";
+import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/shared/config/agent-opts";
 
 export type AgentFormProps = {
   initial?: AgentFormValues;
@@ -29,8 +30,6 @@ export type AgentFormProps = {
   hideCancel?: boolean;
 };
 
-const MODEL_SUGGESTIONS = ["haiku", "sonnet", "opus", "claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"] as const;
-const EFFORTS = ["low", "medium", "high", "xhigh", "max"] as const;
 const PERMS = ["ask", "plan", "auto"] as const;
 
 export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCancel = false }: AgentFormProps) {
@@ -121,14 +120,14 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
               placeholder="sonnet"
             />
             <datalist id="model-suggestions">
-              {MODEL_SUGGESTIONS.map((m) => (
+              {MODEL_OPTS.map((m) => (
                 <option key={m} value={m} />
               ))}
             </datalist>
           </Field>
           <Field label={t("agent_form.label_effort")}>
             <Select value={values.effort} onChange={update("effort")}>
-              {EFFORTS.map((m) => (
+              {EFFORT_OPTS.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </Select>

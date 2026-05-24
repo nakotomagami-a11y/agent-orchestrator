@@ -33,11 +33,11 @@ export const EMPTY_FORM: AgentFormValues = {
   body: "",
 };
 
-function csv(values: string[]): string {
+export function toCsv(values: string[]): string {
   return values.join(", ");
 }
 
-function parseCsv(value: string): string[] {
+export function parseCsv(value: string): string[] {
   return value
     .split(",")
     .map((v) => v.trim())
@@ -49,8 +49,8 @@ export function fromApi(agent: ApiAgent, body: string): AgentFormValues {
     id: agent.name,
     name: agent.name,
     desc: agent.description,
-    skills: csv(agent.skills),
-    tools: csv(agent.tools),
+    skills: toCsv(agent.skills),
+    tools: toCsv(agent.tools),
     pm: agent.permissionMode ?? "ask",
     model: agent.defaultModel ?? "sonnet",
     effort: agent.defaultEffort ?? "high",

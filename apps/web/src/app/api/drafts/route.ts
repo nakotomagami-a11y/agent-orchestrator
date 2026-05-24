@@ -15,7 +15,10 @@ export async function PUT(request: Request) {
   const agentId = searchParams.get("agentId");
   const instanceId = searchParams.get("instanceId") ?? "default";
   if (!agentId) return NextResponse.json({ error: "missing agentId" }, { status: 400 });
-  const { text } = await request.json() as { text: string };
-  db.saveDraft(agentId, instanceId, text ?? "");
+  let body: { text: string };
+  try { body = await request.json() as { text: string }; } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  db.saveDraft(agentId, instanceId, body.text ?? "");
   return NextResponse.json({ ok: true });
 }

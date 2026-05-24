@@ -9,6 +9,7 @@ import { Composer } from "./composer";
 import type { ChatPhase } from "./live-status";
 import { useSummon, useAbortRun } from "../hooks/use-summon";
 import { useRunStream } from "../hooks/use-run-stream";
+import { useRunRecovery } from "../hooks/use-run-recovery";
 import { useRunNotification } from "@/hooks/use-run-notification";
 import {
   clearTranscript,
@@ -21,10 +22,6 @@ import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { Button } from "@/components/ui/button";
 import type { ThreadItem } from "../utils/thread-types";
-import type { PersistedRun } from "@agent-office/shared/types";
-import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { useBranchStore } from "@/lib/branch-store";
 
 export type ChatPanelProps = {
@@ -75,31 +72,12 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   const tKey = transcriptKey(agent.id, instanceId);
 
   // ── State ──
-  // `thread` is the canonical transcript shown to the user. Stream items
-  // get spliced *into* it via runStartIndexRef, not concatenated alongside.
   const [thread, setThread] = useState<ThreadItem[]>([]);
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [transcriptLoaded, setTranscriptLoaded] = useState(false);
-  const [resumeProbed, setResumeProbed] = useState(false);
-  const [resumeError, setResumeError] = useState<
-    | { kind: "missing"; message: string }
-    | { kind: "transient"; message: string; status?: number }
-    | null
-  >(null);
-  // When a run is recovered from a server restart (exitCode 130), the
-  // partial output is spliced into the thread and we surface a recovery
-  // banner so the user knows what happened and can pick up where it stopped.
-  const [recovered, setRecovered] = useState<
-    | { runId: string; partialChars: number; tokensOut: number; cost: number; exitCode: number }
-    | null
-  >(null);
   const [pendingSeed, setPendingSeed] = useState<string | undefined>();
   const [phaseOverride, setPhaseOverride] = useState<ChatPhase | null>(null);
-  // Bumped to retry the resume probe after a failure. Lets the user recover
-  // from a transient 500 (server hot-reloaded, network blip) without losing
-  // the run reference.
-  const [resumeAttempt, setResumeAttempt] = useState(0);
   // Local "wall clock" tick that re-renders every second while a run is in
   // flight. Used purely to compute "Xs since last token" against
   // stream.lastEventAt - without this, the staleness display would freeze.
@@ -109,8 +87,31 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   // message, which is the correct behavior for corrections.
   const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
   const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
-  const runStartIndexRef = useRef<number | null>(null);
-  const fallbackAttemptedRef = useRef<string | null>(null);
+
+  const stream = useRunStream(activeRunId);
+
+  const {
+    resumeError,
+    setResumeError,
+    recovered,
+    setRecovered,
+    retryResume,
+    dismissResume,
+    resetRecovery,
+    runStartIndexRef,
+    fallbackAttemptedRef,
+  } = useRunRecovery({
+    activeRunId,
+    setActiveRunId,
+    thread,
+    setThread,
+    stream,
+    transcriptLoaded,
+    sessionId,
+    setSessionId,
+    tKey,
+    qc,
+  });
 
   // ── Agent or instance switch: swap the entire thread state ──
   useEffect(() => {
@@ -118,12 +119,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     setThread([]);
     setActiveRunId(null);
     setSessionId(null);
-    setResumeProbed(false);
-    setResumeError(null);
-    setRecovered(null);
     setPhaseOverride(null);
-    runStartIndexRef.current = null;
-    fallbackAttemptedRef.current = null;
+    resetRecovery();
     let cancelled = false;
     loadTranscript(tKey).then((t) => {
       if (cancelled) return;
@@ -144,9 +141,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       if (!cancelled) setTranscriptLoaded(true);
     });
     return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tKey]);
-
-  const stream = useRunStream(activeRunId);
 
   const runStartTsRef = useRef<number>(0);
   useEffect(() => {
@@ -156,69 +152,6 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   }, [activeRunId]);
   useRunNotification({ agentName: agent.name, phase: stream.phase, startTs: runStartTsRef.current || null });
 
-  // ── Probe a stored runId once - drop it if the server has no record ──
-  useEffect(() => {
-    if (resumeProbed) return;
-    if (!activeRunId) {
-      setResumeProbed(true);
-      return;
-    }
-    let cancelled = false;
-    setResumeError(null);
-    apiFetch<PersistedRun>(API_ROUTES.run(activeRunId))
-      .then((run) => {
-        if (cancelled) return;
-        if (run.status !== "running") {
-          // Already finished while we were away - append its persisted
-          // output, then drop the id so the stream effect won't try to
-          // reattach.
-          if (run.output && run.output.trim().length > 0) {
-            setThread((prev) => [
-              ...prev,
-              { kind: "agent-text", id: `r_${activeRunId}`, text: run.output, streaming: false },
-            ]);
-          }
-          // Server-restart kill (SIGINT/SIGTERM → exit 130, or hard kill → exit -1):
-          // surface a recovery banner so the user can continue the work.
-          if (run.status === "error" && (run.exitCode === 130 || run.exitCode === -1)) {
-            setRecovered({
-              runId: run.id,
-              partialChars: run.output?.length ?? 0,
-              tokensOut: run.tokensOut,
-              cost: run.cost,
-              exitCode: run.exitCode ?? -1,
-            });
-          }
-          setActiveRunId(null);
-        } else {
-          // Still running - mark this as where the run output goes so the
-          // stream splice has somewhere to land. Use *current* thread length.
-          runStartIndexRef.current = thread.length;
-        }
-        setResumeProbed(true);
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        // Differentiate "run is genuinely gone" (404) from "server unwell"
-        // (5xx, network). For 404 the only useful action is Drop run;
-        // Retry would just 404 again. Show that as the primary action.
-        if (err instanceof ApiError && err.status === 404) {
-          setResumeError({ kind: "missing", message: err.message || "not_found" });
-        } else {
-          const msg = err instanceof Error ? err.message : String(err);
-          const status = err instanceof ApiError ? err.status : undefined;
-          setResumeError({ kind: "transient", message: msg || "couldn't reach server", status });
-        }
-        setResumeProbed(true);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // We intentionally don't include `thread` - only fire once per runId
-    // (resumeAttempt bumps when the user clicks Retry, resetting probed).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRunId, resumeProbed, resumeAttempt]);
-
   // ── While a run is in flight, tick once per second so the
   //    "Xs since last token" display updates without waiting for events. ──
   useEffect(() => {
@@ -227,76 +160,6 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     const id = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(id);
   }, [activeRunId, stream.phase]);
-
-  // ── Splice live stream items into the canonical thread ──
-  useEffect(() => {
-    const startIdx = runStartIndexRef.current;
-    if (startIdx === null) return;
-    if (stream.thread.length === 0 && stream.phase !== "done" && stream.phase !== "error") return;
-    setThread((prev) => {
-      // If startIdx is somehow past the end (shouldn't happen but be safe),
-      // pin it to the end so we append rather than corrupt.
-      const safeIdx = Math.min(startIdx, prev.length);
-      return [...prev.slice(0, safeIdx), ...stream.thread];
-    });
-  }, [stream.thread, stream.phase]);
-
-  // ── On done/error: clear the run slot, fall back if no text ──
-  useEffect(() => {
-    if (stream.phase !== "done" && stream.phase !== "error") return;
-    if (!activeRunId) return;
-    const runId = activeRunId;
-    const startIdx = runStartIndexRef.current;
-
-    const hasText = stream.thread.some(
-      (it) => it.kind === "agent-text" && it.text.trim().length > 0,
-    );
-    // Also consider a streamed system-error as "feedback delivered" - don't
-    // add a second error card on top of the one SSE already emitted.
-    const hasStreamedFeedback = hasText || stream.thread.some((it) => it.kind === "system-error");
-    const shouldFallback = stream.phase === "done" && !hasStreamedFeedback && fallbackAttemptedRef.current !== runId;
-
-    runStartIndexRef.current = null;
-    fallbackAttemptedRef.current = runId;
-    setActiveRunId(null);
-    qc.invalidateQueries({ queryKey: queryKeys.runs.all });
-
-    // Persist the session ID so the next turn can --resume it.
-    if (stream.phase === "done" && stream.sessionId) {
-      setSessionId(stream.sessionId);
-      void saveTranscript(tKey, thread, null, stream.sessionId);
-    }
-
-    if (!shouldFallback) return;
-    apiFetch<PersistedRun>(API_ROUTES.run(runId))
-      .then((run) => {
-        setThread((prev) => {
-          if (startIdx === null) return prev;
-          const before = prev.slice(0, startIdx);
-          const after = prev.slice(startIdx);
-          if (run.output && run.output.trim().length > 0) {
-            // SSE missed some chunks - use the persisted output.
-            return [...before, { kind: "agent-text", id: `r_${runId}`, text: run.output, streaming: false }, ...after];
-          }
-          // Run completed with no output - always surface something so the
-          // user is never left staring at their unanswered message.
-          const msg = run.status === "error"
-            ? `Run ended with no output (exit ${run.exitCode ?? 1}). ${run.exitCode === 1 ? "The model may be rate-limited or an internal error occurred." : "Try again."}`
-            : "Run completed but the agent produced no response. Try sending your message again.";
-          return [...before, { kind: "system-error", id: `e_${runId}`, message: msg }, ...after];
-        });
-      })
-      .catch(() => {
-        // Fallback fetch failed (server down / run GC'd) - still show something.
-        setThread((prev) => {
-          if (startIdx === null) return prev;
-          const before = prev.slice(0, startIdx);
-          const after = prev.slice(startIdx);
-          return [...before, { kind: "system-error", id: `e_${runId}`, message: "Response unavailable - the server may have restarted. Retry to try again." }, ...after];
-        });
-      });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stream.phase, stream.thread, stream.sessionId, activeRunId, qc, sessionId, transcriptLoaded]);
 
   // ── Write-through to server DB ──
   useEffect(() => {
@@ -308,16 +171,15 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   const consumeBranchSeed = useBranchStore((s) => s.consumeSeed);
   useEffect(() => {
     if (!transcriptLoaded) return;
-    const branch = consumeBranchSeed(agent.id);
+    const branch = consumeBranchSeed(agent.id, instanceId);
     if (branch) setPendingSeed(branch.prompt);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcriptLoaded, agent.id]);
+  }, [transcriptLoaded, agent.id, instanceId]);
 
   // ── Submit ──
   const doSubmit = (text: string) => {
     const userItem: ThreadItem = { kind: "you", id: `y_${Date.now()}`, text };
     setThread((prev) => {
-      // The run's output will land right after this "you" turn.
       runStartIndexRef.current = prev.length + 1;
       return [...prev, userItem];
     });
@@ -348,8 +210,6 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
 
   const onSubmit = (text: string) => {
     if (isStreaming) {
-      // Queue for after the current run - replacing any previous queued message
-      // so corrections ("wait, I meant X") work naturally.
       setQueuedMessage(text);
       return;
     }
@@ -446,11 +306,6 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, queuedMessage]);
 
-  // Use only the server-provided startTs (from the attached SSE event).
-  // The local runStartTsRef is kept only for the desktop notification system.
-  // Using Date.now() as a fallback causes a wrong "0s" flash when the panel
-  // re-mounts after a project switch (transcript restores activeRunId before
-  // the SSE attached event arrives).
   const elapsedSec =
     stream.startTs && (phase === "working" || phase === "streaming")
       ? Math.floor((Date.now() - stream.startTs) / 1000)
@@ -461,27 +316,11 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       ? `${fmtElapsed(elapsedSec)}${totalTok > 0 ? ` · ${totalTok.toLocaleString()} tok` : ""}`
       : undefined;
 
-  // ── Staleness detector: tokens are arriving from the SSE but we haven't
-  //    seen one in a while. Surfaces "still working… 42s since last token"
-  //    so the user can tell the difference between "the agent is thinking"
-  //    and "the stream is silently dead". ──
   const STALE_THRESHOLD_MS = 90_000;
   const sinceLastEventMs =
     stream.lastEventAt && isStreaming ? Date.now() - stream.lastEventAt : null;
   const isStale =
     sinceLastEventMs !== null && sinceLastEventMs > STALE_THRESHOLD_MS;
-
-  const retryResume = () => {
-    setResumeError(null);
-    setResumeProbed(false);
-    setResumeAttempt((n) => n + 1);
-  };
-
-  const dismissResume = () => {
-    setResumeError(null);
-    setActiveRunId(null);
-    setResumeProbed(true);
-  };
 
   const continueRecovered = () => {
     setRecovered(null);
@@ -496,7 +335,6 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     if (!lastUser || lastUser.kind !== "you") return;
     setResumeError(null);
     setActiveRunId(null);
-    setResumeProbed(true);
     setPendingSeed(lastUser.text);
   };
 

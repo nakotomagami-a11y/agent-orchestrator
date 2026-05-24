@@ -33,8 +33,9 @@ const pipelines: Map<string, PipelineRun> =
   globalThis.__agentOfficePipelines ??
   (globalThis.__agentOfficePipelines = new Map());
 
-const POLL_INTERVAL_MS = 500;
 const STEP_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const PIPELINE_TIMEOUT_MS = 3 * STEP_TIMEOUT_MS; // 30 minutes overall cap
+const PIPELINE_CLEANUP_DELAY_MS = 30_000; // keep finished pipelines in memory briefly for in-flight polls
 
 export function getPipeline(id: string): PipelineRun | undefined {
   return pipelines.get(id) ?? db.getPipelineFromDb(id) ?? undefined;
@@ -46,6 +47,10 @@ export function listPipelines(): PipelineRun[] {
 
 export function getInterruptedPipelines(): PipelineRun[] {
   return db.listInterruptedPipelines();
+}
+
+function scheduleCleanup(id: string): void {
+  setTimeout(() => pipelines.delete(id), PIPELINE_CLEANUP_DELAY_MS).unref();
 }
 
 function isParallel(step: PipelineStep | ParallelPipelineStep): step is ParallelPipelineStep {
@@ -84,28 +89,61 @@ function expandSteps(reqSteps: CreatePipelineRequest["steps"]): PipelineRunStep[
   return out;
 }
 
-async function waitForRun(runId: string): Promise<{ output: string; exitCode: number }> {
-  const deadline = Date.now() + STEP_TIMEOUT_MS;
-  while (true) {
+function waitForRun(runId: string): Promise<{ output: string; exitCode: number }> {
+  return new Promise((resolve, reject) => {
+    // Fast path: run already in a terminal state (live or persisted).
     const live = runs.getLiveRun(runId);
-    if (live) {
-      if (live.status !== "running") {
-        return { output: live.output, exitCode: live.exitCode ?? (live.status === "done" ? 0 : 1) };
-      }
-    } else {
+    if (live && live.status !== "running") {
+      resolve({ output: live.output, exitCode: live.exitCode ?? (live.status === "done" ? 0 : 1) });
+      return;
+    }
+    if (!live) {
       const persisted = store.getRun(runId);
       if (persisted) {
-        return {
+        resolve({
           output: persisted.output,
           exitCode: persisted.exitCode ?? (persisted.status === "done" ? 0 : 1),
-        };
+        });
+        return;
       }
     }
-    if (Date.now() >= deadline) {
-      throw new Error(`step timed out after ${STEP_TIMEOUT_MS / 1000}s (runId=${runId})`);
+
+    // Slow path: subscribe to run events and resolve when the run finishes.
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      runs.detachEmit(runId, emit);
+      reject(new Error(`step timed out after ${STEP_TIMEOUT_MS / 1000}s (runId=${runId})`));
+    }, STEP_TIMEOUT_MS);
+
+    const emit: runs.SseEmit = (event) => {
+      if (settled) return;
+      if (event.name === "done") {
+        settled = true;
+        clearTimeout(timer);
+        runs.detachEmit(runId, emit);
+        const liveRun = runs.getLiveRun(runId);
+        const exitCode = event.data.exitCode;
+        const output = liveRun?.output ?? store.getRun(runId)?.output ?? "";
+        resolve({ output, exitCode });
+      } else if (event.name === "error") {
+        // error events are informational (e.g. rate-limit warnings); the run
+        // continues. Only the "done" event with a non-zero exitCode is terminal.
+      }
+    };
+
+    // attachEmit replays existing events and immediately fires "done" if the
+    // run already finished — so the fast path above is a belt-and-suspenders
+    // guard, not the only terminal-state handler.
+    const attached = runs.attachEmit(runId, emit);
+    if (!attached) {
+      // Run is not in liveRuns at all and wasn't in store — treat as missing.
+      settled = true;
+      clearTimeout(timer);
+      reject(new Error(`run not found (runId=${runId})`));
     }
-    await new Promise<void>((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-  }
+  });
 }
 
 function mirrorStep(pipeline: PipelineRun, step: PipelineRunStep): void {
@@ -183,8 +221,21 @@ async function runLeafStep(
 async function runOrchestration(pipeline: PipelineRun, req: CreatePipelineRequest): Promise<void> {
   let previousOutput = "";
   let flatIdx = 0;
+  const startedAt = Date.now();
 
   for (const item of req.steps) {
+    if (Date.now() - startedAt > PIPELINE_TIMEOUT_MS) {
+      log.warn("pipeline.timeout", { pipelineId: pipeline.id });
+      for (let j = flatIdx; j < pipeline.steps.length; j++) {
+        pipeline.steps[j]!.status = "error";
+        mirrorStep(pipeline, pipeline.steps[j]!);
+      }
+      pipeline.status = "error";
+      mirrorPipelineStatus(pipeline, Date.now());
+      scheduleCleanup(pipeline.id);
+      throw new Error("Pipeline exceeded maximum allowed duration");
+    }
+
     if (isParallel(item)) {
       // Fan-out: run all sub-steps concurrently
       const group = item.steps;
@@ -229,6 +280,7 @@ async function runOrchestration(pipeline: PipelineRun, req: CreatePipelineReques
         }
         pipeline.status = "error";
         mirrorPipelineStatus(pipeline, Date.now());
+        scheduleCleanup(pipeline.id);
         return;
       }
 
@@ -260,6 +312,7 @@ async function runOrchestration(pipeline: PipelineRun, req: CreatePipelineReques
         }
         pipeline.status = "error";
         mirrorPipelineStatus(pipeline, Date.now());
+        scheduleCleanup(pipeline.id);
         return;
       }
 
@@ -276,6 +329,7 @@ async function runOrchestration(pipeline: PipelineRun, req: CreatePipelineReques
         }
         pipeline.status = "error";
         mirrorPipelineStatus(pipeline, Date.now());
+        scheduleCleanup(pipeline.id);
         return;
       }
 
@@ -288,6 +342,7 @@ async function runOrchestration(pipeline: PipelineRun, req: CreatePipelineReques
 
   pipeline.status = "done";
   mirrorPipelineStatus(pipeline, Date.now());
+  scheduleCleanup(pipeline.id);
   log.info("pipeline.done", { pipelineId: pipeline.id });
 }
 
@@ -323,17 +378,28 @@ export function createPipeline(req: CreatePipelineRequest): PipelineRun {
 
   log.info("pipeline.created", { pipelineId: id, stepCount: steps.length });
 
-  void runOrchestration(pipeline, req).catch((err: unknown) => {
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(
+      () => reject(new Error("Pipeline exceeded maximum runtime")),
+      PIPELINE_TIMEOUT_MS,
+    ).unref(),
+  );
+
+  void Promise.race([runOrchestration(pipeline, req), timeoutPromise]).catch((err: unknown) => {
     const message = err instanceof Error ? err.message : String(err);
     log.warn("pipeline.orchestration_uncaught", { pipelineId: id, error: message });
-    pipeline.status = "error";
+    if (pipeline.status !== "done" && pipeline.status !== "error") {
+      pipeline.status = "error";
+    }
     for (const step of pipeline.steps) {
       if (step.status === "pending" || step.status === "running") {
         step.status = "error";
+        if (step.runId) runs.abortRun(step.runId);
         db.upsertPipelineStep({ pipelineId: id, stepIndex: step.stepIndex, agentId: step.agentId, status: "error" });
       }
     }
     db.updatePipelineStatus(id, "error", Date.now());
+    scheduleCleanup(id);
   });
 
   return pipeline;

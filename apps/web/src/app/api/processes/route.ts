@@ -75,6 +75,10 @@ function readProcStartedAt(pid: number): number {
 }
 
 export async function GET(): Promise<NextResponse> {
+  if (process.platform !== "linux") {
+    return NextResponse.json({ processes: [], platform: process.platform }, { status: 200 });
+  }
+
   let ssOutput: string;
   try {
     ssOutput = execFileSync("ss", ["-tlnp"], { encoding: "utf8", timeout: 5000 });

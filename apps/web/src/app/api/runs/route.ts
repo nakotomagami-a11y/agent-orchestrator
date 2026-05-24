@@ -10,13 +10,15 @@ export async function GET(request: Request) {
   if (error) return error;
   const limit = q.limit ?? 50;
 
-  // Merge currently-running live runs (not yet persisted) with finished ones.
-  // Live run IDs are excluded from the persisted list to avoid duplicates when
-  // a run transitions from running→done between the two reads.
+  // Snapshot both sources synchronously before any filtering to minimise the
+  // window in which a run can transition from live→persisted and appear in both
+  // lists. better-sqlite3 is synchronous so both calls execute without yielding.
   const liveRunning = runsService.getRunningRuns();
   const liveIds = new Set(liveRunning.map((r) => r.id));
-  const all = [...liveRunning, ...store.getRuns().filter((r) => !liveIds.has(r.id))];
+  const persisted = store.getRuns({ agentId: q.agent, projectId: q.project, instanceId: q.instance, limit: limit + liveRunning.length });
+  const all = [...liveRunning, ...persisted.filter((r) => !liveIds.has(r.id))];
 
+  // Live runs are not pre-filtered by the DB query so apply the same filters.
   const filtered = all.filter((r) => {
     if (q.agent && r.agentId !== q.agent) return false;
     if (q.project && r.projectId !== q.project) return false;

@@ -9,24 +9,19 @@ import { fromApi, toBody, type AgentFormValues } from "@/modules/agents/utils/ag
 import { useAgentForm } from "@/modules/agents/hooks/use-agent-form";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/shared";
-import {
-  AoIdentity, AoCpu, AoSparkle, AoWrench, AoCode, AoEye,
-  AoBold, AoItalic, AoHeading, AoLink, AoCheck, AoReset, AoTrash, AoClose, AoPlus,
-  AoFolder, AoSearch, AoTerminal, AoGlobe, AoList, AoPen,
-} from "@/modules/summon/components/ao-icons";
+import { Icon, type IconName } from "@/components/ui/icon";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { BodyHistoryPanel } from "@/modules/agents/components/body-history-panel";
 import { highlightMd } from "@/components/ui/code-editor";
 
-
-const TOOL_ICONS: Record<string, React.ComponentType<{ size?: number }>> = {
-  Read: AoFolder, Write: AoPen, Edit: AoPen, Bash: AoTerminal,
-  WebFetch: AoGlobe, WebSearch: AoSearch, Agent: AoList,
+const TOOL_ICONS: Record<string, IconName> = {
+  Read: "folder", Write: "edit", Edit: "edit", Bash: "terminal-ao",
+  WebFetch: "globe", WebSearch: "search", Agent: "list",
 };
 
 function iconForTool(t: string) {
-  const Ic = TOOL_ICONS[t] ?? AoWrench;
-  return <Ic size={12} />;
+  const name = (TOOL_ICONS[t] ?? "wrench") as IconName;
+  return <Icon name={name} size={12} />;
 }
 
 export function SettingsTab({
@@ -165,7 +160,7 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoIdentity size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="identity" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Basic info</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
@@ -205,7 +200,7 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoCpu size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="cpu" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Execution</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
@@ -265,18 +260,18 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoWrench size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="wrench" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Skills &amp; tools</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
             <div className="flex flex-col gap-[6px]">
-              <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2"><AoSparkle size={11} /> Skills</label>
+              <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2"><Icon name="sparkle" size={11} /> Skills</label>
               <div className="flex flex-wrap gap-[6px] p-2 pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[42px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
                 {skills.map((s) => (
                   <span key={s} className="inline-flex items-center gap-[6px] py-1 pl-[10px] pr-1 bg-[var(--ao-accent-soft)] border border-[var(--ao-accent-line)] rounded-full font-mono text-[12px] text-[var(--ao-accent)]">
                     {s}
                     <button type="button" className="w-4 h-4 grid place-items-center rounded-full text-current opacity-60 hover:opacity-100 hover:bg-white/[0.06]" onClick={() => setSkills(skills.filter((x) => x !== s))} aria-label="remove">
-                      <AoClose size={10} />
+                      <Icon name="x" size={10} />
                     </button>
                   </span>
                 ))}
@@ -292,14 +287,14 @@ function SettingsForm({
             </div>
 
             <div className="flex flex-col gap-[6px] mt-[14px]">
-              <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2"><AoWrench size={11} /> Tools allowed</label>
+              <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2"><Icon name="wrench" size={11} /> Tools allowed</label>
               <div className="flex flex-wrap gap-[6px] p-2 pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[42px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
                 {tools.map((t) => (
                   <span key={t} className="inline-flex items-center gap-[6px] py-1 pl-[10px] pr-1 bg-ao-bg-3 border border-ao-line-1 rounded-full font-mono text-[12px] text-ao-fg-0">
                     <span className="text-ao-fg-2">{iconForTool(t)}</span>
                     {t}
                     <button type="button" className="w-4 h-4 grid place-items-center rounded-full text-current opacity-60 hover:opacity-100 hover:bg-white/[0.06]" onClick={() => setTools(tools.filter((x) => x !== t))} aria-label="remove">
-                      <AoClose size={10} />
+                      <Icon name="x" size={10} />
                     </button>
                   </span>
                 ))}
@@ -322,7 +317,7 @@ function SettingsForm({
                   >
                     <span className="text-ao-fg-2">{iconForTool(t)}</span>
                     {t}
-                    <AoPlus size={10} className="text-[var(--ao-fg-3)]" />
+                    <Icon name="plus" size={10} className="text-[var(--ao-fg-3)]" />
                   </button>
                 ))}
               </div>
@@ -340,7 +335,7 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><AoIdentity size={15} /></div>
+            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="identity" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Avatar</div>
             <span className="ml-auto text-[11.5px] font-mono text-ao-fg-3">{v.unit ? "custom selection" : "auto from name"}</span>
           </div>
@@ -378,7 +373,7 @@ function SettingsForm({
                     : "text-ao-fg-3 hover:text-ao-fg-1 hover:bg-[rgba(255,255,255,0.05)] active:bg-[rgba(255,255,255,0.08)]"
                 }`}
               >
-                <AoCode size={11} /> Write
+                <Icon name="code" size={11} /> Write
               </button>
               <button
                 type="button"
@@ -389,7 +384,7 @@ function SettingsForm({
                     : "text-ao-fg-3 hover:text-ao-fg-1 hover:bg-[rgba(255,255,255,0.05)] active:bg-[rgba(255,255,255,0.08)]"
                 }`}
               >
-                <AoEye size={11} /> Preview
+                <Icon name="eye" size={11} /> Preview
               </button>
             </div>
 
@@ -399,11 +394,11 @@ function SettingsForm({
             {/* Format buttons */}
             <div className="flex items-center gap-[1px]">
               {([
-                { icon: <AoHeading size={13} />, label: "Heading", action: () => setV((p) => ({ ...p, body: p.body + "\n## " })) },
-                { icon: <AoBold size={13} />,    label: "Bold",    action: () => setV((p) => ({ ...p, body: p.body + "****" })) },
-                { icon: <AoItalic size={13} />,  label: "Italic",  action: () => setV((p) => ({ ...p, body: p.body + "**" })) },
-                { icon: <AoLink size={13} />,    label: "Link",    action: () => setV((p) => ({ ...p, body: p.body + "[](url)" })) },
-                { icon: <AoCode size={13} />,    label: "Code",    action: () => setV((p) => ({ ...p, body: p.body + "``" })) },
+                { icon: <Icon name="heading" size={13} />, label: "Heading", action: () => setV((p) => ({ ...p, body: p.body + "\n## " })) },
+                { icon: <Icon name="bold" size={13} />,    label: "Bold",    action: () => setV((p) => ({ ...p, body: p.body + "****" })) },
+                { icon: <Icon name="italic" size={13} />,  label: "Italic",  action: () => setV((p) => ({ ...p, body: p.body + "**" })) },
+                { icon: <Icon name="link" size={13} />,    label: "Link",    action: () => setV((p) => ({ ...p, body: p.body + "[](url)" })) },
+                { icon: <Icon name="code" size={13} />,    label: "Code",    action: () => setV((p) => ({ ...p, body: p.body + "``" })) },
               ] as { icon: React.ReactNode; label: string; action: () => void }[]).map(({ icon, label, action }) => (
                 <button
                   key={label}
@@ -509,13 +504,13 @@ function SettingsForm({
             Discard
           </button>
           <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-[rgba(217,83,79,0.12)] border border-[rgba(217,83,79,0.35)] text-ao-bad hover:bg-[rgba(217,83,79,0.2)] disabled:opacity-50" onClick={onDelete} disabled={deleting}>
-            <AoTrash size={12} /> Delete
+            <Icon name="trash" size={12} /> Delete
           </button>
           <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-ao-bg-3 border border-ao-line-1 text-ao-fg-0 hover:bg-ao-bg-4 hover:border-ao-line-2 disabled:opacity-50" onClick={handleDiscard} disabled={!dirty}>
-            <AoReset size={12} /> Revert
+            <Icon name="refresh" size={12} /> Revert
           </button>
           <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-ao-accent border border-transparent text-white hover:bg-[color-mix(in_oklab,var(--ao-accent)_90%,white)] disabled:opacity-50" onClick={handleSave} disabled={saving || !dirty}>
-            <AoCheck size={13} /> Save changes
+            <Icon name="check" size={13} /> Save changes
           </button>
         </div>
       </div>

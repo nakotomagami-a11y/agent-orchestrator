@@ -11,13 +11,7 @@ import { ConfigurationTab } from "./tabs/configuration-tab";
 import { HistoryTab } from "./tabs/history-tab";
 import { MemoryTab } from "./tabs/memory-tab";
 import { SettingsTab } from "./tabs/settings-tab";
-import {
-  AoClose,
-  AoBranch,
-  AoPlus,
-  AoPen,
-  AoReset,
-} from "@/modules/summon/components/ao-icons";
+import { Icon } from "@/components/ui/icon";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
@@ -145,7 +139,7 @@ export function AgentDetailsModal() {
               onClick={closeInspector}
               type="button"
             >
-              <AoClose size={18} />
+              <Icon name="x" size={18} />
             </button>
           </div>
 
@@ -212,14 +206,14 @@ export function AgentDetailsModal() {
                     className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                     onClick={() => setBranchSignal((n) => n + 1)}
                   >
-                    <AoBranch size={13} /> Branch
+                    <Icon name="branch-ao" size={13} /> Branch
                   </button>
                   <button
                     type="button"
                     className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                     onClick={() => setNewThreadSignal((n) => n + 1)}
                   >
-                    <AoPlus size={13} /> New
+                    <Icon name="plus" size={13} /> New
                   </button>
                   <button
                     type="button"
@@ -227,7 +221,7 @@ export function AgentDetailsModal() {
                     aria-label="Edit agent"
                     onClick={() => changeTab("settings")}
                   >
-                    <AoPen size={13} />
+                    <Icon name="edit" size={13} />
                   </button>
                 </>
               )}
@@ -237,7 +231,7 @@ export function AgentDetailsModal() {
                   className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                   onClick={() => changeTab("settings")}
                 >
-                  <AoPen size={13} /> Edit
+                  <Icon name="edit" size={13} /> Edit
                 </button>
               )}
               {tab === "memory" && (
@@ -246,7 +240,7 @@ export function AgentDetailsModal() {
                   className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                   onClick={() => memoryDiscardRef.current?.()}
                 >
-                  <AoReset size={13} /> Discard
+                  <Icon name="refresh" size={13} /> Discard
                 </button>
               )}
               {tab === "settings" && (
@@ -255,7 +249,7 @@ export function AgentDetailsModal() {
                   className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
                   onClick={() => settingsResetRef.current?.()}
                 >
-                  <AoReset size={13} /> Reset
+                  <Icon name="refresh" size={13} /> Reset
                 </button>
               )}
             </div>

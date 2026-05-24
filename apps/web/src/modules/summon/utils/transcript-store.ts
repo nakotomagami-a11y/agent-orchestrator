@@ -83,8 +83,15 @@ export async function clearTranscript(key: string): Promise<void> {
   } catch { /* best-effort */ }
 }
 
-export async function listAgentTranscripts(agentId: string): Promise<Array<{ key: string; transcript: Transcript }>> {
-  // Not implemented for now - returns empty (was only used in archive view)
-  void agentId;
-  return [];
+export async function listAgentTranscripts(
+  agentId: string,
+): Promise<Array<{ instanceId: string; sessionId: string | null; updatedAt: number }>> {
+  try {
+    const res = await fetch(`/api/transcripts?agentId=${encodeURIComponent(agentId)}`);
+    if (!res.ok) return [];
+    const data = await res.json() as Array<{ instanceId: string; sessionId: string | null; updatedAt: number }>;
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }

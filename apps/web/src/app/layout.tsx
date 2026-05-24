@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { db } from "@agent-office/shared/services";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -26,8 +27,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const locale = await getLocale();
   const messages = await getMessages();
 
+  // Read the stored theme server-side so the correct value is embedded in the
+  // initial HTML, avoiding any client-side flash before React hydrates.
+  const storedTheme = db.getUiSetting("theme");
+  const initialTheme = storedTheme === "dark" || storedTheme === "light" ? storedTheme : "dark";
+
   return (
-    <html lang={locale} data-theme="light" className={`${ubuntu.variable} ${ubuntuMono.variable}`}>
+    <html lang={locale} data-theme={initialTheme} className={`${ubuntu.variable} ${ubuntuMono.variable}`}>
+      <head />
       <style>{`button:not(:disabled){cursor:pointer}button:disabled{cursor:not-allowed}`}</style>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>

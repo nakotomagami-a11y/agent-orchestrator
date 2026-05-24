@@ -466,6 +466,147 @@ const ICON_PATHS = {
     ...STROKE_BASE,
     body: <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
   },
+  filter: {
+    ...STROKE_BASE,
+    body: <path d="M3 4h18l-7 9v6l-4 2v-8z" />,
+  },
+  "branch-ao": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <circle cx="6" cy="6" r="2.5" />
+        <circle cx="18" cy="6" r="2.5" />
+        <circle cx="6" cy="18" r="2.5" />
+        <path d="M6 8.5v7" />
+        <path d="M18 8.5c0 4-6 3-6 7" />
+      </>
+    ),
+  },
+  "corner-down": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M9 10l-5 5 5 5" />
+        <path d="M20 4v7a4 4 0 0 1-4 4H4" />
+      </>
+    ),
+  },
+  sparkle: {
+    ...STROKE_BASE,
+    body: <path d="M12 2l1.7 5.3L19 9l-5.3 1.7L12 16l-1.7-5.3L5 9l5.3-1.7z" />,
+  },
+  "bot-ao": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <rect x="3" y="8" width="18" height="12" rx="2" />
+        <path d="M12 8V4" />
+        <circle cx="9" cy="14" r="1" />
+        <circle cx="15" cy="14" r="1" />
+        <path d="M8 4h8" />
+      </>
+    ),
+  },
+  identity: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <circle cx="9" cy="11" r="2.5" />
+        <path d="M14 9h4" />
+        <path d="M14 13h3" />
+        <path d="M5 17.5c.7-1.6 2.3-2.5 4-2.5s3.3.9 4 2.5" />
+      </>
+    ),
+  },
+  wrench: {
+    ...STROKE_BASE,
+    body: <path d="M14.7 6.3a4 4 0 1 1 3 3L6 21l-3-3 11.7-11.7" />,
+  },
+  book: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M4 4h12a3 3 0 0 1 3 3v13H7a3 3 0 0 1-3-3z" />
+        <path d="M4 17h12" />
+      </>
+    ),
+  },
+  eye: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+        <circle cx="12" cy="12" r="3" />
+      </>
+    ),
+  },
+  code: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M16 18l6-6-6-6" />
+        <path d="M8 6l-6 6 6 6" />
+      </>
+    ),
+  },
+  "terminal-ao": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <rect x="3" y="4" width="18" height="16" rx="2" />
+        <path d="M7 9l3 3-3 3" />
+        <path d="M13 15h4" />
+      </>
+    ),
+  },
+  bold: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M7 5h6a3 3 0 0 1 0 6H7z" />
+        <path d="M7 11h7a3 3 0 0 1 0 6H7z" />
+      </>
+    ),
+  },
+  italic: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M19 4h-9" />
+        <path d="M14 20H5" />
+        <path d="M15 4L9 20" />
+      </>
+    ),
+  },
+  heading: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M6 4v16" />
+        <path d="M18 4v16" />
+        <path d="M6 12h12" />
+      </>
+    ),
+  },
+  link: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1.5 1.5" />
+        <path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1.5-1.5" />
+      </>
+    ),
+  },
+  lock: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <rect x="4" y="11" width="16" height="10" rx="2" />
+        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+      </>
+    ),
+  },
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

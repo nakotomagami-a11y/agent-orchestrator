@@ -1,9 +1,8 @@
-import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { agents, db, projects } from "@agent-office/shared/services";
-import { AGENTS_DIR } from "@agent-office/shared/services/paths";
-import { ensureDir } from "@agent-office/shared/services/fs-atomic";
+import { AGENTS_DIR, isValidIdSegment } from "@agent-office/shared/services/paths";
+import { ensureDir, writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
 
 interface SaveFile {
   version: 1;
@@ -43,8 +42,9 @@ export async function POST(request: Request) {
     ensureDir(AGENTS_DIR);
     for (const agent of data.agents) {
       if (typeof agent.id !== "string" || !agent.id) continue;
+      if (!isValidIdSegment(agent.id)) continue;
       if (typeof agent.content === "string" && agent.content) {
-        writeFileSync(join(AGENTS_DIR, `${agent.id}.md`), agent.content, "utf8");
+        writeFileAtomic(join(AGENTS_DIR, `${agent.id}.md`), agent.content);
       }
       if (typeof agent.memory === "string") {
         agents.writeAgentMemory(agent.id, agent.memory);
@@ -53,6 +53,9 @@ export async function POST(request: Request) {
 
     // Restore project
     const p = data.project;
+    if (!isValidIdSegment(p.id)) {
+      return NextResponse.json({ error: "invalid_save_file", detail: "Invalid project id" }, { status: 400 });
+    }
     const meta = p.meta as Record<string, unknown>;
     const existing = projects.readProject(p.id);
     if (existing) {
@@ -81,6 +84,7 @@ export async function POST(request: Request) {
     if (Array.isArray(data.history)) {
       for (const entry of data.history) {
         if (typeof entry.agentId !== "string" || typeof entry.instanceId !== "string" || typeof entry.transcript !== "string") continue;
+        if (!isValidIdSegment(entry.agentId) || !isValidIdSegment(entry.instanceId)) continue;
         db.saveTranscript(entry.agentId, entry.instanceId, entry.transcript, null, null);
       }
     }

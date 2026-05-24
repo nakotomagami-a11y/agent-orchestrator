@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { MessageBubble, ToolGroupRow } from "./message-bubble";
+import { ExpandedStateContext, MessageBubble, ToolGroupRow } from "./message-bubble";
 import { LiveStatus, type ChatPhase } from "./live-status";
 import type { ThreadItem } from "../utils/thread-types";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
@@ -84,6 +84,13 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   const t = useTranslations("chat_thread");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
+
+  // Stable map for collapsible section state — survives re-renders and remounts during streaming.
+  const expandedMapRef = useRef<Map<string, boolean>>(new Map());
+  const expandedCtx = useMemo(() => ({
+    get: (id: string) => expandedMapRef.current.get(id) ?? false,
+    set: (id: string, val: boolean) => { expandedMapRef.current.set(id, val); },
+  }), []);
 
   // ── Auto-follow state ──
   // `followTail` is the user's intent: "keep me pinned to the latest message".
@@ -240,6 +247,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   }, []);
 
   return (
+    <ExpandedStateContext.Provider value={expandedCtx}>
     <div className="relative min-h-0 flex-1 overflow-hidden flex flex-col">
     <div className="overflow-y-auto overscroll-contain px-[16px] pt-[18px] pb-[20px] flex-1" ref={scrollRef}>
       {items.length === 0 && phase === "idle" ? (
@@ -314,6 +322,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
               return (
                 <ToolGroupRow
                   key={row.id}
+                  id={row.id}
                   tools={row.tools.map((t) => ({ id: t.id, name: t.name, arg: t.arg }))}
                   avatar={agent.short[0]?.toUpperCase() ?? "?"}
                   hideAvatar={hideAvatar}
@@ -369,5 +378,6 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
       </div>
     ) : null}
     </div>
+    </ExpandedStateContext.Provider>
   );
 }

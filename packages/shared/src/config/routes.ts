@@ -6,7 +6,7 @@
  */
 
 export const PAGE_ROUTES = {
-  home: "/",
+  /** Landing page / office island — the root route. Use this; there is no separate `home` alias. */
   office: "/",
   agents: "/agents",
   agent: (id: string) => `/agents/${encodeURIComponent(id)}`,

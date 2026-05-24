@@ -6,58 +6,7 @@ import { paths } from "@agent-office/shared/services";
 import { validateBody } from "@/lib/validation";
 import { summonRequestSchema } from "@/lib/validation-schemas";
 import { badRequest } from "@/lib/api-helpers";
-
-// ─── Quota helpers (server-side, no zustand dependency) ───────────────────────
-
-type LimitsPeriod = "daily" | "week" | "month";
-type HardCap = "off" | "warn" | "block";
-
-interface ClaudeLimits {
-  quotaUsd: number;
-  period: LimitsPeriod;
-  hardCap: HardCap;
-}
-
-function parseLimitsRaw(raw: string | null): ClaudeLimits {
-  const DEFAULTS: ClaudeLimits = { quotaUsd: 0, period: "week", hardCap: "warn" };
-  if (!raw) return DEFAULTS;
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const period: LimitsPeriod =
-      parsed.period === "month" ? "month" :
-      parsed.period === "daily" ? "daily" :
-      "week";
-    const hardCap: HardCap =
-      parsed.hardCap === "off" || parsed.hardCap === "warn" || parsed.hardCap === "block"
-        ? (parsed.hardCap as HardCap)
-        : DEFAULTS.hardCap;
-    const quotaUsd =
-      typeof parsed.quotaUsd === "number" && parsed.quotaUsd >= 0 ? parsed.quotaUsd : DEFAULTS.quotaUsd;
-    return { quotaUsd, period, hardCap };
-  } catch {
-    return DEFAULTS;
-  }
-}
-
-function periodStart(period: LimitsPeriod, now = Date.now()): number {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  if (period === "month") return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-  if (period === "daily") return d.getTime();
-  // week - start on Monday (ISO)
-  const dow = d.getDay();
-  const daysSinceMonday = (dow + 6) % 7;
-  d.setDate(d.getDate() - daysSinceMonday);
-  return d.getTime();
-}
-
-function getPeriodSpend(period: LimitsPeriod): number {
-  const cutoff = periodStart(period);
-  const allRuns = store.getRuns({ limit: 10000 });
-  return allRuns
-    .filter((r) => r.ts >= cutoff)
-    .reduce((sum, r) => sum + (r.cost ?? 0), 0);
-}
+import { parseLimits, periodStart } from "@/lib/claude-limits";
 
 // ─── Route handler ─────────────────────────────────────────────────────────────
 
@@ -75,10 +24,10 @@ export async function POST(request: Request) {
   }
 
   // ── Quota enforcement ──────────────────────────────────────────────────────
-  const limits = parseLimitsRaw(db.getUiSetting("claude-limits"));
+  const limits = parseLimits(db.getUiSetting("claude-limits"));
   let warning: string | undefined;
   if (limits.hardCap !== "off" && limits.quotaUsd > 0) {
-    const spent = getPeriodSpend(limits.period);
+    const spent = db.getSumCostSince(periodStart(limits.period));
     if (limits.hardCap === "block" && spent >= limits.quotaUsd) {
       return NextResponse.json(
         {
@@ -113,7 +62,7 @@ export async function POST(request: Request) {
 
   let priorContext: string | undefined;
   if (!req.resumeSessionId) {
-    const recentMsgs = history.getRecentMessages(`${req.agentId}::${req.instanceId ?? "default"}`, 8);
+    const recentMsgs = history.getRecentMessages(req.agentId, req.instanceId ?? "default", 8);
     if (recentMsgs.length > 0) priorContext = history.formatPriorContext(recentMsgs);
   }
 

@@ -185,6 +185,14 @@ function dedupeName(name: string, source: string, used: Set<string>): string {
   return `${withSuffix}-${n}`;
 }
 
+async function pLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += limit) {
+    results.push(...await Promise.all(items.slice(i, i + limit).map(fn)));
+  }
+  return results;
+}
+
 export async function fetchRegistry(force = false): Promise<RegistrySkill[]> {
   const cached = loadCachedRegistry();
   if (!force && cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
@@ -203,27 +211,25 @@ export async function fetchRegistry(force = false): Promise<RegistrySkill[]> {
       const tree = await fetchTree(src.source, src.ref);
       const skillBlobs = tree.filter((t) => t.type === "blob" && t.path.endsWith("/SKILL.md"));
 
-      const results = await Promise.all(
-        skillBlobs.map(async (blob) => {
-          const dirPath = blob.path.slice(0, -"/SKILL.md".length);
-          const rawName = dirPath.split("/").pop() ?? dirPath;
-          let description = "";
-          try {
-            const content = await fetchSkillMd(src.source, src.ref, blob.path);
-            description = parseFrontmatterDescription(content);
-          } catch {
-            /* best-effort */
-          }
-          return {
-            source: src.source,
-            ref: src.ref,
-            rawName,
-            description,
-            path: dirPath,
-            sha: blob.sha,
-          };
-        }),
-      );
+      const results = await pLimit(skillBlobs, 5, async (blob) => {
+        const dirPath = blob.path.slice(0, -"/SKILL.md".length);
+        const rawName = dirPath.split("/").pop() ?? dirPath;
+        let description = "";
+        try {
+          const content = await fetchSkillMd(src.source, src.ref, blob.path);
+          description = parseFrontmatterDescription(content);
+        } catch (e) {
+          log.warn("registry.fetch_skill_failed", { path: blob.path, err: String(e) });
+        }
+        return {
+          source: src.source,
+          ref: src.ref,
+          rawName,
+          description,
+          path: dirPath,
+          sha: blob.sha,
+        };
+      });
 
       for (const r of results) {
         const name = dedupeName(r.rawName, src.source, usedNames);

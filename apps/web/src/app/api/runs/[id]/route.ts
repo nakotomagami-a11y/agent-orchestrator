@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { runs, store } from "@agent-office/shared/services";
-import { notFound } from "@/lib/api-helpers";
+import { notFound, validateIdParam } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, { params }: Params) {
-  const { id } = await params;
+  const { value: id, error } = validateIdParam((await params).id);
+  if (error) return error;
   // Check in-flight runs first - a just-started run lives only in memory
   // until it finishes and gets written to runs.log.
   const live = runs.getLiveRunAsPersistedRun(id);

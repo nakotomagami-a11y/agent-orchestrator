@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { PageHeader } from "@/components/ui/page-header";
-import { useProject, useUpdateProject } from "../hooks/use-projects";
+import { useGitStatus, useProject, useUpdateProject } from "../hooks/use-projects";
 import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { ProjectActivity } from "./project-activity";
 import { AddAgentModal } from "./add-agent-modal";
@@ -53,6 +53,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   const [editingDesc, setEditingDesc] = useState(false);
   const [descValue, setDescValue] = useState("");
   const { agents: allAgents } = useOfficeAgents();
+  const gitStatusQ = useGitStatus(id, !!projectQ.data?.meta.cwd);
 
   const project = projectQ.data;
   const header = (
@@ -268,21 +269,58 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   <span className="text-[11px] text-txt-3 font-[var(--font-mono)]">runs</span>
                 </div>
               )}
-              <div className="flex items-center gap-[14px] ml-auto">
-                {project.lastRunAt && (
-                  <span className="font-[var(--font-mono)] text-[10.5px] text-txt-3">
-                    last run {relativeTime(project.lastRunAt)}
-                  </span>
-                )}
-                {project.meta.cwd && (
-                  <div className="flex items-center gap-[6px] font-[var(--font-mono)] text-[11px] text-txt-3">
-                    <Icon name="folder" size={11} className="shrink-0" />
-                    <span className="truncate max-w-[360px]">
-                      {project.meta.cwd.replace(/^\/home\/[^/]+\//, "~/")}
+              <div className="flex items-end gap-[14px] ml-auto flex-col items-end">
+                <div className="flex items-center gap-[14px]">
+                  {project.lastRunAt && (
+                    <span className="font-[var(--font-mono)] text-[10.5px] text-txt-3">
+                      last run {relativeTime(project.lastRunAt)}
                     </span>
-                    <button type="button" className="shrink-0 w-[20px] h-[20px] grid place-items-center rounded-[4px] bg-transparent border-none text-txt-3 hover:bg-bg-3 hover:text-txt cursor-pointer transition-colors" title="Copy path" onClick={handleCopyPath}>
-                      <Icon name={copiedPath ? "check" : "copy"} size={11} />
-                    </button>
+                  )}
+                  {project.meta.cwd && (
+                    <div className="flex items-center gap-[6px] font-[var(--font-mono)] text-[11px] text-txt-3">
+                      <Icon name="folder" size={11} className="shrink-0" />
+                      <span className="truncate max-w-[360px]">
+                        {project.meta.cwd.replace(/^\/home\/[^/]+\//, "~/")}
+                      </span>
+                      <button type="button" className="shrink-0 w-[20px] h-[20px] grid place-items-center rounded-[4px] bg-transparent border-none text-txt-3 hover:bg-bg-3 hover:text-txt cursor-pointer transition-colors" title="Copy path" onClick={handleCopyPath}>
+                        <Icon name={copiedPath ? "check" : "copy"} size={11} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {gitStatusQ.data?.isGit && (
+                  <div className="flex items-center gap-[10px] font-[var(--font-mono)] text-[10.5px] text-txt-3">
+                    {gitStatusQ.data.branch && (
+                      <span className="flex items-center gap-[5px]">
+                        <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+                          <path d="M5 3.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm0 2.122a2.25 2.25 0 1 0-1.5 0v.878A2.25 2.25 0 0 0 5.75 8.5h1.5v2.128a2.251 2.251 0 1 0 1.5 0V8.5h1.5a2.25 2.25 0 0 0 2.25-2.25v-.878a2.25 2.25 0 1 0-1.5 0v.878a.75.75 0 0 1-.75.75h-4.5A.75.75 0 0 1 5 6.25v-.878zm3.75 7.378a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0zm3-8.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0z" />
+                        </svg>
+                        {gitStatusQ.data.branch}
+                      </span>
+                    )}
+                    {(gitStatusQ.data.added > 0 || gitStatusQ.data.removed > 0) && (
+                      <span className="flex items-center gap-[4px]">
+                        {gitStatusQ.data.added > 0 && (
+                          <span style={{ color: "var(--working)" }}>+{gitStatusQ.data.added}</span>
+                        )}
+                        {gitStatusQ.data.removed > 0 && (
+                          <span style={{ color: "var(--error)" }}>-{gitStatusQ.data.removed}</span>
+                        )}
+                      </span>
+                    )}
+                    {gitStatusQ.data.behind > 0 && (
+                      <span className="flex items-center gap-[3px]" style={{ color: "var(--warn, #e6b35a)" }}>
+                        ↓ {gitStatusQ.data.behind} behind
+                      </span>
+                    )}
+                    {gitStatusQ.data.ahead > 0 && (
+                      <span className="flex items-center gap-[3px]" style={{ color: "var(--working)" }}>
+                        ↑ {gitStatusQ.data.ahead} ahead
+                      </span>
+                    )}
+                    {gitStatusQ.data.added === 0 && gitStatusQ.data.removed === 0 && gitStatusQ.data.behind === 0 && gitStatusQ.data.ahead === 0 && (
+                      <span className="text-txt-4">clean</span>
+                    )}
                   </div>
                 )}
               </div>

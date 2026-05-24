@@ -5,9 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import {
-  AoSearch, AoFilter, AoChevronRight, AoSparkle, AoDown, AoTrash,
-} from "@/modules/summon/components/ao-icons";
+import { Icon } from "@/components/ui/icon";
 
 function fmtDur(ms: number): string {
   if (!ms) return "-";
@@ -122,7 +120,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
       {/* Toolbar */}
       <div className="flex items-center gap-[10px] mb-[16px]">
         <div className="flex-1 flex items-center gap-[10px] px-[14px] py-[9px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md text-ao-fg-2 focus-within:border-[var(--ao-accent-line)] focus-within:shadow-[0_0_0_3px_var(--ao-accent-softer)]">
-          <AoSearch size={14} />
+          <Icon name="search" size={14} />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -167,7 +165,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
             onClick={() => setConfirmWipe(true)}
             disabled={allRuns.length === 0}
           >
-            <AoTrash size={13} /> Wipe
+            <Icon name="trash" size={13} /> Wipe
           </button>
         )}
       </div>
@@ -176,7 +174,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
       {groups.length === 0 ? (
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="p-[var(--ao-pad-card)] !text-center !p-10 !text-ao-fg-2">
-            <AoSearch size={28} />
+            <Icon name="search" size={28} />
             <div className="mt-[10px] text-sm">
               {allRuns.length === 0 ? "No runs yet." : "No runs match your filter."}
             </div>
@@ -245,7 +243,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                         isOpen ? "rotate-180 text-ao-accent" : "text-[var(--ao-fg-3)]",
                       ].join(" ")}
                     >
-                      <AoDown size={14} />
+                      <Icon name="chevron-down" size={14} />
                     </span>
                   </div>
                   {isOpen && (
@@ -256,7 +254,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                       {/* Prompt panel */}
                       <div className="bg-ao-bg-1 border border-ao-line-1 rounded-ao-sm overflow-hidden">
                         <div className="px-[12px] py-[8px] border-b border-[var(--ao-line-0)] font-mono text-[11px] text-ao-fg-2 uppercase tracking-[0.08em] flex items-center gap-[8px]">
-                          <AoChevronRight size={11} /> prompt
+                          <Icon name="chevron" size={11} /> prompt
                         </div>
                         <div className="px-[12px] py-[10px] font-mono text-[12px] text-ao-fg-0 leading-[1.55] max-h-[160px] overflow-y-auto whitespace-pre-wrap break-words">
                           {r.prompt}
@@ -265,7 +263,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                       {/* Response panel */}
                       <div className="bg-ao-bg-1 border border-ao-line-1 rounded-ao-sm overflow-hidden">
                         <div className="px-[12px] py-[8px] border-b border-[var(--ao-line-0)] font-mono text-[11px] text-ao-fg-2 uppercase tracking-[0.08em] flex items-center gap-[8px]">
-                          <AoSparkle size={11} /> response
+                          <Icon name="sparkle" size={11} /> response
                         </div>
                         <div className="px-[12px] py-[10px] font-mono text-[12px] text-ao-fg-0 leading-[1.55] max-h-[160px] overflow-y-auto whitespace-pre-wrap break-words">
                           {r.output || "-"}

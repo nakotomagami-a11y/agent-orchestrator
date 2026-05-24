@@ -5,6 +5,7 @@ import { apiFetch } from "@agent-office/shared/hooks/api";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import type { AgentInstance, Project, ProjectMeta, ProjectSummary } from "@agent-office/shared/types";
+import type { GitStatus } from "@/app/api/projects/[id]/git-status/route";
 
 export function useProjects() {
   return useQuery({
@@ -58,6 +59,20 @@ export function useRemoveInstance() {
       qc.invalidateQueries({ queryKey: queryKeys.projects.all });
       qc.invalidateQueries({ queryKey: queryKeys.projects.detail(vars.projectId) });
     },
+  });
+}
+
+export function useGitStatus(projectId: string | null, hasCwd: boolean) {
+  return useQuery<GitStatus>({
+    queryKey: ["git-status", projectId],
+    queryFn: async () => {
+      const r = await fetch(`/api/projects/${encodeURIComponent(projectId!)}/git-status`);
+      if (!r.ok) throw new Error("git-status fetch failed");
+      return r.json() as Promise<GitStatus>;
+    },
+    enabled: !!projectId && hasCwd,
+    refetchInterval: 30_000,
+    staleTime: 20_000,
   });
 }
 

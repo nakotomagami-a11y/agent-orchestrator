@@ -1,3 +1,10 @@
+// Alias → full versioned model ID. Update here when Anthropic releases new versions.
+export const MODEL_FULL: Record<string, string> = {
+  haiku:  "claude-haiku-4-5",
+  sonnet: "claude-sonnet-4-6",
+  opus:   "claude-opus-4-7",
+};
+
 export const MODEL_OPTS = [
   "haiku",
   "sonnet",
