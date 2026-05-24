@@ -188,10 +188,11 @@ export function ProjectSwitcher() {
           role="menu"
           aria-label={t("project_switcher.menu_label")}
           onKeyDown={onKey}
-          className="absolute overflow-hidden border border-line-2 bg-bg-elev rounded-[var(--r-lg)] shadow-[var(--shadow-3)] z-50"
-          style={{ top: "calc(100% + 6px)", left: 0, width: 340 }}
+          className="absolute flex flex-col border border-line-2 bg-bg-elev rounded-[var(--r-lg)] shadow-[var(--shadow-3)] z-50 overflow-hidden"
+          style={{ top: "calc(100% + 6px)", left: 0, width: 340, maxHeight: "70vh" }}
         >
-          <div className="p-1">
+          {/* Fixed header */}
+          <div className="shrink-0 p-1 pb-0">
             <ProjectRow
               href={PAGE_ROUTES.projects}
               primary={t("project_switcher.all_projects")}
@@ -203,14 +204,16 @@ export function ProjectSwitcher() {
               onHover={() => setActiveIndex(0)}
               onSelect={() => navigate(PAGE_ROUTES.projects, null)}
             />
-
             <Separator />
             <SectionLabel>
               {isLoading
                 ? t("project_switcher.section_loading")
                 : t("project_switcher.section_count", { count: projects.length })}
             </SectionLabel>
+          </div>
 
+          {/* Scrollable project list */}
+          <div className="overflow-y-auto flex-1 min-h-0 px-1 [scrollbar-width:thin] [scrollbar-color:var(--line-strong)_transparent]">
             {!isLoading && projects.length === 0 ? (
               <div className="px-[10px] pt-2 pb-[10px] text-xs text-txt-3 italic">
                 {t("project_switcher.no_projects")}
@@ -252,8 +255,6 @@ export function ProjectSwitcher() {
                 );
               })
             )}
-
-            <Separator />
           </div>
 
           {creating ? (

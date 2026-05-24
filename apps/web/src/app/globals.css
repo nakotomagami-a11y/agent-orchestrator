@@ -9,7 +9,7 @@
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* ── Theme tokens — replaces tailwind.config.ts ── */
-@theme {
+@theme inline {
   /* Font families (Next.js injects --font-sans/--font-mono via html class; this is the fallback) */
   --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "Cascadia Code", monospace;
@@ -43,37 +43,40 @@
   --color-status-error:    var(--error);
   --color-status-thinking: var(--thinking);
 
-  /* Colors — ao-modal palette (scoped to .ao-modal, inherited by children) */
-  --color-ao-bg-0: var(--ao-bg-0);
-  --color-ao-bg-1: var(--ao-bg-1);
-  --color-ao-bg-2: var(--ao-bg-2);
-  --color-ao-bg-3: var(--ao-bg-3);
-  --color-ao-bg-4: var(--ao-bg-4);
-  --color-ao-line-1: var(--ao-line-1);
-  --color-ao-line-2: var(--ao-line-2);
-  --color-ao-fg-0: var(--ao-fg-0);
-  --color-ao-fg-1: var(--ao-fg-1);
-  --color-ao-fg-2: var(--ao-fg-2);
-  --color-ao-fg-3: var(--ao-fg-3);
-  --color-ao-accent:      var(--ao-accent);
-  --color-ao-accent-soft: var(--ao-accent-soft);
-  --color-ao-accent-line: var(--ao-accent-line);
-  --color-ao-ok:       var(--ao-ok);
-  --color-ao-ok-soft:  var(--ao-ok-soft);
-  --color-ao-warn:     var(--ao-warn);
-  --color-ao-warn-soft: var(--ao-warn-soft);
-  --color-ao-bad:      var(--ao-bad);
-  --color-ao-bad-soft: var(--ao-bad-soft);
+  /* Colors — ao-modal palette
+     Literal values here (not var() refs) so Tailwind utility classes
+     like border-ao-line-1 resolve correctly at :root level. The raw
+     --ao-* vars are kept on .ao-modal for arbitrary-value syntax usage. */
+  --color-ao-bg-0: #14100e;
+  --color-ao-bg-1: #1c1815;
+  --color-ao-bg-2: #221d1a;
+  --color-ao-bg-3: #2a2421;
+  --color-ao-bg-4: #322b27;
+  --color-ao-line-1: rgba(255, 245, 235, 0.10);
+  --color-ao-line-2: rgba(255, 245, 235, 0.16);
+  --color-ao-fg-0: #f4eee7;
+  --color-ao-fg-1: #d2c7bd;
+  --color-ao-fg-2: #9b9089;
+  --color-ao-fg-3: #6d655f;
+  --color-ao-accent:      #E95420;
+  --color-ao-accent-soft: rgba(233, 84, 32, 0.14);
+  --color-ao-accent-line: rgba(233, 84, 32, 0.32);
+  --color-ao-ok:       #4eb96f;
+  --color-ao-ok-soft:  rgba(78, 185, 111, 0.14);
+  --color-ao-warn:     #e6b35a;
+  --color-ao-warn-soft: rgba(230, 179, 90, 0.14);
+  --color-ao-bad:      #d9534f;
+  --color-ao-bad-soft: rgba(217, 83, 79, 0.14);
 
   /* Border radius */
   --radius-sm: var(--r-sm);
   --radius-md: var(--r-md);
   --radius-lg: var(--r-lg);
   --radius-xl: var(--r-xl);
-  --radius-ao-sm: var(--ao-radius-sm);
-  --radius-ao-md: var(--ao-radius-md);
-  --radius-ao-lg: var(--ao-radius-lg);
-  --radius-ao-xl: var(--ao-radius-xl);
+  --radius-ao-sm: 6px;
+  --radius-ao-md: 10px;
+  --radius-ao-lg: 14px;
+  --radius-ao-xl: 20px;
 
   /* Box shadows — defined directly to avoid self-referencing var() */
   --shadow-1: 0 1px 0 rgba(40,30,25,0.04), 0 1px 2px rgba(40,30,25,0.06);
@@ -157,7 +160,6 @@
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
-
 body {
   font-family: var(--font-sans);
   background:

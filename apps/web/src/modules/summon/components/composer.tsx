@@ -271,6 +271,9 @@ export function Composer({
     setAttachments([]);
     setSlashOpen(false);
     setPromptsOpen(false);
+    // Clear the DOM value before autosize so scrollHeight reflects the empty state,
+    // not the stale pre-render value (React batches the setValue update).
+    if (textRef.current) textRef.current.value = "";
     autosize(textRef.current);
     textRef.current?.focus();
   };

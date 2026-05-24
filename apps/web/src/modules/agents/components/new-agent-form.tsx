@@ -17,6 +17,7 @@ import {
 import { useCreateAgent } from "../hooks/use-agents";
 import { useInstalledSkills } from "@/modules/skills/hooks/use-skills";
 import { Button } from "@/components/ui/button";
+import { CodeEditor } from "@/components/ui/code-editor";
 
 const TOOL_SUGGESTIONS = [
   { id: "Read",      desc: "Read files" },
@@ -60,77 +61,6 @@ function countDirty(values: AgentFormValues): number {
   ).length;
 }
 
-/* ── Markdown editor ─────────────────────────────────────────── */
-
-function inlineMd(s: string): string {
-  return s
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
-}
-
-function renderPreview(md: string): string {
-  const out: string[] = [];
-  const lines = md.split("\n");
-  let para: string[] = [];
-  let list: string[] = [];
-  const flushPara = () => { if (para.length) { out.push(`<p>${inlineMd(para.join(" "))}</p>`); para = []; } };
-  const flushList = () => { if (list.length) { out.push(`<ul>${list.map((it) => `<li>${inlineMd(it)}</li>`).join("")}</ul>`); list = []; } };
-  for (const raw of lines) {
-    const ln = raw.trimEnd();
-    if (/^#\s+/.test(ln)) { flushList(); flushPara(); out.push(`<h1>${inlineMd(ln.replace(/^#\s+/, ""))}</h1>`); continue; }
-    if (/^##\s+/.test(ln)) { flushList(); flushPara(); out.push(`<h2>${inlineMd(ln.replace(/^##\s+/, ""))}</h2>`); continue; }
-    if (/^###\s+/.test(ln)) { flushList(); flushPara(); out.push(`<h3>${inlineMd(ln.replace(/^###\s+/, ""))}</h3>`); continue; }
-    if (/^[-*]\s+/.test(ln)) { flushPara(); list.push(ln.replace(/^[-*]\s+/, "")); continue; }
-    if (!ln.trim()) { flushPara(); flushList(); continue; }
-    flushList(); para.push(ln);
-  }
-  flushPara(); flushList();
-  return out.join("");
-}
-
-function MarkdownEditor({ value, onChange, hasError }: { value: string; onChange: (v: string) => void; hasError?: boolean }) {
-  const [view, setView] = useState<"write" | "preview">("write");
-  const lines = value.split("\n");
-
-  return (
-    <div className={`markdown-editor${hasError ? " error" : ""}`}>
-      <div className="tabs">
-        <button type="button" className={view === "write" ? "active text-txt [border-bottom-color:var(--acc)]" : "hover:text-txt"} onClick={() => setView("write")}>
-          <Icon name="pen" size={12} /> Write
-        </button>
-        <button type="button" className={view === "preview" ? "active text-txt [border-bottom-color:var(--acc)]" : "hover:text-txt"} onClick={() => setView("preview")}>
-          <Icon name="play" size={12} /> Preview
-        </button>
-        <div className="ml-auto flex gap-[2px]">
-          <button type="button" aria-label="heading" title="Heading" className="text-txt-4 px-[6px] py-[4px] rounded-[4px] hover:bg-bg-3 hover:text-txt-2"><Icon name="pen" size={13} /></button>
-          <button type="button" aria-label="code" title="Code" className="text-txt-4 px-[6px] py-[4px] rounded-[4px] hover:bg-bg-3 hover:text-txt-2"><Icon name="terminal" size={13} /></button>
-          <button type="button" aria-label="list" title="List" className="text-txt-4 px-[6px] py-[4px] rounded-[4px] hover:bg-bg-3 hover:text-txt-2"><Icon name="list" size={13} /></button>
-        </div>
-      </div>
-      {view === "write" ? (
-        <div className="editor">
-          <div className="gutter">
-            {lines.map((_, i) => <div key={i}>{i + 1}</div>)}
-          </div>
-          <textarea
-            className="code-area"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Write your system prompt here…"
-            spellCheck={false}
-          />
-        </div>
-      ) : (
-        <div
-          className="preview"
-          dangerouslySetInnerHTML={{ __html: renderPreview(value) || "<p style='color:var(--txt-4)'>Nothing to preview yet.</p>" }}
-        />
-      )}
-    </div>
-  );
-}
 
 /* ── Section card ─────────────────────────────────────────────── */
 
@@ -495,7 +425,12 @@ export function NewAgentForm() {
             sub={`markdown body · ${values.body.length.toLocaleString()} chars · ~${Math.round(values.body.length / 4)} tokens`}
             complete={sec4Done}
           >
-            <MarkdownEditor value={values.body} onChange={(v) => set("body", v)} hasError={!!errFor("body")} />
+            <CodeEditor
+              value={values.body}
+              onChange={(v) => set("body", v)}
+              placeholder="Write your system prompt here…"
+              minHeight={220}
+            />
             {errFor("body") && <span className="text-[11px] text-status-error">{errFor("body")}</span>}
             {serverError && (
               <div className="bg-status-error text-white rounded-[6px] px-3 py-2 text-[12px]">

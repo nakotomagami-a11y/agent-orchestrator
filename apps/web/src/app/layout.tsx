@@ -28,6 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang={locale} data-theme="light" className={`${ubuntu.variable} ${ubuntuMono.variable}`}>
+      <style>{`button:not(:disabled){cursor:pointer}button:disabled{cursor:not-allowed}`}</style>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>

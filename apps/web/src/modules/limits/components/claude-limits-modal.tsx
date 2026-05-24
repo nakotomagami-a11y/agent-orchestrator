@@ -19,6 +19,25 @@ import { useRuns } from "@/modules/runs/hooks/use-runs";
 const fmtUSD = (n: number, dec = 2): string => `$${n.toFixed(dec)}`;
 const fmtTok = (n: number): string => n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
 
+function modelLabel(raw: string): { name: string; sub: string } {
+  const exact: Record<string, { name: string; sub: string }> = {
+    "sonnet":              { name: "Sonnet",       sub: "claude-sonnet-4" },
+    "opus":                { name: "Opus",          sub: "claude-opus-4" },
+    "haiku":               { name: "Haiku",         sub: "claude-haiku-4" },
+    "default":             { name: "Unknown",       sub: "model not captured" },
+    "unknown":             { name: "Unknown",       sub: "model not captured" },
+  };
+  if (exact[raw]) return exact[raw];
+  // claude-{family}-{version} full IDs → e.g. "claude-opus-4-7" → "Opus 4.7"
+  const m = raw.match(/^claude-([a-z]+)-([\d]+)(?:-([\d]+))?/i);
+  if (m) {
+    const family = m[1]!.charAt(0).toUpperCase() + m[1]!.slice(1);
+    const ver = m[3] ? `${m[2]}.${m[3]}` : m[2]!;
+    return { name: `${family} ${ver}`, sub: raw };
+  }
+  return { name: raw, sub: raw };
+}
+
 /* ------------------------------------------------------------------ */
 /* Plan config                                                          */
 /* ------------------------------------------------------------------ */
@@ -195,23 +214,37 @@ function BehaviorButtons({
   );
 }
 
+const CHART_H = 60; // fixed pixel height for the bar area
+
 function DailyBars({ last14 }: { last14: { label: string; spend: number }[] }) {
   const max = Math.max(...last14.map((d) => d.spend), 0.01);
   return (
     <div className="flex flex-col gap-[6px]">
-      <div className="flex gap-[3px] h-[60px] items-end" role="img" aria-label="Last 14 days of spend">
+      <div className="flex gap-[3px]" style={{ height: CHART_H }} role="img" aria-label="Last 14 days of spend">
         {last14.map((d, i) => {
           const isToday = i === last14.length - 1;
-          const hPct = Math.max(3, (d.spend / max) * 100);
+          const barPx = d.spend > 0 ? Math.max(4, Math.round((d.spend / max) * CHART_H)) : 0;
           return (
-            <div key={i} className="flex-1 flex flex-col items-center justify-end relative cursor-default group/bar">
-              <div className="absolute bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2 hidden group-hover/bar:block bg-ao-bg-4 border border-ao-line-2 rounded-[6px] px-2 py-1 text-[10.5px] whitespace-nowrap text-ao-fg-1 font-mono z-10 pointer-events-none">
-                {fmtUSD(d.spend)} · {d.label}
-              </div>
-              <div
-                className={`w-full rounded-[3px_3px_0_0] min-h-[3px] transition-[background] duration-[120ms] ${isToday ? "bg-ao-accent" : "bg-ao-bg-4 group-hover/bar:bg-ao-fg-3"}`}
-                style={{ height: `${hPct}%` }}
-              />
+            <div
+              key={i}
+              className="flex-1 flex flex-col justify-end relative cursor-default group/bar"
+              style={{ height: CHART_H }}
+            >
+              {d.spend > 0 && (
+                <div className="absolute bottom-[calc(100%+4px)] left-1/2 -translate-x-1/2 hidden group-hover/bar:flex bg-ao-bg-4 border border-ao-line-2 rounded-[6px] px-[8px] py-[5px] text-[10.5px] whitespace-nowrap text-ao-fg-1 font-mono z-10 pointer-events-none gap-[4px]">
+                  <span className="text-ao-fg-0">{fmtUSD(d.spend)}</span>
+                  <span className="text-ao-fg-3">·</span>
+                  <span>{d.label}</span>
+                </div>
+              )}
+              {barPx > 0 ? (
+                <div
+                  className={`w-full rounded-[2px_2px_0_0] transition-[background] duration-[100ms] ${isToday ? "bg-ao-accent" : "bg-ao-fg-2 group-hover/bar:bg-ao-fg-0"}`}
+                  style={{ height: barPx }}
+                />
+              ) : (
+                <div className={`w-full h-[2px] ${isToday ? "bg-ao-accent opacity-30" : "bg-ao-line-2"}`} />
+              )}
             </div>
           );
         })}
@@ -231,7 +264,7 @@ function ByModel({
   modelRows,
   totalCost,
 }: {
-  modelRows: [string, { runs: number; tokens: number; cost: number; sub: string }][];
+  modelRows: [string, { runs: number; tokens: number; cost: number }][];
   totalCost: number;
 }) {
   if (modelRows.length === 0) {
@@ -242,11 +275,12 @@ function ByModel({
       {modelRows.map(([id, m]) => {
         const pct = totalCost > 0 ? (m.cost / totalCost) * 100 : 0;
         const avg = m.runs > 0 ? m.cost / m.runs : 0;
+        const label = modelLabel(id);
         return (
           <div key={id} className="grid gap-2 items-center" style={{ gridTemplateColumns: "90px 1fr auto auto" }}>
             <div className="text-[12px] font-semibold text-ao-fg-0 font-mono">
-              {id}
-              <span className="block text-[10px] text-ao-fg-3 font-normal">{m.sub}</span>
+              {label.name}
+              <span className="block text-[10px] text-ao-fg-3 font-normal">{label.sub}</span>
             </div>
             <div className="flex items-center gap-[6px]">
               <div className="flex-1 h-[5px] bg-ao-bg-3 rounded-full overflow-hidden" aria-label={`${pct.toFixed(0)}% of cost`}>
@@ -323,8 +357,7 @@ export function ClaudeLimitsModal() {
   const hardCap   = useClaudeLimitsStore((s) => s.hardCap);
   const update    = useClaudeLimitsStore((s) => s.update);
 
-  // Local editable state - only written to store on Save
-  const [localPlan,     setLocalPlan]     = useState<ClaudePlan>(plan);
+  // Local editable state for user-configurable fields only (plan is read-only from credentials)
   const [localQuota,    setLocalQuota]    = useState(quotaUsd);
   const [localPeriod,   setLocalPeriod]   = useState<LimitsPeriod>(period);
   const [localHardCap,  setLocalHardCap]  = useState<"off" | "warn" | "block">(hardCap);
@@ -332,15 +365,14 @@ export function ClaudeLimitsModal() {
   // Sync local state whenever the modal opens
   useEffect(() => {
     if (open) {
-      setLocalPlan(plan);
       setLocalQuota(quotaUsd);
       setLocalPeriod(period);
       setLocalHardCap(hardCap);
     }
-  }, [open, plan, quotaUsd, period, hardCap]);
+  }, [open, quotaUsd, period, hardCap]);
 
   const onSave = () => {
-    update({ plan: localPlan, quotaUsd: localQuota, period: localPeriod, hardCap: localHardCap });
+    update({ quotaUsd: localQuota, period: localPeriod, hardCap: localHardCap });
     setOpen(false);
   };
 
@@ -377,15 +409,14 @@ export function ClaudeLimitsModal() {
 
   // By model (current period)
   const { modelRows, totalModelCost } = useMemo(() => {
-    const byModel = new Map<string, { runs: number; tokens: number; cost: number; sub: string }>();
+    const byModel = new Map<string, { runs: number; tokens: number; cost: number }>();
     for (const r of inPeriod) {
       const k = r.model || "unknown";
-      const cur = byModel.get(k) ?? { runs: 0, tokens: 0, cost: 0, sub: k };
+      const cur = byModel.get(k) ?? { runs: 0, tokens: 0, cost: 0 };
       byModel.set(k, {
         runs:   cur.runs + 1,
         tokens: cur.tokens + (r.tokensIn || 0) + (r.tokensOut || 0),
         cost:   cur.cost + (r.cost || 0),
-        sub:    cur.sub,
       });
     }
     const rows = [...byModel.entries()].sort((a, b) => b[1].cost - a[1].cost);
@@ -443,7 +474,7 @@ export function ClaudeLimitsModal() {
             {/* Plan */}
             <section className="flex flex-col gap-3">
               <SectionHead title="Plan" sub="determines model access and rate limits" />
-              <PlanGrid value={localPlan} />
+              <PlanGrid value={plan} />
             </section>
 
             {/* Quota cap + period */}

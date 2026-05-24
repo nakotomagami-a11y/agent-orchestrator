@@ -12,13 +12,14 @@ export interface ClaudeLimits {
   hardCap: "off" | "warn" | "block";
 }
 
-const DEFAULTS: ClaudeLimits = { plan: "pro", quotaUsd: 0, period: "week", hardCap: "warn" };
+const DEFAULTS: ClaudeLimits = { plan: "free", quotaUsd: 0, period: "week", hardCap: "warn" };
 
 type LimitsState = ClaudeLimits & {
   open: boolean;
   hydrated: boolean;
   setOpen: (next: boolean) => void;
-  update: (patch: Partial<ClaudeLimits>) => void;
+  /** Update user-configurable settings only (plan is read-only — sourced from credentials). */
+  update: (patch: Omit<Partial<ClaudeLimits>, "plan">) => void;
   hydrate: () => void;
 };
 
@@ -66,28 +67,29 @@ export const useClaudeLimitsStore = create<LimitsState>((set, get) => ({
   hydrated: false,
   setOpen: (next) => set({ open: next }),
   update: (patch) => {
-    const current: ClaudeLimits = {
-      plan: get().plan,
-      quotaUsd: get().quotaUsd,
-      period: get().period,
-      hardCap: get().hardCap,
-    };
-    const merged: ClaudeLimits = { ...current, ...patch };
+    const merged = { ...get(), ...patch };
     set(merged);
+    // Persist only user-configurable fields (plan comes from credentials, not stored here)
+    const toSave = { quotaUsd: merged.quotaUsd, period: merged.period, hardCap: merged.hardCap };
     fetch("/api/ui-settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "claude-limits": JSON.stringify(merged) }),
+      body: JSON.stringify({ "claude-limits": JSON.stringify(toSave) }),
     }).catch(() => { /* best-effort */ });
   },
   hydrate: () => {
     if (get().hydrated) return;
     set({ hydrated: true });
-    fetch("/api/ui-settings")
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
-        const stored = data["claude-limits"];
-        if (stored) set(parseLimits(stored));
+    // Load user settings and real plan in parallel
+    Promise.all([
+      fetch("/api/ui-settings").then((r) => r.json() as Promise<Record<string, string>>),
+      fetch("/api/account").then((r) => r.json() as Promise<{ plan: ClaudePlan }>),
+    ])
+      .then(([settings, account]) => {
+        const stored = settings["claude-limits"];
+        const limits = stored ? parseLimits(stored) : DEFAULTS;
+        // Real plan from credentials always wins
+        set({ ...limits, plan: account.plan });
       })
       .catch(() => { /* ignore */ });
   },
