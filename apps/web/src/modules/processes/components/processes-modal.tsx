@@ -340,24 +340,24 @@ export function ProcessesModal() {
           </div>
 
           {/* Stats bar */}
-          <div className="flex items-center gap-0 px-5 py-[10px] bg-ao-bg-2 border-b border-[var(--ao-line-0)] shrink-0">
-            <div className="flex flex-col gap-0.5 pr-4">
-              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">Total</span>
-              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{processes.length}<span className="text-[10px] text-ao-fg-3 font-normal"> processes</span></span>
+          <div className="flex items-stretch flex-wrap gap-4 px-[22px] py-3 bg-ao-bg-2 border-b border-[var(--ao-line-1)] shrink-0">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9.5px] text-ao-fg-3 uppercase tracking-[0.08em] font-mono">Total</span>
+              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{processes.length}<span className="text-[11px] text-ao-fg-2 font-normal ml-[3px]">processes</span></span>
             </div>
-            <span className="w-px h-[26px] bg-[var(--ao-line-0)] mx-3 shrink-0" />
-            <div className="flex flex-col gap-0.5 pr-4">
-              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">From this project</span>
-              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{projectCount}<span className="text-[10px] text-ao-fg-3 font-normal"> servers</span></span>
+            <span className="w-px self-stretch bg-[var(--ao-line-1)] shrink-0" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9.5px] text-ao-fg-3 uppercase tracking-[0.08em] font-mono">From this project</span>
+              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{projectCount}<span className="text-[11px] text-ao-fg-2 font-normal ml-[3px]">servers</span></span>
             </div>
-            <span className="w-px h-[26px] bg-[var(--ao-line-0)] mx-3 shrink-0" />
-            <div className="flex flex-col gap-0.5 pr-4">
-              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">Memory</span>
+            <span className="w-px self-stretch bg-[var(--ao-line-1)] shrink-0" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9.5px] text-ao-fg-3 uppercase tracking-[0.08em] font-mono">Memory</span>
               <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{fmtMem(totalMem)}</span>
             </div>
-            <span className="w-px h-[26px] bg-[var(--ao-line-0)] mx-3 shrink-0" />
-            <div className="flex flex-col gap-0.5 pr-4">
-              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">Health</span>
+            <span className="w-px self-stretch bg-[var(--ao-line-1)] shrink-0" />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-[9.5px] text-ao-fg-3 uppercase tracking-[0.08em] font-mono">Health</span>
               <span className="text-[14px] font-semibold text-ao-fg-0 font-mono flex items-center gap-1">
                 <span className="inline-flex items-center gap-[5px] py-[2px] px-[6px] rounded-full text-[10px] font-mono normal-case tracking-normal border bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]">
                   <span className="text-[7px]">●</span>{processes.length} healthy
