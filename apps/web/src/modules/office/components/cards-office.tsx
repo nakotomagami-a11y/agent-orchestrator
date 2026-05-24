@@ -175,7 +175,7 @@ export function CardsOffice({
   }
 
   return (
-    <div className="flex flex-col min-h-0 flex-1 overflow-hidden">
+    <div className="flex flex-col min-h-0 h-full overflow-hidden">
       <header className="border-b border-line shrink-0 flex items-center gap-[16px] px-[28px] pt-[18px] pb-[14px]">
         <div className="flex flex-col gap-[2px]">
           <h1 className="font-bold flex items-baseline gap-[10px] m-0 text-[22px] tracking-[-0.01em]">
