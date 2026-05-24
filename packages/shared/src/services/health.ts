@@ -2,7 +2,7 @@
 
 import { spawn } from "node:child_process";
 import type { HealthInfo } from "../types/index";
-import { buildAugmentedPath } from "./paths";
+import { buildAugmentedPath, resolveClaudeCommand } from "./paths";
 
 interface HealthState {
   cached: HealthInfo | null;
@@ -23,9 +23,12 @@ function probe(): Promise<HealthInfo> {
     let stdout = "";
     let stderr = "";
     try {
-      const proc = spawn("claude", ["--version"], {
+      const cmd = resolveClaudeCommand();
+      const useShell = process.platform === "win32" && cmd.toLowerCase().endsWith(".cmd");
+      const proc = spawn(cmd, ["--version"], {
         stdio: ["ignore", "pipe", "pipe"],
         env: { ...process.env, PATH: buildAugmentedPath() },
+        shell: useShell,
       });
       proc.stdout.on("data", (chunk: Buffer) => {
         stdout += chunk.toString();

@@ -9,7 +9,7 @@ import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
 import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseToolEvent, SseUsageEvent } from "../types/index";
 import { log } from "./log";
-import { buildAugmentedPath } from "./paths";
+import { buildAugmentedPath, resolveClaudeCommand } from "./paths";
 import { pushRun } from "./store";
 import { appendRun as appendHistory } from "./history";
 import * as db from "./db";
@@ -180,10 +180,18 @@ export interface StartRunOpts {
 
 export function startRun(opts: StartRunOpts): { runId: string } {
   const runId = randomUUID();
-  const proc = spawn("claude", opts.args, {
+  // shell:true only as a last-resort fallback — needed for .cmd files on
+  // Windows but it routes through cmd.exe whose quoting corrupts multi-line
+  // arguments like --append-system-prompt. resolveClaudeCommand() prefers
+  // the real .exe so we can avoid the shell.
+  const cmd = resolveClaudeCommand();
+  const useShell = process.platform === "win32" && cmd.toLowerCase().endsWith(".cmd");
+  const proc = spawn(cmd, opts.args, {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: opts.cwd,
     env: { ...process.env, PATH: buildAugmentedPath() },
+    shell: useShell,
+    windowsVerbatimArguments: false,
   });
   const run: LiveRun = {
     id: runId,
@@ -251,10 +259,14 @@ export function startRun(opts: StartRunOpts): { runId: string } {
         ...run.args.slice(resumeIdx + 2), // drop "--resume" and the session ID value after it
       ];
       log.info("run.retry_no_resume", { runId: run.id });
-      const retryProc = spawn("claude", retryArgs, {
+      const retryCmd = resolveClaudeCommand();
+      const retryUseShell = process.platform === "win32" && retryCmd.toLowerCase().endsWith(".cmd");
+      const retryProc = spawn(retryCmd, retryArgs, {
         stdio: ["ignore", "pipe", "pipe"],
         cwd: run.cwd,
         env: { ...process.env, PATH: buildAugmentedPath() },
+        shell: retryUseShell,
+        windowsVerbatimArguments: false,
       });
       run.proc = retryProc;
       run.stderrBuf = "";

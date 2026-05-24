@@ -1,9 +1,10 @@
 // Centralised on-disk paths. Keep these identical to the legacy server's
 // values so existing user data still loads.
 
-import { existsSync, readdirSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { delimiter, dirname, join, resolve as resolvePath } from "node:path";
 
 export const HOME = homedir();
 export const CLAUDE_DIR = join(HOME, ".claude");
@@ -90,14 +91,78 @@ export function buildAugmentedPath(): string {
     }
   }
 
-  // Other common global bin locations
-  extra.push(join(HOME, ".local", "bin"));
-  extra.push("/usr/local/bin");
-  extra.push("/usr/bin");
-  extra.push("/bin");
+  if (process.platform === "win32") {
+    // Common Windows locations where the Claude CLI lands when installed via npm.
+    extra.push(join(process.env.APPDATA ?? join(HOME, "AppData", "Roaming"), "npm"));
+    extra.push(join(HOME, "AppData", "Local", "npm"));
+  } else {
+    extra.push(join(HOME, ".local", "bin"));
+    extra.push("/usr/local/bin");
+    extra.push("/usr/bin");
+    extra.push("/bin");
+  }
 
   const existing = process.env.PATH ?? "";
-  const parts = [...extra, ...existing.split(":").filter(Boolean)];
+  const parts = [...extra, ...existing.split(delimiter).filter(Boolean)];
   // Deduplicate while preserving order
-  return [...new Set(parts)].join(":");
+  return [...new Set(parts)].join(delimiter);
+}
+
+// Resolve the actual Claude CLI binary path. Node's spawn() on Windows won't
+// pick up `claude.cmd` from a bare "claude" name — we need either shell:true
+// (which is unsafe with user-supplied prompt args) or the full path. Cache it.
+let cachedClaudeCommand: string | null = null;
+export function resolveClaudeCommand(): string {
+  if (process.platform !== "win32") return "claude";
+  if (cachedClaudeCommand) return cachedClaudeCommand;
+  try {
+    const out = execSync("where claude", {
+      encoding: "utf8",
+      env: { ...process.env, PATH: buildAugmentedPath() },
+    });
+    const lines = out.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
+    // Prefer .exe if present in PATH — it's a real executable and Node's
+    // spawn() can launch it directly without shell:true. Using .cmd would
+    // force shell:true, and cmd.exe quoting mangles multi-line arguments
+    // like --append-system-prompt (newlines/specials get treated as arg
+    // boundaries), which corrupts the prompt sent to claude.
+    let pick = lines.find((l) => l.toLowerCase().endsWith(".exe"));
+
+    // If no .exe in PATH, try to extract the real .exe path from the .cmd
+    // shim — npm's global shim is a thin batch wrapper that calls the
+    // underlying .exe out of node_modules.
+    if (!pick) {
+      const cmdPath = lines.find((l) => l.toLowerCase().endsWith(".cmd"));
+      if (cmdPath) {
+        const real = readExeFromCmdShim(cmdPath);
+        if (real && existsSync(real)) pick = real;
+        else pick = cmdPath; // fall back to the .cmd shim
+      }
+    }
+
+    pick = pick ?? lines[0];
+    if (pick) cachedClaudeCommand = pick;
+  } catch {
+    // ignore — fall through
+  }
+  return cachedClaudeCommand ?? "claude";
+}
+
+function readExeFromCmdShim(cmdPath: string): string | null {
+  try {
+    const content = readFileSync(cmdPath, "utf8");
+    // Match the .exe path that the shim invokes, e.g.:
+    //   "%dp0%\node_modules\...\bin\claude.exe"  %*
+    const m = content.match(/"([^"\r\n]+\.exe)"\s+%\*/i);
+    if (!m) return null;
+    // Replace whichever batch %dp0 variant the shim used — covers all four
+    // forms (%dp0%, %~dp0, %~dp0%, %dp0) so we work with shims emitted by
+    // modern npm (cmd-shim with `SET dp0=%~dp0`), yarn, older npm, and
+    // pnpm polyfills alike.
+    const raw = m[1]!.replace(/%~?dp0%?\\?/i, dirname(cmdPath) + "\\");
+    return resolvePath(raw);
+  } catch {
+    return null;
+  }
 }
