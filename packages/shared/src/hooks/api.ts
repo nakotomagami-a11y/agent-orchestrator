@@ -6,7 +6,14 @@
  */
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, message: string, public readonly fields?: Record<string, string[]>) {
+  constructor(
+    public readonly status: number,
+    message: string,
+    public readonly fields?: Record<string, string[]>,
+    // Raw parsed response body for non-2xx responses. Callers can inspect
+    // domain-specific fields (e.g. softCap on 409 INSTANCE_CAP_EXCEEDED).
+    public readonly data?: Record<string, unknown>,
+  ) {
     super(message);
     this.name = "ApiError";
   }
@@ -53,14 +60,20 @@ export async function apiFetch<T>(url: string, init: ApiInit = {}): Promise<T> {
   const res = await fetch(url, requestInit);
 
   if (!res.ok) {
+    let raw: unknown;
     let envelope: ErrorEnvelope = {};
     try {
-      envelope = parseErrorEnvelope(await res.json());
+      raw = await res.json();
+      envelope = parseErrorEnvelope(raw);
     } catch {
       /* non-json error */
     }
     const message = envelope.error ?? res.statusText ?? `HTTP ${res.status}`;
-    throw new ApiError(res.status, message, envelope.fields);
+    const data =
+      raw && typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : undefined;
+    throw new ApiError(res.status, message, envelope.fields, data);
   }
 
   if (asText) {

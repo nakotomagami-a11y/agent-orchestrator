@@ -42,8 +42,7 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
 
         {/* Header row — kind labels */}
         <div
-          className="grid bg-[rgba(0,0,0,0.2)] border-b border-[var(--ao-line-1)] px-[10px] py-[9px]"
-          style={{ gridTemplateColumns: "60px repeat(5, 1fr)" }}
+          className="grid [grid-template-columns:60px_repeat(5,1fr)] bg-[rgba(0,0,0,0.2)] border-b border-[var(--ao-line-1)] px-[10px] py-[9px]"
         >
           <div />
           {UNIT_KINDS.map((kind) => (
@@ -61,8 +60,7 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
           {UNIT_FACTIONS.map((faction) => (
             <div
               key={faction}
-              className="grid items-center px-[10px] py-[5px]"
-              style={{ gridTemplateColumns: "60px repeat(5, 1fr)" }}
+              className="grid [grid-template-columns:60px_repeat(5,1fr)] items-center px-[10px] py-[5px]"
             >
               {/* Faction label */}
               <div className="flex items-center gap-[7px] pr-[6px]">

@@ -260,6 +260,14 @@ function DailyBars({ last14 }: { last14: { label: string; spend: number }[] }) {
   );
 }
 
+function modelBarGradient(modelId: string): string {
+  const id = modelId.toLowerCase();
+  if (id.includes("sonnet")) return "linear-gradient(90deg, #b6b3ff, #7a76e0)";
+  if (id.includes("haiku"))  return "linear-gradient(90deg, #80e1c5, #2e8f73)";
+  if (id.includes("opus"))   return "linear-gradient(90deg, #ffd591, #f0a548)";
+  return "linear-gradient(90deg, color-mix(in oklab, var(--ao-accent) 80%, white), var(--ao-accent))";
+}
+
 function ByModel({
   modelRows,
   totalCost,
@@ -271,30 +279,33 @@ function ByModel({
     return <div className="text-[12px] text-ao-fg-3 py-2">No runs in this period.</div>;
   }
   return (
-    <div className="flex flex-col gap-2">
+    <div className="bg-ao-bg-2 border border-ao-line-1 rounded-[10px] overflow-hidden">
       {modelRows.map(([id, m]) => {
         const pct = totalCost > 0 ? (m.cost / totalCost) * 100 : 0;
         const avg = m.runs > 0 ? m.cost / m.runs : 0;
         const label = modelLabel(id);
         return (
-          <div key={id} className="grid gap-2 items-center" style={{ gridTemplateColumns: "90px 1fr auto auto" }}>
-            <div className="text-[12px] font-semibold text-ao-fg-0 font-mono">
-              {label.name}
-              <span className="block text-[10px] text-ao-fg-3 font-normal">{label.sub}</span>
-            </div>
-            <div className="flex items-center gap-[6px]">
-              <div className="flex-1 h-[5px] bg-ao-bg-3 rounded-full overflow-hidden" aria-label={`${pct.toFixed(0)}% of cost`}>
-                <div className="h-full bg-ao-accent rounded-full" style={{ width: `${pct}%` }} />
+          <div key={id} className="flex flex-col gap-[10px] px-[18px] py-[16px] border-t border-[var(--ao-line-0)] first:border-t-0">
+            {/* Row 1: name · pct · cost */}
+            <div className="grid items-baseline gap-[14px]" style={{ gridTemplateColumns: "1fr auto auto" }}>
+              <div className="flex items-baseline gap-[10px] min-w-0">
+                <span className="font-bold text-[15px] text-ao-fg-0 tracking-[-0.005em]">{label.name}</span>
+                <span className="font-mono text-[10.5px] text-ao-fg-3 tracking-[0.04em]">{label.sub}</span>
               </div>
-              <span className="text-[10px] text-ao-fg-3 font-mono min-w-[28px] text-right">{pct.toFixed(0)}%</span>
+              <span className="font-mono font-bold text-[14px] text-ao-fg-1 tracking-[0.02em]">{pct.toFixed(0)}%</span>
+              <span className="font-mono font-bold text-[16px] text-ao-fg-0">{fmtUSD(m.cost)}</span>
             </div>
-            <div className="flex flex-col items-end gap-[1px]">
-              <span className="text-[11px] font-mono text-ao-fg-0">{m.runs} runs</span>
-              <span className="text-[10px] font-mono text-ao-fg-3">{fmtTok(m.tokens)} tok</span>
+
+            {/* Bar */}
+            <div className="h-[8px] rounded-full overflow-hidden border border-[var(--ao-line-0)]" style={{ background: "var(--ao-bg-1)" }}>
+              <div className="h-full rounded-full transition-[width_.4s_ease]" style={{ width: `${pct}%`, background: modelBarGradient(id) }} />
             </div>
-            <div className="flex flex-col items-end gap-[1px]">
-              <span className="text-[11px] font-mono text-ao-fg-0">{fmtUSD(m.cost)}</span>
-              <span className="text-[10px] font-mono text-ao-fg-3">{fmtUSD(avg, 3)}/run</span>
+
+            {/* Meta */}
+            <div className="flex gap-[18px] font-mono text-[11px] text-ao-fg-3">
+              <span><span className="text-ao-fg-1">{m.runs}</span> runs</span>
+              <span><span className="text-ao-fg-1">{fmtTok(m.tokens)}</span> tokens</span>
+              <span><span className="text-ao-fg-1">{fmtUSD(avg, 3)}</span> / run</span>
             </div>
           </div>
         );
@@ -313,27 +324,67 @@ function TopAgents({
   if (agentRows.length === 0) {
     return <div className="text-[12px] text-ao-fg-3 py-2">No runs in this period.</div>;
   }
+  const maxCost = agentRows[0]?.[1].cost ?? 1;
   return (
-    <div className="flex flex-col gap-2">
+    <div className="bg-ao-bg-2 border border-ao-line-1 rounded-[10px] overflow-hidden">
       {agentRows.map(([id, a], i) => {
         const pct = totalCost > 0 ? (a.cost / totalCost) * 100 : 0;
+        const barPct = Math.max(2, (a.cost / maxCost) * 100);
         const initial = (a.name || id).charAt(0).toUpperCase();
+        const isTop = i === 0;
         return (
-          <div key={id} className="flex items-center gap-2">
-            <div className="text-[10px] text-ao-fg-3 font-mono w-5 text-right shrink-0">#{i + 1}</div>
-            <div className="flex items-center gap-[6px] min-w-0 w-[100px] shrink-0">
-              <div className="w-[22px] h-[22px] rounded-[6px] bg-ao-bg-3 border border-ao-line-1 grid place-items-center text-[11px] font-bold text-ao-fg-1 shrink-0 font-mono" aria-hidden="true">{initial}</div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-semibold text-ao-fg-0 overflow-hidden text-ellipsis whitespace-nowrap">{id}</div>
-                <div className="text-[9.5px] text-ao-fg-3">{a.runs} runs</div>
-              </div>
+          <div
+            key={id}
+            className="grid items-center gap-[14px] px-[16px] py-[12px] border-t border-[var(--ao-line-0)] first:border-t-0 transition-[background_.12s]"
+            style={{
+              gridTemplateColumns: "24px 32px minmax(0,1fr) 1fr 70px",
+              background: isTop ? "linear-gradient(90deg, var(--ao-accent-softer), transparent 50%)" : undefined,
+            }}
+          >
+            {/* Rank */}
+            <div
+              className="font-mono text-[11px] text-right tracking-[0.04em]"
+              style={{ color: isTop ? "var(--ao-accent)" : "var(--ao-fg-3)", fontWeight: isTop ? 700 : 400 }}
+            >
+              {i + 1}
             </div>
-            <div className="flex-1 flex items-center gap-[6px] min-w-0">
-              <div className="flex-1 h-[5px] bg-ao-bg-3 rounded-full overflow-hidden" aria-label={`${pct.toFixed(0)}% of agent spend`}>
-                <div className="h-full bg-ao-accent rounded-full" style={{ width: `${pct}%` }} />
+
+            {/* Avatar */}
+            <div
+              className="w-8 h-8 rounded-[8px] grid place-items-center font-mono font-bold text-[13px] text-ao-fg-1 shrink-0"
+              style={{
+                background: "var(--ao-bg-3)",
+                border: isTop ? "1px solid var(--ao-accent-line)" : "1px solid var(--ao-line-1)",
+                boxShadow: isTop ? "0 0 12px var(--ao-accent-softer)" : undefined,
+              }}
+              aria-hidden="true"
+            >
+              {initial}
+            </div>
+
+            {/* Name + runs */}
+            <div className="min-w-0">
+              <div className="font-semibold text-[13px] text-ao-fg-0 truncate">{id}</div>
+              <div className="font-mono text-[10.5px] text-ao-fg-3 mt-[2px]">{a.runs} runs</div>
+            </div>
+
+            {/* Bar + pct */}
+            <div className="flex items-center gap-[8px]">
+              <div className="flex-1 h-[6px] rounded-full overflow-hidden border border-[var(--ao-line-0)] min-w-0" style={{ background: "var(--ao-bg-1)" }}>
+                <div
+                  className="h-full rounded-full transition-[width_.4s_ease]"
+                  style={{ width: `${barPct}%`, background: "linear-gradient(90deg, color-mix(in oklab, var(--ao-accent) 75%, white), var(--ao-accent))" }}
+                />
               </div>
-              <span className="text-[10px] text-ao-fg-3 font-mono min-w-[28px] text-right shrink-0">{pct.toFixed(0)}%</span>
-              <span className="text-[11px] font-mono text-ao-fg-0 min-w-[42px] text-right shrink-0">{fmtUSD(a.cost)}</span>
+              <span className="font-mono text-[10.5px] text-ao-fg-2 w-8 text-right shrink-0">{pct.toFixed(0)}%</span>
+            </div>
+
+            {/* Cost */}
+            <div
+              className="font-mono font-bold text-[13.5px] text-right"
+              style={{ color: isTop ? "var(--ao-accent)" : "var(--ao-fg-0)" }}
+            >
+              {fmtUSD(a.cost)}
             </div>
           </div>
         );
@@ -444,7 +495,7 @@ export function ClaudeLimitsModal() {
       open={open}
       onClose={() => setOpen(false)}
       bareContent
-      maxWidth={680}
+      maxWidth={880}
       className="ao-modal"
       closeLabel="Close usage &amp; limits"
     >
@@ -453,8 +504,8 @@ export function ClaudeLimitsModal() {
 
           {/* Body */}
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-5 py-5 flex flex-col gap-6 [scrollbar-width:thin] [scrollbar-color:var(--ao-bg-4)_transparent]">
-            {/* By model + top agents */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* By model + Top agents — two-column grid, stacks on narrow */}
+            <div className="grid gap-[14px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
               <section className="flex flex-col gap-3">
                 <SectionHead
                   title="By model"
@@ -462,6 +513,7 @@ export function ClaudeLimitsModal() {
                 />
                 <ByModel modelRows={modelRows} totalCost={totalModelCost} />
               </section>
+
               <section className="flex flex-col gap-3">
                 <SectionHead
                   title="Top agents"

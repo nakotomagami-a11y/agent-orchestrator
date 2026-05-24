@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { ActionBar } from "@/components/ui/action-bar";
 import { cn } from "@/lib/cn";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
@@ -405,11 +406,13 @@ export function OfficeToolbar({ view, setView, agentCount, workingCount }: Offic
 
       <div className="ml-auto flex items-center gap-[8px]">
         {activeProjectId && project?.meta.cwd && (
-          <>
-            <OpenFolderButton projectId={activeProjectId} />
-            <BuildButton key={`build-${activeProjectId}`} projectId={activeProjectId} />
-            <DevServerButton key={activeProjectId} projectId={activeProjectId} />
-          </>
+          <ActionBar
+            actions={[
+              { key: "open-folder", element: <OpenFolderButton projectId={activeProjectId} /> },
+              { key: `build-${activeProjectId}`, element: <BuildButton key={`build-${activeProjectId}`} projectId={activeProjectId} /> },
+              { key: activeProjectId, element: <DevServerButton key={activeProjectId} projectId={activeProjectId} /> },
+            ]}
+          />
         )}
         <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
           <button

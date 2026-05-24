@@ -19,6 +19,7 @@ export const PAGE_ROUTES = {
   run: (id: string) => `/runs/${encodeURIComponent(id)}`,
   settings: "/settings",
   activity: "/activity",
+  docs: "/docs",
 } as const;
 
 export const API_ROUTES = {

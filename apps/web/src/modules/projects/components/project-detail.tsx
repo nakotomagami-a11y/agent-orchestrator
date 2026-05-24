@@ -15,7 +15,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { CodeEditor } from "@/components/ui/code-editor";
-import { DevServerButton, BuildButton } from "@/modules/office/components/office-toolbar";
+import { DevServerButton, BuildButton, OpenFolderButton } from "@/modules/office/components/office-toolbar";
+import { ActionBar } from "@/components/ui/action-bar";
 
 function relativeTime(ts: number): string {
   const diff = Date.now() - ts;
@@ -62,8 +63,15 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
       sub={project ? `· ${project.meta.name}` : undefined}
       actions={
         <>
-          <BuildButton key={`build-${id}`} projectId={id} />
-          <DevServerButton key={id} projectId={id} />
+          {project?.meta.cwd && (
+            <ActionBar
+              actions={[
+                { key: "open-folder", element: <OpenFolderButton projectId={id} /> },
+                { key: `build-${id}`, element: <BuildButton key={`build-${id}`} projectId={id} /> },
+                { key: id, element: <DevServerButton key={id} projectId={id} /> },
+              ]}
+            />
+          )}
           <button
             type="button"
             className="inline-flex items-center gap-[6px] bg-acc font-semibold cursor-pointer px-[14px] py-[8px] text-white rounded-[9px] text-[13px] transition-[background] duration-[120ms] hover:bg-[var(--acc-hover)] border-none"

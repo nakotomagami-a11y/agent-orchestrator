@@ -1,4 +1,6 @@
-import { projects } from "@agent-office/shared/services";
+import { NextResponse } from "next/server";
+import { projects, settings } from "@agent-office/shared/services";
+import { InstanceCapError } from "@agent-office/shared/services/projects";
 import { validateBody } from "@/lib/validation";
 import { rosterAddSchema } from "@/lib/validation-schemas";
 import { tryService, validateIdParam } from "@/lib/api-helpers";
@@ -11,5 +13,22 @@ export async function POST(request: Request, { params }: Params) {
   const raw: unknown = await request.json();
   const { data, error } = validateBody(rosterAddSchema, raw);
   if (error) return error;
-  return tryService(() => projects.addInstance(id, data.agentId, data.init));
+
+  // Handle instance cap errors with a typed 409 before delegating the rest
+  // to tryService (which would convert them to a generic 500).
+  const appSettings = settings.readSettings();
+  let result: ReturnType<typeof projects.addInstance>;
+  try {
+    result = projects.addInstance(id, data.agentId, data.init, appSettings, data.force);
+  } catch (e) {
+    if (e instanceof InstanceCapError) {
+      return NextResponse.json(
+        { error: "INSTANCE_CAP_EXCEEDED", softCap: e.softCap, count: e.count },
+        { status: 409 },
+      );
+    }
+    // Re-throw so tryService-equivalent error mapping can handle it below.
+    return tryService(() => { throw e; });
+  }
+  return NextResponse.json(result);
 }

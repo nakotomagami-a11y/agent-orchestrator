@@ -4,14 +4,14 @@
 
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import type { AgentInstance, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
+import type { AgentInstance, AppSettings, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
 import { expandTilde, PROJECTS_DIR } from "./paths";
 import { ensureDir, writeFileAtomic } from "./fs-atomic";
 import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlValue } from "./yaml";
 import { log } from "./log";
-import { readSettings, scanProjects, slugify } from "./settings";
-import { deleteRunsForInstance } from "./store";
+import { readSettings, scanProjects, slugify, isFeatureEnabled } from "./settings";
 import { getDb } from "./db";
+import { isGitRepo, createWorktree, removeWorktree, reconcileWorktrees } from "./worktrees";
 
 function metadataFile(id: string): string {
   return join(PROJECTS_DIR, id, "project.md");
@@ -48,6 +48,14 @@ function rosterToYaml(roster: AgentInstance[]): YamlValue {
     if (inst.effort !== undefined) o.effort = inst.effort;
     if (inst.permissionMode !== undefined) o.permissionMode = inst.permissionMode;
     if (inst.room !== undefined) o.room = inst.room;
+    if (inst.cwd !== undefined) o.cwd = inst.cwd;
+    if (inst.worktree !== undefined) {
+      o.worktree = {
+        branch: inst.worktree.branch,
+        basePath: inst.worktree.basePath,
+        createdAt: inst.worktree.createdAt,
+      } as unknown as YamlValue;
+    }
     return o;
   });
 }
@@ -79,6 +87,21 @@ function normalizeRoster(raw: unknown): AgentInstance[] {
     if (typeof o.effort === "string") inst.effort = o.effort;
     if (typeof o.permissionMode === "string") inst.permissionMode = o.permissionMode;
     if (typeof o.room === "string") inst.room = o.room;
+    if (typeof o.cwd === "string") inst.cwd = o.cwd;
+    if (o.worktree && typeof o.worktree === "object") {
+      const wt = o.worktree as Record<string, unknown>;
+      if (
+        typeof wt.branch === "string" &&
+        typeof wt.basePath === "string" &&
+        typeof wt.createdAt === "number"
+      ) {
+        inst.worktree = {
+          branch: wt.branch,
+          basePath: wt.basePath,
+          createdAt: wt.createdAt,
+        };
+      }
+    }
     out.push(inst);
   }
   return out;
@@ -188,18 +211,71 @@ function makeInstanceId(agentId: string, existing: AgentInstance[]): string {
   return `${agentId}-${Date.now()}`;
 }
 
+export class InstanceCapError extends Error {
+  readonly code = "INSTANCE_CAP_EXCEEDED" as const;
+  readonly softCap: boolean;
+  readonly count: number;
+  constructor(opts: { softCap: boolean; count: number }) {
+    super(`Instance cap exceeded (softCap=${opts.softCap}, count=${opts.count})`);
+    this.name = "InstanceCapError";
+    this.softCap = opts.softCap;
+    this.count = opts.count;
+  }
+}
+
 export function addInstance(
   projectId: string,
   agentId: string,
   init?: Partial<Omit<AgentInstance, "instanceId" | "agentId">>,
+  settings?: AppSettings | null,
+  force?: boolean,
 ): { project: Project; instance: AgentInstance } {
   const p = readProject(projectId);
   if (!p) throw new Error(`project '${projectId}' not found`);
-  const instance: AgentInstance = {
-    instanceId: makeInstanceId(agentId, p.meta.roster),
-    agentId,
-    ...init,
-  };
+
+  const existingCount = p.meta.roster.filter((i) => i.agentId === agentId).length;
+
+  if (existingCount >= 10) {
+    // Hard cap — always enforced regardless of force flag.
+    throw new InstanceCapError({ softCap: false, count: existingCount });
+  }
+  if (existingCount >= 5 && !force) {
+    // Soft cap — skipped when force is true.
+    throw new InstanceCapError({ softCap: true, count: existingCount });
+  }
+
+  const instanceId = makeInstanceId(agentId, p.meta.roster);
+  const instance: AgentInstance = { instanceId, agentId, ...init };
+
+  // Worktree creation for 2nd+ instance of the same agent, when flag is on.
+  if (
+    existingCount >= 1 &&
+    isFeatureEnabled(settings ?? null, "multiInstance") &&
+    p.meta.cwd &&
+    isGitRepo(p.meta.cwd)
+  ) {
+    try {
+      const wt = createWorktree(p.meta.cwd, agentId, instanceId);
+      instance.worktree = wt;
+      instance.cwd = wt.basePath;
+    } catch (err) {
+      log.warn("project.worktree_create_failed", {
+        projectId,
+        instanceId,
+        agentId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+      // Graceful fallback: instance shares project cwd, worktree/cwd remain unset.
+    }
+  } else if (existingCount >= 1 && !isGitRepo(p.meta.cwd ?? "")) {
+    log.info("project.instance_shared_cwd", {
+      projectId,
+      instanceId,
+      agentId,
+      note: "project is not a git repo — instance shares project cwd",
+    });
+  }
+
   const meta: ProjectMeta = { ...p.meta, roster: [...p.meta.roster, instance] };
   writeMetadata(projectId, meta, p.memory);
   log.info("project.instance_added", { projectId, instanceId: instance.instanceId, agentId });
@@ -230,15 +306,64 @@ export function patchInstance(
 export function removeInstance(projectId: string, instanceId: string): Project {
   const p = readProject(projectId);
   if (!p) throw new Error(`project '${projectId}' not found`);
+  const instance = p.meta.roster.find((i) => i.instanceId === instanceId);
   const roster = p.meta.roster.filter((i) => i.instanceId !== instanceId);
   if (roster.length === p.meta.roster.length) {
     throw new Error(`instance '${instanceId}' not found`);
   }
+
+  // Clean up worktree before removing from roster.
+  if (instance?.worktree && p.meta.cwd) {
+    try {
+      removeWorktree(p.meta.cwd, instance.worktree);
+    } catch (err) {
+      log.warn("project.worktree_remove_failed", {
+        projectId,
+        instanceId,
+        err: err instanceof Error ? err.message : String(err),
+      });
+      // Do not fail the remove — roster entry is still removed below.
+    }
+  }
+
   const meta = { ...p.meta, roster };
   writeMetadata(projectId, meta, p.memory);
-  const runsRemoved = deleteRunsForInstance(projectId, instanceId);
-  log.info("project.instance_removed", { projectId, instanceId, runsRemoved });
+  // Transcript rows (runs, messages, tool_calls) are archived, not deleted.
+  log.info("project.instance_removed", { projectId, instanceId });
   return { id: projectId, meta, memory: p.memory };
+}
+
+/**
+ * Boot-time reconciliation: remove orphan worktree directories for all projects.
+ * Only runs when the multiInstance feature flag is enabled.
+ */
+export function reconcileAllWorktrees(settings: AppSettings | null): void {
+  if (!isFeatureEnabled(settings, "multiInstance")) return;
+
+  const currentSettings = settings ?? readSettings();
+  if (!currentSettings) return;
+
+  const entries = scanProjects(currentSettings.projectsRoot, currentSettings.excluded);
+
+  for (const entry of entries) {
+    const cwd = entry.fullPath;
+    if (!isGitRepo(cwd)) continue;
+
+    const md = readMetadata(entry.id);
+    const roster = normalizeRoster(md?.meta.roster);
+    const rosterInstanceIds = new Set(roster.map((i) => i.instanceId));
+
+    try {
+      reconcileWorktrees(cwd, rosterInstanceIds);
+    } catch (err) {
+      log.warn("reconcile.project_failed", {
+        projectId: entry.id,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  log.info("reconcile.done", { projectsChecked: entries.length });
 }
 
 export function findInstance(project: Project | null, instanceId: string | undefined): AgentInstance | null {

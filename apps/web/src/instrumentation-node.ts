@@ -22,6 +22,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { projects, settings } from "@agent-office/shared/services";
 
 const SKILLS_DIR = join(homedir(), ".claude", "agents", "_skills");
 
@@ -85,4 +86,14 @@ try {
 } catch (err) {
   // eslint-disable-next-line no-console
   console.warn("[starter-bootstrap] skipped:", err);
+}
+
+// Boot-time worktree reconciliation — removes orphan .worktrees/ directories
+// for projects whose roster no longer contains the corresponding instance.
+// Only runs when the multiInstance feature flag is enabled in settings.
+try {
+  projects.reconcileAllWorktrees(settings.readSettings());
+} catch (err) {
+  // eslint-disable-next-line no-console
+  console.warn("[worktree-reconcile] skipped:", err);
 }

@@ -365,6 +365,24 @@ export function getSumCostSince(sinceTimestamp: number): number {
   return row.total;
 }
 
+export function getSpendForInstance(agentId: string, instanceId: string): number {
+  const row = getDb().prepare(
+    "SELECT COALESCE(SUM(cost_usd), 0) as total FROM runs WHERE agent_id = ? AND instance_id = ?"
+  ).get(agentId, instanceId) as { total: number };
+  return row.total;
+}
+
+export function getSpendByInstanceForProject(projectId: string): Record<string, number> {
+  const rows = getDb().prepare(
+    "SELECT agent_id, instance_id, COALESCE(SUM(cost_usd), 0) as total FROM runs WHERE project_id = ? GROUP BY agent_id, instance_id"
+  ).all(projectId) as Array<{ agent_id: string; instance_id: string; total: number }>;
+  const out: Record<string, number> = {};
+  for (const row of rows) {
+    out[`${row.agent_id}|${row.instance_id}`] = row.total;
+  }
+  return out;
+}
+
 export function getRun(id: string): PersistedRun | null {
   const row = getDb().prepare("SELECT * FROM runs WHERE id = ?").get(id) as RunRow | undefined;
   return row ? rowToRun(row) : null;

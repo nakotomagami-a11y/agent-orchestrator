@@ -188,8 +188,7 @@ export function ProjectSwitcher() {
           role="menu"
           aria-label={t("project_switcher.menu_label")}
           onKeyDown={onKey}
-          className="absolute flex flex-col border border-line-2 bg-bg-elev rounded-[var(--r-lg)] shadow-[var(--shadow-3)] z-50 overflow-hidden"
-          style={{ top: "calc(100% + 6px)", left: 0, width: 340, maxHeight: "70vh" }}
+          className="absolute flex flex-col border border-line-2 bg-bg-elev rounded-[var(--r-lg)] shadow-[var(--shadow-3)] z-50 overflow-hidden top-[calc(100%+6px)] left-0 w-[340px] max-h-[70vh]"
         >
           {/* Fixed header */}
           <div className="shrink-0 p-1 pb-0">
@@ -308,7 +307,7 @@ export function ProjectSwitcher() {
               ) : null}
             </div>
           ) : (
-            <div className="grid border-t border-line bg-bg-2 gap-[2px] p-[6px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <div className="grid grid-cols-2 border-t border-line bg-bg-2 gap-[2px] p-[6px]">
               <button
                 type="button"
                 role="menuitem"

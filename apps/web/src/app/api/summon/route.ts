@@ -49,7 +49,10 @@ export async function POST(request: Request) {
   const instance = projects.findInstance(project, req.instanceId);
 
   let cwd: string | undefined;
-  const requestedCwd = projects.resolveSummonCwd(req.cwd, project);
+  // Prefer instance.cwd (worktree path) over project cwd, falling back to the
+  // explicit request cwd and finally project.meta.cwd.
+  const instanceCwd = instance?.cwd;
+  const requestedCwd = instanceCwd ?? projects.resolveSummonCwd(req.cwd, project);
   if (requestedCwd) {
     const expanded = paths.expandTilde(requestedCwd);
     if (!existsSync(expanded) || !statSync(expanded).isDirectory()) {

@@ -25,6 +25,7 @@ import {
   useOfficeDragStore,
   type DragRef,
 } from "../hooks/use-office-drag";
+import type { AgentInstance } from "@agent-office/shared/types";
 
 /** "x,y" → DragRef. Sparse - cells with no agent aren't keys. */
 export type AgentPositions = Record<string, DragRef>;
@@ -289,6 +290,15 @@ export type OfficeMapProps = {
   onAgentClick?: (x: number, y: number, ref: DragRef) => void;
   /** When non-empty, dims agents whose name doesn't include this string. */
   agentSearch?: string;
+  /**
+   * Project roster instances. When set and `isMultiInstance` is true,
+   * a small `#N` badge is rendered on workstations for instances beyond #1.
+   */
+  rosterInstances?: AgentInstance[];
+  /** When true, instance badges are shown (feature flag gate). */
+  isMultiInstance?: boolean;
+  /** Per-instance spend keyed `"agentId|instanceId"`. Used to show spend under desks. */
+  spendByInstance?: Record<string, number>;
 };
 
 /**
@@ -331,7 +341,22 @@ export function OfficeMap({
   onCellClick,
   onAgentDrop,
   onAgentClick,
+  rosterInstances = [],
+  isMultiInstance = false,
+  spendByInstance = {},
 }: OfficeMapProps) {
+  // Pre-compute per-agent instance index for badge rendering.
+  // instance index is the 1-based position in the roster for that agent.
+  const instanceIndexMap = new Map<string, number>(); // instanceId → 1-based index
+  if (isMultiInstance && rosterInstances.length > 0) {
+    const seenByAgent = new Map<string, number>();
+    for (const inst of rosterInstances) {
+      const prev = seenByAgent.get(inst.agentId) ?? 0;
+      const idx = prev + 1;
+      seenByAgent.set(inst.agentId, idx);
+      instanceIndexMap.set(inst.instanceId, idx);
+    }
+  }
   const cols = grid[0]?.length ?? 0;
   const rows = grid.length;
   const tiles = buildTiles(grid);
@@ -551,6 +576,13 @@ export function OfficeMap({
             } else action = "hammer";
           }
           const searchMatch = !agentSearch || agent.name.toLowerCase().includes(agentSearch.toLowerCase());
+          // Instance badge: show #N for any instance beyond the first
+          const instanceIdx = ref.instanceId ? instanceIndexMap.get(ref.instanceId) : undefined;
+          const showBadge = isMultiInstance && instanceIdx !== undefined && instanceIdx > 1;
+          // Spend pill
+          const spendKey = ref.instanceId ? `${ref.agentId}|${ref.instanceId}` : null;
+          const instSpend = spendKey ? (spendByInstance[spendKey] ?? 0) : 0;
+          const showSpend = isMultiInstance && instSpend > 0;
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
@@ -571,8 +603,8 @@ export function OfficeMap({
                 height: SIZE,
                 opacity: searchMatch ? 1 : 0.2,
               }}
-              aria-label={`${agent.name} - click to open, drag to move`}
-              title={agent.name}
+              aria-label={`${agent.name}${instanceIdx ? ` #${instanceIdx}` : ""} - click to open, drag to move`}
+              title={`${agent.name}${instanceIdx ? ` #${instanceIdx}` : ""}`}
             >
               <UnitSprite
                 unit={agent.unitChoice}
@@ -581,6 +613,56 @@ export function OfficeMap({
                 flip={flip}
                 animate
               />
+              {/* Instance index badge — bottom-right of sprite, only for #2+ */}
+              {showBadge && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    bottom: 2,
+                    right: 2,
+                    background: "rgba(20,16,14,0.82)",
+                    color: "rgba(244,239,234,0.88)",
+                    borderRadius: 4,
+                    fontSize: 9,
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontWeight: 600,
+                    lineHeight: 1,
+                    padding: "2px 4px",
+                    letterSpacing: "0.04em",
+                    border: "1px solid rgba(255,240,230,0.18)",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                >
+                  #{instanceIdx}
+                </span>
+              )}
+              {/* Spend pill — below the badge / bottom area */}
+              {showSpend && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: "absolute",
+                    bottom: showBadge ? 18 : 2,
+                    right: 2,
+                    background: "rgba(20,16,14,0.82)",
+                    color: "rgba(180,220,180,0.9)",
+                    borderRadius: 4,
+                    fontSize: 9,
+                    fontFamily: "var(--font-mono, monospace)",
+                    fontWeight: 600,
+                    lineHeight: 1,
+                    padding: "2px 4px",
+                    letterSpacing: "0.04em",
+                    border: "1px solid rgba(34,197,94,0.25)",
+                    pointerEvents: "none",
+                    userSelect: "none",
+                  }}
+                >
+                  ${instSpend.toFixed(2)}
+                </span>
+              )}
             </div>
           );
         })}

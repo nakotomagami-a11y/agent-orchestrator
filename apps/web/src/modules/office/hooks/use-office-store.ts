@@ -25,6 +25,11 @@ type OfficeState = {
   pendingTab: AgentTab | null;
   /** Currently visible tab - kept in sync by AgentDetailsModal. */
   activeTab: AgentTab;
+  /**
+   * Per-project set of agentIds whose roster group is expanded.
+   * Keyed by projectId. Only populated when features.multiInstance is on.
+   */
+  expandedGroups: Record<string, string[]>;
   setView: (next: OfficeView) => void;
   setZoom: (next: number) => void;
   zoomIn: () => void;
@@ -34,6 +39,8 @@ type OfficeState = {
   consumePendingTab: () => AgentTab | null;
   closeInspector: () => void;
   setActiveTab: (tab: AgentTab) => void;
+  toggleGroup: (projectId: string, agentId: string) => void;
+  setGroupExpanded: (projectId: string, agentId: string, expanded: boolean) => void;
 };
 
 const ZOOM_MIN = 0.6;
@@ -50,6 +57,7 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   inspectorOpen: false,
   pendingTab: null,
   activeTab: "conversation",
+  expandedGroups: {},
   setView: (next) => set({ view: next }),
   setZoom: (next) => set({ zoom: clamp(next, ZOOM_MIN, ZOOM_MAX) }),
   zoomIn: () => set({ zoom: clamp(get().zoom + ZOOM_STEP, ZOOM_MIN, ZOOM_MAX) }),
@@ -69,7 +77,30 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   },
   closeInspector: () => set({ inspectorOpen: false, pendingTab: null, selectedInstanceId: null }),
   setActiveTab: (tab) => set({ activeTab: tab }),
+  toggleGroup: (projectId, agentId) => {
+    const current = get().expandedGroups;
+    const ids = current[projectId] ?? [];
+    const isExpanded = ids.includes(agentId);
+    set({
+      expandedGroups: {
+        ...current,
+        [projectId]: isExpanded ? ids.filter((id) => id !== agentId) : [...ids, agentId],
+      },
+    });
+  },
+  setGroupExpanded: (projectId, agentId, expanded) => {
+    const current = get().expandedGroups;
+    const ids = current[projectId] ?? [];
+    const isExpanded = ids.includes(agentId);
+    if (expanded === isExpanded) return;
+    set({
+      expandedGroups: {
+        ...current,
+        [projectId]: expanded ? [...ids, agentId] : ids.filter((id) => id !== agentId),
+      },
+    });
+  },
 }), {
   name: "office-view",
-  partialize: (s) => ({ view: s.view }),
+  partialize: (s) => ({ view: s.view, expandedGroups: s.expandedGroups }),
 }));

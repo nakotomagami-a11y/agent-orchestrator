@@ -228,15 +228,13 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-[9999] p-[24px] [backdrop-filter:blur(8px)]"
-      style={{ background: "rgba(0,0,0,0.72)" }}
+      className="fixed inset-0 flex items-center justify-center z-[9999] p-[24px] [backdrop-filter:blur(8px)] bg-[rgba(0,0,0,0.72)]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="fr-title"
     >
       <div
-        className="flex flex-col overflow-hidden border border-line-2 rounded-[12px] w-[min(720px,100%)] max-h-[90vh]"
-        style={{ background: "var(--bg-elev)", boxShadow: "0 24px 60px rgba(0,0,0,0.45), 0 4px 12px rgba(0,0,0,0.25)" }}
+        className="flex flex-col overflow-hidden border border-line-2 rounded-[12px] w-[min(720px,100%)] max-h-[90vh] bg-[var(--bg-elev)] shadow-[0_24px_60px_rgba(0,0,0,0.45),_0_4px_12px_rgba(0,0,0,0.25)]"
       >
         <header className="border-b border-line-2 px-[24px] pt-[20px] pb-[12px]">
           <h2 id="fr-title" className="font-semibold m-0 mb-[4px] text-[18px]">{t("first_run.title")}</h2>
@@ -350,7 +348,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
                 <p>{t("common.loading")}</p>
               ) : (
                 <>
-                  <label className="flex items-start cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] bg-acc-faint mb-[6px]" style={{ border: "1px dashed var(--acc)" }}>
+                  <label className="flex items-start cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] bg-acc-faint mb-[6px] border border-dashed border-[var(--acc)]">
                     <input
                       type="checkbox"
                       className="mt-[3px]"
@@ -437,8 +435,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
 
         {error ? (
           <div
-            className="mx-[24px] px-[12px] py-[8px] rounded-[6px] text-[12px]"
-            style={{ background: "rgba(239,68,68,0.1)", border: "1px solid var(--error)", color: "var(--error)" }}
+            className="mx-[24px] px-[12px] py-[8px] rounded-[6px] text-[12px] bg-[rgba(239,68,68,0.1)] border border-[var(--error)] text-[var(--error)]"
             role="alert"
           >
             {error}

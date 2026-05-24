@@ -126,7 +126,14 @@
     "status_done": "✓ {label}",
     "status_done_default": "done",
     "status_queued": "in queue",
-    "status_needs_attention": "needs attention"
+    "status_needs_attention": "needs attention",
+    "rename_instance_aria": "Rename instance #{number}",
+    "remove_instance_aria": "Remove instance #{number} {label} from this project",
+    "spawn_instance_aria": "Add another {name} instance",
+    "spawn_instance_title": "Add instance",
+    "group_toggle_aria": "Toggle {name} group ({count} instances)",
+    "instance_cap_soft": "You already have several instances of this agent. Add another anyway?",
+    "instance_cap_hard": "Maximum 10 instances reached. Remove one before adding another."
   },
   "titlebar": {
     "switch_to_light": "Switch to light theme",

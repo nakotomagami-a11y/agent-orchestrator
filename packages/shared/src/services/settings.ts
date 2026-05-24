@@ -15,14 +15,24 @@ export function readSettings(): AppSettings | null {
   try {
     const raw = JSON.parse(readFileSync(SETTINGS_FILE, "utf8")) as Partial<AppSettings>;
     if (typeof raw.projectsRoot !== "string") return null;
+    const features: AppSettings["features"] =
+      raw.features && typeof raw.features === "object" ? { ...raw.features } : {};
     return {
       projectsRoot: raw.projectsRoot,
       excluded: Array.isArray(raw.excluded) ? raw.excluded.filter((s) => typeof s === "string") : [],
       firstRunComplete: raw.firstRunComplete === true,
+      features,
     };
   } catch {
     return null;
   }
+}
+
+export function isFeatureEnabled(
+  settings: AppSettings | null,
+  feature: keyof NonNullable<AppSettings["features"]>,
+): boolean {
+  return settings?.features?.[feature] === true;
 }
 
 export function writeSettings(s: AppSettings): void {

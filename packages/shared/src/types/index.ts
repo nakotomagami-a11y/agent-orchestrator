@@ -100,6 +100,13 @@ export interface AgentInstance {
   effort?: string;
   permissionMode?: string;
   room?: string;
+  /** Absolute path to the git worktree for this instance. Falls back to project.meta.cwd when unset. */
+  cwd?: string;
+  worktree?: {
+    branch: string;   // e.g. "agent/frontend-craftsman-abc1-1716800000000"
+    basePath: string; // e.g. "/path/to/project/.worktrees/frontend-craftsman-abc1"
+    createdAt: number; // unix ms
+  };
 }
 
 export interface ProjectMeta {
@@ -113,6 +120,9 @@ export interface AppSettings {
   projectsRoot: string;
   excluded: string[];
   firstRunComplete: boolean;
+  features?: {
+    multiInstance?: boolean;
+  };
 }
 
 export interface ScannedEntry {

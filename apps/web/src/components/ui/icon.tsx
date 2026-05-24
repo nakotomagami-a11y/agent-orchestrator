@@ -607,6 +607,16 @@ const ICON_PATHS = {
       </>
     ),
   },
+  "more-horizontal": {
+    ...FILL_BASE,
+    body: (
+      <>
+        <circle cx="5" cy="12" r="1.5" />
+        <circle cx="12" cy="12" r="1.5" />
+        <circle cx="19" cy="12" r="1.5" />
+      </>
+    ),
+  },
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

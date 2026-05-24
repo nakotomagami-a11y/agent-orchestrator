@@ -60,6 +60,9 @@ export const createProjectSchema = z.object({
 
 export const rosterAddSchema = z.object({
   agentId: z.string().min(1),
+  // When true, the caller has acknowledged the soft-cap warning and wants to
+  // proceed despite the instance count being above the soft limit.
+  force: z.boolean().optional(),
   init: z
     .object({
       label: z.string().optional(),

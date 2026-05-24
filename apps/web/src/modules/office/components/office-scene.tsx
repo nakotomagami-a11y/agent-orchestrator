@@ -18,6 +18,9 @@ import {
 import { useOfficeAgents } from "../hooks/use-office-agents";
 import { useOfficeStore } from "../hooks/use-office-store";
 import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
+import { useProject } from "@/modules/projects/hooks/use-projects";
+import { useSettings } from "@/modules/settings/hooks/use-settings";
+import { useProjectSpend } from "@/modules/projects/hooks/use-project-spend";
 import {
   DEFAULT_GRASS_COLOR,
   isGrassColor,
@@ -59,7 +62,7 @@ const KIND_MIGRATIONS: Record<string, DecorationKind | null> = {
 };
 
 function migrateKind(raw: string): DecorationKind | null {
-  if (raw in KIND_MIGRATIONS) return KIND_MIGRATIONS[raw]!;
+  if (raw in KIND_MIGRATIONS) return KIND_MIGRATIONS[raw] ?? null;
   return raw in DECORATIONS ? (raw as DecorationKind) : null;
 }
 
@@ -203,6 +206,14 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
     for (const a of agents) m.set(a.id, a);
     return m;
   }, [agents]);
+
+  // Multi-instance data: roster + feature flag + spend
+  const settingsQ = useSettings();
+  const isMultiInstance = settingsQ.data?.features?.multiInstance === true;
+  const projectQ = useProject(projectId);
+  const rosterInstances = projectQ.data?.meta.roster ?? [];
+  const spendQ = useProjectSpend(isMultiInstance ? projectId : null);
+  const spendByInstance = spendQ.data?.byInstance ?? {};
 
   // Prune agentPositions entries whose agent no longer exists.
   useEffect(() => {
@@ -525,6 +536,9 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
           onCellClick={onCellClick}
           onAgentDrop={onAgentDrop}
           onAgentClick={onAgentClick}
+          rosterInstances={rosterInstances}
+          isMultiInstance={isMultiInstance}
+          spendByInstance={spendByInstance}
         />
       </div>
 

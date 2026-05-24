@@ -219,10 +219,10 @@ export function CodeEditor({
           </>
         )}
         <div className="ml-auto flex items-center gap-[10px]">
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "10.5px", color: "var(--txt-4)" }}>
+          <span className="font-[var(--font-mono)] text-[10.5px] text-[var(--txt-4)]">
             {value.length > 0 ? `${value.length.toLocaleString()} chars · ~${Math.round(value.length / 4)} tokens` : "empty"}
           </span>
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--txt-4)", background: "var(--bg-1)", border: "1px solid var(--line)", padding: "1px 6px", borderRadius: 4 }}>
+          <span className="font-[var(--font-mono)] text-[10px] text-[var(--txt-4)] bg-[var(--bg-1)] border border-[var(--line)] px-[6px] py-[1px] rounded-[4px]">
             {lang}
           </span>
         </div>
@@ -233,19 +233,7 @@ export function CodeEditor({
           {/* ── Gutter ── */}
           <div
             aria-hidden
-            style={{
-              width: 44,
-              flexShrink: 0,
-              background: "rgba(0,0,0,.15)",
-              borderRight: "1px solid var(--line)",
-              padding: "12px 10px 12px 8px",
-              fontFamily: "var(--font-mono)",
-              fontSize: "11.5px",
-              lineHeight: "1.6",
-              textAlign: "right",
-              color: "var(--txt-4)",
-              userSelect: "none",
-            }}
+            className="w-[44px] shrink-0 bg-[rgba(0,0,0,0.15)] border-r border-r-[var(--line)] pt-[12px] pb-[12px] pl-[8px] pr-[10px] font-[var(--font-mono)] text-[11.5px] leading-[1.6] text-right text-[var(--txt-4)] select-none"
           >
             {lines.map((_, i) => <div key={i}>{i + 1}</div>)}
           </div>
@@ -263,7 +251,7 @@ export function CodeEditor({
            * some browsers honour fill-color for textarea text rendering even
            * when the inherited `color` property is transparent.
            */}
-          <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+          <div className="relative flex-1 min-w-0">
             <pre
               aria-hidden
               dangerouslySetInnerHTML={{ __html: preHtml }}

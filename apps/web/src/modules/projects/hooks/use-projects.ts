@@ -38,10 +38,33 @@ export function useUpdateProject() {
 export function useAddInstance() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ projectId, agentId, init }: { projectId: string; agentId: string; init?: Partial<AgentInstance> }) =>
+    mutationFn: ({ projectId, agentId, init, force }: { projectId: string; agentId: string; init?: Partial<AgentInstance>; force?: boolean }) =>
       apiFetch<{ project: Project; instance: AgentInstance }>(API_ROUTES.projectRoster(projectId), {
         method: "POST",
-        body: { agentId, init },
+        body: { agentId, init, force },
+      }),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all });
+      qc.invalidateQueries({ queryKey: queryKeys.projects.detail(vars.projectId) });
+    },
+  });
+}
+
+export function useUpdateInstance() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      instanceId,
+      patch,
+    }: {
+      projectId: string;
+      instanceId: string;
+      patch: { label?: string; model?: string; effort?: string; permissionMode?: string; room?: string };
+    }) =>
+      apiFetch<AgentInstance>(API_ROUTES.projectRosterItem(projectId, instanceId), {
+        method: "PATCH",
+        body: patch,
       }),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.projects.all });
