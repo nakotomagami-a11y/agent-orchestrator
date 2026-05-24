@@ -481,6 +481,44 @@ body {
   --ao-header-h: 72px;
 }
 
+/* Light-mode palette for the conversation tab inside .ao-modal. Other tabs
+   (Configuration / History / Memory / Settings) keep the dark palette so the
+   modal chrome stays consistent. The conversation wrapper paints its own
+   light background so the dark modal root doesn't show through. */
+:where([data-theme="light"]) .ao-modal .ao-modal-chat {
+  --ao-bg-0: #f1ebe3;
+  --ao-bg-1: #fbf6ef;
+  --ao-bg-2: #f5efe6;
+  --ao-bg-3: #ece5dc;
+  --ao-bg-4: #e3dbd1;
+  --ao-line-0: rgba(30, 26, 24, 0.06);
+  --ao-line-1: rgba(30, 26, 24, 0.10);
+  --ao-line-2: rgba(30, 26, 24, 0.18);
+  --ao-fg-0: #1E1A18;
+  --ao-fg-1: #4A4340;
+  --ao-fg-2: #6d655f;
+  --ao-fg-3: #8A8079;
+  background: var(--ao-bg-1);
+  color: var(--ao-fg-0);
+  color-scheme: light;
+}
+
+/* Ensure the composer's input/textarea inside the chat wrapper always uses
+   the chat palette's foreground colour, even if a child has its own
+   `text-txt` / `color:` utility class. Same rule works for both themes
+   because --ao-fg-0 is dark in light mode and light in dark mode. */
+.ao-modal-chat textarea,
+.ao-modal-chat input[type="text"],
+.ao-modal-chat input:not([type]) {
+  color: var(--ao-fg-0);
+  caret-color: var(--ao-fg-0);
+}
+.ao-modal-chat textarea::placeholder,
+.ao-modal-chat input::placeholder {
+  color: var(--ao-fg-3);
+  opacity: 1;
+}
+
 /* ao-agent-strip scrollbar */
 .ao-agent-strip::-webkit-scrollbar { display: none; }
 

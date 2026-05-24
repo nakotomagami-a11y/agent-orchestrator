@@ -535,18 +535,20 @@ export function AgentDetailsModal() {
           {/* ── Tab content ── */}
           <div className="ao-modal-body flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-color:var(--ao-bg-4)_transparent] [scrollbar-width:thin] relative flex flex-col">
             {tab === "conversation" && (
-              <ChatPanel
-                agent={agent}
-                projectId={activeProjectId ?? undefined}
-                instanceId={selectedInstanceId ?? undefined}
-                onClose={closeInspector}
-                onEdit={() => changeTab("settings")}
-                onNavigateTab={(tab) => changeTab(tab)}
-                noHeader
-                newThreadSignal={newThreadSignal}
-                branchSignal={branchSignal}
-                onActiveRunChange={setActiveRunId}
-              />
+              <div className="ao-modal-chat flex-1 min-h-0 flex flex-col">
+                <ChatPanel
+                  agent={agent}
+                  projectId={activeProjectId ?? undefined}
+                  instanceId={selectedInstanceId ?? undefined}
+                  onClose={closeInspector}
+                  onEdit={() => changeTab("settings")}
+                  onNavigateTab={(tab) => changeTab(tab)}
+                  noHeader
+                  newThreadSignal={newThreadSignal}
+                  branchSignal={branchSignal}
+                  onActiveRunChange={setActiveRunId}
+                />
+              </div>
             )}
             {tab === "configuration" && <ConfigurationTab agent={agent} />}
             {tab === "history" && (
