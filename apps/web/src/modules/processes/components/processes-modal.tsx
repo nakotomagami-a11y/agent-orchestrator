@@ -60,6 +60,21 @@ function detectFramework(name: string, cmd: string): string {
   return name;
 }
 
+function detectProto(name: string, cmd: string): string {
+  const n = name.toLowerCase();
+  const c = cmd.toLowerCase();
+  if (
+    n === "next-server" || c.includes("next") ||
+    n === "bun" || c.startsWith("bun ") ||
+    n === "node" || c.includes("node ") ||
+    n === "python" || n === "python3" ||
+    n === "ruby" || n === "deno" ||
+    c.includes("vite") || c.includes("webpack") ||
+    n === "caddy" || n === "nginx"
+  ) return "http";
+  return "tcp";
+}
+
 type Group = { id: string; label: string; processes: ProcessInfo[] };
 
 function groupByProject(processes: ProcessInfo[]): Group[] {
@@ -92,6 +107,7 @@ function ServerCard({
 }) {
   const [open, setOpen] = useState(false);
   const framework = detectFramework(p.name, p.cmd);
+  const proto = detectProto(p.name, p.cmd);
   const isLocal = p.address === "127.0.0.1" || p.address === "::1" || p.address === "0.0.0.0" || p.address === "::";
   const memPct = Math.min(100, p.memMb / 10);
 
@@ -106,7 +122,7 @@ function ServerCard({
           className="flex items-center gap-[3px] font-mono text-[13px] font-bold text-ao-accent bg-[var(--ao-accent-softer)] border border-ao-accent-line rounded-full px-2 py-[2px] whitespace-nowrap shrink-0 no-underline"
           onClick={(e) => e.stopPropagation()}
         >
-          <span className="text-[10px] text-ao-fg-3 font-normal mr-[1px]">:tcp</span>
+          <span className="text-[10px] text-ao-fg-3 font-normal mr-[1px]">:{proto}</span>
           {p.port}
           {isLocal && (
             <a
@@ -150,6 +166,20 @@ function ServerCard({
               <Icon name="globe" size={13} />
             </a>
           )}
+          <button
+            title="View logs"
+            className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-ao-fg-3 transition-[background,color] duration-[100ms] hover:bg-ao-bg-4 hover:text-ao-fg-1 border-0 bg-transparent cursor-pointer p-0"
+            onClick={() => setOpen(true)}
+          >
+            <Icon name="list" size={13} />
+          </button>
+          <button
+            title="Restart process"
+            className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-ao-fg-3 transition-[background,color] duration-[100ms] hover:bg-ao-bg-4 hover:text-ao-fg-1 border-0 bg-transparent cursor-pointer p-0"
+            disabled
+          >
+            <Icon name="refresh" size={13} />
+          </button>
           <button
             title="Stop process"
             className="w-[26px] h-[26px] rounded-[6px] flex items-center justify-center text-ao-fg-3 transition-[background,color] duration-[100ms] hover:bg-ao-bad-soft hover:text-ao-bad border-0 bg-transparent cursor-pointer p-0"
@@ -202,6 +232,18 @@ function ServerCard({
                 <Icon name="globe" size={12} /> Open localhost:{p.port}
               </a>
             )}
+            <button
+              className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[6px] text-[11.5px] font-mono bg-ao-bg-3 border border-ao-line-2 text-ao-fg-1 transition-[background,border-color] duration-[100ms] hover:bg-ao-bg-4 cursor-pointer border-solid"
+            >
+              <Icon name="list" size={12} /> Tail logs
+            </button>
+            <button
+              className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[6px] text-[11.5px] font-mono bg-ao-bg-3 border border-ao-line-2 text-ao-fg-3 cursor-not-allowed opacity-50 border-solid"
+              disabled
+              title="Restart not yet supported"
+            >
+              <Icon name="refresh" size={12} /> Restart
+            </button>
             <button
               className="flex items-center gap-[5px] px-[10px] py-[5px] rounded-[6px] text-[11.5px] font-mono bg-ao-bg-3 border border-[rgba(217,83,79,0.30)] text-ao-bad transition-[background,border-color] duration-[100ms] hover:bg-ao-bad-soft cursor-pointer border-solid"
               onClick={onKill}
@@ -299,22 +341,29 @@ export function ProcessesModal() {
 
           {/* Stats bar */}
           <div className="flex items-center gap-0 px-5 py-[10px] bg-ao-bg-2 border-b border-[var(--ao-line-0)] shrink-0">
-            {[
-              { l: "Total",        v: <>{processes.length}<span className="text-[10px] text-ao-fg-3 font-normal"> processes</span></> },
-              { l: "This project", v: <>{projectCount}<span className="text-[10px] text-ao-fg-3 font-normal"> servers</span></> },
-              { l: "Memory",       v: <>{fmtMem(totalMem)}</> },
-              { l: "Status",       v: (
+            <div className="flex flex-col gap-0.5 pr-4">
+              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">Total</span>
+              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{processes.length}<span className="text-[10px] text-ao-fg-3 font-normal"> processes</span></span>
+            </div>
+            <span className="w-px h-[26px] bg-[var(--ao-line-0)] mx-3 shrink-0" />
+            <div className="flex flex-col gap-0.5 pr-4">
+              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">From this project</span>
+              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{projectCount}<span className="text-[10px] text-ao-fg-3 font-normal"> servers</span></span>
+            </div>
+            <span className="w-px h-[26px] bg-[var(--ao-line-0)] mx-3 shrink-0" />
+            <div className="flex flex-col gap-0.5 pr-4">
+              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">Memory</span>
+              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{fmtMem(totalMem)}</span>
+            </div>
+            <span className="w-px h-[26px] bg-[var(--ao-line-0)] mx-3 shrink-0" />
+            <div className="flex flex-col gap-0.5 pr-4">
+              <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">Health</span>
+              <span className="text-[14px] font-semibold text-ao-fg-0 font-mono flex items-center gap-1">
                 <span className="inline-flex items-center gap-[5px] py-[2px] px-[6px] rounded-full text-[10px] font-mono normal-case tracking-normal border bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]">
-                  <span className="text-[7px]">●</span>{processes.length} running
+                  <span className="text-[7px]">●</span>{processes.length} healthy
                 </span>
-              )},
-            ].map((item, i, arr) => (
-              <div key={item.l} className="flex flex-col gap-0.5 pr-4">
-                <span className="text-[10px] text-ao-fg-3 uppercase tracking-[0.06em] font-mono">{item.l}</span>
-                <span className="text-[14px] font-semibold text-ao-fg-0 font-mono">{item.v}</span>
-                {i < arr.length - 1 && <span className="hidden" />}
-              </div>
-            ))}
+              </span>
+            </div>
           </div>
 
           {/* Toolbar */}
@@ -381,16 +430,23 @@ export function ProcessesModal() {
           {/* Footer */}
           <div className="flex items-center gap-3 px-5 py-3 border-t border-[var(--ao-line-0)] shrink-0">
             <div className="flex-1 flex items-center gap-[6px] text-[11px] text-ao-fg-3 font-mono">
-              <Icon name="server" size={11} />
-              <span>scanning <kbd className="bg-ao-bg-3 border border-ao-line-2 rounded-[4px] px-[5px] py-px font-mono text-[10.5px]">localhost</kbd> ports via <kbd className="bg-ao-bg-3 border border-ao-line-2 rounded-[4px] px-[5px] py-px font-mono text-[10.5px]">ss -tlnp</kbd></span>
-              <span className="ml-auto text-[10.5px] text-ao-fg-3">refreshed {processesQ.dataUpdatedAt ? fmtAgo(processesQ.dataUpdatedAt) : "-"}</span>
+              <Icon name="wrench" size={11} />
+              <span>scanning <kbd className="bg-ao-bg-3 border border-ao-line-2 rounded-[4px] px-[5px] py-px font-mono text-[10.5px]">localhost</kbd> ports <kbd className="bg-ao-bg-3 border border-ao-line-2 rounded-[4px] px-[5px] py-px font-mono text-[10.5px]">1024–65535</kbd></span>
+              <span className="ml-auto text-[10.5px] text-ao-fg-3">last scan {processesQ.dataUpdatedAt ? fmtAgo(processesQ.dataUpdatedAt) : "-"}</span>
             </div>
             <div className="flex gap-2 shrink-0">
               <button
-                className="px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-medium cursor-pointer transition-[background,border-color] duration-[120ms] bg-transparent border border-ao-line-2 text-ao-fg-1 hover:bg-ao-bg-3"
+                className="px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-medium cursor-pointer transition-[background,border-color] duration-[120ms] bg-transparent border border-ao-line-2 text-ao-fg-3 hover:bg-ao-bg-3 hover:text-ao-fg-1"
+                title="Settings (coming soon)"
+                disabled
+              >
+                Settings
+              </button>
+              <button
+                className="flex items-center gap-[5px] px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-semibold cursor-pointer transition-[background] duration-[120ms] bg-ao-accent border-0 text-white hover:bg-[var(--ao-accent-hover,var(--ao-accent))]"
                 onClick={() => setOpen(false)}
               >
-                Close
+                <Icon name="check" size={12} /> Done
               </button>
             </div>
           </div>
