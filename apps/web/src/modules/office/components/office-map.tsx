@@ -517,8 +517,8 @@ function OfficeMapInner({
           style={foamStyle(f.x, f.y)}
         />
       ))}
-      {tiles.map((t, i) => (
-        <div key={`tile-${i}`} style={tileStyle(t, tileset)} />
+      {tiles.map((t) => (
+        <div key={`tile-${t.x}-${t.y}-${t.quarter ?? "f"}-${t.c}-${t.r}`} style={tileStyle(t, tileset)} />
       ))}
       {decoList.map((d) => {
         const def = DECORATIONS[d.kind];
@@ -637,7 +637,7 @@ function OfficeMapInner({
           return (
             <div
               key={`agent-${dragRefKey(ref)}`}
-              className="cursor-grab transition-[transform,filter] duration-100 ease-linear hover:scale-[1.12] hover:drop-shadow-[0_0_6px_#fbbf24] hover:z-[5] active:cursor-grabbing absolute pointer-events-auto transition-opacity duration-150"
+              className="cursor-grab transition-[transform,filter,opacity] duration-100 ease-linear hover:scale-[1.12] hover:drop-shadow-[0_0_6px_#fbbf24] hover:z-[5] active:cursor-grabbing absolute pointer-events-auto"
               draggable
               onDragStart={(e) => {
                 e.dataTransfer.setData(AGENT_DRAG_MIME, JSON.stringify(ref));

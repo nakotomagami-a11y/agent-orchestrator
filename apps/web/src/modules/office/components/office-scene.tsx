@@ -85,15 +85,18 @@ function floodFill(
 ): [boolean[][], number] {
   if (grid[startY]?.[startX] === true) return [grid, 0]; // already grass
   const next = grid.map((row) => [...row]);
+  // Use a flat Uint8Array bitmap instead of a string-keyed Set — no string
+  // allocations per cell, O(1) lookup, and no O(n) shift on dequeue.
+  const visited = new Uint8Array(GRID_COLS * GRID_ROWS);
+  let head = 0;
   const queue: [number, number][] = [[startX, startY]];
-  const visited = new Set<string>();
   let count = 0;
-  while (queue.length > 0) {
-    const [x, y] = queue.shift()!;
-    const key = `${x},${y}`;
-    if (visited.has(key)) continue;
-    visited.add(key);
+  while (head < queue.length) {
+    const [x, y] = queue[head++]!;
     if (x < 0 || x >= GRID_COLS || y < 0 || y >= GRID_ROWS) continue;
+    const idx = y * GRID_COLS + x;
+    if (visited[idx]) continue;
+    visited[idx] = 1;
     if (next[y]![x]) continue;
     next[y]![x] = true;
     count++;
@@ -163,6 +166,13 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   // Sync painting refs with React state
   useEffect(() => { buildModeRef.current = buildMode; }, [buildMode, buildModeRef]);
   useEffect(() => { toolRef.current = tool; }, [tool, toolRef]);
+
+  // HUD counters — memoized so grid.flat() doesn't run on every pointer-move render
+  const grassCount = useMemo(() => grid.flat().filter(Boolean).length, [grid]);
+  const decoCount = useMemo(
+    () => Object.values(decorations).reduce((s, stack) => s + (stack?.length ?? 0), 0),
+    [decorations],
+  );
 
   // Track container size for viewport culling
   useEffect(() => {
@@ -599,6 +609,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   }, [projectId]);
 
   // Revert back to the shared global map layout for this project.
+  // Chain the PATCH before the GET so we never read stale custom-flag state.
   const disableCustomMap = useCallback(() => {
     if (!projectId) return;
     setSceneLoaded(false); // block saves while we reload global state
@@ -607,66 +618,89 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [`office-map-custom:${projectId}`]: "false" }),
-    }).catch(() => {});
-    fetch("/api/ui-settings")
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
-        if (data["office-grid"]) {
-          try {
-            const parsed = JSON.parse(data["office-grid"]) as unknown;
-            if (
-              Array.isArray(parsed) &&
-              parsed.length === GRID_ROWS &&
-              parsed.every(
-                (row): row is boolean[] =>
-                  Array.isArray(row) &&
-                  row.length === GRID_COLS &&
-                  row.every((cell) => typeof cell === "boolean"),
-              )
-            ) {
-              setGrid(parsed);
-            }
-          } catch { /* ignore */ }
-        } else {
-          setGrid(makeSeedGrid());
-        }
-        if (data["office-decorations"]) {
-          try {
-            const parsed = JSON.parse(data["office-decorations"]) as unknown;
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-              const out: DecorationsMap = {};
-              for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-                if (typeof value === "string") {
-                  const migrated = migrateKind(value);
-                  if (migrated) out[key] = [migrated];
-                  continue;
-                }
-                if (Array.isArray(value)) {
-                  const arr: DecorationKind[] = [];
-                  for (const v of value) {
-                    if (typeof v !== "string") continue;
-                    const migrated = migrateKind(v);
-                    if (migrated) arr.push(migrated);
-                  }
-                  if (arr.length > 0) out[key] = arr;
-                }
-              }
-              setDecorations(out);
-            }
-          } catch { /* ignore */ }
-        } else {
-          setDecorations({});
-        }
-        if (data["office-grass-color"]) {
-          const gc = data["office-grass-color"];
-          if (isGrassColor(gc)) setGrassColor(gc);
-          else setGrassColor(DEFAULT_GRASS_COLOR);
-        } else {
-          setGrassColor(DEFAULT_GRASS_COLOR);
-        }
-      })
+    })
       .catch(() => {})
-      .finally(() => setSceneLoaded(true));
+      .finally(() => {
+        fetch("/api/ui-settings")
+          .then((r) => r.json())
+          .then((data: Record<string, string>) => {
+            if (data["office-grid"]) {
+              try {
+                const parsed = JSON.parse(data["office-grid"]) as unknown;
+                if (
+                  Array.isArray(parsed) &&
+                  parsed.length === GRID_ROWS &&
+                  parsed.every(
+                    (row): row is boolean[] =>
+                      Array.isArray(row) &&
+                      row.length === GRID_COLS &&
+                      row.every((cell) => typeof cell === "boolean"),
+                  )
+                ) {
+                  setGrid(parsed);
+                }
+              } catch { /* ignore */ }
+            } else {
+              setGrid(makeSeedGrid());
+            }
+            if (data["office-decorations"]) {
+              try {
+                const parsed = JSON.parse(data["office-decorations"]) as unknown;
+                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                  const out: DecorationsMap = {};
+                  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+                    if (typeof value === "string") {
+                      const migrated = migrateKind(value);
+                      if (migrated) out[key] = [migrated];
+                      continue;
+                    }
+                    if (Array.isArray(value)) {
+                      const arr: DecorationKind[] = [];
+                      for (const v of value) {
+                        if (typeof v !== "string") continue;
+                        const migrated = migrateKind(v);
+                        if (migrated) arr.push(migrated);
+                      }
+                      if (arr.length > 0) out[key] = arr;
+                    }
+                  }
+                  setDecorations(out);
+                }
+              } catch { /* ignore */ }
+            } else {
+              setDecorations({});
+            }
+            // Also reload agent positions from the global (non-project-specific) key
+            const agentKey = `office-agents:${projectId}`;
+            if (data[agentKey]) {
+              try {
+                const parsed = JSON.parse(data[agentKey]) as unknown;
+                if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                  const out: AgentPositions = {};
+                  for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+                    if (value && typeof value === "object" && !Array.isArray(value) &&
+                        typeof (value as { agentId?: unknown }).agentId === "string") {
+                      const v = value as { agentId: string; instanceId?: unknown };
+                      out[key] = { agentId: v.agentId, instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined };
+                    }
+                  }
+                  setAgentPositions(out);
+                }
+              } catch { /* ignore */ }
+            } else {
+              setAgentPositions({});
+            }
+            if (data["office-grass-color"]) {
+              const gc = data["office-grass-color"];
+              if (isGrassColor(gc)) setGrassColor(gc);
+              else setGrassColor(DEFAULT_GRASS_COLOR);
+            } else {
+              setGrassColor(DEFAULT_GRASS_COLOR);
+            }
+          })
+          .catch(() => {})
+          .finally(() => setSceneLoaded(true));
+      });
   }, [projectId]);
 
   const selectAgent = useOfficeStore((s) => s.select);
@@ -821,8 +855,6 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
 
       {/* Canvas info - bottom-left: tile coords + map stats */}
       {(() => {
-        const grassCount = grid.flat().filter(Boolean).length;
-        const decoCount  = Object.values(decorations).reduce((s, stack) => s + (stack?.length ?? 0), 0);
         const placedCount = grassCount + decoCount;
         return (
           <div className="canvas-info absolute flex z-[10] pointer-events-none bottom-[14px] left-[14px] gap-[14px] px-[12px] py-[8px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] font-mono text-[10.5px] text-[rgba(138,128,121,0.9)] backdrop-blur-[10px]">
