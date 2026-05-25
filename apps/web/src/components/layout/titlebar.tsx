@@ -10,6 +10,7 @@ import {
   toggleMaximizeWindow,
 } from "@/lib/tauri-window";
 import { ProjectSwitcher } from "./project-switcher";
+import { DevMenu } from "@/components/dev/dev-menu";
 
 /**
  * The in-app titlebar plays two roles depending on where the app runs:
@@ -71,6 +72,7 @@ export function Titlebar() {
         {t("app.name")} - {t("app.studio_subtitle")}
       </div>
       <div className="flex items-center gap-2 justify-end">
+        <DevMenu />
         <button
           type="button"
           className="h-[24px] px-[10px] inline-flex items-center gap-[6px] bg-transparent border border-transparent rounded-sm text-txt-2 font-[inherit] text-[12.5px] cursor-pointer hover:bg-bg-2 hover:border-line"

@@ -168,7 +168,11 @@ export interface SummonRequest {
   instanceId?: string;
   /** Session ID from the previous turn - passed as --resume to continue the conversation. */
   resumeSessionId?: string;
+  /** How much prior-conversation context to inject. Defaults to "balanced". */
+  contextProfile?: ContextProfile;
 }
+
+export type ContextProfile = "tight" | "balanced" | "deep";
 
 export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "attached" | "subagent" | "subagent-update";
 

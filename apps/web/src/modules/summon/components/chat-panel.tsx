@@ -17,6 +17,7 @@ import {
   saveTranscript,
   transcriptKey,
 } from "../utils/transcript-store";
+import type { ContextProfile } from "@agent-office/shared/types";
 import { clearDraft } from "../utils/draft-store";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useProject } from "@/modules/projects/hooks/use-projects";
@@ -87,6 +88,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   // message, which is the correct behavior for corrections.
   const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
   const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
+  const [contextProfile, setContextProfile] = useState<ContextProfile>("balanced");
 
   const stream = useRunStream(activeRunId);
 
@@ -185,7 +187,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     });
     setPhaseOverride("sending");
     summon.mutate(
-      { agentId: agent.id, prompt: text, projectId, instanceId, resumeSessionId: sessionId ?? undefined },
+      { agentId: agent.id, prompt: text, projectId, instanceId, resumeSessionId: sessionId ?? undefined, contextProfile },
       {
         onSuccess: ({ runId, warning }) => {
           setActiveRunId(runId);
@@ -462,6 +464,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
         seed={pendingSeed}
         onCommand={handleCommand}
         draftKey={tKey}
+        contextProfile={contextProfile}
+        onProfileChange={setContextProfile}
       />
     </div>
   );

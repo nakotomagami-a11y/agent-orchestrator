@@ -485,6 +485,30 @@ export function searchMessages(query: string, limit = 50): Array<HistoryMessage 
   }));
 }
 
+export function searchMessagesForAgent(agentId: string, instanceId: string, ftsQuery: string, limit = 10): HistoryMessage[] {
+  try {
+    const rows = getDb().prepare(`
+      SELECT m.role, m.content, m.run_id, m.ts
+      FROM messages_fts f JOIN messages m ON f.rowid = m.rowid
+      WHERE messages_fts MATCH ? AND m.agent_id = ? AND m.instance_id = ?
+      ORDER BY rank LIMIT ?
+    `).all(ftsQuery, agentId, instanceId, limit) as Array<{ role: string; content: string; run_id: string; ts: number }>;
+    return rows.map(r => ({ role: r.role as "user" | "assistant", content: r.content, runId: r.run_id, ts: r.ts }));
+  } catch {
+    return [];
+  }
+}
+
+export function getRecentMessagesByProject(agentId: string, projectId: string, limit = 8): HistoryMessage[] {
+  const rows = getDb().prepare(`
+    SELECT m.role, m.content, m.run_id, m.ts
+    FROM messages m JOIN runs r ON m.run_id = r.id
+    WHERE m.agent_id = ? AND r.project_id = ?
+    ORDER BY m.ts DESC LIMIT ?
+  `).all(agentId, projectId, limit) as Array<{ role: string; content: string; run_id: string; ts: number }>;
+  return rows.reverse().map(r => ({ role: r.role as "user" | "assistant", content: r.content, runId: r.run_id, ts: r.ts }));
+}
+
 // ─── Tool calls ────────────────────────────────────────────────────────────────
 
 export function insertToolCall(runId: string, name: string, input: unknown, ts: number): void {

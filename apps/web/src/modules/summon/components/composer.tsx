@@ -17,6 +17,7 @@ import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
 import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
 import { isTauri } from "@/lib/tauri-window";
+import type { ContextProfile } from "@agent-office/shared/types";
 
 type SlashCommand = {
   cmd: string;
@@ -67,10 +68,19 @@ export type ComposerProps = {
    * value used by the chat panel. When omitted, drafts are not persisted.
    */
   draftKey?: string;
+  contextProfile?: ContextProfile;
+  onProfileChange?: (p: ContextProfile) => void;
 };
 
 let attachmentCounter = 0;
 const nextAttachmentId = () => `att-${Date.now().toString(36)}-${attachmentCounter++}`;
+
+const PROFILE_CYCLE: ContextProfile[] = ["tight", "balanced", "deep"];
+const PROFILE_TOK: Record<ContextProfile, string> = {
+  tight: "~400 tok",
+  balanced: "~1.5k tok",
+  deep: "~4k tok",
+};
 
 export function Composer({
   disabled,
@@ -84,6 +94,8 @@ export function Composer({
   seed,
   onCommand,
   draftKey,
+  contextProfile = "balanced",
+  onProfileChange,
 }: ComposerProps) {
   const t = useTranslations();
   // Initialise empty; the persisted draft loads async in the effect below.
@@ -514,6 +526,24 @@ export function Composer({
             </Button>
             {cwdChip ? <span className="inline-flex items-center gap-[5px] bg-bg-2 border border-line text-txt-2 rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] hover:bg-bg-3" title="working directory">{cwdChip}</span> : null}
             {modelChip ? <span className="inline-flex items-center gap-[5px] bg-bg-2 border border-line text-txt-2 rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] hover:bg-bg-3" title="active model">{modelChip}</span> : null}
+            {onProfileChange ? (
+              <button
+                type="button"
+                title="Context profile — click to cycle"
+                onClick={() => {
+                  const next = PROFILE_CYCLE[(PROFILE_CYCLE.indexOf(contextProfile) + 1) % PROFILE_CYCLE.length] ?? "balanced";
+                  onProfileChange(next);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-[5px] rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] transition-colors",
+                  contextProfile === "balanced"
+                    ? "bg-bg-2 border border-line text-txt-2 hover:bg-bg-3"
+                    : "bg-acc-faint border border-acc-tint text-acc hover:bg-acc-softer",
+                )}
+              >
+                ctx:{contextProfile} <span className="text-txt-4">{PROFILE_TOK[contextProfile]}</span>
+              </button>
+            ) : null}
             <div className="ml-auto flex items-center gap-[6px]">
               {abortable ? (
                 <Button size="sm" onClick={onAbort}>

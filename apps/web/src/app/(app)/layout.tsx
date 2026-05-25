@@ -10,7 +10,6 @@ import { CommandPalette } from "@/components/command-palette/command-palette";
 import { CompareModal } from "@/modules/runs/components/compare-modal";
 import { ModalUrlSync } from "@/components/modal-url-sync";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
-
 /**
  * Group layout for in-app pages (everything except auth, if/when added).
  * Wraps every protected page in the GNOME window chrome + sidebar, plus

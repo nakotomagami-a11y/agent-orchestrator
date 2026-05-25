@@ -61,13 +61,25 @@ export async function POST(request: Request) {
     cwd = expanded;
   }
 
-  const appendedSystemPrompt = agents.buildAppendedPrompt(req.agentId, project, req.instanceId);
+  const profile = req.contextProfile ?? "balanced";
 
   let priorContext: string | undefined;
+  let hasMessages = false;
   if (!req.resumeSessionId) {
-    const recentMsgs = history.getRecentMessages(req.agentId, req.instanceId ?? "default", 8);
-    if (recentMsgs.length > 0) priorContext = history.formatPriorContext(recentMsgs);
+    const msgs = history.getContextMessages({
+      agentId: req.agentId,
+      instanceId: req.instanceId ?? "default",
+      projectId: req.projectId,
+      profile,
+      currentPrompt: req.prompt,
+    });
+    if (msgs.length > 0) {
+      hasMessages = true;
+      priorContext = history.formatPriorContext(msgs, profile);
+    }
   }
+
+  const appendedSystemPrompt = agents.buildAppendedPrompt(req.agentId, project, req.instanceId, hasMessages);
 
   const built = summon.buildClaudeArgs({
     request: req,

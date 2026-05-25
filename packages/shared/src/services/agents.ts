@@ -144,7 +144,7 @@ export function writeAgentMemory(agentId: string, content: string): void {
  * Caller passes a pre-resolved `Project` (or null) - we don't import the
  * projects service here to avoid a cycle.
  */
-export function buildAppendedPrompt(agentName: string, project: Project | null, instanceId?: string): string {
+export function buildAppendedPrompt(agentName: string, project: Project | null, instanceId?: string, hasMessages?: boolean): string {
   const agent = readAgent(agentName);
   const skillFragment = agent ? buildSkillsPrompt(agent.info.skills).trim() : "";
   const global = readGlobalMemory().trim();
@@ -164,7 +164,7 @@ export function buildAppendedPrompt(agentName: string, project: Project | null, 
   if (projectMemory) parts.push(`## Project memory (${project!.meta.name})\n` + projectMemory);
   if (perAgent) parts.push(`## Memory specific to ${agentName}\n` + perAgent);
 
-  if (permissionMode !== "plan") {
+  if (permissionMode !== "plan" && !hasMessages) {
     const effectiveInstanceId = instanceId ?? "default";
     const hNote = historyNote(agentName, effectiveInstanceId);
     parts.push(

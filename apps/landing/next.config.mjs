@@ -2,12 +2,7 @@
 const nextConfig = {
   output: "export",
   reactStrictMode: true,
-  async redirects() {
-    return [
-      { source: '/docs',        destination: '/#how', permanent: true },
-      { source: '/docs/:slug*', destination: '/#how', permanent: true },
-    ];
-  },
+  transpilePackages: ["@agent-office/ui"],
 };
 
 export default nextConfig;

@@ -103,6 +103,7 @@ export const summonRequestSchema = z.object({
   projectId: z.string().optional(),
   instanceId: z.string().optional(),
   resumeSessionId: z.string().optional(),
+  contextProfile: z.enum(["tight", "balanced", "deep"]).optional(),
 });
 
 export const runsQuerySchema = z.object({

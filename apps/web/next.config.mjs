@@ -13,7 +13,7 @@ const nextConfig = {
   },
   output: "standalone",
   reactStrictMode: true,
-  transpilePackages: ["@agent-office/shared"],
+  transpilePackages: ["@agent-office/shared", "@agent-office/ui"],
   serverExternalPackages: ["better-sqlite3"],
   webpack: (config, { isServer }) => {
     if (isServer) {
