@@ -85,6 +85,7 @@ export default function ScreenshotSlider() {
         coverflowEffect={{ rotate: 28, stretch: 0, depth: 120, modifier: 1, slideShadows: true }}
         pagination={{ clickable: true }}
         loop
+        loopAdditionalSlides={SLIDES.length}
         modules={[EffectCoverflow, Pagination]}
         style={{
           paddingBottom: "48px",
