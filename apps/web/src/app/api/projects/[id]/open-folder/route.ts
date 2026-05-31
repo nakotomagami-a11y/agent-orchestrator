@@ -5,7 +5,7 @@ import { validateIdParam, notFound } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };
 
-export async function POST(_req: Request, { params }: Params) {
+export async function POST(req: Request, { params }: Params) {
   const { id } = await params;
   const { value, error } = validateIdParam(id);
   if (error) return error;
@@ -16,7 +16,12 @@ export async function POST(_req: Request, { params }: Params) {
   const cwd = project.meta.cwd;
   if (!cwd) return NextResponse.json({ error: "No cwd" }, { status: 400 });
 
-  spawn("xdg-open", [cwd], { detached: true, stdio: "ignore" }).unref();
+  const app = new URL(req.url).searchParams.get("app");
+  if (app === "code") {
+    spawn("code", [cwd], { detached: true, stdio: "ignore" }).unref();
+  } else {
+    spawn("xdg-open", [cwd], { detached: true, stdio: "ignore" }).unref();
+  }
 
   return NextResponse.json({ ok: true });
 }

@@ -617,6 +617,34 @@ const ICON_PATHS = {
       </>
     ),
   },
+  smartphone: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <rect x="5" y="2" width="14" height="20" rx="2" />
+        <circle cx="12" cy="18" r="1" fill="currentColor" stroke="none" />
+      </>
+    ),
+  },
+  monitor: {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <rect x="2" y="3" width="20" height="14" rx="2" />
+        <path d="M8 21h8M12 17v4" />
+      </>
+    ),
+  },
+  "git-commit": {
+    ...STROKE_BASE,
+    body: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <line x1="3" y1="12" x2="9" y2="12" />
+        <line x1="15" y1="12" x2="21" y2="12" />
+      </>
+    ),
+  },
 } as const;
 
 export type IconName = keyof typeof ICON_PATHS;

@@ -1,16 +1,25 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { ActionBar } from "@/components/ui/action-bar";
 import { cn } from "@/lib/cn";
 import { useActiveProjectStore } from "@/lib/active-project-store";
-import { useProject } from "@/modules/projects/hooks/use-projects";
+import { useProject, useGitStatus } from "@/modules/projects/hooks/use-projects";
 import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
+import { useFlutterStore } from "@/lib/flutter-store";
+import { useFlutterDevices } from "@/modules/flutter/hooks/use-flutter-devices";
+import { useDevServerStore } from "@/lib/dev-server-store";
+import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { OfficeView } from "../hooks/use-office-store";
 import type { DetectedCommand } from "@/app/api/projects/[id]/dev/route";
 import type { ProcessInfo } from "@/app/api/processes/route";
+
+// Shared compact button style for all toolbar action buttons
+const TBTN = "inline-flex items-center gap-[5px] px-[9px] h-[30px] rounded-[7px] text-[12px] text-txt-2 border border-transparent hover:bg-bg-3 hover:text-txt transition-[background,color,border-color] duration-[120ms] cursor-pointer select-none shrink-0";
 
 type InstallState = "unknown" | "needed" | "installing" | "done";
 
@@ -21,64 +30,62 @@ type RunState =
   | { phase: "stopping" };
 
 export function DevServerButton({ projectId }: { projectId: string }) {
-  const [commands, setCommands] = useState<DetectedCommand[]>([]);
-  const [states, setStates] = useState<Record<string, RunState>>({});
   const [install, setInstall] = useState<InstallState>("unknown");
-  const [hasPackageJson, setHasPackageJson] = useState(false);
   const [open, setOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
-  // Tracks whether we've already reconciled running processes for this mount
-  const reconciledRef = useRef(false);
 
-  useEffect(() => {
-    fetch(`/api/projects/${projectId}/dev`)
-      .then((r) => r.json() as Promise<{ hasPackageJson: boolean; hasNodeModules: boolean; commands: DetectedCommand[] }>)
-      .then(({ hasPackageJson: hasPkg, hasNodeModules, commands: cmds }) => {
-        setHasPackageJson(hasPkg);
-        // Only offer "Install" when there's actually a package.json to install from
-        setInstall(hasNodeModules ? "done" : hasPkg ? "needed" : "done");
-        setCommands(cmds ?? []);
-      })
-      .catch(() => setInstall("done"));
-  }, [projectId]);
+  const store = useDevServerStore();
 
-  // Reconcile UI state with already-running processes (survives page refresh)
+  const devQ = useQuery({
+    queryKey: ["project-dev-config", projectId],
+    queryFn: () =>
+      fetch(`/api/projects/${projectId}/dev`)
+        .then((r) => r.json() as Promise<{ hasPackageJson: boolean; hasNodeModules: boolean; commands: DetectedCommand[] }>),
+    staleTime: 60_000,
+  });
+
+  const commands = devQ.data?.commands ?? [];
+  const hasPackageJson = devQ.data?.hasPackageJson ?? false;
+
+  // Sync install state from query data (only when we don't have a local override)
   useEffect(() => {
-    if (commands.length === 0 || reconciledRef.current) return;
-    reconciledRef.current = true;
+    if (!devQ.data || install !== "unknown") return;
+    setInstall(devQ.data.hasNodeModules ? "done" : devQ.data.hasPackageJson ? "needed" : "done");
+  }, [devQ.data, install]);
+
+  // Reconcile UI state with already-running processes (once per project, persisted in store)
+  useEffect(() => {
+    if (commands.length === 0 || store.isReconciled(projectId)) return;
+    store.markReconciled(projectId);
     fetch("/api/processes")
       .then((r) => r.json() as Promise<ProcessInfo[]>)
       .then((processes) => {
         const mine = processes.filter((p) => p.projectId === projectId);
         if (mine.length === 0) return;
-        setStates((prev) => {
-          const next = { ...prev };
-          for (const proc of mine) {
-            // Skip processes we're already tracking
-            const alreadyTracked = Object.values(next).some(
-              (s) => s.phase === "running" && s.pid === proc.pid
-            );
-            if (alreadyTracked) continue;
-            // Match the running process to the closest command by script name
-            const matched =
-              commands.find((cmd) => {
-                const scriptName = cmd.argv[cmd.argv.length - 1] ?? "";
-                return proc.cmd.includes(scriptName) || proc.cmd.includes(cmd.key);
-              }) ?? commands[0]!;
-            if (matched && (!next[matched.key] || next[matched.key]?.phase === "idle")) {
-              next[matched.key] = {
-                phase: "running",
-                pid: proc.pid,
-                port: proc.port,
-                url: `http://localhost:${proc.port}`,
-              };
-            }
+        for (const proc of mine) {
+          const alreadyTracked = commands.some((cmd) => {
+            const s = store.getRunState(projectId, cmd.key);
+            return s.phase === "running" && s.pid === proc.pid;
+          });
+          if (alreadyTracked) continue;
+          const matched =
+            commands.find((cmd) => {
+              const scriptName = cmd.argv[cmd.argv.length - 1] ?? "";
+              return proc.cmd.includes(scriptName) || proc.cmd.includes(cmd.key);
+            }) ?? commands[0]!;
+          if (matched && store.getRunState(projectId, matched.key).phase === "idle") {
+            store.setRunState(projectId, matched.key, {
+              phase: "running",
+              pid: proc.pid,
+              port: proc.port,
+              url: `http://localhost:${proc.port}`,
+            });
           }
-          return next;
-        });
+        }
       })
       .catch(() => {});
-  }, [commands, projectId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commands.length, projectId]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -91,11 +98,11 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   }, [open]);
 
   function getState(key: string): RunState {
-    return states[key] ?? { phase: "idle" };
+    return store.getRunState(projectId, key) as RunState;
   }
 
   function setKeyState(key: string, s: RunState) {
-    setStates((prev) => ({ ...prev, [key]: s }));
+    store.setRunState(projectId, key, s);
   }
 
   async function runInstall() {
@@ -104,10 +111,6 @@ export function DevServerButton({ projectId }: { projectId: string }) {
       const res = await fetch(`/api/projects/${projectId}/install`, { method: "POST" });
       if (res.ok) {
         setInstall("done");
-        // Re-fetch commands now that node_modules exist
-        const r2 = await fetch(`/api/projects/${projectId}/dev`);
-        const data = await r2.json() as { hasNodeModules: boolean; commands: DetectedCommand[] };
-        setCommands(data.commands ?? []);
       } else {
         setInstall("needed");
       }
@@ -140,7 +143,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
     setKeyState(key, { phase: "idle" });
   }
 
-  const runningCount = Object.values(states).filter((s) => s.phase === "running").length;
+  const runningCount = commands.filter((cmd) => store.getRunState(projectId, cmd.key).phase === "running").length;
   const busyInstall = install === "needed" || install === "installing";
 
   // No package.json and no detected commands (e.g. non-JS project) — hide entirely
@@ -150,13 +153,13 @@ export function DevServerButton({ projectId }: { projectId: string }) {
 
   // ── Install button ──────────────────────────────────────────────────────────
   const installBtn = install === "needed" ? (
-    <Button variant="ghost" size="sm" onClick={() => { void runInstall(); }}>
+    <button type="button" className={TBTN} onClick={() => { void runInstall(); }}>
       <Icon name="download" size={12} /> Install
-    </Button>
+    </button>
   ) : install === "installing" ? (
-    <Button variant="ghost" size="sm" disabled>
+    <button type="button" className={TBTN} disabled>
       <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Installing…
-    </Button>
+    </button>
   ) : null;
 
   // ── Single command: inline buttons ─────────────────────────────────────────
@@ -164,42 +167,36 @@ export function DevServerButton({ projectId }: { projectId: string }) {
     const cmd = commands[0]!;
     const s = getState(cmd.key);
     return (
-      <>
-        <span className="inline-flex items-center gap-1.5">
-          {installBtn}
-          {s.phase === "idle" && (
-            <Button variant="ghost" size="sm" onClick={() => { void startCmd(cmd.key); }} disabled={busyInstall}>
-              <Icon name="play" size={12} /> Dev server
-            </Button>
-          )}
-          {s.phase === "starting" && (
-            <Button variant="ghost" size="sm" disabled>
-              <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Starting…
-            </Button>
-          )}
-          {s.phase === "stopping" && (
-            <Button variant="ghost" size="sm" disabled>
-              <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Stopping…
-            </Button>
-          )}
-          {s.phase === "running" && (
-            <>
-              {s.port !== null && (
-                <a
-                  href={s.url ?? "#"} target="_blank" rel="noopener noreferrer"
-                  className="font-mono text-[11px] text-[var(--txt-2)] no-underline px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--working)_15%,transparent)] border border-[color-mix(in_srgb,var(--working)_30%,transparent)]"
-                  title={`Open ${s.url}`}
-                >
-                  :{s.port}
-                </a>
-              )}
-              <Button variant="ghost" size="sm" onClick={() => { void stopCmd(cmd.key); }} title="Stop dev server">
-                <Icon name="stop" size={12} /> Stop
-              </Button>
-            </>
-          )}
-        </span>
-      </>
+      <span className="inline-flex items-center gap-1">
+        {installBtn}
+        {s.phase === "idle" && (
+          <button type="button" className={TBTN} onClick={() => { void startCmd(cmd.key); }} disabled={busyInstall} title="Start dev server">
+            <Icon name="play" size={11} /> Dev
+          </button>
+        )}
+        {(s.phase === "starting" || s.phase === "stopping") && (
+          <button type="button" className={TBTN} disabled>
+            <Icon name="refresh" size={11} className="[animation:spin_1s_linear_infinite]" />
+            {s.phase === "starting" ? "Starting…" : "Stopping…"}
+          </button>
+        )}
+        {s.phase === "running" && (
+          <>
+            {s.port !== null && (
+              <a
+                href={s.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                className="font-mono text-[11px] text-[var(--working)] no-underline px-[7px] h-[30px] inline-flex items-center rounded-[7px] bg-[color-mix(in_srgb,var(--working)_10%,transparent)] border border-[color-mix(in_srgb,var(--working)_25%,transparent)] hover:bg-[color-mix(in_srgb,var(--working)_18%,transparent)] transition-colors"
+                title={`Open ${s.url}`}
+              >
+                :{s.port}
+              </a>
+            )}
+            <button type="button" className={TBTN} onClick={() => { void stopCmd(cmd.key); }} title="Stop dev server">
+              <Icon name="stop" size={11} /> Stop
+            </button>
+          </>
+        )}
+      </span>
     );
   }
 
@@ -282,31 +279,129 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   return installBtn;
 }
 
-export function OpenFolderButton({ projectId }: { projectId: string }) {
-  function open() {
-    void fetch(`/api/projects/${projectId}/open-folder`, { method: "POST" });
-  }
+export function FlutterDeviceButton() {
+  const setOpen = useFlutterStore((s) => s.setOpen);
+  const devicesQ = useFlutterDevices();
+  const devices = devicesQ.data?.devices ?? [];
+  const available = devicesQ.data?.available ?? false;
+  const connected = devices.filter((d) => d.status === "device");
+  const hasDevice = connected.length > 0;
+
+  if (!devicesQ.isSuccess || !available) return null;
+
+  const label = hasDevice
+    ? (connected.length > 1 ? `${connected.length} devices` : (connected[0]?.model ?? "Device"))
+    : "No device";
+
   return (
-    <Button variant="ghost" size="sm" onClick={open} title="Open project folder">
-      <Icon name="folder" size={12} /> Open folder
-    </Button>
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      title={hasDevice ? `${connected.length} device${connected.length !== 1 ? "s" : ""} connected — open Flutter manager` : "No Android device connected"}
+      className={cn(TBTN, hasDevice ? "text-[#54C5F8] hover:text-[#54C5F8]" : "")}
+    >
+      <Icon name="smartphone" size={12} />
+      {label}
+    </button>
+  );
+}
+
+export function OpenFolderButton({ projectId }: { projectId: string }) {
+  return (
+    <button type="button" className={TBTN} title="Open project folder"
+      onClick={() => { void fetch(`/api/projects/${projectId}/open-folder`, { method: "POST" }); }}>
+      <Icon name="folder" size={13} />
+    </button>
+  );
+}
+
+export function OpenInVSCodeButton({ projectId }: { projectId: string }) {
+  return (
+    <button type="button" className={TBTN} title="Open in VS Code"
+      onClick={() => { void fetch(`/api/projects/${projectId}/open-folder?app=code`, { method: "POST" }); }}>
+      <Icon name="code" size={13} />
+    </button>
+  );
+}
+
+export function GitStatusButton({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const gitQ = useGitStatus(projectId, true);
+  const git = gitQ.data;
+  if (!git?.isGit || !git.branch) return null;
+  const dirty = git.filesChanged > 0;
+  return (
+    <button
+      type="button"
+      className={cn(TBTN, dirty ? "text-[var(--acc-2)]" : "")}
+      title={[
+        `Branch: ${git.branch}`,
+        dirty ? `${git.filesChanged} changed, +${git.added} -${git.removed}` : "clean",
+        git.ahead ? `${git.ahead} ahead` : "",
+        git.behind ? `${git.behind} behind` : "",
+      ].filter(Boolean).join(" · ")}
+      onClick={() => router.push(PAGE_ROUTES.project(projectId))}
+    >
+      <Icon name="branch" size={12} />
+      <span className="font-mono">{git.branch}</span>
+      {dirty && <span className="text-[10.5px] font-mono text-txt-4">·{git.filesChanged}</span>}
+      {git.ahead > 0 && <span className="text-[10.5px] font-mono text-[var(--ok)]">↑{git.ahead}</span>}
+      {git.behind > 0 && <span className="text-[10.5px] font-mono text-yellow-400">↓{git.behind}</span>}
+    </button>
+  );
+}
+
+export function KillAgentsButton({ projectId }: { projectId: string }) {
+  const countQ = useQuery({
+    queryKey: ["project-running-count", projectId],
+    queryFn: () =>
+      fetch(`/api/runs?project=${projectId}&limit=100`)
+        .then((r) => r.json() as Promise<Array<{ status: string }>>)
+        .then((rs) => rs.filter((r) => r.status === "running").length),
+    refetchInterval: 4000,
+    staleTime: 2000,
+  });
+  const count = countQ.data ?? 0;
+  if (count === 0) return null;
+
+  async function killAll() {
+    await fetch("/api/runs/abort-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ projectId }),
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      className={cn(TBTN, "text-[var(--error)] hover:bg-[color-mix(in_srgb,var(--error)_12%,transparent)] hover:text-[var(--error)] hover:border-[color-mix(in_srgb,var(--error)_25%,transparent)]")}
+      title={`Stop all ${count} running agent${count !== 1 ? "s" : ""}`}
+      onClick={() => { void killAll(); }}
+    >
+      <Icon name="stop" size={11} />
+      Stop {count}
+    </button>
   );
 }
 
 type BuildPhase = "idle" | "building" | "done" | "error";
 
 export function BuildButton({ projectId }: { projectId: string }) {
-  const [hasBuild, setHasBuild] = useState(false);
   const [phase, setPhase] = useState<BuildPhase>("idle");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    fetch(`/api/projects/${projectId}/build`)
-      .then((r) => r.json() as Promise<{ hasBuild: boolean }>)
-      .then((d) => setHasBuild(d.hasBuild))
-      .catch(() => {});
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [projectId]);
+  useEffect(() => { return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, []);
+
+  const buildQ = useQuery({
+    queryKey: ["project-build-check", projectId],
+    queryFn: () =>
+      fetch(`/api/projects/${projectId}/build`)
+        .then((r) => r.json() as Promise<{ hasBuild: boolean }>),
+    staleTime: 60_000,
+  });
+
+  const hasBuild = buildQ.data?.hasBuild ?? false;
 
   async function startBuild() {
     if (phase !== "idle") return;
@@ -339,29 +434,29 @@ export function BuildButton({ projectId }: { projectId: string }) {
 
   if (phase === "building") {
     return (
-      <Button variant="ghost" size="sm" disabled>
+      <button type="button" className={TBTN} disabled>
         <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Building…
-      </Button>
+      </button>
     );
   }
   if (phase === "done") {
     return (
-      <Button variant="ghost" size="sm" disabled>
+      <button type="button" className={cn(TBTN, "text-[var(--ok)]")} disabled>
         <Icon name="check" size={12} /> Built
-      </Button>
+      </button>
     );
   }
   if (phase === "error") {
     return (
-      <Button variant="ghost" size="sm" disabled>
-        <Icon name="x" size={12} /> Build failed
-      </Button>
+      <button type="button" className={cn(TBTN, "text-[var(--error)]")} disabled>
+        <Icon name="x" size={12} /> Failed
+      </button>
     );
   }
   return (
-    <Button variant="ghost" size="sm" onClick={() => { void startBuild(); }}>
+    <button type="button" className={TBTN} onClick={() => { void startBuild(); }} title="Build project">
       <Icon name="zap" size={12} /> Build
-    </Button>
+    </button>
   );
 }
 
@@ -405,15 +500,19 @@ export function OfficeToolbar({ view, setView, agentCount, workingCount }: Offic
       </div>
 
       <div className="ml-auto flex items-center gap-[8px]">
-        {activeProjectId && project?.meta.cwd && (
-          <ActionBar
-            actions={[
+        <ActionBar
+          actions={[
+            ...(activeProjectId && project?.meta.cwd ? [
+              { key: `git-${activeProjectId}`, element: <GitStatusButton projectId={activeProjectId} /> },
               { key: "open-folder", element: <OpenFolderButton projectId={activeProjectId} /> },
+              { key: "open-vscode", element: <OpenInVSCodeButton projectId={activeProjectId} /> },
               { key: `build-${activeProjectId}`, element: <BuildButton key={`build-${activeProjectId}`} projectId={activeProjectId} /> },
               { key: activeProjectId, element: <DevServerButton key={activeProjectId} projectId={activeProjectId} /> },
-            ]}
-          />
-        )}
+              { key: `kill-${activeProjectId}`, element: <KillAgentsButton projectId={activeProjectId} /> },
+            ] : []),
+            { key: "flutter-device", element: <FlutterDeviceButton /> },
+          ]}
+        />
         <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
           <button
             type="button"

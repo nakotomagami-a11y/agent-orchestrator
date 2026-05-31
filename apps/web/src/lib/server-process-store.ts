@@ -1,3 +1,5 @@
+import type { Writable } from "node:stream";
+
 interface ProcessRecord {
   lines: string[];
   exitCode: number | null;
@@ -8,9 +10,25 @@ interface ProcessRecord {
 const MAX_LINES = 500;
 const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 const store = new Map<number, ProcessRecord>();
+const stdinMap = new Map<number, Writable>();
 
 export function registerProcess(pid: number) {
   store.set(pid, { lines: [], exitCode: null, signal: null, createdAt: Date.now() });
+}
+
+export function registerStdin(pid: number, stdin: Writable) {
+  stdinMap.set(pid, stdin);
+}
+
+export function writeStdin(pid: number, data: string): boolean {
+  const s = stdinMap.get(pid);
+  if (!s || s.destroyed) return false;
+  s.write(data);
+  return true;
+}
+
+export function deleteStdin(pid: number) {
+  stdinMap.delete(pid);
 }
 
 export function appendLine(pid: number, line: string) {

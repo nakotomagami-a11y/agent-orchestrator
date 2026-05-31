@@ -16,6 +16,8 @@ import { cn } from "@/lib/cn";
 import { usePaletteStore } from "@/lib/palette-store";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
+import { useFlutterStore } from "@/lib/flutter-store";
+import { useThemeStore } from "@/lib/theme-store";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 
 // ---------------------------------------------------------------------------
@@ -27,58 +29,61 @@ type Command = {
   label: string;
   secondary?: string;
   icon: IconName;
+  section: string;
   action: (router: AppRouterInstance) => void;
 };
 
 const COMMANDS: Command[] = [
+  // ── Navigate ──────────────────────────────────────────────────────────────
+  { id: "nav-office",    label: "Go to Office",    icon: "home",      section: "Navigate", action: (r) => r.push(PAGE_ROUTES.office) },
+  { id: "nav-activity",  label: "Go to Activity",  icon: "activity",  section: "Navigate", action: (r) => r.push(PAGE_ROUTES.activity) },
+  { id: "nav-agents",    label: "Go to Agents",    icon: "templates", section: "Navigate", action: (r) => r.push(PAGE_ROUTES.agents) },
+  { id: "nav-projects",  label: "Go to Projects",  icon: "folder",    section: "Navigate", action: (r) => r.push(PAGE_ROUTES.projects) },
+  { id: "nav-memory",    label: "Go to Memory",    icon: "memory",    section: "Navigate", action: (r) => r.push(PAGE_ROUTES.memory) },
+  { id: "nav-skills",    label: "Go to Skills",    icon: "layers",    section: "Navigate", action: (r) => r.push(PAGE_ROUTES.skills) },
+  { id: "nav-settings",  label: "Go to Settings",  icon: "settings",  section: "Navigate", action: (r) => r.push(PAGE_ROUTES.settings) },
+  { id: "nav-docs",      label: "Go to Docs",      icon: "help-circle", section: "Navigate", action: (r) => r.push(PAGE_ROUTES.docs) },
+  { id: "nav-search",    label: "Search Runs",     icon: "search",    section: "Navigate", secondary: "⌘K then type", action: (r) => r.push("/search") },
+  { id: "new-agent",     label: "New Agent",       icon: "plus",      section: "Navigate", action: (r) => r.push("/agents/new") },
+  // ── Actions ───────────────────────────────────────────────────────────────
   {
-    id: "nav-office",
-    label: "Go to Office",
-    icon: "home",
-    action: (r) => r.push(PAGE_ROUTES.office),
+    id: "toggle-theme",
+    label: "Toggle Theme",
+    secondary: "dark / light",
+    icon: "sun",
+    section: "Actions",
+    action: () => useThemeStore.getState().toggle(),
   },
   {
-    id: "nav-activity",
-    label: "Go to Activity",
-    icon: "activity",
-    action: (r) => r.push(PAGE_ROUTES.activity),
+    id: "kill-all-runs",
+    label: "Stop all running agents",
+    icon: "stop",
+    section: "Actions",
+    action: () => {
+      void fetch("/api/runs/abort-all", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    },
   },
-  {
-    id: "nav-agents",
-    label: "Go to Agents",
-    icon: "templates",
-    action: (r) => r.push(PAGE_ROUTES.agents),
-  },
-  {
-    id: "nav-projects",
-    label: "Go to Projects",
-    icon: "folder",
-    action: (r) => r.push(PAGE_ROUTES.projects),
-  },
-  {
-    id: "nav-settings",
-    label: "Go to Settings",
-    icon: "settings",
-    action: (r) => r.push(PAGE_ROUTES.settings),
-  },
-  {
-    id: "nav-search",
-    label: "Search Runs",
-    secondary: "⌘K then type",
-    icon: "search",
-    action: (r) => r.push("/search"),
-  },
+  // ── Tools ─────────────────────────────────────────────────────────────────
   {
     id: "open-limits",
-    label: "Open Limits",
+    label: "Spending Limits",
     icon: "gauge",
+    section: "Tools",
     action: () => useClaudeLimitsStore.getState().setOpen(true),
   },
   {
     id: "open-servers",
     label: "Running Servers",
     icon: "server",
+    section: "Tools",
     action: () => useProcessesStore.getState().setOpen(true),
+  },
+  {
+    id: "open-flutter",
+    label: "Flutter Device Manager",
+    icon: "smartphone",
+    section: "Tools",
+    action: () => useFlutterStore.getState().setOpen(true),
   },
 ];
 
@@ -93,7 +98,7 @@ export function CommandPalette() {
 
   const { query, setQuery, filtered } = useFilter(
     COMMANDS,
-    (c, q) => c.label.toLowerCase().includes(q.toLowerCase()),
+    (c, q) => c.label.toLowerCase().includes(q.toLowerCase()) || c.section.toLowerCase().includes(q.toLowerCase()),
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -225,10 +230,20 @@ export function CommandPalette() {
             <div className="px-[10px] py-3 text-[13px] text-[var(--txt-3)] text-center">
               No commands found
             </div>
-          ) : (
-            filtered.map((cmd, idx) => {
+          ) : (() => {
+            const elements: React.ReactNode[] = [];
+            let lastSection = "";
+            filtered.forEach((cmd, idx) => {
               const isActive = idx === activeIndex;
-              return (
+              if (!query && cmd.section !== lastSection) {
+                lastSection = cmd.section;
+                elements.push(
+                  <div key={`sec-${cmd.section}`} className="px-[10px] pt-[10px] pb-[4px] text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--txt-4)]">
+                    {cmd.section}
+                  </div>
+                );
+              }
+              elements.push(
                 <div
                   key={cmd.id}
                   id={`cmd-${cmd.id}`}
@@ -237,10 +252,10 @@ export function CommandPalette() {
                   data-active={isActive}
                   onClick={() => execute(cmd)}
                   onMouseEnter={() => setActiveIndex(idx)}
-                  className={cn("flex items-center gap-[10px] px-[10px] py-2 rounded-[var(--r-md)] cursor-pointer select-none", isActive ? "bg-bg-2" : "bg-transparent")}
+                  className={cn("flex items-center gap-[10px] px-[10px] py-[8px] rounded-[var(--r-md)] cursor-pointer select-none", isActive ? "bg-bg-2" : "bg-transparent")}
                 >
-                  <Icon name={cmd.icon} size={16} aria-hidden />
-                  <span className="flex-1 text-[14px] text-[var(--txt)]">
+                  <Icon name={cmd.icon} size={15} aria-hidden />
+                  <span className="flex-1 text-[13.5px] text-[var(--txt)]">
                     {cmd.label}
                   </span>
                   {cmd.secondary ? (
@@ -250,8 +265,9 @@ export function CommandPalette() {
                   ) : null}
                 </div>
               );
-            })
-          )}
+            });
+            return elements;
+          })()}
         </div>
       </div>
     </div>,

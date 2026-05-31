@@ -15,7 +15,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { CodeEditor } from "@/components/ui/code-editor";
-import { DevServerButton, BuildButton, OpenFolderButton } from "@/modules/office/components/office-toolbar";
+import { DevServerButton, BuildButton, OpenFolderButton, OpenInVSCodeButton, GitStatusButton, KillAgentsButton, FlutterDeviceButton } from "@/modules/office/components/office-toolbar";
 import { ActionBar } from "@/components/ui/action-bar";
 
 function relativeTime(ts: number): string {
@@ -66,9 +66,13 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           {project?.meta.cwd && (
             <ActionBar
               actions={[
+                { key: `git-${id}`, element: <GitStatusButton projectId={id} /> },
                 { key: "open-folder", element: <OpenFolderButton projectId={id} /> },
+                { key: "open-vscode", element: <OpenInVSCodeButton projectId={id} /> },
                 { key: `build-${id}`, element: <BuildButton key={`build-${id}`} projectId={id} /> },
                 { key: id, element: <DevServerButton key={id} projectId={id} /> },
+                { key: `kill-${id}`, element: <KillAgentsButton projectId={id} /> },
+                { key: "flutter-device", element: <FlutterDeviceButton /> },
               ]}
             />
           )}

@@ -13,6 +13,7 @@ import { buildAugmentedPath } from "./paths";
 import { pushRun } from "./store";
 import { appendRun as appendHistory } from "./history";
 import * as db from "./db";
+import { acquireInhibit, releaseInhibit, forceReleaseInhibit } from "./sleep-inhibit";
 
 export type SseEvent =
   | { name: "attached"; data: SseAttachedEvent }
@@ -64,7 +65,9 @@ interface LiveRun {
   childRunIds: string[];
 }
 
-const IDLE_TIMEOUT_MS = 10 * 60_000; // kill runs with no stdout for 10 min
+// Hard wall-clock cap. The process is "active" as long as it is alive —
+// stdout silence is not inactivity (Claude may be waiting on a long bash tool).
+const MAX_WALL_CLOCK_MS = 4 * 60 * 60_000; // 4-hour safety cap
 
 declare global {
   // eslint-disable-next-line no-var
@@ -93,9 +96,9 @@ function gc(): void {
       liveRuns.delete(id);
       continue;
     }
-    if (run.status === "running" && now - run.lastActivityAt > IDLE_TIMEOUT_MS) {
-      log.warn("run.idle_timeout", { runId: id, idleMs: now - run.lastActivityAt });
-      broadcast(run, { name: "error", data: { runId: id, message: "Run timed out after 10 minutes of inactivity." } });
+    if (run.status === "running" && now - run.startTs > MAX_WALL_CLOCK_MS) {
+      log.warn("run.wall_clock_exceeded", { runId: id, wallMs: now - run.startTs });
+      broadcast(run, { name: "error", data: { runId: id, message: "Run exceeded maximum runtime of 4 hours." } });
       try { run.proc.kill(); } catch { /* already gone */ }
     }
   }
@@ -222,6 +225,7 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     childRunIds: [],
   };
   liveRuns.set(runId, run);
+  acquireInhibit();
 
   db.insertRun({
     id: runId,
@@ -362,6 +366,7 @@ export function killAllRuns(): void {
       finalizeRun(run, 130);
     }
   }
+  forceReleaseInhibit();
 }
 
 function broadcast(run: LiveRun, event: SseEvent): void {
@@ -641,6 +646,7 @@ function finalizeRun(run: LiveRun, exitCode: number): void {
   run.status = exitCode === 0 ? "done" : "error";
   run.exitCode = exitCode;
   run.finishedAt = Date.now();
+  releaseInhibit();
 
   log.info("run.end", { runId: run.id, exitCode, durMs: run.finishedAt - run.startTs, cost: run.cost });
 
