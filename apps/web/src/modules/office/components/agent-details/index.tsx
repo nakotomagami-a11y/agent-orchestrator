@@ -13,7 +13,7 @@ import { MemoryTab } from "./tabs/memory-tab";
 import { SettingsTab } from "./tabs/settings-tab";
 import { Icon } from "@/components/ui/icon";
 import { useActiveProjectStore } from "@/lib/active-project-store";
-import { useProject } from "@/modules/projects/hooks/use-projects";
+import { useProject, useAddInstance } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
 import type { AgentInstance } from "@agent-office/shared/types";
@@ -197,10 +197,29 @@ export function AgentDetailsModal() {
     setShowOverview(false);
   }, [selectedId]);
 
+  const addMut = useAddInstance();
+
   const [tab, setTab] = useState<Tab>("conversation");
   const changeTab = (t: Tab) => { setTab(t); setActiveTab(t); };
   const [newThreadSignal, setNewThreadSignal] = useState(0);
-  const [branchSignal, setBranchSignal] = useState(0);
+
+  const handleNewConversation = async () => {
+    if (!activeProjectId || !selectedId) {
+      setNewThreadSignal((n) => n + 1);
+      return;
+    }
+    try {
+      const data = await new Promise<{ instance: AgentInstance }>((resolve, reject) => {
+        addMut.mutate({ projectId: activeProjectId, agentId: selectedId }, {
+          onSuccess: (d) => resolve(d),
+          onError: reject,
+        });
+      });
+      selectAgent(selectedId, { instanceId: data.instance.instanceId, tab: "conversation" });
+    } catch {
+      setNewThreadSignal((n) => n + 1);
+    }
+  };
 
   const runsQ = useRuns({
     agentId: agent?.id,
@@ -389,8 +408,8 @@ export function AgentDetailsModal() {
             <>
           {/* ── Agent header ── */}
           <div className="flex items-center gap-[14px] px-6 py-4 border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
-            <div className="relative w-[40px] h-[40px] rounded-[10px] bg-ao-bg-3 border border-ao-line-1 overflow-hidden shrink-0 grid place-items-center [image-rendering:pixelated]">
-              <span className="text-[22px]">{agent.short[0]?.toUpperCase() ?? "?"}</span>
+            <div className="relative shrink-0">
+              <AgentAvatar unit={agent.unitChoice} size={40} label={agent.name} />
               <span className={`absolute right-[-2px] bottom-[-2px] w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
                 isWorking
                   ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]"
@@ -468,39 +487,15 @@ export function AgentDetailsModal() {
                   </button>
                 </div>
               )}
-              <span className="inline-flex items-center gap-[6px] h-[28px] px-3 rounded-[8px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] text-[var(--ao-fg-1)] font-mono text-[11.5px] tracking-[0.02em]">
-                <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${isWorking ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]" : "bg-[var(--ao-fg-3)]"}`} />
-                {effectiveStatus}
-              </span>
               {tab === "conversation" && (
-                <>
-                  <span className="inline-flex items-center gap-[10px] h-7 px-3 rounded-lg bg-ao-bg-3 border border-ao-line-1 font-mono text-[11.5px] text-ao-fg-1">
-                    <span className="text-ao-fg-2">{(usage.tokensIn + usage.tokensOut).toLocaleString()} tok</span>
-                    <span className="text-ao-fg-0">${usage.cost.toFixed(4)}</span>
-                  </span>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
-                    onClick={() => setBranchSignal((n) => n + 1)}
-                  >
-                    <Icon name="branch-ao" size={13} /> Branch
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
-                    onClick={() => setNewThreadSignal((n) => n + 1)}
-                  >
-                    <Icon name="plus" size={13} /> New
-                  </button>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-transparent border-transparent text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-3"
-                    aria-label="Edit agent"
-                    onClick={() => changeTab("settings")}
-                  >
-                    <Icon name="edit" size={13} />
-                  </button>
-                </>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2 disabled:opacity-40 disabled:cursor-default"
+                  onClick={() => void handleNewConversation()}
+                  disabled={addMut.isPending}
+                >
+                  <Icon name="plus" size={13} /> New
+                </button>
               )}
               {tab === "configuration" && (
                 <button
@@ -544,7 +539,6 @@ export function AgentDetailsModal() {
                 onNavigateTab={(tab) => changeTab(tab)}
                 noHeader
                 newThreadSignal={newThreadSignal}
-                branchSignal={branchSignal}
                 onActiveRunChange={setActiveRunId}
               />
             )}

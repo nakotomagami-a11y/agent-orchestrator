@@ -32,7 +32,12 @@ function startInhibit() {
       { stdio: "ignore", detached: false },
     );
     proc.unref();
-    proc.on("exit", () => { if (getProc() === proc) setProc(null); });
+    proc.on("exit", () => {
+      if (getProc() !== proc) return;
+      setProc(null);
+      // Restart the inhibitor if runs are still active (proc died unexpectedly).
+      if (getCount() > 0) startInhibit();
+    });
     setProc(proc);
     log.info("sleep_inhibit.acquired");
   } catch {

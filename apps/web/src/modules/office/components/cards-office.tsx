@@ -14,7 +14,17 @@ import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import type { OfficeView } from "../hooks/use-office-store";
-import { DevServerButton, BuildButton } from "./office-toolbar";
+import { ActionBar } from "@/components/ui/action-bar";
+import { useProject } from "@/modules/projects/hooks/use-projects";
+import {
+  GitStatusButton,
+  OpenFolderButton,
+  OpenInVSCodeButton,
+  BuildButton,
+  DevServerButton,
+  KillAgentsButton,
+  FlutterDeviceButton,
+} from "./office-toolbar";
 
 export type OfficeFilter = "all" | "live" | "idle";
 
@@ -49,6 +59,8 @@ export function CardsOffice({
   const [pinned, setPinned] = useState<Set<string>>(new Set());
   const [addOpen, setAddOpen] = useState(false);
   const setActiveId = useActiveProjectStore((s) => s.setId);
+  const projectQ = useProject(projectId);
+  const hasCwd = !!projectQ.data?.meta.cwd;
 
   const togglePin = (id: string) =>
     setPinned(prev => {
@@ -198,12 +210,19 @@ export function CardsOffice({
         </div>
 
         <div className="ml-auto flex items-center gap-[8px]">
-          {projectId && (
-            <>
-              <BuildButton key={`build-${projectId}`} projectId={projectId} />
-              <DevServerButton key={projectId} projectId={projectId} />
-            </>
+          {projectId && hasCwd && (
+            <ActionBar
+              actions={[
+                { key: `git-${projectId}`, element: <GitStatusButton projectId={projectId} /> },
+                { key: "open-folder", element: <OpenFolderButton projectId={projectId} /> },
+                { key: "open-vscode", element: <OpenInVSCodeButton projectId={projectId} /> },
+                { key: `build-${projectId}`, element: <BuildButton key={`build-${projectId}`} projectId={projectId} /> },
+                { key: projectId, element: <DevServerButton key={projectId} projectId={projectId} /> },
+                { key: `kill-${projectId}`, element: <KillAgentsButton projectId={projectId} /> },
+              ]}
+            />
           )}
+          <FlutterDeviceButton />
           <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
             <button
               type="button"

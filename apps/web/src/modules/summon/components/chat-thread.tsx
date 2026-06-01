@@ -93,47 +93,66 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   }), []);
 
   // ── Auto-follow state ──
-  // `followTail` is the user's intent: "keep me pinned to the latest message".
-  // We flip it to false the moment they scroll above the stick band, and back
-  // to true the moment they return to it. While following, every new item
-  // triggers a scroll-to-bottom; while not following, new tokens leave the
-  // viewport alone - exactly what the user asked for.
   const [followTail, setFollowTail] = useState(true);
-  // `hasNewBelow` drives the "Jump to latest" pill. True when items arrive
-  // while the user is scrolled up; cleared when they jump back down (or
-  // scroll back into the stick band themselves).
   const [hasNewBelow, setHasNewBelow] = useState(false);
-  // `visibleCount` is the windowed render slice. Starts at the most recent
-  // VISIBLE_WINDOW items; user clicks "Load earlier" to widen the window.
+  // visibleCount: number of *rows* (not items) to show. Tool-chain groups count as one row.
   const [visibleCount, setVisibleCount] = useState(VISIBLE_WINDOW);
 
+  // frozenStartRef: when the user scrolls up (!followTail), we lock the
+  // start row index so that new items appended at the tail don't shift the
+  // slice the user is reading. null = follow-tail mode.
+  const frozenStartRef = useRef<number | null>(null);
+
+  // Group ALL items once so chain IDs (chain-${firstTool.id}) are stable for
+  // the lifetime of the transcript. Windowing on rows (not items) means a
+  // chain that started before the visible window still gets a consistent key,
+  // preventing ToolGroupRow from unmounting/remounting mid-stream and losing
+  // its expanded state.
+  const allRows = useMemo(() => groupRows(items), [items]);
+
+  // Refs so the scroll handler (created once) can read current values.
+  const allRowsLengthRef = useRef(allRows.length);
+  allRowsLengthRef.current = allRows.length;
+  const visibleCountRef = useRef(visibleCount);
+  visibleCountRef.current = visibleCount;
+
   // When the underlying transcript identity changes (agent / instance switch,
-  // /clear, /branch), reset the visible window AND snap back to the latest
-  // message so we open at the bottom of the new conversation - never midway.
-  // We detect a swap via the id of items[0]: appending tokens never changes
-  // it, but loading a different transcript always does.
+  // /clear, /branch), reset state and snap to the bottom.
   const firstId = items[0]?.id ?? null;
   const prevFirstIdRef = useRef(firstId);
   useLayoutEffect(() => {
     if (prevFirstIdRef.current === firstId) return;
     prevFirstIdRef.current = firstId;
-    setVisibleCount(Math.min(items.length, VISIBLE_WINDOW));
+    frozenStartRef.current = null;
+    setVisibleCount(VISIBLE_WINDOW);
     setFollowTail(true);
     setHasNewBelow(false);
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [firstId, items.length]);
 
-  // Slice the tail of the transcript for rendering.
-  const visibleItems = useMemo(() => {
-    if (visibleCount >= items.length) return items;
-    return items.slice(items.length - visibleCount);
-  }, [items, visibleCount]);
+  // Window into allRows. While frozen, the start index is fixed — new rows
+  // appended at the tail stay outside the visible slice.
+  const visibleRows = useMemo(() => {
+    const frozen = frozenStartRef.current;
+    if (frozen !== null) {
+      return allRows.slice(frozen, Math.min(frozen + visibleCount, allRows.length));
+    }
+    if (visibleCount >= allRows.length) return allRows;
+    return allRows.slice(allRows.length - visibleCount);
+  // followTail is in deps so the memo re-runs when frozenStartRef changes
+  // (frozenStartRef is mutated in the scroll handler then setFollowTail fires).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allRows, visibleCount, followTail]);
 
-  const rows = useMemo(() => groupRows(visibleItems), [visibleItems]);
-  const hiddenCount = items.length - visibleItems.length;
-  const hiddenConversationalCount = hiddenCount > 0
-    ? items.slice(0, hiddenCount).filter((it) => CONVERSATIONAL_KINDS.has(it.kind)).length
+  // Count hidden conversational rows (tool chains don't count toward the pill).
+  const rowWindowStart = frozenStartRef.current !== null
+    ? frozenStartRef.current
+    : Math.max(0, allRows.length - visibleCount);
+  const hiddenConversationalCount = rowWindowStart > 0
+    ? allRows.slice(0, rowWindowStart).filter(
+        (row) => row.kind === "single" && CONVERSATIONAL_KINDS.has(row.item.kind)
+      ).length
     : 0;
 
   // Detect agent-text items that are asking a question and haven't been
@@ -170,6 +189,12 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
         raf = 0;
         const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
         const nearBottom = distance <= STICK_THRESHOLD_PX;
+        if (!nearBottom && frozenStartRef.current === null) {
+          frozenStartRef.current = Math.max(0, allRowsLengthRef.current - visibleCountRef.current);
+        }
+        if (nearBottom) {
+          frozenStartRef.current = null;
+        }
         setFollowTail(nearBottom);
         if (nearBottom) setHasNewBelow(false);
       });
@@ -187,10 +212,9 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
     const el = scrollRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
+    frozenStartRef.current = null;
     setFollowTail(true);
     setHasNewBelow(false);
-    // Run exactly once per mount. The thread state is owned by the parent,
-    // and re-running on items changes is the auto-scroll bug we're fixing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -224,19 +248,22 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
   // delta after paint so the user's reading position stays put.
   const loadEarlier = useCallback(() => {
     const el = scrollRef.current;
+    // When frozen, extend the window backward by moving frozenStart earlier.
+    if (frozenStartRef.current !== null) {
+      frozenStartRef.current = Math.max(0, frozenStartRef.current - LOAD_MORE_STEP);
+    }
     if (!el) {
-      setVisibleCount((c) => Math.min(items.length, c + LOAD_MORE_STEP));
+      setVisibleCount((c) => Math.min(allRowsLengthRef.current, c + LOAD_MORE_STEP));
       return;
     }
     const prevHeight = el.scrollHeight;
     const prevTop = el.scrollTop;
-    setVisibleCount((c) => Math.min(items.length, c + LOAD_MORE_STEP));
-    // After paint, adjust scrollTop by the height delta.
+    setVisibleCount((c) => Math.min(allRowsLengthRef.current, c + LOAD_MORE_STEP));
     requestAnimationFrame(() => {
       const nextHeight = el.scrollHeight;
       el.scrollTop = prevTop + (nextHeight - prevHeight);
     });
-  }, [items.length]);
+  }, []);
 
   const jumpToBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -294,8 +321,8 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
             </div>
           ) : null}
           <div className="max-w-[760px] mx-auto px-2 flex flex-col gap-[20px]">
-            {rows.map((row, idx) => {
-              const prevRow = rows[idx - 1] ?? null;
+            {visibleRows.map((row, idx) => {
+              const prevRow = visibleRows[idx - 1] ?? null;
               const curIsAgent = isAgentRow(row);
               const hideAvatar = curIsAgent && prevRow !== null && isAgentRow(prevRow);
 
@@ -317,7 +344,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                   />
                 );
               }
-              const isTail = idx === rows.length - 1;
+              const isTail = idx === visibleRows.length - 1;
               const running = isTail && LIVE_PHASES.has(phase);
               return (
                 <ToolGroupRow

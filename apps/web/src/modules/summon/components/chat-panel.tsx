@@ -36,8 +36,6 @@ export type ChatPanelProps = {
   noHeader?: boolean;
   /** Incrementing this triggers a new thread. */
   newThreadSignal?: number;
-  /** Incrementing this triggers a branch (new thread). */
-  branchSignal?: number;
   /** Called with the current active run id (null when idle). */
   onActiveRunChange?: (runId: string | null) => void;
 };
@@ -59,7 +57,7 @@ export type ChatPanelProps = {
  * it's already finished, we fall back to the persisted run's output so
  * the user actually sees the result instead of an empty bubble.
  */
-export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNavigateTab, noHeader, newThreadSignal, branchSignal, onActiveRunChange }: ChatPanelProps) {
+export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNavigateTab, noHeader, newThreadSignal, onActiveRunChange }: ChatPanelProps) {
   const qc = useQueryClient();
   const summon = useSummon();
   const abort = useAbortRun();
@@ -251,7 +249,6 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
 
   // External new-thread / branch signals from the parent shell header buttons
   const prevNewThreadRef = useRef(newThreadSignal ?? 0);
-  const prevBranchRef = useRef(branchSignal ?? 0);
   useEffect(() => {
     const cur = newThreadSignal ?? 0;
     if (cur !== prevNewThreadRef.current) {
@@ -260,14 +257,6 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newThreadSignal]);
-  useEffect(() => {
-    const cur = branchSignal ?? 0;
-    if (cur !== prevBranchRef.current) {
-      prevBranchRef.current = cur;
-      newThread();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [branchSignal]);
 
   // ── Phase ──
   const sliceText = useMemo(() => {
@@ -350,11 +339,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       {!noHeader && (
         <ChatHead
           agent={agent}
-          phase={stream.phase}
-          usage={stream.usage}
-          onBranch={newThread}
           onNew={newThread}
-          onEdit={onEdit}
         />
       )}
 
