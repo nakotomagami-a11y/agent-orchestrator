@@ -86,7 +86,7 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
                     className={[
                       "flex items-center justify-center p-[7px] rounded-[8px] mx-[3px] my-[3px] transition-[background,box-shadow] duration-100",
                       isActive
-                        ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1.5px_var(--ao-accent-line)]"
+                        ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_2px_var(--ao-accent)]"
                         : "hover:bg-[var(--ao-bg-3)]",
                     ].join(" ")}
                   >

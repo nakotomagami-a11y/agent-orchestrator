@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { rmSync, mkdirSync } from "node:fs";
+import { rmSync, mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { readdirSync } from "node:fs";
 import { db, agents, projects, paths } from "@agent-office/shared/services";
 
 const DECORATIONS = `{"12,12":["house1"],"15,17":["house2"],"15,22":["tower"],"20,10":["castle"],"24,18":["gold_mine_active"],"23,18":["cursed_chest"],"16,9":["tree2"],"17,8":["tree2"],"17,9":["tree"],"24,8":["tree"],"17,21":["tree3","mushroom2"],"16,21":["tree4","mushroom1"],"14,21":["shrub3"],"16,16":["shrub5"],"11,13":["sheep"],"13,15":["sheep"],"18,17":["pumpkin2"],"17,14":["pumpkin1"],"21,13":["gravestone"],"16,10":["bush3"],"10,10":["bush3"],"17,17":["bush3"],"16,24":["bush3"],"23,17":["bush3"],"22,18":["bush4"],"19,18":["bush"],"22,16":["bush"],"20,19":["rock2"],"23,21":["mushroom2"],"19,15":["mushroom2"],"23,12":["mushroom2"],"15,13":["mushroom2"],"16,14":["bridge_h"],"23,14":["duck"],"12,20":["duck"],"14,7":["duck"],"16,15":["water_rock2"],"18,16":["water_rock"],"24,9":["water_rock2"],"14,10":["water_rock4"],"25,18":["bones1","bone_sign"],"13,12":["bones1"],"17,13":["tree3"],"24,11":["tree4"],"25,20":["tree4"],"23,20":["shrub4"],"20,14":["shrub4"],"19,11":["shrub4","bush2"],"23,10":["shrub4"],"19,10":["shrub5"],"21,10":["shrub5"],"19,16":["shrub5"],"22,19":["shrub5"],"16,22":["shrub5"],"14,22":["shrub5"],"13,13":["shrub5"],"14,15":["shrub5"],"13,16":["shrub5"],"10,13":["shrub4"],"16,17":["shrub4"],"22,13":["shrub4"],"19,20":["stump3"],"25,10":["stump1"]}`;
@@ -543,5 +544,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, message: "Demo data cleared." });
   }
 
+  if (action === "clear-all-runs") {
+    const rawDb = db.getDb();
+    rawDb.prepare("DELETE FROM tool_calls").run();
+    rawDb.prepare("DELETE FROM messages").run();
+    rawDb.prepare("DELETE FROM runs").run();
+    return NextResponse.json({ ok: true, message: "All runs, messages, and tool calls deleted." });
+  }
+
+  if (action === "fix-orphans") {
+    const rawDb = db.getDb();
+    const result = rawDb.prepare("UPDATE runs SET status='error', exit_code=-1 WHERE status='running'").run();
+    return NextResponse.json({ ok: true, message: `${result.changes} orphaned run(s) marked as error.` });
+  }
+
   return NextResponse.json({ error: "unknown action" }, { status: 400 });
+}
+
+export function GET() {
+  const rawDb = db.getDb();
+  const runsCount = (rawDb.prepare("SELECT COUNT(*) as n FROM runs").get() as { n: number }).n;
+  const messagesCount = (rawDb.prepare("SELECT COUNT(*) as n FROM messages").get() as { n: number }).n;
+  const orphansCount = (rawDb.prepare("SELECT COUNT(*) as n FROM runs WHERE status='running'").get() as { n: number }).n;
+
+  let dbSizeBytes = 0;
+  try { dbSizeBytes = statSync(paths.DB_PATH).size; } catch { /* ignore */ }
+
+  let agentsCount = 0;
+  try { agentsCount = readdirSync(paths.AGENTS_DIR).filter(f => f.endsWith(".md") && !f.startsWith("_")).length; } catch { /* ignore */ }
+
+  return NextResponse.json({
+    runsCount,
+    messagesCount,
+    orphansCount,
+    dbSizeBytes,
+    agentsCount,
+    dbPath: paths.DB_PATH,
+  });
 }

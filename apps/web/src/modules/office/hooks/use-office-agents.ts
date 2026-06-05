@@ -23,6 +23,7 @@ export interface OfficeAgent extends ApiAgent {
 
 interface OfficeAgentsResult {
   agents: OfficeAgent[];
+  runs: PersistedRun[];
   workingCount: number;
   idleCount: number;
   errorCount: number;
@@ -76,7 +77,7 @@ export function useOfficeAgents(): OfficeAgentsResult & { isLoading: boolean } {
       if (r.ts >= todayMs) spendToday += r.cost || 0;
     }
 
-    return { agents, workingCount, idleCount, errorCount, spendToday };
+    return { agents, runs: rawRuns, workingCount, idleCount, errorCount, spendToday };
   }, [agentsQuery.data, runsQuery.data]);
 
   return { ...enriched, isLoading: agentsQuery.isLoading };

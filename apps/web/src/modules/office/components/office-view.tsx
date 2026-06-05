@@ -72,8 +72,6 @@ export function OfficeView() {
     <>
       {view === "iso" && (
         <OfficeToolbar
-          view={view}
-          setView={setView}
           agentCount={agents.length}
           workingCount={workingCount}
         />
@@ -110,7 +108,7 @@ export function OfficeView() {
               </div>
             )}
 
-            <OfficeScene key={activeProjectId ?? "global"} projectId={activeProjectId ?? null} />
+            <OfficeScene key={activeProjectId ?? "global"} projectId={activeProjectId ?? null} view={view} setView={setView} />
           </>
         ) : (
           <CardsOffice

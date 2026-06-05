@@ -18,6 +18,9 @@ export function useOfficePainting({
   const onCellClickRef = useRef<(x: number, y: number) => void>(() => undefined);
   // Dedup: skip onCellClick when the tile coord hasn't changed during a drag
   const lastPaintedTile = useRef<{ x: number; y: number } | null>(null);
+  // Cache getBoundingClientRect on pointerdown — calling it on every pointermove
+  // forces a layout reflow. The rect is stable for the duration of a drag.
+  const cachedRectRef = useRef<DOMRect | null>(null);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): boolean => {
@@ -34,6 +37,7 @@ export function useOfficePainting({
         lastPaintedTile.current = null;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        cachedRectRef.current = rect;
         const wx = (e.clientX - rect.left - panRef.current.x) / zoomRef.current;
         const wy = (e.clientY - rect.top - panRef.current.y) / zoomRef.current;
         const tx = Math.floor(wx / TILE);
@@ -52,7 +56,8 @@ export function useOfficePainting({
   const onPointerMove = useCallback(
     (e: React.PointerEvent<HTMLDivElement>): boolean => {
       if (!isPainting.current) return false;
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      // Reuse the rect cached on pointerdown — no layout reflow on every move
+      const rect = cachedRectRef.current ?? (e.currentTarget as HTMLElement).getBoundingClientRect();
       const wx = (e.clientX - rect.left - panRef.current.x) / zoomRef.current;
       const wy = (e.clientY - rect.top - panRef.current.y) / zoomRef.current;
       const tx = Math.floor(wx / TILE);

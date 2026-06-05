@@ -14,17 +14,9 @@ import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import type { OfficeView } from "../hooks/use-office-store";
-import { ActionBar } from "@/components/ui/action-bar";
 import { useProject } from "@/modules/projects/hooks/use-projects";
-import {
-  GitStatusButton,
-  OpenFolderButton,
-  OpenInVSCodeButton,
-  BuildButton,
-  DevServerButton,
-  KillAgentsButton,
-  FlutterDeviceButton,
-} from "./office-toolbar";
+import { ProjectChip } from "@/modules/projects/components/project-chip";
+import { ProjectActionsBar } from "./office-toolbar";
 
 export type OfficeFilter = "all" | "live" | "idle";
 
@@ -60,7 +52,7 @@ export function CardsOffice({
   const [addOpen, setAddOpen] = useState(false);
   const setActiveId = useActiveProjectStore((s) => s.setId);
   const projectQ = useProject(projectId);
-  const hasCwd = !!projectQ.data?.meta.cwd;
+
 
   const togglePin = (id: string) =>
     setPinned(prev => {
@@ -189,40 +181,28 @@ export function CardsOffice({
   return (
     <div className="flex flex-col min-h-0 h-full overflow-hidden">
       <header className="border-b border-line shrink-0 flex items-center gap-[16px] px-[28px] pt-[18px] pb-[14px]">
-        <div className="flex flex-col gap-[2px]">
-          <h1 className="font-bold flex items-baseline gap-[10px] m-0 text-[22px] tracking-[-0.01em]">
-            The office
-            <span className="text-txt-3 font-normal font-[var(--font-mono)] text-[12.5px] tracking-normal">
-              {projectId ? (
-                <>
-                  · <span className="text-txt-2">{rosterCount} agent{rosterCount === 1 ? "" : "s"}</span>
-                  {projectName ? <> in {projectName}</> : null}
-                  {" · "}
-                  <span className="text-txt-2" style={workingCount > 0 ? { color: "var(--working)" } : undefined}>
-                    {workingCount} working
-                  </span>
-                </>
-              ) : (
-                <> · {agents.length} agent{agents.length === 1 ? "" : "s"}</>
-              )}
+        <div className="flex items-center gap-[14px] min-w-0">
+          <h1 className="font-bold m-0 text-[22px] tracking-[-0.01em] shrink-0">The office</h1>
+          {projectId ? (
+            <>
+              <span className="text-txt-4 text-[14px] shrink-0">·</span>
+              <ProjectChip projectId={projectId} project={projectQ.data} />
+              <span className="text-txt-3 font-mono text-[12px] shrink-0 whitespace-nowrap">
+                {rosterCount} agent{rosterCount === 1 ? "" : "s"}
+                {workingCount > 0 && (
+                  <> · <span className="text-status-working">{workingCount} working</span></>
+                )}
+              </span>
+            </>
+          ) : (
+            <span className="text-txt-3 font-mono text-[12px] shrink-0">
+              · {agents.length} agent{agents.length === 1 ? "" : "s"}
             </span>
-          </h1>
+          )}
         </div>
 
         <div className="ml-auto flex items-center gap-[8px]">
-          {projectId && hasCwd && (
-            <ActionBar
-              actions={[
-                { key: `git-${projectId}`, element: <GitStatusButton projectId={projectId} /> },
-                { key: "open-folder", element: <OpenFolderButton projectId={projectId} /> },
-                { key: "open-vscode", element: <OpenInVSCodeButton projectId={projectId} /> },
-                { key: `build-${projectId}`, element: <BuildButton key={`build-${projectId}`} projectId={projectId} /> },
-                { key: projectId, element: <DevServerButton key={projectId} projectId={projectId} /> },
-                { key: `kill-${projectId}`, element: <KillAgentsButton projectId={projectId} /> },
-              ]}
-            />
-          )}
-          <FlutterDeviceButton />
+          {projectId && <ProjectActionsBar projectId={projectId} />}
           <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
             <button
               type="button"

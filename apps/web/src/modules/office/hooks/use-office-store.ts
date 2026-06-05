@@ -10,7 +10,7 @@ export type OfficeView = "iso" | "cards";
  * modal) so other surfaces can pre-select a tab when opening the inspector -
  * e.g. clicking the edit icon on an agent card jumps straight to "prompt".
  */
-export type AgentTab = "conversation" | "configuration" | "history" | "memory" | "settings";
+export type AgentTab = "conversation" | "history" | "memory" | "settings";
 
 type SelectOptions = { tab?: AgentTab; instanceId?: string | null };
 

@@ -11,6 +11,7 @@ import { isActiveRoute } from "./sidebar.utils";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 import { useOfficeAgents, type OfficeAgent } from "@/modules/office/hooks/use-office-agents";
+import { statusFromRunsForInstance } from "@/modules/office/utils/derive-status";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
@@ -46,7 +47,7 @@ type RosterRow = {
 export function Sidebar() {
   const t = useTranslations();
   const pathname = usePathname();
-  const { agents, workingCount, spendToday } = useOfficeAgents();
+  const { agents, runs, workingCount, spendToday } = useOfficeAgents();
   const selectedId = useOfficeStore((s) => s.selectedId);
   const selectedInstanceId = useOfficeStore((s) => s.selectedInstanceId);
   const select = useOfficeStore((s) => s.select);
@@ -125,11 +126,11 @@ export function Sidebar() {
       }
       const group = seen.get(inst.agentId)!;
       group.instances.push(inst);
-      group.instanceStatuses.push(a.status);
+      group.instanceStatuses.push(statusFromRunsForInstance(inst.instanceId, runs).status);
     }
 
     return order.map((id) => seen.get(id)!);
-  }, [agents, project, expandedGroups, activeProjectId]);
+  }, [agents, runs, project, expandedGroups, activeProjectId]);
 
   // Auto-expand a group when its instance becomes selected
   useEffect(() => {

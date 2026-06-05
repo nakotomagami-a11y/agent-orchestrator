@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, startTransition, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/components/ui/icon";
-import { OfficeMap, TILE, type AgentPositions, type VisibleRange } from "./office-map";
+import { OfficeMap, OfficeMapOverlay, TILE, type AgentPositions, type VisibleRange } from "./office-map";
+import { OfficePixiCanvas } from "./office-pixi-canvas";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
   DECORATIONS,
@@ -34,6 +36,7 @@ import {
 } from "../hooks/use-office-camera";
 import { useOfficePainting } from "../hooks/use-office-painting";
 import type { AgentInstance } from "@agent-office/shared/types";
+import type { OfficeView } from "../hooks/use-office-store";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -180,7 +183,15 @@ type Snapshot = {
   agentPositions: AgentPositions;
 };
 
-export function OfficeScene({ projectId }: { projectId: string | null }) {
+export function OfficeScene({
+  projectId,
+  view,
+  setView,
+}: {
+  projectId: string | null;
+  view: OfficeView;
+  setView: (v: OfficeView) => void;
+}) {
   const [grid, setGrid] = useState<boolean[][]>(() => makeSeedGrid());
   const [decorations, setDecorations] = useState<DecorationsMap>(() => ({}));
   const [agentPositions, setAgentPositions] = useState<AgentPositions>(() => ({}));
@@ -199,12 +210,12 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   // Undo/redo session history (not server-synced, session-only)
   const undoStack = useRef<Snapshot[]>([]);
   const redoStack = useRef<Snapshot[]>([]);
-  // Keep a ref to current state so the keyboard handler can push to redo
-  // without capturing stale closure values.
+  // Refs always reflect latest state so callbacks don't need them in deps.
+  // Assigned during render (safe - refs are mutable, no re-render triggered).
   const currentStateRef = useRef<Snapshot>({ grid, decorations, agentPositions });
-  useEffect(() => {
-    currentStateRef.current = { grid, decorations, agentPositions };
-  }, [grid, decorations, agentPositions]);
+  currentStateRef.current = { grid, decorations, agentPositions };
+  const rectStartRef = useRef<{ x: number; y: number } | null>(null);
+  rectStartRef.current = rectStart;
 
   const {
     zoom, panX, panY,
@@ -320,6 +331,8 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   // Multi-instance data: roster + feature flag + spend
   const settingsQ = useSettings();
   const isMultiInstance = settingsQ.data?.features?.multiInstance === true;
+  // Pixi renderer is on by default; explicitly set features.newOfficeRenderer=false to revert to DOM path
+  const usePixiRenderer = settingsQ.data?.features?.newOfficeRenderer !== false;
   const projectQ = useProject(projectId);
   const rosterInstances = projectQ.data?.meta.roster ?? EMPTY_ROSTER;
   const spendQ = useProjectSpend(isMultiInstance ? projectId : null);
@@ -396,6 +409,12 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
 
   const onCellClick = useCallback(
     (x: number, y: number, shiftKey = false) => {
+      // Read all state from refs — this callback never closes over state,
+      // so it stays stable ([] deps) and never breaks OfficeMap's memo.
+      const { grid, decorations, agentPositions } = currentStateRef.current;
+      const rectStart = rectStartRef.current;
+      const tool = toolRef.current;
+
       const key = decorationKey(x, y);
       const cellHasGrass = grid[y]?.[x] === true;
 
@@ -410,34 +429,40 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         const yMin = Math.min(rectStart.y, y);
         const yMax = Math.max(rectStart.y, y);
         if (tool === "grass") {
-          setGrid((prev) => {
-            const next = prev.map((row) => [...row]);
-            for (let cy = yMin; cy <= yMax; cy++)
-              for (let cx = xMin; cx <= xMax; cx++)
-                next[cy]![cx] = true;
-            return next;
+          startTransition(() => {
+            setGrid((prev) => {
+              const next = [...prev];
+              for (let cy = yMin; cy <= yMax; cy++) {
+                next[cy] = [...prev[cy]!];
+                for (let cx = xMin; cx <= xMax; cx++) next[cy]![cx] = true;
+              }
+              return next;
+            });
           });
         } else {
-          setGrid((prev) => {
-            const next = prev.map((row) => [...row]);
-            for (let cy = yMin; cy <= yMax; cy++)
-              for (let cx = xMin; cx <= xMax; cx++)
-                next[cy]![cx] = false;
-            return next;
-          });
-          setDecorations((prev) => {
-            const next = { ...prev };
-            for (let cy = yMin; cy <= yMax; cy++)
-              for (let cx = xMin; cx <= xMax; cx++)
-                delete next[decorationKey(cx, cy)];
-            return next;
-          });
-          setAgentPositions((prev) => {
-            const next = { ...prev };
-            for (let cy = yMin; cy <= yMax; cy++)
-              for (let cx = xMin; cx <= xMax; cx++)
-                delete next[decorationKey(cx, cy)];
-            return next;
+          startTransition(() => {
+            setGrid((prev) => {
+              const next = [...prev];
+              for (let cy = yMin; cy <= yMax; cy++) {
+                next[cy] = [...prev[cy]!];
+                for (let cx = xMin; cx <= xMax; cx++) next[cy]![cx] = false;
+              }
+              return next;
+            });
+            setDecorations((prev) => {
+              const next = { ...prev };
+              for (let cy = yMin; cy <= yMax; cy++)
+                for (let cx = xMin; cx <= xMax; cx++)
+                  delete next[decorationKey(cx, cy)];
+              return next;
+            });
+            setAgentPositions((prev) => {
+              const next = { ...prev };
+              for (let cy = yMin; cy <= yMax; cy++)
+                for (let cx = xMin; cx <= xMax; cx++)
+                  delete next[decorationKey(cx, cy)];
+              return next;
+            });
           });
         }
         setPendingChanges((n) => n + (xMax - xMin + 1) * (yMax - yMin + 1));
@@ -450,22 +475,27 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
         redoStack.current = [];
         setRectStart({ x, y });
-        setGrid((prev) => {
-          const next = prev.map((row) => [...row]);
-          next[y]![x] = true;
-          return next;
-        });
         setPendingChanges((n) => n + 1);
-        // Drop any water-only decorations now stranded on land
-        setDecorations((prev) => {
-          const existing = prev[key];
-          if (!existing) return prev;
-          const kept = existing.filter((k) => DECORATIONS[k].terrain === "land");
-          if (kept.length === existing.length) return prev;
-          const next = { ...prev };
-          if (kept.length === 0) delete next[key];
-          else next[key] = kept;
-          return next;
+        startTransition(() => {
+          // Only copy the one row that changes — O(GRID_COLS) not O(GRID_ROWS*GRID_COLS)
+          setGrid((prev) => {
+            if (prev[y]?.[x] === true) return prev;
+            const next = [...prev];
+            next[y] = [...prev[y]!];
+            next[y]![x] = true;
+            return next;
+          });
+          // Drop any water-only decorations now stranded on land
+          setDecorations((prev) => {
+            const existing = prev[key];
+            if (!existing) return prev;
+            const kept = existing.filter((k) => DECORATIONS[k].terrain === "land");
+            if (kept.length === existing.length) return prev;
+            const next = { ...prev };
+            if (kept.length === 0) delete next[key];
+            else next[key] = kept;
+            return next;
+          });
         });
         return;
       }
@@ -476,8 +506,10 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
         if (count === 0) return;
         undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
         redoStack.current = [];
-        setGrid(newGrid);
         setPendingChanges((n) => n + count);
+        startTransition(() => {
+          setGrid(newGrid);
+        });
         return;
       }
 
@@ -506,8 +538,7 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
               else next[key] = popped.stack;
               return next;
             });
-            // If a bridge was removed from a water cell, evict any agent
-            // standing on it - they can't stand on water.
+            // If a bridge was removed from a water cell, evict any agent.
             const isWater = grid[y]?.[x] !== true;
             const bridgeGone = isWater && !popped.stack.some((k) => familyOf(k) === "bridge");
             if (bridgeGone && agentPositions[key]) {
@@ -525,12 +556,17 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
           undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
           redoStack.current = [];
           setRectStart({ x, y });
-          setGrid((prev) => {
-            const next = prev.map((row) => [...row]);
-            next[y]![x] = false;
-            return next;
-          });
           setPendingChanges((n) => n + 1);
+          startTransition(() => {
+            // Only copy the one row that changes
+            setGrid((prev) => {
+              if (prev[y]?.[x] !== true) return prev;
+              const next = [...prev];
+              next[y] = [...prev[y]!];
+              next[y]![x] = false;
+              return next;
+            });
+          });
         }
         return;
       }
@@ -546,7 +582,8 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
       });
       setPendingChanges((n) => n + 1);
     },
-    [grid, decorations, agentPositions, tool, rectStart],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [], // stable forever — all state is read through refs
   );
 
   // Keep ref in sync so pointer handlers can call the latest version
@@ -605,6 +642,11 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
   // grid cell that passes its terrain + overlap validation. Move
   // semantics: if the same agent is already on the map, its old cell
   // becomes empty.
+  const onBuildToggle = useCallback(() => {
+    setBuildMode((m) => { if (!m) setAgentSearch(""); return !m; });
+    setPendingChanges(0);
+  }, []);
+
   const onAgentDrop = useCallback((x: number, y: number, ref: DragRef) => {
     setAgentPositions((prev) => {
       const next: AgentPositions = {};
@@ -751,72 +793,123 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
       onPointerUp={onPointerUp}
     >
       {/* Transform wrapper: pan + zoom applied here, OfficeMap anchored at 0,0 */}
-      <div
-        className="absolute left-0 top-0 origin-top-left"
-        style={{
-          width: GRID_COLS * TILE,
-          height: GRID_ROWS * TILE,
-          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-        }}
-      >
-        <OfficeMap
-          grid={grid}
-          decorations={decorations}
-          agentPositions={agentPositions}
-          agentsById={agentsById}
-          grassColor={grassColor}
-          editable={buildMode}
-          tool={tool}
-          agentSearch={agentSearch}
-          onCellClick={onCellClick}
-          onAgentDrop={onAgentDrop}
-          onAgentClick={onAgentClick}
-          rosterInstances={rosterInstances}
-          isMultiInstance={isMultiInstance}
-          spendByInstance={spendByInstance}
-          visibleRange={visibleCellRange}
-        />
-      </div>
-
-      {/* Canvas tools - top-left: zoom + recenter */}
-      <div className="canvas-tools absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] backdrop-blur-[10px]">
-        <button
-          type="button"
-          className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
-          onClick={() => zoomBy(1 - ZOOM_STEP)}
-          aria-label="Zoom out"
-        >
-          <Icon name="minus" size={11} />
-        </button>
+      {usePixiRenderer ? (
+        <>
+          {/* PixiJS visual layer — camera controlled via panX/panY/zoom props */}
+          {containerSize && (
+            <OfficePixiCanvas
+              width={containerSize.w}
+              height={containerSize.h}
+              panX={panX}
+              panY={panY}
+              zoom={zoom}
+              grid={grid}
+              decorations={decorations}
+              grassColor={grassColor}
+              agentPositions={agentPositions}
+              agentsById={agentsById}
+              agentSearch={agentSearch}
+              isMultiInstance={isMultiInstance}
+              rosterInstances={rosterInstances}
+              spendByInstance={spendByInstance}
+            />
+          )}
+          {/* Interaction overlay — same world transform, handles build mode + agent clicks */}
+          <div
+            className="absolute left-0 top-0 origin-top-left pointer-events-none"
+            style={{
+              width: GRID_COLS * TILE,
+              height: GRID_ROWS * TILE,
+              transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+            }}
+          >
+            <OfficeMapOverlay
+              grid={grid}
+              decorations={decorations}
+              agentPositions={agentPositions}
+              agentsById={agentsById}
+              buildMode={buildMode}
+              tool={tool}
+              visibleRange={visibleCellRange}
+              onCellClick={onCellClick}
+              onAgentClick={onAgentClick}
+            />
+          </div>
+        </>
+      ) : (
         <div
-          className="text-center cursor-pointer px-[8px] py-[2px] text-[rgba(199,191,183,0.9)] font-mono text-[11px] min-w-[40px] hover:text-[#f4efea]"
-          onClick={resetCamera}
-          title="Reset camera"
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => { if (e.key === "Enter") resetCamera(); }}
+          className="absolute left-0 top-0 origin-top-left"
+          style={{
+            width: GRID_COLS * TILE,
+            height: GRID_ROWS * TILE,
+            transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+          }}
         >
-          {Math.round(zoom * 100)}%
+          <OfficeMap
+            grid={grid}
+            decorations={decorations}
+            agentPositions={agentPositions}
+            agentsById={agentsById}
+            grassColor={grassColor}
+            editable={buildMode}
+            tool={tool}
+            agentSearch={agentSearch}
+            onCellClick={onCellClick}
+            onAgentDrop={onAgentDrop}
+            onAgentClick={onAgentClick}
+            rosterInstances={rosterInstances}
+            isMultiInstance={isMultiInstance}
+            spendByInstance={spendByInstance}
+            visibleRange={visibleCellRange}
+          />
         </div>
-        <button
-          type="button"
-          className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
-          onClick={() => zoomBy(1 + ZOOM_STEP)}
-          aria-label="Zoom in"
-        >
-          <Icon name="plus" size={11} />
-        </button>
-        <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
-        <button
-          type="button"
-          className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
-          title="Recenter"
-          onClick={resetCamera}
-        >
-          <Icon name="crosshair" size={13} />
-        </button>
+      )}
+
+      {/* Canvas tools - top-left: zoom + recenter (hidden in build mode) */}
+      <AnimatePresence initial={false}>
         {!buildMode && (
-          <>
+          <motion.div
+            key="canvas-tools"
+            className="canvas-tools absolute flex items-center gap-[6px] z-[10] pointer-events-auto top-[14px] left-[14px] bg-[rgba(20,16,14,0.95)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px]"
+            initial={{ opacity: 0, scale: 0.85, x: -6, y: -6 }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 300, damping: 26 } }}
+            exit={{ opacity: 0, scale: 0.8, x: -6, y: -6, transition: { duration: 0.13, ease: "easeIn", delay: 0.04 } }}
+          >
+            <button
+              type="button"
+              className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
+              onClick={() => zoomBy(1 - ZOOM_STEP)}
+              aria-label="Zoom out"
+            >
+              <Icon name="minus" size={11} />
+            </button>
+            <div
+              className="text-center cursor-pointer px-[8px] py-[2px] text-[rgba(199,191,183,0.9)] font-mono text-[11px] min-w-[40px] hover:text-[#f4efea]"
+              onClick={resetCamera}
+              title="Reset camera"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter") resetCamera(); }}
+            >
+              {Math.round(zoom * 100)}%
+            </div>
+            <button
+              type="button"
+              className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
+              onClick={() => zoomBy(1 + ZOOM_STEP)}
+              aria-label="Zoom in"
+            >
+              <Icon name="plus" size={11} />
+            </button>
+            <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
+            <button
+              type="button"
+              className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[rgba(199,191,183,0.9)] text-[11.5px] font-mono transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
+              title="Recenter"
+              onClick={resetCamera}
+            >
+              <Icon name="crosshair" size={13} />
+            </button>
             <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
             <input
               className="bg-transparent border-none outline-none text-[rgba(199,191,183,0.9)] font-mono text-[11px] w-[110px] px-[4px] py-[2px] focus:text-[#f4efea] placeholder:text-[rgba(199,191,183,0.4)]"
@@ -826,15 +919,48 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
               onChange={(e) => setAgentSearch(e.target.value)}
               aria-label="Search agents"
             />
-          </>
+          </motion.div>
         )}
-      </div>
+      </AnimatePresence>
 
-      {/* Canvas info - bottom-left: tile coords + map stats */}
-      {(() => {
-        const placedCount = grassCount + decoCount;
-        return (
-          <div className="canvas-info absolute flex z-[10] pointer-events-none bottom-[14px] left-[14px] gap-[14px] px-[12px] py-[8px] bg-[rgba(20,16,14,0.88)] border border-[rgba(255,240,230,0.12)] rounded-[8px] font-mono text-[10.5px] text-[rgba(138,128,121,0.9)] backdrop-blur-[10px]">
+      {/* View toggle - top-left below zoom bar (hidden in build mode) */}
+      <AnimatePresence initial={false}>
+        {!buildMode && (
+          <motion.div
+            key="view-toggle"
+            className="absolute flex items-center z-[10] pointer-events-auto top-[14px] right-[14px] bg-[rgba(20,16,14,0.95)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] gap-[2px]"
+            initial={{ opacity: 0, scale: 0.85, x: 6, y: -6 }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 300, damping: 26, delay: 0.05 } }}
+            exit={{ opacity: 0, scale: 0.8, x: 6, y: -6, transition: { duration: 0.13, ease: "easeIn", delay: 0.07 } }}
+          >
+            <button
+              type="button"
+              className={`inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[11.5px] font-mono transition-[background,color] duration-100 ${view === "iso" ? "bg-[rgba(255,240,230,0.12)] text-[#f4efea]" : "text-[rgba(199,191,183,0.9)] hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"}`}
+              onClick={() => setView("iso")}
+            >
+              <Icon name="map" size={11} /> Iso
+            </button>
+            <button
+              type="button"
+              className={`inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[11.5px] font-mono transition-[background,color] duration-100 ${view === "cards" ? "bg-[rgba(255,240,230,0.12)] text-[#f4efea]" : "text-[rgba(199,191,183,0.9)] hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"}`}
+              onClick={() => setView("cards")}
+            >
+              <Icon name="grid" size={11} /> Cards
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Canvas info - bottom-left: tile coords + map stats (hidden in build mode) */}
+      <AnimatePresence initial={false}>
+        {!buildMode && (
+          <motion.div
+            key="canvas-info"
+            className="canvas-info absolute flex z-[10] pointer-events-none bottom-[14px] left-[14px] gap-[14px] px-[12px] py-[8px] bg-[rgba(20,16,14,0.95)] border border-[rgba(255,240,230,0.12)] rounded-[8px] font-mono text-[10.5px] text-[rgba(138,128,121,0.9)]"
+            initial={{ opacity: 0, scale: 0.85, x: -6, y: 6 }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 300, damping: 26, delay: 0.1 } }}
+            exit={{ opacity: 0, scale: 0.8, x: -6, y: 6, transition: { duration: 0.13, ease: "easeIn", delay: 0.1 } }}
+          >
             <div className="item">
               <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Tile</div>
               <div className="text-[rgba(244,239,234,0.9)]">{hoverTile ? `${hoverTile.x}, ${hoverTile.y}` : "-"}</div>
@@ -845,56 +971,60 @@ export function OfficeScene({ projectId }: { projectId: string | null }) {
             </div>
             <div className="item">
               <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Placed</div>
-              <div className="text-[rgba(244,239,234,0.9)]">{placedCount} tiles</div>
+              <div className="text-[rgba(244,239,234,0.9)]">{grassCount + decoCount} tiles</div>
             </div>
-            {buildMode && rectStart && (
-              <div className="item">
-                <div className="uppercase tracking-[0.06em] text-[rgba(94,86,81,0.9)] text-[9.5px]">Rect</div>
-                <div className="text-[rgba(244,239,234,0.9)]">{rectStart.x},{rectStart.y} → shift+click</div>
-              </div>
-            )}
-          </div>
-        );
-      })()}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Build actions bar - bottom-center, build mode only */}
-      {buildMode && (
-        <div className="build-actions-bar absolute flex items-center gap-[4px] z-[15] pointer-events-auto whitespace-nowrap rounded-full bottom-[14px] left-1/2 [transform:translateX(-50%)] p-[5px] bg-[rgba(26,22,20,0.92)] border border-[rgba(255,240,230,0.14)] shadow-[0_14px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-[12px]">
-          <button
-            type="button"
-            className="inline-flex items-center gap-[7px] rounded-full font-semibold px-[16px] py-[8px] text-[12.5px] transition-[background,color] duration-[120ms] bg-[rgba(255,240,230,0.08)] border border-[rgba(255,240,230,0.12)] text-[rgba(244,239,234,0.9)] hover:bg-[rgba(255,240,230,0.12)]"
-            onClick={() => { setBuildMode(false); setPendingChanges(0); undoStack.current = []; redoStack.current = []; }}
+      {/* Build actions bar - bottom-center, build mode only (wrapper handles centering, motion handles anim) */}
+      <div className="absolute bottom-[14px] left-1/2 -translate-x-1/2 z-[15] pointer-events-none">
+      <AnimatePresence>
+        {buildMode && (
+          <motion.div
+            key="done-bar"
+            className="build-actions-bar flex items-center gap-[4px] pointer-events-auto whitespace-nowrap rounded-full p-[5px] bg-[rgba(26,22,20,0.97)] border border-[rgba(255,240,230,0.14)] shadow-[0_14px_40px_-10px_rgba(0,0,0,0.7)]"
+            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 360, damping: 28, delay: 0.32 } }}
+            exit={{ opacity: 0, scale: 0.5, y: 20, transition: { duration: 0.12, ease: "easeIn" } }}
           >
-            {pendingChanges > 0 && <span className="rounded-full shrink-0 w-[6px] h-[6px] bg-[#e6b35a] shadow-[0_0_6px_#e6b35a]" />}
-            <Icon name="check" size={13} />
-            Done{pendingChanges > 0 ? ` · ${pendingChanges} saved` : ""}
-          </button>
-          {projectId && (
-            <>
-              <div className="shrink-0 w-[1px] h-[20px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
-              <button
-                type="button"
-                className={`inline-flex items-center gap-[5px] rounded-full bg-transparent cursor-pointer font-medium text-[12px] px-[11px] py-[5px] border border-[rgba(255,240,230,0.15)] text-[rgba(255,240,230,0.55)] transition-[background,color,border-color] duration-100 hover:bg-[rgba(255,240,230,0.07)] hover:text-[rgba(255,240,230,0.8)]${useCustomMap ? " !border-[rgba(233,84,32,0.5)] !bg-[rgba(233,84,32,0.12)] !text-[#e95420]" : ""}`}
-                title={
-                  useCustomMap
-                    ? "Switch back to the default shared layout (used by all projects)"
-                    : "Create a project-specific layout for this project"
-                }
-                onClick={useCustomMap ? disableCustomMap : enableCustomMap}
-              >
-                <Icon name="map" size={12} />
-                {useCustomMap ? "Project layout" : "Default layout"}
-              </button>
-            </>
-          )}
-        </div>
-      )}
+            <button
+              type="button"
+              className="inline-flex items-center gap-[7px] rounded-full font-semibold px-[16px] py-[8px] text-[12.5px] transition-[background,color] duration-[120ms] bg-[rgba(255,240,230,0.08)] border border-[rgba(255,240,230,0.12)] text-[rgba(244,239,234,0.9)] hover:bg-[rgba(255,240,230,0.12)]"
+              onClick={() => { setBuildMode(false); setPendingChanges(0); undoStack.current = []; redoStack.current = []; }}
+            >
+              {pendingChanges > 0 && <span className="rounded-full shrink-0 w-[6px] h-[6px] bg-[#e6b35a] shadow-[0_0_6px_#e6b35a]" />}
+              <Icon name="check" size={13} />
+              Done{pendingChanges > 0 ? ` · ${pendingChanges} saved` : ""}
+            </button>
+            {projectId && (
+              <>
+                <div className="shrink-0 w-[1px] h-[20px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-[5px] rounded-full bg-transparent cursor-pointer font-medium text-[12px] px-[11px] py-[5px] border border-[rgba(255,240,230,0.15)] text-[rgba(255,240,230,0.55)] transition-[background,color,border-color] duration-100 hover:bg-[rgba(255,240,230,0.07)] hover:text-[rgba(255,240,230,0.8)]${useCustomMap ? " !border-[rgba(233,84,32,0.5)] !bg-[rgba(233,84,32,0.12)] !text-[#e95420]" : ""}`}
+                  title={
+                    useCustomMap
+                      ? "Switch back to the default shared layout (used by all projects)"
+                      : "Create a project-specific layout for this project"
+                  }
+                  onClick={useCustomMap ? disableCustomMap : enableCustomMap}
+                >
+                  <Icon name="map" size={12} />
+                  {useCustomMap ? "Project layout" : "Default layout"}
+                </button>
+              </>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+      </div>
 
       <OfficeBuildToolbar
         active={buildMode}
         tool={tool}
         grassColor={grassColor}
-        onToggle={() => { setBuildMode((m) => { if (!m) setAgentSearch(""); return !m; }); setPendingChanges(0); }}
+        onToggle={onBuildToggle}
         onSelectTool={setTool}
         onSelectGrassColor={setGrassColor}
       />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,10 +22,13 @@ export type ProjectActivityProps = {
   onMeta?: (info: { count: number; todayCost: number }) => void;
 };
 
+const PAGE_SIZE = 5;
+
 export function ProjectActivity({ projectId, onMeta }: ProjectActivityProps) {
   const t = useTranslations();
   const select = useOfficeStore((s) => s.select);
   const { data, isLoading } = useRuns({ projectId, limit: 100 });
+  const [visible, setVisible] = useState(PAGE_SIZE);
 
   const runs = data ?? [];
   const today = new Date();
@@ -57,15 +61,27 @@ export function ProjectActivity({ projectId, onMeta }: ProjectActivityProps) {
     );
   }
 
+  const shown = runs.slice(0, visible);
+  const hasMore = visible < runs.length;
+
   return (
     <div>
-      {runs.map((run) => (
+      {shown.map((run) => (
         <RunRow
           key={run.id}
           run={run}
           onOpen={() => select(run.agentId, { tab: "history", instanceId: run.instanceId ?? null })}
         />
       ))}
+      {hasMore && (
+        <button
+          type="button"
+          onClick={() => setVisible((v) => v + PAGE_SIZE)}
+          className="w-full px-[18px] py-[10px] text-[12px] font-mono text-txt-3 hover:text-txt hover:bg-bg-2 transition-colors duration-100 border-none bg-transparent cursor-pointer text-left"
+        >
+          Load more ({runs.length - visible} remaining)
+        </button>
+      )}
     </div>
   );
 }

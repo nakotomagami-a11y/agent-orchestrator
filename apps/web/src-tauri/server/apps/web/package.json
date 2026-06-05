@@ -4,24 +4,27 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port 5173",
-    "build": "next build",
-    "start": "next start --port 5173",
+    "dev": "next dev",
+    "build": "unset __NEXT_PRIVATE_STANDALONE_CONFIG; next build",
+    "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
   },
   "dependencies": {
     "@agent-office/shared": "workspace:*",
+    "@agent-office/ui": "workspace:*",
+    "@tailwindcss/postcss": "^4.3.0",
     "@tanstack/react-query": "^5.59.20",
     "clsx": "^2.1.1",
     "next": "15.3.4",
     "next-intl": "^3.26.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^2.5.5",
+    "tailwind-merge": "^3.6.0",
     "ts-pattern": "^5.5.0",
     "zod": "^3.23.8",
     "zustand": "^5.0.2"
@@ -37,7 +40,8 @@
     "eslint": "^9.15.0",
     "eslint-config-next": "15.3.4",
     "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.15",
-    "typescript": "^5.6.3"
+    "tailwindcss": "^4.3.0",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.7"
   }
 }

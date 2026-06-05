@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import type { AgentStatusInfo } from "@/modules/office/utils/derive-status";
 
@@ -104,25 +105,27 @@ export function RosterInstanceRow({
 
       {/* Hover actions — absolutely positioned via ses-actions CSS */}
       <div className="ses-actions">
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onRename(); }}
-          aria-label={`Rename session ${instanceNumber}`}
-          title="Rename"
-          data-instance-id={instanceId}
-        >
-          <Icon name="edit" size={11} />
-        </button>
-        <button
-          type="button"
-          className="danger"
-          onClick={(e) => { e.stopPropagation(); onRemove(); }}
-          aria-label={t("sidebar.remove_instance_aria", { number: instanceNumber, label: label ?? "" })}
-          title={t("sidebar.remove_from_project_title")}
-          data-instance-id={instanceId}
-        >
-          <Icon name="x" size={11} />
-        </button>
+        <Tooltip content="Rename" side="top" delayMs={300}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRename(); }}
+            aria-label={`Rename session ${instanceNumber}`}
+            data-instance-id={instanceId}
+          >
+            <Icon name="edit" size={11} />
+          </button>
+        </Tooltip>
+        <Tooltip content={t("sidebar.remove_from_project_title")} side="top" delayMs={300}>
+          <button
+            type="button"
+            className="danger"
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            aria-label={t("sidebar.remove_instance_aria", { number: instanceNumber, label: label ?? "" })}
+            data-instance-id={instanceId}
+          >
+            <Icon name="x" size={11} />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

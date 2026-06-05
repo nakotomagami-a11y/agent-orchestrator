@@ -1,149 +1,263 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSettings } from "@/modules/settings/hooks/use-settings";
+import { ModalShell } from "@/components/ui/modal-shell";
 
-type ActionKey = "office" | "memory" | "all" | "clear";
-type UIState = "idle" | "loading" | "done" | "error";
+type SeedAction = "office" | "memory" | "all" | "clear" | "clear-all-runs" | "fix-orphans";
+type BtnState = "idle" | "loading" | "done" | "error";
 
-async function callSeed(action: ActionKey): Promise<void> {
+interface DbStats {
+  runsCount: number;
+  messagesCount: number;
+  orphansCount: number;
+  dbSizeBytes: number;
+  agentsCount: number;
+  dbPath: string;
+}
+
+async function callSeed(action: SeedAction): Promise<string> {
   const res = await fetch("/api/dev/seed", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action }),
   });
-  if (!res.ok) {
-    const body = await res.json() as { error?: string };
-    throw new Error(body.error ?? "seed failed");
-  }
+  const body = await res.json() as { message?: string; error?: string };
+  if (!res.ok) throw new Error(body.error ?? "seed failed");
+  return body.message ?? "Done.";
 }
 
-function FlaskIcon() {
+async function fetchStats(): Promise<DbStats> {
+  const res = await fetch("/api/dev/seed");
+  if (!res.ok) throw new Error("failed to load stats");
+  return res.json() as Promise<DbStats>;
+}
+
+function fmtBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9 3h6M9 3v7L5 20h14L15 10V3M9 3h6" />
-    </svg>
+    <div className="flex items-center gap-2 mb-2">
+      <span className="w-[3px] h-[13px] bg-acc rounded-full shrink-0" />
+      <span className="text-[11px] font-semibold text-txt-3 uppercase tracking-wider">{children}</span>
+    </div>
   );
 }
 
-function Spinner() {
-  return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="animate-spin">
-      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
-    </svg>
-  );
-}
-
-interface ActionButtonProps {
+function ActionBtn({
+  label,
+  onClick,
+  variant = "default",
+  state,
+  message,
+}: {
   label: string;
-  action: ActionKey;
+  action?: SeedAction; // used only for key/identity at call site
+  onClick: () => void;
   variant?: "default" | "accent" | "danger";
-  state: UIState;
-  onAction: (action: ActionKey) => void;
-}
-
-function ActionButton({ label, action, variant = "default", state, onAction }: ActionButtonProps) {
-  const isLoading = state === "loading";
-  const isDone = state === "done";
-
-  const base = "w-full flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-mono transition-colors";
+  state: BtnState;
+  message?: string;
+}) {
+  const base = "w-full flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-mono transition-colors border";
   const variants = {
-    default: "bg-bg-2 text-txt-2 hover:text-txt hover:bg-bg-3 border border-line hover:border-line-2",
-    accent: "bg-acc text-acc-ink hover:opacity-90 border border-acc",
-    danger: "bg-transparent text-red-400 hover:text-red-300 hover:bg-red-900/20 border border-red-900/40 hover:border-red-900/60",
+    default: "bg-bg-2 text-txt-2 hover:text-txt hover:bg-bg-3 border-line hover:border-line-2",
+    accent:  "bg-acc text-white hover:opacity-90 border-acc",
+    danger:  "bg-transparent text-red-400 hover:text-red-300 hover:bg-red-900/20 border-red-900/40 hover:border-red-900/60",
   };
-
   return (
-    <button
-      type="button"
-      onClick={() => onAction(action)}
-      disabled={isLoading}
-      className={`${base} ${variants[variant]} ${isLoading ? "opacity-50 cursor-wait" : ""}`}
-    >
-      {isLoading ? (
-        <>
-          <Spinner />
-          <span>working…</span>
-        </>
-      ) : isDone ? (
-        <span className="text-green-400">✓ done</span>
-      ) : (
-        label
-      )}
-    </button>
+    <div className="flex flex-col gap-0.5">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={state === "loading"}
+        className={`${base} ${variants[variant]} ${state === "loading" ? "opacity-50 cursor-wait" : ""}`}
+      >
+        {state === "loading" ? "working…" : state === "done" ? "✓ done" : label}
+      </button>
+      {message && <p className="text-[10.5px] text-txt-4 font-mono text-center px-1">{message}</p>}
+    </div>
   );
 }
 
 export function DevMenu() {
   const [open, setOpen] = useState(false);
-  const [states, setStates] = useState<Record<ActionKey, UIState>>({
-    office: "idle",
-    memory: "idle",
-    all: "idle",
-    clear: "idle",
+  const [stats, setStats] = useState<DbStats | null>(null);
+  const [states, setStates] = useState<Record<SeedAction, BtnState>>({
+    office: "idle", memory: "idle", all: "idle", clear: "idle",
+    "clear-all-runs": "idle", "fix-orphans": "idle",
   });
+  const [messages, setMessages] = useState<Partial<Record<SeedAction, string>>>({});
+  const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
+  const settingsQ = useSettings();
+  const pixiEnabled = settingsQ.data?.features?.newOfficeRenderer !== false;
 
-  async function handleAction(action: ActionKey) {
+  const loadStats = useCallback(async () => {
+    try { setStats(await fetchStats()); } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => {
+    if (open) void loadStats();
+  }, [open, loadStats]);
+
+  async function handleAction(action: SeedAction) {
     setStates(s => ({ ...s, [action]: "loading" }));
+    setMessages(m => ({ ...m, [action]: undefined }));
     try {
-      await callSeed(action);
+      const msg = await callSeed(action);
       setStates(s => ({ ...s, [action]: "done" }));
+      setMessages(m => ({ ...m, [action]: msg }));
       await queryClient.invalidateQueries();
-      setTimeout(() => {
-        setStates(s => ({ ...s, [action]: "idle" }));
-      }, 2000);
-    } catch {
+      await loadStats();
+      setTimeout(() => setStates(s => ({ ...s, [action]: "idle" })), 3000);
+    } catch (e) {
       setStates(s => ({ ...s, [action]: "idle" }));
+      setMessages(m => ({ ...m, [action]: e instanceof Error ? e.message : "error" }));
     }
   }
 
+  async function togglePixiRenderer() {
+    await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ features: { newOfficeRenderer: !pixiEnabled } }),
+    });
+    await queryClient.invalidateQueries();
+  }
+
+  async function copyDbPath() {
+    if (!stats?.dbPath) return;
+    await navigator.clipboard.writeText(stats.dbPath);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
-    <div className="relative">
+    <>
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
-        title="Dev tools"
+        onClick={() => setOpen(true)}
         className="h-[24px] px-[10px] inline-flex items-center gap-[6px] bg-transparent border border-transparent rounded-sm text-txt-2 font-[inherit] text-[12.5px] cursor-pointer hover:bg-bg-2 hover:border-line"
       >
         <FlaskIcon />
         Dev
       </button>
 
-      {open && (
-        <div className="absolute top-full right-0 mt-1 z-[500] w-64 bg-bg-1 border border-line rounded-xl shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-line">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-txt-4">Dev Tools</span>
+      <ModalShell open={open} onClose={() => setOpen(false)} title="Dev Tools" size="sm" maxWidth={400}>
+        <div className="flex flex-col gap-5">
+
+          {/* ── Demo data ── */}
+          <div>
+            <SectionLabel>Demo data</SectionLabel>
+            <div className="flex flex-col gap-1.5">
+              <ActionBtn label="Seed office floor + runs" action="office" state={states.office} message={messages.office} onClick={() => handleAction("office")} />
+              <ActionBtn label="Seed agent memories" action="memory" state={states.memory} message={messages.memory} onClick={() => handleAction("memory")} />
+              <ActionBtn label="Seed everything" action="all" variant="accent" state={states.all} message={messages.all} onClick={() => handleAction("all")} />
+              <ActionBtn label="Clear demo data" action="clear" variant="danger" state={states.clear} message={messages.clear} onClick={() => handleAction("clear")} />
+            </div>
+          </div>
+
+          {/* ── Database ── */}
+          <div>
+            <SectionLabel>Database</SectionLabel>
+
+            {stats ? (
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-3 bg-bg-2 rounded-lg px-3 py-2.5 border border-line">
+                <StatRow label="Runs" value={stats.runsCount.toLocaleString()} />
+                <StatRow label="Messages" value={stats.messagesCount.toLocaleString()} />
+                <StatRow label="Agents" value={stats.agentsCount.toLocaleString()} />
+                <StatRow label="DB size" value={fmtBytes(stats.dbSizeBytes)} />
+                {stats.orphansCount > 0 && (
+                  <div className="col-span-2 mt-1 text-[10.5px] font-mono text-yellow-400">
+                    ⚠ {stats.orphansCount} orphaned running run{stats.orphansCount !== 1 ? "s" : ""}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-[62px] bg-bg-2 rounded-lg border border-line mb-3 flex items-center justify-center text-txt-4 text-[11px] font-mono">loading…</div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <ActionBtn
+                label={`Fix orphans${stats?.orphansCount ? ` (${stats.orphansCount})` : ""}`}
+                action="fix-orphans"
+                state={states["fix-orphans"]}
+                message={messages["fix-orphans"]}
+                onClick={() => handleAction("fix-orphans")}
+              />
+              <ActionBtn
+                label="Clear ALL runs & messages"
+                action="clear-all-runs"
+                variant="danger"
+                state={states["clear-all-runs"]}
+                message={messages["clear-all-runs"]}
+                onClick={() => handleAction("clear-all-runs")}
+              />
+              <button
+                type="button"
+                onClick={copyDbPath}
+                className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-[11px] font-mono bg-bg-2 border border-line hover:border-line-2 text-txt-3 hover:text-txt transition-colors"
+              >
+                <span className="shrink-0">{copied ? "✓ copied" : "copy db path"}</span>
+                <span className="truncate text-txt-4 text-[10px]">{stats?.dbPath ?? "…"}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ── Renderer ── */}
+          <div>
+            <SectionLabel>Renderer</SectionLabel>
             <button
               type="button"
-              onClick={() => setOpen(false)}
-              className="text-txt-4 hover:text-txt text-xs leading-none transition-colors"
+              onClick={() => void togglePixiRenderer()}
+              className="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-[12px] font-mono bg-bg-2 border border-line hover:border-line-2 text-txt-2 hover:text-txt transition-colors"
             >
-              ✕
+              <span>PixiJS renderer</span>
+              <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${pixiEnabled ? "bg-green-900/40 text-green-400" : "bg-bg-3 text-txt-4"}`}>
+                {pixiEnabled ? "ON" : "OFF"}
+              </span>
+            </button>
+            <p className="text-[10.5px] text-txt-4 font-mono text-center mt-1">
+              {pixiEnabled ? "GPU canvas · reload to apply if just changed" : "DOM path · click to switch to PixiJS"}
+            </p>
+          </div>
+
+          {/* ── Utilities ── */}
+          <div>
+            <SectionLabel>Utilities</SectionLabel>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="w-full flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[12px] font-mono bg-bg-2 border border-line hover:border-line-2 text-txt-2 hover:text-txt transition-colors"
+            >
+              Reload window
             </button>
           </div>
 
-          <div className="p-3 flex flex-col gap-3">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-mono text-txt-4 uppercase tracking-wider">Office floor</span>
-              <ActionButton label="Seed project + runs" action="office" state={states.office} onAction={handleAction} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[10px] font-mono text-txt-4 uppercase tracking-wider">Memory pages</span>
-              <ActionButton label="Seed agent memories" action="memory" state={states.memory} onAction={handleAction} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <ActionButton label="Seed everything" action="all" variant="accent" state={states.all} onAction={handleAction} />
-            </div>
-
-            <div className="border-t border-line pt-3">
-              <ActionButton label="Clear demo data" action="clear" variant="danger" state={states.clear} onAction={handleAction} />
-            </div>
-          </div>
         </div>
-      )}
-    </div>
+      </ModalShell>
+    </>
+  );
+}
+
+function StatRow({ label, value }: { label: string; value: string }) {
+  return (
+    <>
+      <span className="text-[10.5px] font-mono text-txt-4">{label}</span>
+      <span className="text-[10.5px] font-mono text-txt-2 text-right">{value}</span>
+    </>
+  );
+}
+
+function FlaskIcon() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 3h6M9 3v7L5 20h14L15 10V3M9 3h6" />
+    </svg>
   );
 }

@@ -185,26 +185,8 @@ export function ProjectsList() {
 
   const header = (
     <PageHeader
-      title={
-        <>
-          Projects
-          {!isLoading && (
-            <span className="text-txt font-bold text-[22px] tracking-[-0.01em]">
-              {allProjects.length} found
-            </span>
-          )}
-        </>
-      }
-      sub={
-        isLoading ? null : (
-          <Link
-            href={PAGE_ROUTES.settings}
-            className="no-underline hover:text-txt-2 transition-colors"
-          >
-            · scanned from your projects root ↗
-          </Link>
-        )
-      }
+      title="Projects"
+      sub={!isLoading ? `· ${allProjects.length} found` : undefined}
       actions={
         <button
           type="button"

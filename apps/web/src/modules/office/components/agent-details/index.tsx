@@ -7,11 +7,11 @@ import { useOfficeStore, type AgentTab } from "../../hooks/use-office-store";
 import { ChatPanel } from "@/modules/summon/components/chat-panel";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { useRunStream } from "@/modules/summon/hooks/use-run-stream";
-import { ConfigurationTab } from "./tabs/configuration-tab";
 import { HistoryTab } from "./tabs/history-tab";
 import { MemoryTab } from "./tabs/memory-tab";
 import { SettingsTab } from "./tabs/settings-tab";
 import { Icon } from "@/components/ui/icon";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject, useAddInstance } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
@@ -24,7 +24,6 @@ type Tab = AgentTab;
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "conversation", label: "Conversation" },
-  { id: "configuration", label: "Configuration" },
   { id: "history", label: "History" },
   { id: "memory", label: "Memory" },
   { id: "settings", label: "Settings" },
@@ -239,7 +238,6 @@ export function AgentDetailsModal() {
   }, [inspectorOpen, selectedId, consumePendingTab]);
 
   const memoryDiscardRef = useRef<(() => void) | null>(null);
-  const settingsResetRef = useRef<(() => void) | null>(null);
 
   // Close on Escape
   const ref = useRef<HTMLDivElement>(null);
@@ -358,14 +356,16 @@ export function AgentDetailsModal() {
               </button>
             ))}
             <div className="flex-1" />
-            <button
-              className="inline-flex items-center justify-center w-8 h-8 my-auto mr-1 rounded-lg text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-bg-3"
-              aria-label="Close"
-              onClick={closeInspector}
-              type="button"
-            >
-              <Icon name="x" size={18} />
-            </button>
+            <Tooltip content="Close (Esc)" side="bottom" delayMs={600}>
+              <button
+                className="inline-flex items-center justify-center w-8 h-8 my-auto mr-1 rounded-lg text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-bg-3"
+                aria-label="Close"
+                onClick={closeInspector}
+                type="button"
+              >
+                <Icon name="x" size={18} />
+              </button>
+            </Tooltip>
           </div>
 
           {/* ── Body row: agent strip + content ── */}
@@ -377,18 +377,18 @@ export function AgentDetailsModal() {
                 const inst = rosterInstances.find((r) => r.agentId === a.id);
                 const isActive = a.id === selectedId;
                 return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    title={a.name}
-                    className={`relative w-[38px] h-[38px] rounded-[10px] border-2 cursor-pointer flex items-center justify-center transition-[background,border-color] duration-[120ms] shrink-0 hover:bg-[var(--ao-bg-2)] ${isActive ? "border-[var(--ao-accent)] bg-[var(--ao-bg-2)]" : "border-transparent bg-transparent"}`}
-                    onClick={() => selectAgent(a.id, { tab, instanceId: inst?.instanceId ?? null })}
-                  >
-                    <AgentAvatar unit={a.unitChoice} size={30} label={a.name} />
-                    {a.status === "working" || a.status === "thinking" ? (
-                      <span className="absolute bottom-[1px] right-[1px] w-2 h-2 rounded-full border-[1.5px] border-[var(--ao-bg-1)] bg-[var(--ao-ok)] animate-[ao-pulse_1.4s_ease-in-out_infinite]" />
-                    ) : null}
-                  </button>
+                  <Tooltip key={a.id} content={a.name} side="right" delayMs={300}>
+                    <button
+                      type="button"
+                      className={`relative w-[38px] h-[38px] rounded-[10px] border-2 cursor-pointer flex items-center justify-center transition-[background,border-color] duration-[120ms] shrink-0 hover:bg-[var(--ao-bg-2)] ${isActive ? "border-[var(--ao-accent)] bg-[var(--ao-bg-2)]" : "border-transparent bg-transparent"}`}
+                      onClick={() => selectAgent(a.id, { tab, instanceId: inst?.instanceId ?? null })}
+                    >
+                      <AgentAvatar unit={a.unitChoice} size={30} label={a.name} />
+                      {a.status === "working" || a.status === "thinking" ? (
+                        <span className="absolute bottom-[1px] right-[1px] w-2 h-2 rounded-full border-[1.5px] border-[var(--ao-bg-1)] bg-[var(--ao-ok)] animate-[ao-pulse_1.4s_ease-in-out_infinite]" />
+                      ) : null}
+                    </button>
+                  </Tooltip>
                 );
               })}
             </div>
@@ -443,8 +443,6 @@ export function AgentDetailsModal() {
                 <div className="font-bold text-base text-ao-fg-0">{agent.name}</div>
               )}
               <div className="flex items-center gap-2 text-ao-fg-2 font-mono text-[12px]">
-                <span>{agent.id}</span>
-                <span className="w-[3px] h-[3px] bg-ao-fg-3 rounded-full" />
                 <span>{agent.defaultModel ?? "default"}</span>
                 <span className="w-[3px] h-[3px] bg-ao-fg-3 rounded-full" />
                 <span>effort {agent.defaultEffort ?? "default"}</span>
@@ -454,37 +452,39 @@ export function AgentDetailsModal() {
               {/* Alt+← / Alt+→ navigator when multi-instance */}
               {isMultiAgentSelected && (
                 <div className="flex items-center gap-[2px] mr-1">
-                  <button
-                    type="button"
-                    aria-label="Previous instance (Alt+←)"
-                    title="Previous instance (Alt+←)"
-                    onClick={() => {
-                      const ci = agentInstances.findIndex((i) => i.instanceId === selectedInstanceId);
-                      const ni = (ci - 1 + agentInstances.length) % agentInstances.length;
-                      const next = agentInstances[ni];
-                      if (next) { selectAgent(selectedId!, { instanceId: next.instanceId, tab }); }
-                    }}
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-bg-3 border border-transparent hover:border-ao-line-1 transition-all duration-[120ms]"
-                  >
-                    <span className="rotate-180 inline-flex"><Icon name="chevron" size={14} /></span>
-                  </button>
+                  <Tooltip content="Previous (Alt+←)" side="bottom">
+                    <button
+                      type="button"
+                      aria-label="Previous instance (Alt+←)"
+                      onClick={() => {
+                        const ci = agentInstances.findIndex((i) => i.instanceId === selectedInstanceId);
+                        const ni = (ci - 1 + agentInstances.length) % agentInstances.length;
+                        const next = agentInstances[ni];
+                        if (next) { selectAgent(selectedId!, { instanceId: next.instanceId, tab }); }
+                      }}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-bg-3 border border-transparent hover:border-ao-line-1 transition-all duration-[120ms]"
+                    >
+                      <span className="rotate-180 inline-flex"><Icon name="chevron" size={14} /></span>
+                    </button>
+                  </Tooltip>
                   <span className="font-mono text-[11px] text-ao-fg-2 min-w-[32px] text-center">
                     {selectedInstIdx + 1}/{agentInstances.length}
                   </span>
-                  <button
-                    type="button"
-                    aria-label="Next instance (Alt+→)"
-                    title="Next instance (Alt+→)"
-                    onClick={() => {
-                      const ci = agentInstances.findIndex((i) => i.instanceId === selectedInstanceId);
-                      const ni = (ci + 1) % agentInstances.length;
-                      const next = agentInstances[ni];
-                      if (next) { selectAgent(selectedId!, { instanceId: next.instanceId, tab }); }
-                    }}
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-bg-3 border border-transparent hover:border-ao-line-1 transition-all duration-[120ms]"
-                  >
-                    <Icon name="chevron" size={14} />
-                  </button>
+                  <Tooltip content="Next (Alt+→)" side="bottom">
+                    <button
+                      type="button"
+                      aria-label="Next instance (Alt+→)"
+                      onClick={() => {
+                        const ci = agentInstances.findIndex((i) => i.instanceId === selectedInstanceId);
+                        const ni = (ci + 1) % agentInstances.length;
+                        const next = agentInstances[ni];
+                        if (next) { selectAgent(selectedId!, { instanceId: next.instanceId, tab }); }
+                      }}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-bg-3 border border-transparent hover:border-ao-line-1 transition-all duration-[120ms]"
+                    >
+                      <Icon name="chevron" size={14} />
+                    </button>
+                  </Tooltip>
                 </div>
               )}
               {tab === "conversation" && (
@@ -497,15 +497,6 @@ export function AgentDetailsModal() {
                   <Icon name="plus" size={13} /> New
                 </button>
               )}
-              {tab === "configuration" && (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
-                  onClick={() => changeTab("settings")}
-                >
-                  <Icon name="edit" size={13} /> Edit
-                </button>
-              )}
               {tab === "memory" && (
                 <button
                   type="button"
@@ -513,15 +504,6 @@ export function AgentDetailsModal() {
                   onClick={() => memoryDiscardRef.current?.()}
                 >
                   <Icon name="refresh" size={13} /> Discard
-                </button>
-              )}
-              {tab === "settings" && (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-[6px] h-7 px-[10px] rounded-lg bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 text-[13px] transition-[background,color,border-color] duration-[120ms] hover:bg-ao-bg-4 hover:text-ao-fg-0 hover:border-ao-line-2"
-                  onClick={() => settingsResetRef.current?.()}
-                >
-                  <Icon name="refresh" size={13} /> Reset
                 </button>
               )}
             </div>
@@ -542,7 +524,6 @@ export function AgentDetailsModal() {
                 onActiveRunChange={setActiveRunId}
               />
             )}
-            {tab === "configuration" && <ConfigurationTab agent={agent} />}
             {tab === "history" && (
               <HistoryTab agentId={agent.id} />
             )}
@@ -550,9 +531,8 @@ export function AgentDetailsModal() {
             {tab === "settings" && (
               <SettingsTab
                 agentId={agent.id}
-                onAfterSave={() => changeTab("configuration")}
+                onAfterSave={() => {}}
                 onAfterDelete={closeInspector}
-                resetRef={settingsResetRef}
               />
             )}
           </div>

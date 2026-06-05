@@ -20,6 +20,33 @@ export interface AgentStatusInfo {
   taskKind?: string;
 }
 
+export function statusFromRunsForInstance(instanceId: string, runs: PersistedRun[]): AgentStatusInfo {
+  const now = Date.now();
+  const recent = runs.filter(
+    (r) => r.instanceId === instanceId && (r.status === "running" || now - r.ts < STICKY_MS),
+  );
+  if (recent.length === 0) return { status: "idle" };
+  recent.sort((a, b) => b.ts - a.ts);
+  const latest = recent[0]!;
+  return match(latest.status)
+    .with("running", () => ({
+      status: "working" as AgentStatus,
+      task: truncate(latest.prompt, 32),
+      taskKind: "Running",
+    }))
+    .with("done", () => ({
+      status: "done" as AgentStatus,
+      task: truncate(latest.prompt, 32),
+      taskKind: "Done",
+    }))
+    .with("error", () => ({
+      status: "error" as AgentStatus,
+      task: truncate(latest.prompt, 32),
+      taskKind: "Error",
+    }))
+    .exhaustive();
+}
+
 export function statusFromRuns(agentId: string, runs: PersistedRun[]): AgentStatusInfo {
   const now = Date.now();
   // Running jobs are always shown regardless of age - a job can run for hours.

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/components/ui/icon";
 import {
   DECORATIONS,
@@ -33,7 +34,7 @@ const CATEGORY_TABS: { id: DecoCategory; label: string }[] = [
   { id: "water", label: "Water" },
 ];
 
-export function OfficeBuildToolbar({
+export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
   active,
   tool,
   grassColor,
@@ -83,22 +84,30 @@ export function OfficeBuildToolbar({
     : null;
   const selectedDef = selectedKind ? DECORATIONS[selectedKind] : null;
 
-  if (!active) {
-    return (
-      <button
-        type="button"
-        className="build-entry-btn absolute inline-flex items-center gap-[6px] bg-bg-1 border border-line text-txt font-semibold cursor-pointer z-[6] right-[14px] bottom-[14px] px-[14px] py-2 rounded-[8px] shadow-[var(--shadow-2)] text-[13px] transition-[background,border-color] duration-100 hover:bg-bg-2 hover:border-line-2"
-        onClick={onToggle}
-        aria-label="Enter build mode"
-      >
-        <Icon name="hammer" size={13} />
-        Build
-      </button>
-    );
-  }
-
   return (
-    <div className="build-panel absolute flex flex-col min-h-0 overflow-hidden z-[6] bg-bg-1 border border-line right-[14px] top-[14px] bottom-[14px] w-[300px] rounded-[var(--r-lg)] shadow-[var(--shadow-2)]">
+    <AnimatePresence>
+      {!active ? (
+        <motion.button
+          key="build-entry"
+          type="button"
+          className="build-entry-btn absolute inline-flex items-center gap-[6px] bg-bg-1 border border-line text-txt font-semibold cursor-pointer z-[6] right-[14px] bottom-[14px] px-[14px] py-2 rounded-[8px] shadow-[var(--shadow-2)] text-[13px] transition-[background,border-color] duration-100 hover:bg-bg-2 hover:border-line-2"
+          onClick={onToggle}
+          aria-label="Enter build mode"
+          initial={{ opacity: 0, scale: 0.85, x: 4, y: 4 }}
+          animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 300, damping: 26 } }}
+          exit={{ opacity: 0, scale: 0.8, x: 4, y: 4, transition: { duration: 0.13, ease: "easeIn" } }}
+        >
+          <Icon name="hammer" size={13} />
+          Build
+        </motion.button>
+      ) : (
+        <motion.div
+          key="build-panel"
+          className="build-panel absolute flex flex-col min-h-0 overflow-hidden z-[6] bg-bg-1 border border-line right-[14px] top-[14px] bottom-[14px] w-[300px] rounded-[var(--r-lg)] shadow-[var(--shadow-2)]"
+          initial={{ opacity: 0, scale: 0.93, x: 22 }}
+          animate={{ opacity: 1, scale: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 28, delay: 0.18 } }}
+          exit={{ opacity: 0, scale: 0.93, x: 22, transition: { duration: 0.13, ease: "easeIn" } }}
+        >
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="border-b border-line shrink-0 px-[16px] pt-[14px] pb-[10px]">
         <div className="flex items-center gap-[10px]">
@@ -268,9 +277,11 @@ export function OfficeBuildToolbar({
           </div>
         </div>
       </div>
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-}
+});
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 

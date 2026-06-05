@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { ActionBar } from "@/components/ui/action-bar";
+import { Tooltip } from "@/components/ui/tooltip";
+import { ProjectChip } from "@/modules/projects/components/project-chip";
 import { cn } from "@/lib/cn";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject, useGitStatus } from "@/modules/projects/hooks/use-projects";
@@ -14,7 +16,6 @@ import { useFlutterStore } from "@/lib/flutter-store";
 import { useFlutterDevices } from "@/modules/flutter/hooks/use-flutter-devices";
 import { useDevServerStore } from "@/lib/dev-server-store";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import type { OfficeView } from "../hooks/use-office-store";
 import type { DetectedCommand } from "@/app/api/projects/[id]/dev/route";
 import type { ProcessInfo } from "@/app/api/processes/route";
 
@@ -170,9 +171,11 @@ export function DevServerButton({ projectId }: { projectId: string }) {
       <span className="inline-flex items-center gap-1">
         {installBtn}
         {s.phase === "idle" && (
-          <button type="button" className={TBTN} onClick={() => { void startCmd(cmd.key); }} disabled={busyInstall} title="Start dev server">
-            <Icon name="play" size={11} /> Dev
-          </button>
+          <Tooltip content="Start dev server" side="bottom">
+            <button type="button" className={TBTN} onClick={() => { void startCmd(cmd.key); }} disabled={busyInstall}>
+              <Icon name="play" size={11} /> Dev
+            </button>
+          </Tooltip>
         )}
         {(s.phase === "starting" || s.phase === "stopping") && (
           <button type="button" className={TBTN} disabled>
@@ -183,17 +186,20 @@ export function DevServerButton({ projectId }: { projectId: string }) {
         {s.phase === "running" && (
           <>
             {s.port !== null && (
-              <a
-                href={s.url ?? "#"} target="_blank" rel="noopener noreferrer"
-                className="font-mono text-[11px] text-[var(--working)] no-underline px-[7px] h-[30px] inline-flex items-center rounded-[7px] bg-[color-mix(in_srgb,var(--working)_10%,transparent)] border border-[color-mix(in_srgb,var(--working)_25%,transparent)] hover:bg-[color-mix(in_srgb,var(--working)_18%,transparent)] transition-colors"
-                title={`Open ${s.url}`}
-              >
-                :{s.port}
-              </a>
+              <Tooltip content={`Open ${s.url}`} side="bottom">
+                <a
+                  href={s.url ?? "#"} target="_blank" rel="noopener noreferrer"
+                  className="font-mono text-[11px] text-[var(--working)] no-underline px-[7px] h-[30px] inline-flex items-center rounded-[7px] bg-[color-mix(in_srgb,var(--working)_10%,transparent)] border border-[color-mix(in_srgb,var(--working)_25%,transparent)] hover:bg-[color-mix(in_srgb,var(--working)_18%,transparent)] transition-colors"
+                >
+                  :{s.port}
+                </a>
+              </Tooltip>
             )}
-            <button type="button" className={TBTN} onClick={() => { void stopCmd(cmd.key); }} title="Stop dev server">
-              <Icon name="stop" size={11} /> Stop
-            </button>
+            <Tooltip content="Stop dev server" side="bottom">
+              <button type="button" className={TBTN} onClick={() => { void stopCmd(cmd.key); }}>
+                <Icon name="stop" size={11} /> Stop
+              </button>
+            </Tooltip>
           </>
         )}
       </span>
@@ -245,24 +251,26 @@ export function DevServerButton({ projectId }: { projectId: string }) {
                         <Icon name="refresh" size={13} className="text-[var(--txt-3)] [animation:spin_1s_linear_infinite] shrink-0" />
                       )}
                       {!busy && s.phase === "idle" && (
-                        <button
-                          type="button"
-                          onClick={() => { void startCmd(cmd.key); }}
-                          className="w-6 h-6 grid place-items-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                          title={`Start ${cmd.name}`}
-                        >
-                          <Icon name="play" size={11} />
-                        </button>
+                        <Tooltip content={`Start ${cmd.name}`} side="left" delayMs={300}>
+                          <button
+                            type="button"
+                            onClick={() => { void startCmd(cmd.key); }}
+                            className="w-6 h-6 grid place-items-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          >
+                            <Icon name="play" size={11} />
+                          </button>
+                        </Tooltip>
                       )}
                       {!busy && s.phase === "running" && (
-                        <button
-                          type="button"
-                          onClick={() => { void stopCmd(cmd.key); }}
-                          className="w-6 h-6 grid place-items-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                          title={`Stop ${cmd.name}`}
-                        >
-                          <Icon name="stop" size={11} />
-                        </button>
+                        <Tooltip content={`Stop ${cmd.name}`} side="left" delayMs={300}>
+                          <button
+                            type="button"
+                            onClick={() => { void stopCmd(cmd.key); }}
+                            className="w-6 h-6 grid place-items-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          >
+                            <Icon name="stop" size={11} />
+                          </button>
+                        </Tooltip>
                       )}
                     </div>
                   );
@@ -293,34 +301,43 @@ export function FlutterDeviceButton() {
     ? (connected.length > 1 ? `${connected.length} devices` : (connected[0]?.model ?? "Device"))
     : "No device";
 
+  const tip = hasDevice
+    ? `${connected.length} device${connected.length !== 1 ? "s" : ""} connected — open Flutter manager`
+    : "No Android device connected";
+
   return (
-    <button
-      type="button"
-      onClick={() => setOpen(true)}
-      title={hasDevice ? `${connected.length} device${connected.length !== 1 ? "s" : ""} connected — open Flutter manager` : "No Android device connected"}
-      className={cn(TBTN, hasDevice ? "text-[#54C5F8] hover:text-[#54C5F8]" : "")}
-    >
-      <Icon name="smartphone" size={12} />
-      {label}
-    </button>
+    <Tooltip content={tip} side="bottom">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={cn(TBTN, hasDevice ? "text-[#54C5F8] hover:text-[#54C5F8]" : "")}
+      >
+        <Icon name="smartphone" size={12} />
+        {label}
+      </button>
+    </Tooltip>
   );
 }
 
 export function OpenFolderButton({ projectId }: { projectId: string }) {
   return (
-    <button type="button" className={TBTN} title="Open project folder"
-      onClick={() => { void fetch(`/api/projects/${projectId}/open-folder`, { method: "POST" }); }}>
-      <Icon name="folder" size={13} />
-    </button>
+    <Tooltip content="Open project folder" side="bottom">
+      <button type="button" className={TBTN}
+        onClick={() => { void fetch(`/api/projects/${projectId}/open-folder`, { method: "POST" }); }}>
+        <Icon name="folder" size={13} />
+      </button>
+    </Tooltip>
   );
 }
 
 export function OpenInVSCodeButton({ projectId }: { projectId: string }) {
   return (
-    <button type="button" className={TBTN} title="Open in VS Code"
-      onClick={() => { void fetch(`/api/projects/${projectId}/open-folder?app=code`, { method: "POST" }); }}>
-      <Icon name="code" size={13} />
-    </button>
+    <Tooltip content="Open in VS Code" side="bottom">
+      <button type="button" className={TBTN}
+        onClick={() => { void fetch(`/api/projects/${projectId}/open-folder?app=code`, { method: "POST" }); }}>
+        <Icon name="code" size={13} />
+      </button>
+    </Tooltip>
   );
 }
 
@@ -330,24 +347,27 @@ export function GitStatusButton({ projectId }: { projectId: string }) {
   const git = gitQ.data;
   if (!git?.isGit || !git.branch) return null;
   const dirty = git.filesChanged > 0;
+  const tip = [
+    `Branch: ${git.branch}`,
+    dirty ? `${git.filesChanged} changed, +${git.added} -${git.removed}` : "clean",
+    git.ahead ? `${git.ahead} ahead` : "",
+    git.behind ? `${git.behind} behind` : "",
+  ].filter(Boolean).join(" · ");
+
   return (
-    <button
-      type="button"
-      className={cn(TBTN, dirty ? "text-[var(--acc-2)]" : "")}
-      title={[
-        `Branch: ${git.branch}`,
-        dirty ? `${git.filesChanged} changed, +${git.added} -${git.removed}` : "clean",
-        git.ahead ? `${git.ahead} ahead` : "",
-        git.behind ? `${git.behind} behind` : "",
-      ].filter(Boolean).join(" · ")}
-      onClick={() => router.push(PAGE_ROUTES.project(projectId))}
-    >
-      <Icon name="branch" size={12} />
-      <span className="font-mono">{git.branch}</span>
-      {dirty && <span className="text-[10.5px] font-mono text-txt-4">·{git.filesChanged}</span>}
-      {git.ahead > 0 && <span className="text-[10.5px] font-mono text-[var(--ok)]">↑{git.ahead}</span>}
-      {git.behind > 0 && <span className="text-[10.5px] font-mono text-yellow-400">↓{git.behind}</span>}
-    </button>
+    <Tooltip content={tip} side="bottom">
+      <button
+        type="button"
+        className={cn(TBTN, dirty ? "text-[var(--acc-2)]" : "")}
+        onClick={() => router.push(PAGE_ROUTES.project(projectId))}
+      >
+        <Icon name="branch" size={12} />
+        <span className="font-mono">{git.branch}</span>
+        {dirty && <span className="text-[10.5px] font-mono text-txt-4">·{git.filesChanged}</span>}
+        {git.ahead > 0 && <span className="text-[10.5px] font-mono text-[var(--ok)]">↑{git.ahead}</span>}
+        {git.behind > 0 && <span className="text-[10.5px] font-mono text-yellow-400">↓{git.behind}</span>}
+      </button>
+    </Tooltip>
   );
 }
 
@@ -373,19 +393,65 @@ export function KillAgentsButton({ projectId }: { projectId: string }) {
   }
 
   return (
-    <button
-      type="button"
-      className={cn(TBTN, "text-[var(--error)] hover:bg-[color-mix(in_srgb,var(--error)_12%,transparent)] hover:text-[var(--error)] hover:border-[color-mix(in_srgb,var(--error)_25%,transparent)]")}
-      title={`Stop all ${count} running agent${count !== 1 ? "s" : ""}`}
-      onClick={() => { void killAll(); }}
-    >
-      <Icon name="stop" size={11} />
-      Stop {count}
-    </button>
+    <Tooltip content={`Stop all ${count} running agent${count !== 1 ? "s" : ""}`} side="bottom">
+      <button
+        type="button"
+        className={cn(TBTN, "text-[var(--error)] hover:bg-[color-mix(in_srgb,var(--error)_12%,transparent)] hover:text-[var(--error)] hover:border-[color-mix(in_srgb,var(--error)_25%,transparent)]")}
+        onClick={() => { void killAll(); }}
+      >
+        <Icon name="stop" size={11} />
+        Stop {count}
+      </button>
+    </Tooltip>
   );
 }
 
 type BuildPhase = "idle" | "building" | "done" | "error";
+
+export function ClearCacheButton({ projectId }: { projectId: string }) {
+  const [phase, setPhase] = useState<"idle" | "clearing" | "done" | "error">("idle");
+
+  async function clearCache() {
+    if (phase !== "idle") return;
+    setPhase("clearing");
+    try {
+      const res = await fetch(`/api/projects/${projectId}/clear-cache`, { method: "POST" });
+      setPhase(res.ok ? "done" : "error");
+    } catch {
+      setPhase("error");
+    }
+    setTimeout(() => setPhase("idle"), 2500);
+  }
+
+  if (phase === "clearing") {
+    return (
+      <button type="button" className={TBTN} disabled>
+        <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" />
+      </button>
+    );
+  }
+  if (phase === "done") {
+    return (
+      <button type="button" className={cn(TBTN, "text-[var(--ok)]")} disabled>
+        <Icon name="check" size={12} />
+      </button>
+    );
+  }
+  if (phase === "error") {
+    return (
+      <button type="button" className={cn(TBTN, "text-[var(--error)]")} disabled>
+        <Icon name="x" size={12} />
+      </button>
+    );
+  }
+  return (
+    <Tooltip content="Clear build cache (.next, .turbo, node_modules/.cache)" side="bottom">
+      <button type="button" className={TBTN} onClick={() => { void clearCache(); }}>
+        <Icon name="trash" size={12} />
+      </button>
+    </Tooltip>
+  );
+}
 
 export function BuildButton({ projectId }: { projectId: string }) {
   const [phase, setPhase] = useState<BuildPhase>("idle");
@@ -454,20 +520,46 @@ export function BuildButton({ projectId }: { projectId: string }) {
     );
   }
   return (
-    <button type="button" className={TBTN} onClick={() => { void startBuild(); }} title="Build project">
-      <Icon name="zap" size={12} /> Build
-    </button>
+    <Tooltip content="Build project" side="bottom">
+      <button type="button" className={TBTN} onClick={() => { void startBuild(); }}>
+        <Icon name="zap" size={12} /> Build
+      </button>
+    </Tooltip>
+  );
+}
+
+/**
+ * Canonical project action bar — single source of truth for all toolbar headers.
+ * Used in OfficeToolbar, CardsOffice, and project-detail so every header stays in sync.
+ */
+export function ProjectActionsBar({ projectId }: { projectId: string }) {
+  const projectQ = useProject(projectId);
+  const hasCwd = !!projectQ.data?.meta.cwd;
+
+  return (
+    <ActionBar
+      items={[
+        ...(hasCwd ? [
+          { key: `folder-${projectId}`, element: <OpenFolderButton projectId={projectId} />, segment: "shortcuts", priority: 10 },
+          { key: `vscode-${projectId}`, element: <OpenInVSCodeButton projectId={projectId} />, segment: "shortcuts", priority: 10 },
+          { key: `cache-${projectId}`, element: <ClearCacheButton projectId={projectId} />, segment: "shortcuts", priority: 9 },
+          { key: `div-${projectId}`, type: "divider" as const },
+          { key: `build-${projectId}`, element: <BuildButton key={`build-${projectId}`} projectId={projectId} />, segment: "runtime", priority: 5 },
+          { key: `dev-${projectId}`, element: <DevServerButton key={`dev-${projectId}`} projectId={projectId} />, segment: "runtime", priority: 5 },
+          { key: `kill-${projectId}`, element: <KillAgentsButton projectId={projectId} />, segment: "runtime", priority: 5 },
+        ] : []),
+        { key: "flutter-device", element: <FlutterDeviceButton /> },
+      ]}
+    />
   );
 }
 
 export type OfficeToolbarProps = {
-  view: OfficeView;
-  setView: (next: OfficeView) => void;
   agentCount: number;
   workingCount: number;
 };
 
-export function OfficeToolbar({ view, setView, agentCount, workingCount }: OfficeToolbarProps) {
+export function OfficeToolbar({ agentCount, workingCount }: OfficeToolbarProps) {
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const setActiveId = useActiveProjectStore((s) => s.setId);
   const projectQ = useProject(activeProjectId);
@@ -479,56 +571,28 @@ export function OfficeToolbar({ view, setView, agentCount, workingCount }: Offic
 
   return (
     <header className="border-b border-line shrink-0 flex items-center gap-[16px] px-[28px] pt-[18px] pb-[14px]">
-      <div className="flex flex-col gap-[2px]">
-        <h1 className="font-bold flex items-baseline gap-[10px] m-0 text-[22px] tracking-[-0.01em]">
-          The office
-          <span className="text-txt-3 font-normal font-[var(--font-mono)] text-[12.5px] tracking-normal">
-            {activeProjectId ? (
-              <>
-                · <span className="text-txt-2">{rosterCount} agent{rosterCount === 1 ? "" : "s"}</span>
-                {project ? <> in {project.meta.name}</> : null}
-                {" · "}
-                <span className="text-txt-2" style={workingCount > 0 ? { color: "var(--working)" } : undefined}>
-                  {workingCount} working
-                </span>
-              </>
-            ) : (
-              <> · {agentCount} agent{agentCount === 1 ? "" : "s"}</>
-            )}
+      <div className="flex items-center gap-[14px] min-w-0">
+        <h1 className="font-bold m-0 text-[22px] tracking-[-0.01em] shrink-0">The office</h1>
+        {activeProjectId ? (
+          <>
+            <span className="text-txt-4 text-[14px] shrink-0">·</span>
+            <ProjectChip projectId={activeProjectId} project={project} />
+            <span className="text-txt-3 font-mono text-[12px] shrink-0 whitespace-nowrap">
+              {rosterCount} agent{rosterCount === 1 ? "" : "s"}
+              {workingCount > 0 && (
+                <> · <span className="text-status-working">{workingCount} working</span></>
+              )}
+            </span>
+          </>
+        ) : (
+          <span className="text-txt-3 font-mono text-[12px] shrink-0">
+            · {agentCount} agent{agentCount === 1 ? "" : "s"}
           </span>
-        </h1>
+        )}
       </div>
 
       <div className="ml-auto flex items-center gap-[8px]">
-        <ActionBar
-          actions={[
-            ...(activeProjectId && project?.meta.cwd ? [
-              { key: `git-${activeProjectId}`, element: <GitStatusButton projectId={activeProjectId} /> },
-              { key: "open-folder", element: <OpenFolderButton projectId={activeProjectId} /> },
-              { key: "open-vscode", element: <OpenInVSCodeButton projectId={activeProjectId} /> },
-              { key: `build-${activeProjectId}`, element: <BuildButton key={`build-${activeProjectId}`} projectId={activeProjectId} /> },
-              { key: activeProjectId, element: <DevServerButton key={activeProjectId} projectId={activeProjectId} /> },
-              { key: `kill-${activeProjectId}`, element: <KillAgentsButton projectId={activeProjectId} /> },
-            ] : []),
-            { key: "flutter-device", element: <FlutterDeviceButton /> },
-          ]}
-        />
-        <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
-          <button
-            type="button"
-            className={cn("inline-flex items-center gap-[6px] text-txt-3 px-[12px] py-[6px] rounded-[5px] text-[12.5px] transition-[background,color] duration-[120ms]", view === "iso" && "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]")}
-            onClick={() => setView("iso")}
-          >
-            <Icon name="map" size={12} /> Iso
-          </button>
-          <button
-            type="button"
-            className={cn("inline-flex items-center gap-[6px] text-txt-3 px-[12px] py-[6px] rounded-[5px] text-[12.5px] transition-[background,color] duration-[120ms]", view === "cards" && "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]")}
-            onClick={() => setView("cards")}
-          >
-            <Icon name="grid" size={12} /> Cards
-          </button>
-        </div>
+        {activeProjectId && <ProjectActionsBar projectId={activeProjectId} />}
         <button type="button" className="inline-flex items-center gap-[6px] bg-acc font-semibold cursor-pointer px-[14px] py-[8px] text-white rounded-[9px] text-[13px] transition-[background] duration-[120ms] hover:bg-[var(--acc-hover)] border-none" onClick={() => setAddOpen(true)}>
           <Icon name="plus" size={13} /> Add agent
         </button>

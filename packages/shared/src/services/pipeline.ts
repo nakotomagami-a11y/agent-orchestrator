@@ -33,8 +33,8 @@ const pipelines: Map<string, PipelineRun> =
   globalThis.__agentOfficePipelines ??
   (globalThis.__agentOfficePipelines = new Map());
 
-const STEP_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-const PIPELINE_TIMEOUT_MS = 3 * STEP_TIMEOUT_MS; // 30 minutes overall cap
+const STEP_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes per step
+const PIPELINE_TIMEOUT_MS = 4 * STEP_TIMEOUT_MS; // 4 hours overall cap
 const PIPELINE_CLEANUP_DELAY_MS = 30_000; // keep finished pipelines in memory briefly for in-flight polls
 
 export function getPipeline(id: string): PipelineRun | undefined {

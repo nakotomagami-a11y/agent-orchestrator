@@ -2,6 +2,7 @@
 
 import { useState, useMemo, Fragment } from "react";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/page-header";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
@@ -682,30 +683,30 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
 
   return (
     <>
-      <div className="flex items-center gap-[10px] px-[18px] py-[10px] border-b border-line bg-bg-1">
-        <h1 className="m-0 text-[16px] font-bold tracking-[-0.01em]">Activity</h1>
-        <span className="text-[12px] text-txt-3 font-[var(--font-mono)]">
-          {projectId ? "· run history for this project" : "· run history across all agents"}
-        </span>
-        <div className="ml-auto flex items-center gap-2">
-          <div className="flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden rounded-md">
-            {(["today", "week", "month", "all"] as const).map((s) => (
-              <button
-                key={s}
-                className={cn("bg-transparent border-none cursor-pointer text-txt-3 px-[11px] py-[4px] rounded-[6px] text-[12px] font-[var(--font-mono)]", scope === s && "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]")}
-                onClick={() => setScope(s)}
-                type="button"
-              >
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
-          </div>
-          <Button size="sm" variant="ghost" onClick={handleExport} disabled={filtered.length === 0}>
-            <Icon name="copy" size={12} />
-            Export
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Activity"
+        sub={projectId ? "· run history for this project" : "· run history across all agents"}
+        actions={
+          <>
+            <div className="flex bg-bg-2 border border-line p-[3px] max-[600px]:hidden rounded-md">
+              {(["today", "week", "month", "all"] as const).map((s) => (
+                <button
+                  key={s}
+                  className={cn("bg-transparent border-none cursor-pointer text-txt-3 px-[11px] py-[4px] rounded-[6px] text-[12px] font-[var(--font-mono)]", scope === s && "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]")}
+                  onClick={() => setScope(s)}
+                  type="button"
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
+            <Button size="sm" variant="ghost" onClick={handleExport} disabled={filtered.length === 0}>
+              <Icon name="copy" size={12} />
+              Export
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex flex-col overflow-y-auto flex-1 min-h-0 px-[24px] pt-[20px] pb-[32px] gap-[20px]">
         <LiveStrip runs={liveRuns} />

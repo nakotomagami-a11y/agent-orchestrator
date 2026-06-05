@@ -15,8 +15,10 @@ function fmtDur(ms: number): string {
   return `${m}m ${s}s`;
 }
 
-function fmtTok(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+function fmtNum(n: number): string {
+  if (n >= 1_000_000) return `${parseFloat((n / 1_000_000).toFixed(1))}M`;
+  if (n >= 1_000) return `${parseFloat((n / 1_000).toFixed(1))}K`;
+  return String(n);
 }
 
 function relTime(ts: number): string {
@@ -96,11 +98,11 @@ export function HistoryTab({ agentId }: { agentId: string }) {
       <div className="grid grid-cols-4 gap-[10px] mb-[16px]">
         <div className="p-[12px_14px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md">
           <div className="text-[10.5px] text-ao-fg-2 uppercase tracking-[0.1em] font-mono mb-[4px]">Total runs</div>
-          <div className="text-[18px] font-bold text-ao-fg-0">{allRuns.length}</div>
+          <div className="text-[18px] font-bold text-ao-fg-0">{fmtNum(allRuns.length)}</div>
         </div>
         <div className="p-[12px_14px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md">
           <div className="text-[10.5px] text-ao-fg-2 uppercase tracking-[0.1em] font-mono mb-[4px]">Tokens used</div>
-          <div className="text-[18px] font-bold text-ao-fg-0">{fmtTok(totalTokens)}</div>
+          <div className="text-[18px] font-bold text-ao-fg-0">{fmtNum(totalTokens)}</div>
         </div>
         <div className="p-[12px_14px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md">
           <div className="text-[10.5px] text-ao-fg-2 uppercase tracking-[0.1em] font-mono mb-[4px]">Spend</div>
@@ -191,7 +193,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
               </span>
               <span className="flex-1 h-px bg-[var(--ao-line-0)]" />
               <span className="font-mono">
-                ${g.runs.reduce((s, r) => s + (r.cost || 0), 0).toFixed(3)} · {fmtTok(g.runs.reduce((s, r) => s + (r.tokensIn || 0) + (r.tokensOut || 0), 0))}
+                ${g.runs.reduce((s, r) => s + (r.cost || 0), 0).toFixed(3)} · {fmtNum(g.runs.reduce((s, r) => s + (r.tokensIn || 0) + (r.tokensOut || 0), 0))}
               </span>
             </div>
             {g.runs.map((r) => {
@@ -231,7 +233,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                     {/* Cells */}
                     <span className="font-mono text-[12px] text-ao-fg-2 whitespace-nowrap">{fmtDur(r.durMs)}</span>
                     <span className="font-mono text-[12px] text-ao-fg-1 whitespace-nowrap">
-                      {fmtTok((r.tokensIn || 0) + (r.tokensOut || 0))}
+                      {fmtNum((r.tokensIn || 0) + (r.tokensOut || 0))}
                       <span className="text-ao-fg-2"> tok</span>
                     </span>
                     <span className="font-mono text-[12px] text-ao-fg-1 whitespace-nowrap">${(r.cost || 0).toFixed((r.cost || 0) < 0.1 ? 3 : 2)}</span>
@@ -274,7 +276,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                         {[
                           { lbl: "run id",   val: r.id },
                           { lbl: "duration", val: fmtDur(r.durMs) },
-                          { lbl: "tokens",   val: fmtTok((r.tokensIn || 0) + (r.tokensOut || 0)) },
+                          { lbl: "tokens",   val: fmtNum((r.tokensIn || 0) + (r.tokensOut || 0)) },
                           { lbl: "cost",     val: `$${(r.cost || 0).toFixed(4)}` },
                           { lbl: "model",    val: r.model || "-" },
                         ].map(({ lbl, val }) => (

@@ -7,62 +7,71 @@ interface ProcessRecord {
   createdAt: number;
 }
 
+declare global {
+  // eslint-disable-next-line no-var
+  var __aoProcessStore: Map<number, ProcessRecord> | undefined;
+  // eslint-disable-next-line no-var
+  var __aoStdinMap: Map<number, Writable> | undefined;
+}
+
 const MAX_LINES = 500;
-const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
-const store = new Map<number, ProcessRecord>();
-const stdinMap = new Map<number, Writable>();
+const TTL_MS = 2 * 60 * 60 * 1000;
+
+function getStore(): Map<number, ProcessRecord> {
+  if (!globalThis.__aoProcessStore) globalThis.__aoProcessStore = new Map();
+  return globalThis.__aoProcessStore;
+}
+
+function getStdinMap(): Map<number, Writable> {
+  if (!globalThis.__aoStdinMap) globalThis.__aoStdinMap = new Map();
+  return globalThis.__aoStdinMap;
+}
 
 export function registerProcess(pid: number) {
-  store.set(pid, { lines: [], exitCode: null, signal: null, createdAt: Date.now() });
+  getStore().set(pid, { lines: [], exitCode: null, signal: null, createdAt: Date.now() });
 }
 
 export function registerStdin(pid: number, stdin: Writable) {
-  stdinMap.set(pid, stdin);
+  getStdinMap().set(pid, stdin);
 }
 
 export function writeStdin(pid: number, data: string): boolean {
-  const s = stdinMap.get(pid);
+  const s = getStdinMap().get(pid);
   if (!s || s.destroyed) return false;
   s.write(data);
   return true;
 }
 
 export function deleteStdin(pid: number) {
-  stdinMap.delete(pid);
+  getStdinMap().delete(pid);
 }
 
 export function appendLine(pid: number, line: string) {
-  const rec = store.get(pid);
+  const rec = getStore().get(pid);
   if (!rec) return;
   rec.lines.push(line);
   if (rec.lines.length > MAX_LINES) rec.lines.shift();
 }
 
 export function setExited(pid: number, code: number | null, signal: string | null) {
-  const rec = store.get(pid);
+  const rec = getStore().get(pid);
   if (rec) { rec.exitCode = code; rec.signal = signal; }
 }
 
 export function getProcess(pid: number): ProcessRecord | undefined {
-  return store.get(pid);
+  return getStore().get(pid);
 }
 
 export function deleteProcess(pid: number) {
-  store.delete(pid);
+  getStore().delete(pid);
 }
 
 setInterval(() => {
+  const store = getStore();
   const cutoff = Date.now() - TTL_MS;
   for (const [pid, rec] of store) {
-    // Evict entries that have exceeded the TTL regardless of process state.
-    if (rec.createdAt < cutoff) {
-      store.delete(pid);
-      continue;
-    }
-    // Evict entries whose process no longer exists.
-    try {
-      process.kill(pid, 0);
-    } catch (e: unknown) {
+    if (rec.createdAt < cutoff) { store.delete(pid); continue; }
+    try { process.kill(pid, 0); } catch (e: unknown) {
       if ((e as NodeJS.ErrnoException).code === "ESRCH") store.delete(pid);
     }
   }

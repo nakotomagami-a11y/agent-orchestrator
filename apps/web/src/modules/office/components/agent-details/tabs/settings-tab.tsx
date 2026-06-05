@@ -198,8 +198,8 @@ function SettingsForm({
             </div>
             <div className="flex flex-col gap-[6px] mt-3">
               <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Description</label>
-              <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
-                <input value={v.desc} onChange={set("desc")} placeholder="One-sentence description…" className="flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px]" />
+              <div className="px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
+                <textarea rows={3} value={v.desc} onChange={set("desc")} placeholder="One-sentence description…" className="w-full bg-transparent border-0 outline-none resize-none text-ao-fg-0 text-[13.5px] leading-[1.5]" />
               </div>
               <div className="text-[11.5px] text-ao-fg-2 font-mono">{v.desc.length} / 240 chars</div>
             </div>
@@ -242,18 +242,26 @@ function SettingsForm({
             <div className="flex flex-col gap-[6px] mt-[14px]">
               <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Permission mode</label>
               <div className="grid grid-cols-3 gap-[6px] p-1 bg-ao-bg-4 border border-ao-line-1 rounded-ao-md">
-                <button type="button" className={`px-3 py-2 rounded-[8px] text-[12.5px] flex flex-col items-start gap-0.5 text-left transition-[background] duration-[120ms] hover:bg-ao-bg-3 ${v.pm === "auto" ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1px_var(--ao-accent-line)]" : "text-ao-fg-1"}`} onClick={() => setV((p) => ({ ...p, pm: "auto" }))}>
-                  <span className={`font-semibold ${v.pm === "auto" ? "text-[var(--ao-accent)]" : "text-ao-fg-1"}`}>Auto</span>
-                  <span className={`text-[10.5px] font-mono tracking-[0.02em] ${v.pm === "auto" ? "text-[color-mix(in_oklab,var(--ao-accent)_60%,var(--ao-fg-1))]" : "text-ao-fg-3"}`}>trust all tool calls</span>
-                </button>
-                <button type="button" className={`px-3 py-2 rounded-[8px] text-[12.5px] flex flex-col items-start gap-0.5 text-left transition-[background] duration-[120ms] hover:bg-ao-bg-3 ${v.pm === "ask" ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1px_var(--ao-accent-line)]" : "text-ao-fg-1"}`} onClick={() => setV((p) => ({ ...p, pm: "ask" }))}>
-                  <span className={`font-semibold ${v.pm === "ask" ? "text-[var(--ao-accent)]" : "text-ao-fg-1"}`}>Ask</span>
-                  <span className={`text-[10.5px] font-mono tracking-[0.02em] ${v.pm === "ask" ? "text-[color-mix(in_oklab,var(--ao-accent)_60%,var(--ao-fg-1))]" : "text-ao-fg-3"}`}>prompt on destructive ops</span>
-                </button>
-                <button type="button" className={`px-3 py-2 rounded-[8px] text-[12.5px] flex flex-col items-start gap-0.5 text-left transition-[background] duration-[120ms] hover:bg-ao-bg-3 ${v.pm === "plan" ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1px_var(--ao-accent-line)]" : "text-ao-fg-1"}`} onClick={() => setV((p) => ({ ...p, pm: "plan" }))}>
-                  <span className={`font-semibold ${v.pm === "plan" ? "text-[var(--ao-accent)]" : "text-ao-fg-1"}`}>Plan</span>
-                  <span className={`text-[10.5px] font-mono tracking-[0.02em] ${v.pm === "plan" ? "text-[color-mix(in_oklab,var(--ao-accent)_60%,var(--ao-fg-1))]" : "text-ao-fg-3"}`}>read-only mode</span>
-                </button>
+                {(["auto", "ask", "plan"] as const).map((mode) => {
+                  const labels = { auto: "Auto", ask: "Ask", plan: "Plan" };
+                  const hints  = { auto: "trust all tool calls", ask: "prompt on destructive ops", plan: "read-only mode" };
+                  const active = v.pm === mode;
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setV((p) => ({ ...p, pm: mode }))}
+                      className={`px-3 py-2 rounded-[8px] text-[12.5px] flex flex-col items-start gap-0.5 text-left transition-[background,box-shadow] duration-[120ms] ${
+                        active
+                          ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1.5px_var(--ao-accent)]"
+                          : "text-ao-fg-1 hover:bg-ao-bg-3"
+                      }`}
+                    >
+                      <span className={`font-semibold ${active ? "text-[var(--ao-accent)]" : "text-ao-fg-1"}`}>{labels[mode]}</span>
+                      <span className={`text-[10.5px] font-mono tracking-[0.02em] ${active ? "text-[color-mix(in_oklab,var(--ao-accent)_70%,var(--ao-fg-1))]" : "text-ao-fg-3"}`}>{hints[mode]}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
@@ -523,9 +531,6 @@ function SettingsForm({
           <span className="text-ao-fg-3 font-mono text-[11.5px]">No changes</span>
         )}
         <div className="ml-auto flex gap-2">
-          <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-transparent border border-transparent text-ao-fg-1 hover:bg-ao-bg-3 hover:text-ao-fg-0 disabled:opacity-50" onClick={handleDiscard} disabled={!dirty}>
-            Discard
-          </button>
           <button type="button" className="inline-flex items-center gap-2 px-4 py-2 rounded-[8px] text-[13px] font-medium bg-[rgba(217,83,79,0.12)] border border-[rgba(217,83,79,0.35)] text-ao-bad hover:bg-[rgba(217,83,79,0.2)] disabled:opacity-50" onClick={onDelete} disabled={deleting}>
             <Icon name="trash" size={12} /> Delete
           </button>

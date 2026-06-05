@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { Icon } from "@/components/ui/icon";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
 import { RosterInstanceRow } from "./roster-instance-row";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
@@ -145,25 +146,27 @@ export function RosterGroup({
             </>
           ) : (
             <span className="flex gap-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-[120ms]">
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onSpawn(agent.id); }}
-                aria-label={t("sidebar.spawn_instance_aria", { name: agent.name })}
-                title={t("sidebar.spawn_instance_title")}
-                className="w-[20px] h-[20px] bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 hover:text-acc hover:border-acc transition-colors cursor-pointer"
-              >
-                <Icon name="plus" size={10} />
-              </button>
-              {inst && (
+              <Tooltip content={t("sidebar.spawn_instance_title")} side="top">
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onRemove(inst.instanceId); }}
-                  aria-label={t("sidebar.remove_from_project_aria", { name: agent.name })}
-                  title={t("sidebar.remove_from_project_title")}
-                  className="w-[20px] h-[20px] bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 hover:text-[var(--error)] hover:border-[var(--error)] transition-colors cursor-pointer"
+                  onClick={(e) => { e.stopPropagation(); onSpawn(agent.id); }}
+                  aria-label={t("sidebar.spawn_instance_aria", { name: agent.name })}
+                  className="w-[20px] h-[20px] bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 hover:text-acc hover:border-acc transition-colors cursor-pointer"
                 >
-                  <Icon name="x" size={10} />
+                  <Icon name="plus" size={10} />
                 </button>
+              </Tooltip>
+              {inst && (
+                <Tooltip content={t("sidebar.remove_from_project_title")} side="top">
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onRemove(inst.instanceId); }}
+                    aria-label={t("sidebar.remove_from_project_aria", { name: agent.name })}
+                    className="w-[20px] h-[20px] bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 hover:text-[var(--error)] hover:border-[var(--error)] transition-colors cursor-pointer"
+                  >
+                    <Icon name="x" size={10} />
+                  </button>
+                </Tooltip>
               )}
             </span>
           )}
