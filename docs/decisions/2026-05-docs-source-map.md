@@ -70,6 +70,7 @@ All routes live under `apps/web/src/app/api/`.
 | `GET` | `/api/processes/:pid/logs` | — | `{ lines, exitCode, signal, found }` | Captured stdout/stderr |
 | `GET` | `/api/settings` | — | `AppSettings` | Read app settings |
 | `PUT` | `/api/settings` | `settingsPatchSchema` | `AppSettings` | Write app settings |
+| `PATCH` | `/api/settings` | `{ features?: Partial<AppSettings["features"]> }` | `AppSettings` | Partial feature-flag update |
 | `GET` | `/api/settings/scan` | `?root=&excluded=&includeExcluded=` | `ScannedEntry[]` | Scan filesystem for projects |
 | `GET` | `/api/ui-settings` | — | `Record<string,string>` | All UI settings from SQLite |
 | `PATCH` | `/api/ui-settings` | `Record<string,string>` | `{ ok }` | Write allowed UI settings |

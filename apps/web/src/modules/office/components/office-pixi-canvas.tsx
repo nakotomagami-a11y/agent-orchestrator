@@ -16,8 +16,6 @@ import {
   DECORATIONS,
   type DecorationKind,
   type DecorationsMap,
-  decorationKey,
-  familyOf,
 } from "./decorations";
 import { grassTilesetSrc, type GrassColor } from "./grass-colors";
 import {
@@ -25,12 +23,10 @@ import {
   unitSheetSrc,
   type UnitSheetState,
 } from "@/components/ui/unit-sprite.utils";
+import { getAgentActionAndFlip, isBridgeCell } from "../utils/agent-action";
+import { GRID_COLS, GRID_ROWS } from "../hooks/use-office-camera";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import type { AgentInstance } from "@agent-office/shared/types";
-
-// ─── Constants (mirror office-map.tsx) ────────────────────────────────────────
-const GRID_COLS = 40;
-const GRID_ROWS = 26;
 
 const FOAM_SHEET = "/tiles/water-foam.png";
 const FOAM_FRAME = TILE * 3; // 192px
@@ -64,10 +60,7 @@ function decoAnimSpeed(kind: DecorationKind): number {
 
 // ─── Agent helpers ─────────────────────────────────────────────────────────────
 
-/**
- * Resolve the action label to the sheet state string, falling back to "idle"
- * when a unit doesn't have the requested action sheet.
- */
+/** Resolve the action label to the sheet state string, falling back to "idle". */
 function getSheetState(
   action: "idle" | "axe" | "pickaxe" | "knife" | "hammer",
   def: (typeof UNIT_DEFS)[keyof typeof UNIT_DEFS],
@@ -77,47 +70,6 @@ function getSheetState(
   if (action === "pickaxe" && def.pickaxe) return "pickaxe";
   if (action === "knife" && def.knife) return "knife";
   return "idle";
-}
-
-/**
- * Determine the action and flip flag for an agent, replicating office-map.tsx.
- * `isWorking` means status is "working" or "thinking".
- */
-function getAgentActionAndFlip(
-  x: number,
-  y: number,
-  isWorking: boolean,
-  decorations: DecorationsMap,
-): { action: "idle" | "axe" | "pickaxe" | "knife" | "hammer"; flip: boolean } {
-  if (!isWorking) return { action: "idle", flip: false };
-  const has = (nx: number, ny: number, f: string): boolean => {
-    const stack = decorations[decorationKey(nx, ny)];
-    return !!stack && stack.some((k) => familyOf(k) === f);
-  };
-  const hasTree =
-    has(x, y, "tree") || has(x, y + 1, "tree") || has(x, y + 2, "tree");
-  const sheepRight = has(x + 1, y, "sheep");
-  const sheepLeft = has(x - 1, y, "sheep");
-  if (hasTree) return { action: "axe", flip: false };
-  if (has(x, y, "rock")) return { action: "pickaxe", flip: false };
-  if (sheepRight || sheepLeft)
-    return { action: "knife", flip: !sheepRight && sheepLeft };
-  return { action: "hammer", flip: false };
-}
-
-/**
- * Whether the cell is a bridge water cell (agent sits above the tile).
- * Mirrors isBridgeCell in office-map.tsx.
- */
-function isBridgeCell(
-  x: number,
-  y: number,
-  grid: boolean[][],
-  decorations: DecorationsMap,
-): boolean {
-  if (grid[y]?.[x] === true) return false;
-  const stack = decorations[decorationKey(x, y)];
-  return !!stack && stack.some((k) => familyOf(k) === "bridge");
 }
 
 interface Props {
@@ -154,6 +106,7 @@ export function OfficePixiCanvas({
   agentSearch,
   isMultiInstance,
   rosterInstances,
+  spendByInstance,
 }: Props) {
   // Container div — the canvas is created imperatively so each effect invocation
   // gets its own fresh HTMLCanvasElement (and thus its own WebGL context). React
@@ -305,6 +258,7 @@ export function OfficePixiCanvas({
       agentSearch ?? "",
       isMultiInstance ?? false,
       rosterInstances ?? [],
+      spendByInstance ?? {},
       gen,
       agentBuildGenRef,
     ).catch((err: unknown) => {
@@ -319,6 +273,7 @@ export function OfficePixiCanvas({
     agentSearch,
     isMultiInstance,
     rosterInstances,
+    spendByInstance,
   ]);
 
   return <div ref={containerRef} className="absolute inset-0 w-full h-full" />;
@@ -549,6 +504,7 @@ async function buildAgentLayer(
   agentSearch: string,
   isMultiInstance: boolean,
   rosterInstances: AgentInstance[],
+  spendByInstance: Record<string, number>,
   gen: number,
   genRef: MutableRefObject<number>,
 ): Promise<void> {
@@ -626,21 +582,14 @@ async function buildAgentLayer(
     }
     if (!sheetTex) continue;
 
-    // Determine which frame count to use
+    // Determine which frame count to use (getSheetState never returns "run")
     const frameCount =
-      state === "idle"
-        ? def.idle.frames
-        : state === "run"
-          ? def.run.frames
-          : state === "axe"
-            ? (def.axe?.frames ?? def.idle.frames)
-            : state === "hammer"
-              ? (def.hammer?.frames ?? def.idle.frames)
-              : state === "pickaxe"
-                ? (def.pickaxe?.frames ?? def.idle.frames)
-                : state === "knife"
-                  ? (def.knife?.frames ?? def.idle.frames)
-                  : def.idle.frames;
+      state === "idle"    ? def.idle.frames
+      : state === "axe"     ? (def.axe?.frames    ?? def.idle.frames)
+      : state === "hammer"  ? (def.hammer?.frames  ?? def.idle.frames)
+      : state === "pickaxe" ? (def.pickaxe?.frames ?? def.idle.frames)
+      : state === "knife"   ? (def.knife?.frames   ?? def.idle.frames)
+      : def.idle.frames;
 
     // Slice the horizontal strip into individual frame textures
     const frameTextures: Texture[] = Array.from({ length: frameCount }, (_, i) =>
@@ -682,7 +631,7 @@ async function buildAgentLayer(
     animSprite.play();
     agentContainer.addChild(animSprite);
 
-    // ── Instance badge ─────────────────────────────────────────────────────
+    // ── Instance badge & spend pill ────────────────────────────────────────
     const instanceIdx = ref.instanceId
       ? instanceIndexMap.get(ref.instanceId)
       : undefined;
@@ -704,6 +653,24 @@ async function buildAgentLayer(
       badge.x = AGENT_SIZE - 2;
       badge.y = AGENT_SIZE - 2;
       agentContainer.addChild(badge);
+    }
+
+    const spendKey = ref.instanceId ? `${ref.agentId}|${ref.instanceId}` : null;
+    const instSpend = spendKey ? (spendByInstance[spendKey] ?? 0) : 0;
+    if (isMultiInstance && instSpend > 0) {
+      const pill = new Text({
+        text: `$${instSpend.toFixed(2)}`,
+        style: {
+          fill: 0x88cc88,
+          fontSize: 9,
+          fontFamily: "monospace",
+          fontWeight: "600",
+        },
+      });
+      pill.anchor.set(1, 1);
+      pill.x = AGENT_SIZE - 2;
+      pill.y = showBadge ? AGENT_SIZE - 14 : AGENT_SIZE - 2;
+      agentContainer.addChild(pill);
     }
 
     // ── Search dimming ─────────────────────────────────────────────────────

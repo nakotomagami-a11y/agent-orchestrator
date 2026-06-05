@@ -25,6 +25,7 @@ import {
   useOfficeDragStore,
   type DragRef,
 } from "../hooks/use-office-drag";
+import { getAgentActionAndFlip } from "../utils/agent-action";
 import type { AgentInstance } from "@agent-office/shared/types";
 
 /** "x,y" → DragRef. Sparse - cells with no agent aren't keys. */
@@ -755,29 +756,7 @@ function OfficeMapInner({
           //   - none of the above → hammer (generic build pose)
           const isWorking =
             agent.status === "working" || agent.status === "thinking";
-          let action: "idle" | "axe" | "pickaxe" | "knife" | "hammer" = "idle";
-          let flip = false;
-          if (isWorking) {
-            const hasOnNeighbour = (nx: number, ny: number, f: string): boolean => {
-              const stack = decorations[decorationKey(nx, ny)];
-              return !!stack && stack.some((k) => familyOf(k) === f);
-            };
-            const hasTreeNearby =
-              hasOnNeighbour(x, y, "tree") ||
-              hasOnNeighbour(x, y + 1, "tree") ||
-              hasOnNeighbour(x, y + 2, "tree");
-            const sheepRight = hasOnNeighbour(x + 1, y, "sheep");
-            const sheepLeft = hasOnNeighbour(x - 1, y, "sheep");
-            if (hasTreeNearby) action = "axe";
-            else if (hasOnNeighbour(x, y, "rock")) action = "pickaxe";
-            else if (sheepRight || sheepLeft) {
-              action = "knife";
-              // Right wins when sheep flank both sides - the default
-              // sprite faces right, so we only flip when the only
-              // sheep is on the left.
-              flip = !sheepRight && sheepLeft;
-            } else action = "hammer";
-          }
+          const { action, flip } = getAgentActionAndFlip(x, y, isWorking, decorations);
           const searchMatch = !agentSearch || agent.name.toLowerCase().includes(agentSearch.toLowerCase());
           // Instance badge: show #N for any instance beyond the first
           const instanceIdx = ref.instanceId ? instanceIndexMap.get(ref.instanceId) : undefined;
