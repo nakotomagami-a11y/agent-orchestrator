@@ -391,7 +391,7 @@ const GridCell = memo(function GridCell({
       onDragOver={(e) => onDragOver(x, y, e, isValid)}
       onDragLeave={() => onDragLeave(x, y)}
       onDrop={(e) => onDrop(x, y, e)}
-      className="absolute p-0 transition-[background] duration-[80ms] ease-[ease]"
+      className="absolute p-0 pointer-events-auto transition-[background] duration-[80ms] ease-[ease]"
       style={{
         left: x * TILE,
         top: y * TILE,
