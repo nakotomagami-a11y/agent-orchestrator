@@ -11,6 +11,7 @@ import { CompareModal } from "@/modules/runs/components/compare-modal";
 import { ModalUrlSync } from "@/components/modal-url-sync";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { FlutterModal } from "@/modules/flutter/components/flutter-modal";
+import { ResizeHandles } from "@/components/layout/resize-handles";
 /**
  * Group layout for in-app pages (everything except auth, if/when added).
  * Wraps every protected page in the GNOME window chrome + sidebar, plus
@@ -19,6 +20,8 @@ import { FlutterModal } from "@/modules/flutter/components/flutter-modal";
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
+    <>
+    <ResizeHandles />
     <GnomeWindow titlebar={<Titlebar />}>
       <MainShell>{children}</MainShell>
       <AgentDetailsModal />
@@ -31,5 +34,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <MobileBottomNav />
       <FlutterModal />
     </GnomeWindow>
+    </>
   );
 }

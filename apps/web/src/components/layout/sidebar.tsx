@@ -10,8 +10,7 @@ import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { isActiveRoute } from "./sidebar.utils";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
-import { useOfficeAgents, type OfficeAgent } from "@/modules/office/hooks/use-office-agents";
-import { statusFromRunsForInstance } from "@/modules/office/utils/derive-status";
+import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
@@ -20,29 +19,19 @@ import { usePaletteStore } from "@/lib/palette-store";
 import {
   useProject,
   useRemoveInstance,
-  useAddInstance,
   useUpdateInstance,
 } from "@/modules/projects/hooks/use-projects";
 import { useProjectSpend } from "@/modules/projects/hooks/use-project-spend";
 import { useFilter } from "@/hooks/use-filter";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
-import type { AgentInstance } from "@agent-office/shared/types";
 import {
   AGENT_DRAG_MIME,
   useOfficeDragStore,
   type DragRef,
 } from "@/modules/office/hooks/use-office-drag";
-import { RosterGroup, type RosterGroupData } from "./roster-group";
-
-type RosterRow = {
-  /** Stable React key. */
-  key: string;
-  agent: OfficeAgent;
-  /** Roster instance for this row (null when there's no active project). */
-  instance: AgentInstance | null;
-  /** Display name. Uses instance.label if set; else agent.name; else short id. */
-  displayName: string;
-};
+import { RosterGroup } from "./roster-group";
+import { useRosterDisplay, type RosterRow } from "@/modules/office/hooks/use-roster-display";
+import { useSpawnInstance } from "@/modules/office/hooks/use-spawn-instance";
 
 export function Sidebar() {
   const t = useTranslations();
@@ -59,7 +48,6 @@ export function Sidebar() {
   const projectQ = useProject(activeProjectId);
   const project = projectQ.data;
   const removeMut = useRemoveInstance();
-  const addMut = useAddInstance();
   const updateMut = useUpdateInstance();
 
   const settingsQ = useSettings();
@@ -76,61 +64,13 @@ export function Sidebar() {
   // entry in `project.meta.roster`). Two `frontend-craftsman` instances
   // become two separate rows. When no project is active, fall back to a
   // flat agent-definition list.
-  const rosterRows = useMemo<RosterRow[]>(() => {
-    if (!project) {
-      return agents.map((a) => ({
-        key: a.id,
-        agent: a,
-        instance: null,
-        displayName: a.name,
-      }));
-    }
-    const agentsById = new Map(agents.map((a) => [a.id, a] as const));
-    const seenSameAgent = new Map<string, number>();
-    const rows: RosterRow[] = [];
-    for (const inst of project.meta.roster) {
-      const a = agentsById.get(inst.agentId);
-      if (!a) continue;
-      const count = (seenSameAgent.get(inst.agentId) ?? 0) + 1;
-      seenSameAgent.set(inst.agentId, count);
-      const totalForAgent = project.meta.roster.filter((i) => i.agentId === inst.agentId).length;
-      const displayName = inst.label
-        ? inst.label
-        : totalForAgent > 1
-          ? `${a.name} #${count}`
-          : a.name;
-      rows.push({ key: inst.instanceId, agent: a, instance: inst, displayName });
-    }
-    return rows;
-  }, [agents, project]);
-
-  // Build grouped data structure for multi-instance rendering
-  const rosterGroups = useMemo<RosterGroupData[]>(() => {
-    if (!project) return [];
-    const agentsById = new Map(agents.map((a) => [a.id, a] as const));
-    const seen = new Map<string, RosterGroupData>();
-    const order: string[] = [];
-
-    for (const inst of project.meta.roster) {
-      const a = agentsById.get(inst.agentId);
-      if (!a) continue;
-      if (!seen.has(inst.agentId)) {
-        seen.set(inst.agentId, {
-          agentId: inst.agentId,
-          agent: a,
-          instances: [],
-          instanceStatuses: [],
-          expanded: (expandedGroups[activeProjectId ?? ""] ?? []).includes(inst.agentId),
-        });
-        order.push(inst.agentId);
-      }
-      const group = seen.get(inst.agentId)!;
-      group.instances.push(inst);
-      group.instanceStatuses.push(statusFromRunsForInstance(inst.instanceId, runs).status);
-    }
-
-    return order.map((id) => seen.get(id)!);
-  }, [agents, runs, project, expandedGroups, activeProjectId]);
+  const { rosterRows, rosterGroups } = useRosterDisplay({
+    agents,
+    runs,
+    project,
+    expandedGroups,
+    activeProjectId,
+  });
 
   // Auto-expand a group when its instance becomes selected
   useEffect(() => {
@@ -192,46 +132,7 @@ export function Sidebar() {
     removeMut.mutate({ projectId: activeProjectId, instanceId });
   }, [activeProjectId, project, rosterRows, removeMut, t]);
 
-  const onSpawn = useCallback(async (agentId: string) => {
-    if (!activeProjectId) return;
-    try {
-      const result = await new Promise<{ instance: AgentInstance }>((resolve, reject) => {
-        addMut.mutate(
-          { projectId: activeProjectId, agentId },
-          {
-            onSuccess: (data) => resolve(data),
-            onError: reject,
-          },
-        );
-      });
-      setGroupExpanded(activeProjectId, agentId, true);
-    } catch (err: unknown) {
-      // Handle 409 cap errors.
-      // ApiError carries `.data` with the raw parsed response body, so we can
-      // read domain fields like `softCap` that live alongside the `error` key.
-      const anyErr = err as { status?: number; data?: { softCap?: boolean } };
-      if (anyErr?.status === 409) {
-        if (anyErr?.data?.softCap) {
-          const ok = window.confirm(t("sidebar.instance_cap_soft"));
-          if (!ok) return;
-          // Retry with force=true so the backend skips the soft-cap guard.
-          try {
-            const retryResult = await new Promise<{ instance: AgentInstance }>((resolve, reject) => {
-              addMut.mutate(
-                { projectId: activeProjectId, agentId, force: true },
-                { onSuccess: (data) => resolve(data), onError: reject },
-              );
-            });
-            setGroupExpanded(activeProjectId, agentId, true);
-          } catch {
-            // silently fail — backend hard-stopped it
-          }
-        } else {
-          window.alert(t("sidebar.instance_cap_hard"));
-        }
-      }
-    }
-  }, [activeProjectId, addMut, setGroupExpanded, t]);
+  const { spawnInstance: onSpawn } = useSpawnInstance({ activeProjectId });
 
   const onRenameStart = useCallback((instanceId: string) => {
     setRenamingInstanceId(instanceId);

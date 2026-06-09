@@ -439,6 +439,17 @@ body {
 }
 
 
+/* ─── Tauri transparent window ─── */
+/* The inline script in layout.tsx adds .tauri to <html> synchronously before
+   first paint when __TAURI_INTERNALS__ is present. This rule removes the
+   decorative body gradient so the OS desktop shows through the 18px gap
+   around GnomeWindow, and prevents a background flash during minimize. */
+html.tauri,
+html.tauri body {
+  background: transparent !important;
+}
+
+
 /* ─── Reduced motion ─── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

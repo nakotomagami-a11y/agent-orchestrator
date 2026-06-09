@@ -36,6 +36,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang={locale} data-theme={initialTheme} className={`${ubuntu.variable} ${ubuntuMono.variable}`}>
       <head>
         <style>{`button:not(:disabled){cursor:pointer}button:disabled{cursor:not-allowed}`}</style>
+        {/* Synchronous Tauri detection — runs before CSS is applied so there's no
+            flash. Adds .tauri to <html> which triggers transparent-body rules. */}
+        <script dangerouslySetInnerHTML={{ __html: `if('__TAURI_INTERNALS__' in window)document.documentElement.classList.add('tauri')` }} />
       </head>
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>

@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, startTransition, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/components/ui/icon";
-import { OfficeMap, OfficeMapOverlay, TILE, type AgentPositions, type VisibleRange } from "./office-map";
+import { OfficeMap, TILE, type AgentPositions, type VisibleRange } from "./office-map";
+import { OfficeMapOverlay } from "./office-map-overlay";
 import { OfficePixiCanvas } from "./office-pixi-canvas";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
@@ -14,12 +15,13 @@ import {
   hasBridgeCap,
   isPlacementValid,
   popDecoration,
-  type DecorationKind,
   type DecorationsMap,
 } from "./decorations";
 import { useOfficeAgents } from "../hooks/use-office-agents";
 import { useOfficeStore } from "../hooks/use-office-store";
 import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
+import { useOfficeAutoSave } from "../hooks/use-office-auto-save";
+import { useOfficeKeyboardShortcuts } from "../hooks/use-office-keyboard-shortcuts";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { useProjectSpend } from "@/modules/projects/hooks/use-project-spend";
@@ -35,8 +37,18 @@ import {
   ZOOM_STEP,
 } from "../hooks/use-office-camera";
 import { useOfficePainting } from "../hooks/use-office-painting";
-import type { AgentInstance } from "@agent-office/shared/types";
 import type { OfficeView } from "../hooks/use-office-store";
+import {
+  migrateKind,
+  parseGrid,
+  parseDecorations,
+  parseAgentPositions,
+  makeSeedGrid,
+  floodFill,
+  type Snapshot,
+  EMPTY_ROSTER,
+  EMPTY_SPEND,
+} from "../utils/office-scene-data";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -52,136 +64,6 @@ import type { OfficeView } from "../hooks/use-office-store";
  * the terrain. Two clicks fully empty a decorated grass cell.
  */
 
-// Renamed/removed bridge kinds get rewritten on load. The four cap kinds
-// (bridge_h_l/r, bridge_v_t/b) are no longer placeable - caps now auto-
-// paint on adjacent land cells - so any persisted cap drops silently.
-// The middle kinds got shorter names: bridge_h_m → bridge_h, _v_m → _v.
-const KIND_MIGRATIONS: Record<string, DecorationKind | null> = {
-  bridge_h_m: "bridge_h",
-  bridge_v_m: "bridge_v",
-  bridge_h_l: null,
-  bridge_h_r: null,
-  bridge_v_t: null,
-  bridge_v_b: null,
-};
-
-function migrateKind(raw: string): DecorationKind | null {
-  if (raw in KIND_MIGRATIONS) return KIND_MIGRATIONS[raw] ?? null;
-  return raw in DECORATIONS ? (raw as DecorationKind) : null;
-}
-
-function parseGrid(raw: string): boolean[][] | null {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (
-      Array.isArray(parsed) &&
-      parsed.length === GRID_ROWS &&
-      parsed.every(
-        (row): row is boolean[] =>
-          Array.isArray(row) &&
-          row.length === GRID_COLS &&
-          row.every((cell) => typeof cell === "boolean"),
-      )
-    ) {
-      return parsed;
-    }
-  } catch { /* ignore */ }
-  return null;
-}
-
-function parseDecorations(raw: string): DecorationsMap | null {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const out: DecorationsMap = {};
-    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof value === "string") {
-        const migrated = migrateKind(value);
-        if (migrated) out[key] = [migrated];
-        continue;
-      }
-      if (Array.isArray(value)) {
-        const arr: DecorationKind[] = [];
-        for (const v of value) {
-          if (typeof v !== "string") continue;
-          const migrated = migrateKind(v);
-          if (migrated) arr.push(migrated);
-        }
-        if (arr.length > 0) out[key] = arr;
-      }
-    }
-    return out;
-  } catch { /* ignore */ }
-  return null;
-}
-
-function parseAgentPositions(raw: string): AgentPositions | null {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const out: AgentPositions = {};
-    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (
-        value && typeof value === "object" && !Array.isArray(value) &&
-        typeof (value as { agentId?: unknown }).agentId === "string"
-      ) {
-        const v = value as { agentId: string; instanceId?: unknown };
-        out[key] = { agentId: v.agentId, instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined };
-      }
-    }
-    return out;
-  } catch { /* ignore */ }
-  return null;
-}
-
-/** Default grid is empty - users build their own island. */
-function makeSeedGrid(): boolean[][] {
-  return Array.from({ length: GRID_ROWS }, () =>
-    Array.from({ length: GRID_COLS }, () => false),
-  );
-}
-
-/**
- * BFS flood-fill: turns connected water cells starting at (startX, startY)
- * into grass. Returns the new grid and the number of cells filled.
- */
-function floodFill(
-  grid: boolean[][],
-  startX: number,
-  startY: number,
-): [boolean[][], number] {
-  if (grid[startY]?.[startX] === true) return [grid, 0]; // already grass
-  const next = grid.map((row) => [...row]);
-  // Use a flat Uint8Array bitmap instead of a string-keyed Set — no string
-  // allocations per cell, O(1) lookup, and no O(n) shift on dequeue.
-  const visited = new Uint8Array(GRID_COLS * GRID_ROWS);
-  let head = 0;
-  const queue: [number, number][] = [[startX, startY]];
-  let count = 0;
-  while (head < queue.length) {
-    const [x, y] = queue[head++]!;
-    if (x < 0 || x >= GRID_COLS || y < 0 || y >= GRID_ROWS) continue;
-    const idx = y * GRID_COLS + x;
-    if (visited[idx]) continue;
-    visited[idx] = 1;
-    if (next[y]![x]) continue;
-    next[y]![x] = true;
-    count++;
-    queue.push([x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]);
-  }
-  return [next, count];
-}
-
-// Stable empty-array and empty-object fallbacks to avoid recreating them
-// on every render (which would defeat React.memo equality checks).
-const EMPTY_ROSTER: AgentInstance[] = [];
-const EMPTY_SPEND: Record<string, number> = {};
-
-type Snapshot = {
-  grid: boolean[][];
-  decorations: DecorationsMap;
-  agentPositions: AgentPositions;
-};
 
 export function OfficeScene({
   projectId,
@@ -352,57 +234,7 @@ export function OfficeScene({
 
   // Auto-save effects — debounced 400ms so a 100-cell paint drag fires
   // one PATCH after the brush lifts, not 100 individual requests.
-  useEffect(() => {
-    if (!sceneLoaded) return;
-    const key = useCustomMap && projectId ? `office-grid:${projectId}` : "office-grid";
-    const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: JSON.stringify(grid) }),
-      }).catch(() => { /* best-effort */ });
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [grid, sceneLoaded, useCustomMap, projectId]);
-
-  useEffect(() => {
-    if (!sceneLoaded) return;
-    const key = useCustomMap && projectId ? `office-decorations:${projectId}` : "office-decorations";
-    const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: JSON.stringify(decorations) }),
-      }).catch(() => { /* best-effort */ });
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [decorations, sceneLoaded, useCustomMap, projectId]);
-
-  useEffect(() => {
-    if (!sceneLoaded) return;
-    const key = projectId ? `office-agents:${projectId}` : "office-agents";
-    const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: JSON.stringify(agentPositions) }),
-      }).catch(() => { /* best-effort */ });
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [agentPositions, sceneLoaded, projectId]);
-
-  useEffect(() => {
-    if (!sceneLoaded) return;
-    const key = useCustomMap && projectId ? `office-grass-color:${projectId}` : "office-grass-color";
-    const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: grassColor }),
-      }).catch(() => { /* best-effort */ });
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [grassColor, sceneLoaded, useCustomMap, projectId]);
+  useOfficeAutoSave({ sceneLoaded, useCustomMap, projectId, grid, decorations, agentPositions, grassColor });
 
   // Clear rectStart when the user switches tools
   useEffect(() => { setRectStart(null); }, [tool]);
@@ -740,45 +572,19 @@ export function OfficeScene({
 
   // Keyboard shortcuts for build mode: tool selection (B/E/F), Escape to exit,
   // and Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z for undo/redo.
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      const isCmd = e.metaKey || e.ctrlKey;
-
-      if (buildMode && isCmd && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        const snapshot = undoStack.current.pop();
-        if (!snapshot) return;
-        redoStack.current.push(currentStateRef.current);
-        setGrid(snapshot.grid);
-        setDecorations(snapshot.decorations);
-        setAgentPositions(snapshot.agentPositions);
-        setRectStart(null);
-        setPendingChanges((n) => n + 1);
-        return;
-      }
-      if (buildMode && isCmd && ((e.key === "z" && e.shiftKey) || e.key === "y")) {
-        e.preventDefault();
-        const snapshot = redoStack.current.pop();
-        if (!snapshot) return;
-        undoStack.current.push(currentStateRef.current);
-        setGrid(snapshot.grid);
-        setDecorations(snapshot.decorations);
-        setAgentPositions(snapshot.agentPositions);
-        setRectStart(null);
-        setPendingChanges((n) => n + 1);
-        return;
-      }
-
-      if (isCmd || !buildMode) return;
-      if (e.key === "b" || e.key === "B") { e.preventDefault(); setTool("grass"); }
-      if (e.key === "e" || e.key === "E") { e.preventDefault(); setTool("erase"); }
-      if (e.key === "f" || e.key === "F") { e.preventDefault(); setTool("fill"); }
-      if (e.key === "Escape") { setBuildMode(false); setPendingChanges(0); undoStack.current = []; redoStack.current = []; }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [buildMode]);
+  useOfficeKeyboardShortcuts({
+    buildMode,
+    undoStack,
+    redoStack,
+    currentStateRef,
+    setGrid,
+    setDecorations,
+    setAgentPositions,
+    setTool,
+    setBuildMode,
+    setRectStart,
+    setPendingChanges,
+  });
 
   return (
     <div
@@ -833,6 +639,7 @@ export function OfficeScene({
               visibleRange={visibleCellRange}
               onCellClick={onCellClick}
               onAgentClick={onAgentClick}
+              onAgentDrop={onAgentDrop}
             />
           </div>
         </>

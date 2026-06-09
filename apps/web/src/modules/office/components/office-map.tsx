@@ -4,7 +4,6 @@ import { memo, useCallback, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import {
-  BRIDGE_CAPS,
   DECORATIONS,
   decorationKey,
   familyOf,
@@ -27,6 +26,9 @@ import {
 } from "../hooks/use-office-drag";
 import { getAgentActionAndFlip } from "../utils/agent-action";
 import type { AgentInstance } from "@agent-office/shared/types";
+import { buildInstanceIndexMap } from "../utils/build-instance-index-map";
+import { buildDecoList, buildBridgeCaps } from "../utils/build-map-layers";
+import { isAgentDropValid } from "../utils/is-agent-drop-valid";
 
 /** "x,y" → DragRef. Sparse - cells with no agent aren't keys. */
 export type AgentPositions = Record<string, DragRef>;
@@ -59,7 +61,7 @@ export const TILE = 64;
  *  CSS pixels. The pawn bbox (64×104) scales to this size inside the
  *  square; bigger values let the character extend visibly above the
  *  cell, smaller values shrink it back into the tile. */
-const AGENT_SIZE = 96;
+export const AGENT_SIZE = 96;
 const FOAM_SHEET = "/tiles/water-foam.png";
 // Each foam frame is the size of 3 tiles per side (192 px), and the sheet
 // is one row of 16 frames. The foam sits centred behind a tile so it
@@ -332,7 +334,7 @@ export type OfficeMapProps = {
  * no-op). Different variants of the same family are valid - they
  * replace the existing family member in place.
  */
-function isToolValidAt(
+export function isToolValidAt(
   tool: BuildTool,
   x: number,
   y: number,
@@ -352,7 +354,7 @@ function isToolValidAt(
   return true;
 }
 
-type GridCellProps = {
+export type GridCellProps = {
   x: number;
   y: number;
   isHovered: boolean;
@@ -369,7 +371,7 @@ type GridCellProps = {
 /** Memoised overlay cell for build mode. Isolating hover into a prop means
  *  only the 2 cells that change (old hover → new hover) re-render per cursor
  *  move instead of the entire visible grid. All callbacks are stable refs. */
-const GridCell = memo(function GridCell({
+export const GridCell = memo(function GridCell({
   x,
   y,
   isHovered,
@@ -482,75 +484,23 @@ function OfficeMapInner({
   }, []);
 
   // Pre-compute per-agent instance index for badge rendering.
-  const instanceIndexMap = useMemo(() => {
-    const m = new Map<string, number>();
-    if (isMultiInstance && rosterInstances.length > 0) {
-      const seenByAgent = new Map<string, number>();
-      for (const inst of rosterInstances) {
-        const prev = seenByAgent.get(inst.agentId) ?? 0;
-        const idx = prev + 1;
-        seenByAgent.set(inst.agentId, idx);
-        m.set(inst.instanceId, idx);
-      }
-    }
-    return m;
-  }, [isMultiInstance, rosterInstances]);
+  const instanceIndexMap = useMemo(
+    () => buildInstanceIndexMap(isMultiInstance, rosterInstances),
+    [isMultiInstance, rosterInstances],
+  );
 
   const tiles = useMemo(() => buildTiles(grid, visibleRange), [grid, visibleRange]);
   const foam = useMemo(() => buildFoam(grid, visibleRange), [grid, visibleRange]);
 
-  const decoList = useMemo(() => {
-    const list: Array<{ x: number; y: number; kind: DecorationKind; layer: number }> = [];
-    for (const [key, stack] of Object.entries(decorations)) {
-      const [xs, ys] = key.split(",");
-      const x = Number(xs);
-      const y = Number(ys);
-      if (visibleRange && (x < visibleRange.xMin || x > visibleRange.xMax || y < visibleRange.yMin || y > visibleRange.yMax)) continue;
-      for (let layer = 0; layer < stack.length; layer++) {
-        list.push({ x, y, kind: stack[layer]!, layer });
-      }
-    }
-    list.sort((a, b) => a.y - b.y || a.layer - b.layer);
-    return list;
-  }, [decorations, visibleRange]);
+  const decoList = useMemo(
+    () => buildDecoList(decorations, visibleRange),
+    [decorations, visibleRange],
+  );
 
-  const bridgeCaps = useMemo(() => {
-    const caps: Array<{ x: number; y: number; src: string }> = [];
-    const isLand = (cx: number, cy: number): boolean => grid[cy]?.[cx] === true;
-    for (const [key, stack] of Object.entries(decorations)) {
-      if (!stack.some((k) => familyOf(k) === "bridge")) continue;
-      const [xs, ys] = key.split(",");
-      const x = Number(xs);
-      const y = Number(ys);
-      const hasH = stack.includes("bridge_h");
-      const hasV = stack.includes("bridge_v");
-      if (hasH) {
-        if (isLand(x - 1, y)) {
-          const cx = x - 1;
-          if (!visibleRange || (cx >= visibleRange.xMin && cx <= visibleRange.xMax && y >= visibleRange.yMin && y <= visibleRange.yMax))
-            caps.push({ x: cx, y, src: BRIDGE_CAPS.h_l.src });
-        }
-        if (isLand(x + 1, y)) {
-          const cx = x + 1;
-          if (!visibleRange || (cx >= visibleRange.xMin && cx <= visibleRange.xMax && y >= visibleRange.yMin && y <= visibleRange.yMax))
-            caps.push({ x: cx, y, src: BRIDGE_CAPS.h_r.src });
-        }
-      }
-      if (hasV) {
-        if (isLand(x, y - 1)) {
-          const cy = y - 1;
-          if (!visibleRange || (x >= visibleRange.xMin && x <= visibleRange.xMax && cy >= visibleRange.yMin && cy <= visibleRange.yMax))
-            caps.push({ x, y: cy, src: BRIDGE_CAPS.v_t.src });
-        }
-        if (isLand(x, y + 1)) {
-          const cy = y + 1;
-          if (!visibleRange || (x >= visibleRange.xMin && x <= visibleRange.xMax && cy >= visibleRange.yMin && cy <= visibleRange.yMax))
-            caps.push({ x, y: cy, src: BRIDGE_CAPS.v_b.src });
-        }
-      }
-    }
-    return caps;
-  }, [decorations, grid, visibleRange]);
+  const bridgeCaps = useMemo(
+    () => buildBridgeCaps(decorations, grid, visibleRange),
+    [decorations, grid, visibleRange],
+  );
 
   const visibleAgents = useMemo(() => {
     return Object.entries(agentPositions)
@@ -608,24 +558,6 @@ function OfficeMapInner({
     }
     return set;
   }, [tool, grid, decorations, agentPositions, editable, dragging, visibleRange]);
-
-  // Whether placing the currently-dragged agent at (x, y) would succeed:
-  // Agents can stand on grass cells or on water cells that have a bridge
-  // decoration. Bridge cap cells (land ramps) are excluded - they're
-  // reserved for the bridge art and are too narrow for an agent to stand on.
-  const isBridgeCell = (x: number, y: number): boolean => {
-    if (grid[y]?.[x] === true) return false; // land, not a bridge water cell
-    const stack = decorations[decorationKey(x, y)];
-    return !!stack && stack.some((k) => familyOf(k) === "bridge");
-  };
-
-  const isAgentDropValid = (x: number, y: number, ref: DragRef): boolean => {
-    const isGrass = grid[y]?.[x] === true;
-    if (!isGrass && !isBridgeCell(x, y)) return false;
-    const existing = agentPositions[decorationKey(x, y)];
-    if (!existing) return true;
-    return dragRefKey(existing) === dragRefKey(ref);
-  };
 
   // Build a hover-preview decoration when the user is hovering a cell
   // with a decoration tool armed. Rendered with reduced opacity and a
@@ -738,7 +670,8 @@ function OfficeMapInner({
           // tile rather than its bottom edge.
           const SIZE = AGENT_SIZE;
           const left = x * TILE + (TILE - SIZE) / 2;
-          const onBridge = isBridgeCell(x, y) || hasBridgeCap(x, y, grid, decorations);
+          const bridgeStack = decorations[decorationKey(x, y)];
+          const onBridge = (grid[y]?.[x] !== true && !!bridgeStack && bridgeStack.some((k) => familyOf(k) === "bridge")) || hasBridgeCap(x, y, grid, decorations);
           const top = y * TILE + (TILE - SIZE) / 2 - (onBridge ? Math.round(TILE * 0.35) : 0);
           // Animation rule: agents idle by default and only switch to a
           // work animation while they're actively running a task. The
@@ -854,7 +787,7 @@ function OfficeMapInner({
         ? (() => {
             const agent = agentsById.get(dragging.agentId);
             if (!agent) return null;
-            const valid = isAgentDropValid(hover.x, hover.y, dragging);
+            const valid = isAgentDropValid(hover.x, hover.y, dragging, grid, decorations, agentPositions);
             const tint = valid ? "#22c55e" : "#ef4444";
             const SIZE = AGENT_SIZE;
             const left = hover.x * TILE + (TILE - SIZE) / 2;
@@ -954,140 +887,8 @@ function OfficeMapInner({
 
 export const OfficeMap = memo(OfficeMapInner);
 
-// ─── Interaction overlay for the PixiJS renderer path ─────────────────────────
-// Sits on top of the Pixi canvas at the same world transform. Handles build-mode
-// grid cells (hover tint + click/drag-paint) and agent click targets (invisible
-// buttons). All visual rendering is done by OfficePixiCanvas; this layer is
-// purely for pointer interaction.
+// OfficeMapOverlay has moved to ./office-map-overlay.tsx
+// Re-exported here for backwards-compatible imports in office-scene.tsx.
+export type { OfficeMapOverlayProps } from "./office-map-overlay";
+export { OfficeMapOverlay } from "./office-map-overlay";
 
-export type OfficeMapOverlayProps = {
-  grid: boolean[][];
-  decorations: DecorationsMap;
-  agentPositions: AgentPositions;
-  agentsById: Map<string, OfficeAgent>;
-  buildMode: boolean;
-  tool?: BuildTool | null;
-  visibleRange: VisibleRange;
-  onCellClick: (x: number, y: number, shiftKey?: boolean) => void;
-  onAgentClick: (x: number, y: number, ref: DragRef) => void;
-};
-
-export function OfficeMapOverlay({
-  grid,
-  decorations,
-  agentPositions,
-  agentsById,
-  buildMode,
-  tool,
-  visibleRange,
-  onCellClick,
-  onAgentClick,
-}: OfficeMapOverlayProps) {
-  const cols = grid[0]?.length ?? 0;
-  const rows = grid.length;
-  const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
-
-  // Ref updated each render so stable callbacks always see current state.
-  const stateRef = useRef({ grid, decorations, onCellClick, onAgentClick });
-  stateRef.current = { grid, decorations, onCellClick, onAgentClick };
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableOnEnter = useCallback((x: number, y: number) => setHover({ x, y }), []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stableOnLeave = useCallback((x: number, y: number) => {
-    setHover((h) => (h?.x === x && h.y === y ? null : h));
-  }, []);
-  const stableOnClick = useCallback((x: number, y: number, shiftKey: boolean) => {
-    stateRef.current.onCellClick(x, y, shiftKey);
-  }, []);
-  // Drag-and-drop not yet supported in Pixi path — no-op handlers
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const noopDragOver = useCallback((_x: number, _y: number, _e: React.DragEvent<HTMLButtonElement>, _v: boolean) => {}, []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const noopDragLeave = useCallback(() => {}, []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const noopDrop = useCallback(() => {}, []);
-
-  // Same sentinel approach as OfficeMapInner: skip O(N) loop for simple tools.
-  const validitySet = useMemo(() => {
-    if (!buildMode || !tool) return null;
-    if (tool === "grass" || tool === "fill") return "inline-grass" as const;
-    if (tool === "erase") return "inline-erase" as const;
-    const set = new Set<string>();
-    for (let cy = visibleRange.yMin; cy <= visibleRange.yMax; cy++) {
-      for (let cx = visibleRange.xMin; cx <= visibleRange.xMax; cx++) {
-        if (isToolValidAt(tool, cx, cy, grid, decorations)) set.add(decorationKey(cx, cy));
-      }
-    }
-    return set;
-  }, [buildMode, tool, grid, decorations, visibleRange]);
-
-  const yStart = visibleRange.yMin;
-  const yEnd = visibleRange.yMax;
-  const xStart = visibleRange.xMin;
-  const xEnd = visibleRange.xMax;
-
-  return (
-    <div
-      className="absolute left-0 top-0 pointer-events-none"
-      style={{ width: cols * TILE, height: rows * TILE }}
-    >
-      {/* Build mode grid: clickable cells with hover/validity tint */}
-      {buildMode && Array.from({ length: yEnd - yStart + 1 }).flatMap((_, i) => {
-        const y = yStart + i;
-        return Array.from({ length: xEnd - xStart + 1 }).map((_, j) => {
-          const x = xStart + j;
-          let valid: boolean;
-          if (!validitySet) {
-            valid = false;
-          } else if (validitySet === "inline-grass") {
-            valid = grid[y]?.[x] !== true;
-          } else if (validitySet === "inline-erase") {
-            valid = grid[y]?.[x] === true || !!decorations[decorationKey(x, y)];
-          } else {
-            valid = validitySet.has(decorationKey(x, y));
-          }
-          return (
-            <GridCell
-              key={`overlay-cell-${x}-${y}`}
-              x={x}
-              y={y}
-              isHovered={hover?.x === x && hover.y === y}
-              isValid={valid}
-              isEditable
-              onEnter={stableOnEnter}
-              onLeave={stableOnLeave}
-              onClick={stableOnClick}
-              onDragOver={noopDragOver}
-              onDragLeave={noopDragLeave}
-              onDrop={noopDrop}
-            />
-          );
-        });
-      })}
-
-      {/* Agent click targets: invisible buttons at each agent's tile */}
-      {Object.entries(agentPositions).map(([key, ref]) => {
-        const [xs, ys] = key.split(",");
-        const x = Number(xs);
-        const y = Number(ys);
-        const agent = agentsById.get(ref.agentId);
-        if (!agent) return null;
-        if (
-          x < visibleRange.xMin || x > visibleRange.xMax ||
-          y < visibleRange.yMin || y > visibleRange.yMax
-        ) return null;
-        return (
-          <button
-            key={`agent-target-${key}`}
-            type="button"
-            className="absolute pointer-events-auto opacity-0"
-            style={{ left: x * TILE, top: y * TILE, width: TILE, height: TILE }}
-            onClick={() => stateRef.current.onAgentClick(x, y, ref)}
-            aria-label={`Select ${agent.name}`}
-          />
-        );
-      })}
-    </div>
-  );
-}

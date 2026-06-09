@@ -94,6 +94,7 @@ pub fn run() {
             .resizable(true)
             .fullscreen(false)
             .decorations(false)
+            .transparent(true)
             .center()
             .build()?;
 

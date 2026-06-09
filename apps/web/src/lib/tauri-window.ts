@@ -57,3 +57,15 @@ export async function toggleMaximizeWindow(): Promise<void> {
   const w = await getTauriWindow();
   await w?.toggleMaximize();
 }
+
+export type ResizeDirection = 'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' | 'SouthEast' | 'SouthWest' | 'West';
+
+export async function startResizeDragging(direction: ResizeDirection): Promise<void> {
+  if (!isTauri()) return;
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().startResizeDragging(direction);
+  } catch {
+    // ignore — not critical if resize drag fails
+  }
+}

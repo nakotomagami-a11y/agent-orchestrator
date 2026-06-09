@@ -18,18 +18,20 @@ import {
   groupRunsByDay,
 } from "../utils/format-run-meta";
 import { cn } from "@/lib/cn";
+import {
+  fmtTok,
+  isoDay,
+  elapsedSince,
+  agentInitial,
+} from "../utils/activity-formatters";
+import {
+  buildSparkData,
+  buildHeatmapGrid,
+  findBusiestCell,
+  classifyHeatmapLevel,
+} from "../utils/activity-stats";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
-
-function fmtTok(n: number): string {
-  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : `${n}`;
-}
-
-function isoDay(ts: number): string {
-  const d = new Date(ts);
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString().slice(0, 10);
-}
 
 function todayIso(): string {
   return isoDay(Date.now());
@@ -37,18 +39,6 @@ function todayIso(): string {
 
 function yesterdayIso(): string {
   return isoDay(Date.now() - 86_400_000);
-}
-
-function agentInitial(name: string): string {
-  return name.slice(0, 2).toUpperCase();
-}
-
-function elapsedSince(ts: number): string {
-  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  const rem = s % 60;
-  return `${m}m ${rem}s`;
 }
 
 // ── Spark ─────────────────────────────────────────────────────────────────────
@@ -180,22 +170,9 @@ function StatTiles({ runs }: { runs: PersistedRun[] }) {
   const yOk = yRuns.filter((r) => r.status === "done").length;
   const ySuccess = yCount === 0 ? 100 : Math.round((100 * yOk) / yCount);
 
-  // Build a 14-day sparkline from runs bucketed by day
-  const sparkData = useMemo(() => {
-    const days = Array.from({ length: 14 }, (_, i) => {
-      const d = new Date(Date.now() - (13 - i) * 86_400_000);
-      d.setHours(0, 0, 0, 0);
-      return d.toISOString().slice(0, 10);
-    });
-    return (metric: (r: PersistedRun) => number) =>
-      days.map((d) =>
-        runs.filter((r) => isoDay(r.ts) === d).reduce((s, r) => s + metric(r), 0),
-      );
-  }, [runs]);
-
-  const countSpark = sparkData(() => 1);
-  const tokenSpark = sparkData((r) => r.tokensIn + r.tokensOut);
-  const costSpark = sparkData((r) => r.cost);
+  const countSpark = useMemo(() => buildSparkData(runs, () => 1), [runs]);
+  const tokenSpark = useMemo(() => buildSparkData(runs, (r) => r.tokensIn + r.tokensOut), [runs]);
+  const costSpark = useMemo(() => buildSparkData(runs, (r) => r.cost), [runs]);
   const successSpark = useMemo(
     () =>
       Array.from({ length: 14 }, (_, i) => {
@@ -284,25 +261,7 @@ function StatTiles({ runs }: { runs: PersistedRun[] }) {
 // ── Heatmap ───────────────────────────────────────────────────────────────────
 
 function Heatmap({ runs }: { runs: PersistedRun[] }) {
-  const grid = useMemo(() => {
-    const now = new Date();
-    const result: number[][] = [];
-    for (let d = 6; d >= 0; d--) {
-      const row: number[] = new Array(24).fill(0);
-      const dayStart = new Date(now);
-      dayStart.setHours(0, 0, 0, 0);
-      dayStart.setDate(dayStart.getDate() - d);
-      const dayEnd = dayStart.getTime() + 86_400_000;
-      for (const r of runs) {
-        if (r.ts >= dayStart.getTime() && r.ts < dayEnd) {
-          const h = new Date(r.ts).getHours();
-          row[h] = (row[h] ?? 0) + 1;
-        }
-      }
-      result.push(row);
-    }
-    return result;
-  }, [runs]);
+  const grid = useMemo(() => buildHeatmapGrid(runs), [runs]);
 
   const max = Math.max(...grid.flat(), 1);
   const total = grid.flat().reduce((s, v) => s + v, 0);
@@ -325,23 +284,10 @@ function Heatmap({ runs }: { runs: PersistedRun[] }) {
   const nowDay = 6; // last row is today
   const nowHour = new Date().getHours();
 
-  const busiest = useMemo(() => {
-    let best = { d: 0, h: 0, v: 0 };
-    grid.forEach((row, d) =>
-      row.forEach((v, h) => {
-        if (v > best.v) best = { d, h, v };
-      }),
-    );
-    return best;
-  }, [grid]);
+  const busiest = useMemo(() => findBusiestCell(grid), [grid]);
 
-  function lvl(v: number): string {
-    if (v === 0) return "";
-    const r = v / max;
-    if (r < 0.25) return "l1";
-    if (r < 0.5) return "l2";
-    if (r < 0.8) return "l3";
-    return "l4";
+  function lvl(v: number): "" | "l1" | "l2" | "l3" | "l4" {
+    return classifyHeatmapLevel(v, max);
   }
 
   return (

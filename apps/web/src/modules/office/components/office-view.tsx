@@ -80,8 +80,6 @@ export function OfficeView() {
         {view === "iso" ? (
           <>
             <OfficeHud
-              workingCount={workingCount}
-              idleCount={idleCount}
               errorCount={errorCount}
               spendToday={spendToday}
               budgetDaily={budgetDaily}

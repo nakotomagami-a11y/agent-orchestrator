@@ -1,8 +1,6 @@
 import { useTranslations } from "next-intl";
 
 export type OfficeHudProps = {
-  workingCount: number;
-  idleCount: number;
   errorCount: number;
   spendToday: number;
   budgetDaily?: number;
@@ -27,8 +25,6 @@ function spendStyle(spendToday: number, budgetDaily: number): React.CSSPropertie
 }
 
 export function OfficeHud({
-  workingCount,
-  idleCount,
   errorCount,
   spendToday,
   budgetDaily,
@@ -48,20 +44,6 @@ export function OfficeHud({
 
   return (
     <div className="absolute flex items-center gap-2 pointer-events-none z-[5] top-[14px] left-[18px] right-[18px]">
-      <div className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1">
-        <span
-          aria-hidden
-          className="w-2 h-2 rounded-full bg-[var(--working)] inline-block"
-        />{" "}
-        <b>{workingCount}</b> {t("office.live_label")}
-      </div>
-      <div className="pointer-events-auto inline-flex items-center gap-2 border border-line rounded-full text-[12px] bg-[rgba(255,255,255,0.85)] dark:bg-[rgba(42,37,34,0.85)] backdrop-blur-[12px] px-3 py-[6px] shadow-1">
-        <span
-          aria-hidden
-          className="w-2 h-2 rounded-full bg-[var(--idle)] inline-block"
-        />{" "}
-        <b>{idleCount}</b> {t("office.idle_label")}
-      </div>
       {errorCount > 0 ? (
         onErrorFilter ? (
           <button

@@ -517,7 +517,12 @@ function handleStreamLine(run: LiveRun, line: string): void {
       data: { runId: run.id, tokensIn: run.tokensIn, tokensOut: run.tokensOut, cost: run.cost },
     });
     if (evt.is_error) {
-      broadcast(run, { name: "error", data: { runId: run.id, message: evt.error || "The agent encountered an error" } });
+      // evt.error is blank for some Anthropic API errors (e.g. image-dimension limit).
+      // In those cases the real message was already streamed as a text chunk, so fall
+      // back to the last non-empty paragraph from the run's accumulated output.
+      const lastParagraph = run.output.trim().split(/\n{2,}/).at(-1)?.trim() ?? "";
+      const message = evt.error || lastParagraph || "The agent encountered an error";
+      broadcast(run, { name: "error", data: { runId: run.id, message } });
     }
   }
 }
