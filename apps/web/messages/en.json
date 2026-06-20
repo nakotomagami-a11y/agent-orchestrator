@@ -558,6 +558,22 @@
     "bad_request": "Bad request.",
     "missing_file": "Choose a file first."
   },
+  "prompts": {
+    "open_picker": "Saved prompts",
+    "save_current": "Save as prompt",
+    "saved_flash": "Saved!",
+    "search_placeholder": "Search prompts...",
+    "add_title_placeholder": "Prompt title...",
+    "add_body_placeholder": "Prompt text...",
+    "add_category_label": "Category",
+    "add_save_button": "Save prompt",
+    "empty_state": "No prompts found",
+    "empty_add_hint": "Add your first prompt above",
+    "delete_prompt_aria": "Delete prompt",
+    "category_all": "All",
+    "dialog_title": "Prompt Library",
+    "close_aria": "Close"
+  },
   "memory_page": {
     "title": "Memory",
     "global_label": "Global memory",

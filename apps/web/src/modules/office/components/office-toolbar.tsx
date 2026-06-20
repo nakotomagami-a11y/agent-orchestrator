@@ -546,7 +546,6 @@ export function ProjectActionsBar({ projectId }: { projectId: string }) {
           { key: `div-${projectId}`, type: "divider" as const },
           { key: `build-${projectId}`, element: <BuildButton key={`build-${projectId}`} projectId={projectId} />, segment: "runtime", priority: 5 },
           { key: `dev-${projectId}`, element: <DevServerButton key={`dev-${projectId}`} projectId={projectId} />, segment: "runtime", priority: 5 },
-          { key: `kill-${projectId}`, element: <KillAgentsButton projectId={projectId} />, segment: "runtime", priority: 5 },
         ] : []),
         { key: "flutter-device", element: <FlutterDeviceButton /> },
       ]}

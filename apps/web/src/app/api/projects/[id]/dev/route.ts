@@ -151,7 +151,7 @@ let _cachedTerminal: string | null | undefined = undefined;
 
 function detectTerminal(): string | null {
   if (_cachedTerminal !== undefined) return _cachedTerminal;
-  const names = ["gnome-terminal", "xterm", "x-terminal-emulator", "konsole", "xfce4-terminal", "alacritty", "kitty"];
+  const names = ["gnome-terminal", "ptyxis", "xterm", "x-terminal-emulator", "konsole", "xfce4-terminal", "alacritty", "kitty"];
   for (const name of names) {
     try {
       const p = execFileSync("which", [name], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
@@ -179,9 +179,17 @@ function spawnInTerminal(title: string, cwd: string, argv: string[], port: numbe
 
   const shell = `${pathSetup}${portExport}cd ${safeArg(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
 
-  // Pass the server's PATH through to the terminal so anything already on PATH
-  // (e.g. nvm-managed node) is available without an extra source step.
-  const spawnEnv = { ...process.env, ...(port !== null ? { PORT: String(port) } : {}) };
+  // Pass the server's PATH through but strip Next.js standalone internals —
+  // __NEXT_PRIVATE_STANDALONE_CONFIG carries an empty distDir that makes
+  // Turbopack crash, and NODE_ENV=production causes "non-standard NODE_ENV"
+  // warnings + wrong behaviour in child dev servers.
+  const cleanEnv = {} as NodeJS.ProcessEnv;
+  for (const [k, v] of Object.entries(process.env)) {
+    if (k.startsWith("__NEXT_")) continue;
+    if (k === "NODE_ENV") continue;
+    cleanEnv[k] = v;
+  }
+  const spawnEnv = { ...cleanEnv, ...(port !== null ? { PORT: String(port) } : {}) };
 
   const termBin = detectTerminal();
   if (!termBin) {
@@ -196,6 +204,8 @@ function spawnInTerminal(title: string, cwd: string, argv: string[], port: numbe
   let termArgs: string[];
   if (termName === "gnome-terminal") {
     termArgs = ["--wait", "--title", title, "--", "bash", "-c", shell];
+  } else if (termName === "ptyxis") {
+    termArgs = ["--", "bash", "-c", shell];
   } else if (termName === "xterm") {
     termArgs = ["-title", title, "-e", "bash", "-c", shell];
   } else if (termName === "konsole") {

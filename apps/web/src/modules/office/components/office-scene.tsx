@@ -445,6 +445,10 @@ export function OfficeScene({
       const el = e.currentTarget as HTMLElement;
       pointerRafRef.current = requestAnimationFrame(() => {
         pointerRafRef.current = null;
+        // Guard: element may have been unmounted between the pointermove and this
+        // rAF callback. getBoundingClientRect() returns a zeroed rect for detached
+        // elements, producing out-of-bounds tile coordinates.
+        if (!el.isConnected) return;
         const rect = el.getBoundingClientRect();
         const wx = (clientX - rect.left - panRef.current.x) / zoomRef.current;
         const wy = (clientY - rect.top - panRef.current.y) / zoomRef.current;
@@ -589,11 +593,8 @@ export function OfficeScene({
   return (
     <div
       ref={containerRef}
-      className="office-scene relative w-full h-full bg-cover bg-center bg-no-repeat [image-rendering:pixelated] overflow-hidden cursor-default"
-      style={{
-        backgroundImage:
-          "url('https://img.itch.zone/aW1nLzEwNDk2NzQ4LnBuZw==/original/eqMZWi.png')",
-      }}
+      className="office-scene relative w-full h-full [image-rendering:pixelated] overflow-hidden cursor-default"
+      style={{ backgroundColor: "#47aca9" }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

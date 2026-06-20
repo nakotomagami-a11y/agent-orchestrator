@@ -167,3 +167,24 @@ export const broadcastRequestSchema = z.object({
   effort: z.string().optional(),
   cwd: z.string().optional(),
 });
+
+export const savedPromptCreateSchema = z.object({
+  title: z.string().min(1).max(200),
+  body: z.string().min(1).max(5000),
+  category: z.string().optional(),
+});
+
+export const savedPromptsBulkSchema = z.object({
+  prompts: z.array(
+    z.object({
+      title: z.string().min(1).max(200),
+      body: z.string().min(1).max(5000),
+      category: z.string().min(1),
+    })
+  ).min(1),
+});
+
+export const savedPromptsQuerySchema = z.object({
+  q: z.string().optional(),
+  category: z.string().optional(),
+});

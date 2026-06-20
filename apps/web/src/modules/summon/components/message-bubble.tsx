@@ -7,6 +7,7 @@ import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { useCreateSavedPrompt } from "@/modules/prompts/hooks/use-saved-prompts";
 
 // ── Expanded-state context ────────────────────────────────────────────────────
 // A stable Map<id, open> lives in ChatThread (via useRef) so that collapsible
@@ -305,11 +306,22 @@ function ProseBlock({ items, streaming }: { items: ProseItem[]; streaming?: bool
 // ── Message actions ───────────────────────────────────────────────────────────
 function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => void }) {
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const savePrompt = useCreateSavedPrompt();
 
   const handleCopy = () => {
     copyText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  };
+
+  const handleSave = () => {
+    const body = text.trim();
+    if (!body || savePrompt.isPending) return;
+    savePrompt.mutate(
+      { title: body.slice(0, 60), body, category: "general" },
+      { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 1500); } },
+    );
   };
 
   return (
@@ -326,15 +338,29 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
           : <Icon name="code" size={13} />}
       </button>
       {onRerun && (
-        <button
-          type="button"
-          className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
-          aria-label="Rerun"
-          title="Rerun"
-          onClick={() => onRerun(text)}
-        >
-          <Icon name="refresh" size={13} />
-        </button>
+        <>
+          <button
+            type="button"
+            className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
+            aria-label="Rerun"
+            title="Rerun"
+            onClick={() => onRerun(text)}
+          >
+            <Icon name="refresh" size={13} />
+          </button>
+          <button
+            type="button"
+            className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
+            aria-label="Save as prompt"
+            title="Save as prompt"
+            onClick={handleSave}
+            disabled={savePrompt.isPending}
+          >
+            {saved
+              ? <Icon name="check" size={13} className="text-[var(--ao-ok)]" />
+              : <Icon name="bookmark" size={13} />}
+          </button>
+        </>
       )}
     </div>
   );

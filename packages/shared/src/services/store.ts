@@ -1,4 +1,4 @@
-import type { PersistedRun } from "../types/index";
+import type { PersistedRun, SavedPrompt } from "../types/index";
 import * as db from "./db";
 
 export function getRuns(opts: { agentId?: string; projectId?: string; instanceId?: string; limit?: number } = {}): PersistedRun[] {
@@ -50,4 +50,32 @@ export function pushRecentPrompt(agentId: string, prompt: string): void {
 
 export function getAllRecentPrompts(): Record<string, string[]> {
   return db.getAllRecentPrompts();
+}
+
+// ─── Saved prompts ─────────────────────────────────────────────────────────────
+
+export function getSavedPrompts(opts?: { category?: string; q?: string }): SavedPrompt[] {
+  return db.getSavedPrompts(opts);
+}
+
+export function getSavedPrompt(id: string): SavedPrompt | null {
+  return db.getSavedPrompt(id);
+}
+
+export function createSavedPrompt(data: { title: string; body: string; category?: string }): SavedPrompt {
+  return db.createSavedPrompt(data);
+}
+
+export function deleteSavedPrompt(id: string): void {
+  db.deleteSavedPrompt(id);
+}
+
+export function recordSavedPromptUsage(id: string): void {
+  db.recordSavedPromptUsage(id);
+}
+
+export function bulkInsertSavedPrompts(
+  prompts: Array<{ title: string; body: string; category: string }>
+): number {
+  return db.bulkInsertSavedPrompts(prompts);
 }

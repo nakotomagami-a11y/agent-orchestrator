@@ -67,6 +67,11 @@ export const API_ROUTES = {
 
   settings: "/api/settings",
   settingsScan: "/api/settings/scan",
+
+  savedPrompts: "/api/saved-prompts",
+  savedPromptById: (id: string) => `/api/saved-prompts/${id}`,
+  savedPromptUse: (id: string) => `/api/saved-prompts/${id}/use`,
+  savedPromptsBulk: "/api/saved-prompts/bulk",
 } as const;
 
 /**

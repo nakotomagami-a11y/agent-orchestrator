@@ -17,6 +17,7 @@ import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
 import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
 import { isTauri } from "@/lib/tauri-window";
+import { PromptPickerDialog } from "@/modules/prompts/components/prompt-picker-dialog";
 import type { ContextProfile } from "@agent-office/shared/types";
 
 type SlashCommand = {
@@ -106,6 +107,7 @@ export function Composer({
   const [promptsOpen, setPromptsOpen] = useState(false);
   const [promptsIdx, setPromptsIdx] = useState(0);
   const [dragOver, setDragOver] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -306,6 +308,13 @@ export function Composer({
   };
 
   const onKey = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    // Ctrl+P opens the prompt picker dialog.
+    if (e.key === "p" && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      setPickerOpen(true);
+      return;
+    }
+
     // Saved-prompts menu takes keyboard priority when open.
     if (promptsOpen) {
       if (e.key === "ArrowDown") {
@@ -386,6 +395,15 @@ export function Composer({
     disabled || anyPending || (!value.trim() && !hasReadyAttachments);
 
   return (
+    <>
+    <PromptPickerDialog
+      open={pickerOpen}
+      onClose={() => setPickerOpen(false)}
+      onSelect={(body) => {
+        onChange(body);
+        textRef.current?.focus();
+      }}
+    />
     <div
       className="bg-bg-1 px-[24px] pt-[12px] pb-[18px]"
       onDragOver={onDragOver}
@@ -524,6 +542,15 @@ export function Composer({
             >
               <Icon name="slash" />
             </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              title={`${t("prompts.open_picker")} (Ctrl+P)`}
+              aria-label={t("prompts.open_picker")}
+              onClick={() => setPickerOpen(true)}
+            >
+              <Icon name="sparkle" />
+            </Button>
             {cwdChip ? <span className="inline-flex items-center gap-[5px] bg-bg-2 border border-line text-txt-2 rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] hover:bg-bg-3" title="working directory">{cwdChip}</span> : null}
             {modelChip ? <span className="inline-flex items-center gap-[5px] bg-bg-2 border border-line text-txt-2 rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] hover:bg-bg-3" title="active model">{modelChip}</span> : null}
             {onProfileChange ? (
@@ -579,6 +606,7 @@ export function Composer({
         </div>
       </div>
     </div>
+    </>
   );
 }
 

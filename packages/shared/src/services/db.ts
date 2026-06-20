@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DB_PATH, APP_STATE_DIR, AGENTS_DIR } from "./paths";
-import type { PersistedRun, PipelineRun, PipelineRunStep } from "../types/index";
+import type { PersistedRun, PipelineRun, PipelineRunStep, SavedPrompt } from "../types/index";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -171,6 +171,21 @@ const MIGRATIONS: Array<(db: Database.Database) => void> = [
       CREATE INDEX IF NOT EXISTS idx_runs_parent ON runs (parent_run_id);
     `);
   },
+  // v4 → v5: saved_prompts global prompt library
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS saved_prompts (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        body TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'general',
+        created_at INTEGER NOT NULL,
+        use_count INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE INDEX IF NOT EXISTS idx_saved_prompts_category ON saved_prompts(category);
+      CREATE INDEX IF NOT EXISTS idx_saved_prompts_created ON saved_prompts(created_at DESC);
+    `);
+  },
 ];
 
 function createSchema(db: Database.Database): void {
@@ -181,6 +196,7 @@ function createSchema(db: Database.Database): void {
     if (v < 2) { MIGRATIONS[1]!(db); v = 2; db.pragma("user_version = 2"); }
     if (v < 3) { MIGRATIONS[2]!(db); v = 3; db.pragma("user_version = 3"); }
     if (v < 4) { MIGRATIONS[3]!(db); v = 4; db.pragma("user_version = 4"); }
+    if (v < 5) { MIGRATIONS[4]!(db); v = 5; db.pragma("user_version = 5"); }
   })();
 }
 
@@ -753,4 +769,100 @@ export function listInterruptedPipelines(): PipelineRun[] {
     const { row, steps } = map.get(id)!;
     return rowToPipelineRun(row, steps);
   });
+}
+
+// ─── Saved prompts ─────────────────────────────────────────────────────────────
+
+interface SavedPromptRow {
+  id: string;
+  title: string;
+  body: string;
+  category: string;
+  created_at: number;
+  use_count: number;
+}
+
+function rowToSavedPrompt(row: SavedPromptRow): SavedPrompt {
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    category: row.category,
+    createdAt: row.created_at,
+    useCount: row.use_count,
+  };
+}
+
+export function getSavedPrompts(opts: { category?: string; q?: string } = {}): SavedPrompt[] {
+  const { category, q } = opts;
+  const conditions: string[] = [];
+  const params: unknown[] = [];
+
+  if (category) {
+    conditions.push("category = ?");
+    params.push(category);
+  }
+  if (q) {
+    conditions.push("(title LIKE ? OR body LIKE ?)");
+    const like = `%${q}%`;
+    params.push(like, like);
+  }
+
+  const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const rows = getDb().prepare(
+    `SELECT * FROM saved_prompts ${where} ORDER BY created_at DESC`
+  ).all(...params) as SavedPromptRow[];
+  return rows.map(rowToSavedPrompt);
+}
+
+export function getSavedPrompt(id: string): SavedPrompt | null {
+  const row = getDb().prepare(
+    "SELECT * FROM saved_prompts WHERE id = ?"
+  ).get(id) as SavedPromptRow | undefined;
+  return row ? rowToSavedPrompt(row) : null;
+}
+
+export function createSavedPrompt(data: { title: string; body: string; category?: string }): SavedPrompt {
+  const id = randomUUID();
+  const now = Date.now();
+  const category = data.category ?? "general";
+  getDb().prepare(
+    "INSERT INTO saved_prompts (id, title, body, category, created_at, use_count) VALUES (?, ?, ?, ?, ?, 0)"
+  ).run(id, data.title, data.body, category, now);
+  return { id, title: data.title, body: data.body, category, createdAt: now, useCount: 0 };
+}
+
+export function deleteSavedPrompt(id: string): void {
+  getDb().prepare("DELETE FROM saved_prompts WHERE id = ?").run(id);
+}
+
+export function recordSavedPromptUsage(id: string): void {
+  getDb().prepare(
+    "UPDATE saved_prompts SET use_count = use_count + 1 WHERE id = ?"
+  ).run(id);
+}
+
+export function bulkInsertSavedPrompts(
+  prompts: Array<{ title: string; body: string; category: string }>
+): number {
+  const db = getDb();
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO saved_prompts (id, title, body, category, created_at, use_count) VALUES (?, ?, ?, ?, ?, 0)"
+  );
+  // Deduplicate against existing rows by body
+  const existing = new Set(
+    (db.prepare("SELECT body FROM saved_prompts").all() as Array<{ body: string }>).map(r => r.body)
+  );
+
+  let inserted = 0;
+  const seenBodies = new Set<string>();
+  db.transaction(() => {
+    for (const p of prompts) {
+      if (existing.has(p.body) || seenBodies.has(p.body)) continue;
+      seenBodies.add(p.body);
+      insert.run(randomUUID(), p.title, p.body, p.category, Date.now());
+      inserted++;
+    }
+  })();
+  return inserted;
 }

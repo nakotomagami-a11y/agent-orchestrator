@@ -27,14 +27,25 @@ function detectTerminal(): string | null {
 
 const shellQuote = (s: string) => `'${s.replace(/'/g, "'\\''")}'`;
 
+function cleanEnv(): NodeJS.ProcessEnv {
+  const env = {} as NodeJS.ProcessEnv;
+  for (const [k, v] of Object.entries(process.env)) {
+    if (k.startsWith("__NEXT_")) continue;
+    if (k === "NODE_ENV") continue;
+    env[k] = v;
+  }
+  return env;
+}
+
 function spawnInTerminal(title: string, cwd: string, argv: string[]) {
   const cmdStr = argv.map((a) => /[\s"'\\$`!]/.test(a) ? shellQuote(a) : a).join(" ");
   const shell = `cd ${shellQuote(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
 
+  const env = cleanEnv();
   const termBin = detectTerminal();
   if (!termBin) {
     const [bin, ...args] = argv;
-    const child = spawn(bin!, args, { cwd, detached: true, stdio: "ignore" });
+    const child = spawn(bin!, args, { cwd, env, detached: true, stdio: "ignore" });
     child.unref();
     return child;
   }
@@ -55,7 +66,7 @@ function spawnInTerminal(title: string, cwd: string, argv: string[]) {
     termArgs = ["-e", "bash", "-c", shell];
   }
 
-  const child = spawn(termBin, termArgs, { detached: true, stdio: "ignore" });
+  const child = spawn(termBin, termArgs, { env, detached: true, stdio: "ignore" });
   child.unref();
   return child;
 }

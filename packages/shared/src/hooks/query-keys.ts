@@ -65,6 +65,7 @@ export const queryKeys = {
   prompts: {
     all: ["prompts"] as const,
     recent: () => [...queryKeys.prompts.all, "recent"] as const,
+    saved: (opts?: { category?: string; q?: string }) => ["saved-prompts", opts ?? {}] as const,
   },
 
   settings: {

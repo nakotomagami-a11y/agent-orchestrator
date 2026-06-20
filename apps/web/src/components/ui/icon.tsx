@@ -532,6 +532,10 @@ const ICON_PATHS = {
       </>
     ),
   },
+  bookmark: {
+    ...STROKE_BASE,
+    body: <path d="M6 3h12a1 1 0 0 1 1 1v16l-7-4-7 4V4a1 1 0 0 1 1-1z" />,
+  },
   eye: {
     ...STROKE_BASE,
     body: (

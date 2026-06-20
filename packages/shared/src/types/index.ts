@@ -158,6 +158,15 @@ export interface HealthInfo {
   error?: string;
 }
 
+export interface SavedPrompt {
+  id: string;
+  title: string;
+  body: string;
+  category: string;
+  createdAt: number;
+  useCount: number;
+}
+
 export interface SummonRequest {
   agentId: string;
   prompt: string;
