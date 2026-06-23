@@ -156,12 +156,19 @@ function removeVipsLibs(dir) {
 }
 removeVipsLibs(join(serverDestDir, "node_modules"));
 
-// 6. Bundle the running Node.js binary as the Tauri sidecar
+// 6. Bundle the running Node.js binary so the Tauri app has a runtime.
+//    Named platform-neutrally (only Windows carries the `.exe` suffix) so the
+//    Rust side resolves it with a single cfg!(windows) check, and supporting a
+//    new OS needs no change here — it copies whatever `process.execPath` is on
+//    the host. Tauri picks it up via the "binaries/*" resource glob. Wipe the
+//    dir first so a build never bundles a stale (possibly other-OS) binary.
 const binariesDir = join(tauriDir, "binaries");
+rmSync(binariesDir, { recursive: true, force: true });
 mkdirSync(binariesDir, { recursive: true });
-const nodeDest = join(binariesDir, "node-x86_64-unknown-linux-gnu");
+const isWindows = process.platform === "win32";
+const nodeDest = join(binariesDir, `node-runtime${isWindows ? ".exe" : ""}`);
 copyFileSync(process.execPath, nodeDest);
-chmodSync(nodeDest, 0o755);
+if (!isWindows) chmodSync(nodeDest, 0o755);
 
 console.log("✓ Bundle prepared");
 console.log(`  server  → ${serverDestDir}`);

@@ -5,7 +5,7 @@
   "identifier": "com.agentoffice.app",
   "build": {
     "beforeDevCommand": "pnpm exec next dev --port 5173 --turbopack",
-    "beforeBuildCommand": "unset __NEXT_PRIVATE_STANDALONE_CONFIG && pnpm exec next build && node scripts/prepare-bundle.mjs",
+    "beforeBuildCommand": "node scripts/tauri-before-build.mjs",
     "frontendDist": "http://localhost:5173",
     "devUrl": "http://localhost:5173"
   },
@@ -16,10 +16,10 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["deb", "appimage"],
+    "targets": "all",
     "resources": [
       "server",
-      "binaries/node-x86_64-unknown-linux-gnu"
+      "binaries/*"
     ],
     "icon": [
       "icons/32x32.png",

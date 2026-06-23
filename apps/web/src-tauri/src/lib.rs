@@ -37,7 +37,6 @@ pub fn run() {
 
             #[cfg(not(debug_assertions))]
             {
-                use std::os::unix::fs::PermissionsExt;
                 use std::process::Command;
                 use tauri::Manager;
 
@@ -46,9 +45,13 @@ pub fn run() {
                     .resource_dir()
                     .expect("resource dir not found");
 
-                let node_bin = resource_dir
-                    .join("binaries")
-                    .join("node-x86_64-unknown-linux-gnu");
+                // Bundled Node.js runtime. prepare-bundle.mjs writes the host
+                // platform's `node` here under a platform-neutral name (only the
+                // Windows build carries the `.exe` suffix). Supporting a new OS
+                // needs no change beyond this single cfg!(windows) check.
+                let node_name = if cfg!(windows) { "node-runtime.exe" } else { "node-runtime" };
+                let node_bin = resource_dir.join("binaries").join(node_name);
+
                 // pnpm monorepo: standalone output nests the app under apps/web/
                 let server_js = resource_dir
                     .join("server")
@@ -56,18 +59,35 @@ pub fn run() {
                     .join("web")
                     .join("server.js");
 
-                let mut perms = std::fs::metadata(&node_bin)
-                    .expect("node binary missing from resources")
-                    .permissions();
-                perms.set_mode(0o755);
-                // Ignore error — dpkg installs binaries as root-owned; they're already executable.
-                let _ = std::fs::set_permissions(&node_bin, perms);
+                // On Unix the bundled binary can lose its exec bit through
+                // packaging; restore it. Not applicable on Windows.
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    if let Ok(meta) = std::fs::metadata(&node_bin) {
+                        let mut perms = meta.permissions();
+                        perms.set_mode(0o755);
+                        // Ignore error — dpkg installs binaries root-owned; already executable.
+                        let _ = std::fs::set_permissions(&node_bin, perms);
+                    }
+                }
 
-                let child = Command::new(&node_bin)
+                let mut command = Command::new(&node_bin);
+                command
                     .arg(&server_js)
                     .env("PORT", "5173")
                     .env("HOSTNAME", "127.0.0.1")
-                    .env("NODE_ENV", "production")
+                    .env("NODE_ENV", "production");
+
+                // Don't flash a console window when launching Node on Windows.
+                #[cfg(windows)]
+                {
+                    use std::os::windows::process::CommandExt;
+                    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+                    command.creation_flags(CREATE_NO_WINDOW);
+                }
+
+                let child = command
                     .spawn()
                     .expect("failed to spawn bundled server");
 
