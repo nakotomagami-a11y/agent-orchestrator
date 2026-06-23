@@ -3,7 +3,7 @@
 
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, delimiter } from "node:path";
 
 export const HOME = homedir();
 export const CLAUDE_DIR = join(HOME, ".claude");
@@ -77,27 +77,39 @@ export function expandTilde(p: string): string {
 export function buildAugmentedPath(): string {
   const extra: string[] = [];
 
-  // NVM - add every installed node version's bin dir (newest first via reverse sort)
-  const nvmVersionsDir = join(HOME, ".nvm", "versions", "node");
-  if (existsSync(nvmVersionsDir)) {
-    try {
-      const versions = readdirSync(nvmVersionsDir).sort().reverse();
-      for (const v of versions) {
-        extra.push(join(nvmVersionsDir, v, "bin"));
-      }
-    } catch {
-      // ignore read errors
+  if (process.platform === "win32") {
+    // Windows global bin locations where `claude.cmd` and node live.
+    if (process.env.APPDATA) {
+      extra.push(join(process.env.APPDATA, "npm")); // npm global shims (claude.cmd)
+      extra.push(join(process.env.APPDATA, "nvm")); // nvm-for-windows
     }
+    if (process.env.ProgramFiles) extra.push(join(process.env.ProgramFiles, "nodejs"));
+    if (process.env.LOCALAPPDATA) extra.push(join(process.env.LOCALAPPDATA, "Microsoft", "WindowsApps"));
+  } else {
+    // NVM - add every installed node version's bin dir (newest first via reverse sort)
+    const nvmVersionsDir = join(HOME, ".nvm", "versions", "node");
+    if (existsSync(nvmVersionsDir)) {
+      try {
+        const versions = readdirSync(nvmVersionsDir).sort().reverse();
+        for (const v of versions) {
+          extra.push(join(nvmVersionsDir, v, "bin"));
+        }
+      } catch {
+        // ignore read errors
+      }
+    }
+
+    // Other common global bin locations
+    extra.push(join(HOME, ".local", "bin"));
+    extra.push("/usr/local/bin");
+    extra.push("/usr/bin");
+    extra.push("/bin");
   }
 
-  // Other common global bin locations
-  extra.push(join(HOME, ".local", "bin"));
-  extra.push("/usr/local/bin");
-  extra.push("/usr/bin");
-  extra.push("/bin");
-
+  // Use the platform PATH separator (`;` on Windows, `:` elsewhere). Splitting
+  // Windows PATH on ":" would shred every "C:\..." entry.
   const existing = process.env.PATH ?? "";
-  const parts = [...extra, ...existing.split(":").filter(Boolean)];
+  const parts = [...extra, ...existing.split(delimiter).filter(Boolean)];
   // Deduplicate while preserving order
-  return [...new Set(parts)].join(":");
+  return [...new Set(parts)].join(delimiter);
 }

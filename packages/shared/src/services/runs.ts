@@ -256,6 +256,8 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: opts.cwd,
     env: { ...process.env, PATH: buildAugmentedPath() },
+    // On Windows `claude` is a `.cmd` shim, which spawn can only launch via a shell.
+    shell: process.platform === "win32",
   });
   const run: LiveRun = {
     id: runId,
@@ -332,6 +334,8 @@ export function startRun(opts: StartRunOpts): { runId: string } {
         stdio: ["ignore", "pipe", "pipe"],
         cwd: run.cwd,
         env: { ...process.env, PATH: buildAugmentedPath() },
+        // On Windows `claude` is a `.cmd` shim, which spawn can only launch via a shell.
+        shell: process.platform === "win32",
       });
       run.proc = retryProc;
       run.stderrBuf = "";

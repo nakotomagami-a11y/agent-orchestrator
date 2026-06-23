@@ -26,6 +26,8 @@ function probe(): Promise<HealthInfo> {
       const proc = spawn("claude", ["--version"], {
         stdio: ["ignore", "pipe", "pipe"],
         env: { ...process.env, PATH: buildAugmentedPath() },
+        // On Windows `claude` is a `.cmd` shim, which spawn can only launch via a shell.
+        shell: process.platform === "win32",
       });
       proc.stdout.on("data", (chunk: Buffer) => {
         stdout += chunk.toString();
