@@ -9,7 +9,7 @@
  *   pnpm exec next build && node scripts/prepare-bundle.mjs
  */
 
-import { copyFileSync, mkdirSync, cpSync, rmSync, rmdirSync, unlinkSync, readdirSync, existsSync, chmodSync, realpathSync } from "node:fs";
+import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,75 +23,58 @@ if (!existsSync(standaloneDir)) {
   process.exit(1);
 }
 
-// 1. Copy standalone server output
+// 1. Copy the standalone tree EXCEPT its node_modules. pnpm's standalone fills
+//    node_modules with symlinks into a .pnpm store, and those don't survive a
+//    cross-platform copy: dereferencing follows pnpm's intra-store symlink
+//    cycles and overflows the stack on Windows (STATUS_STACK_BUFFER_OVERRUN),
+//    while copying them verbatim recreates directory symlinks with the wrong
+//    type on Windows so Node can't traverse them (EPERM on stat). We copy
+//    everything else, then rebuild a FLAT real node_modules from .pnpm below.
 const serverDestDir = join(tauriDir, "server");
 if (existsSync(serverDestDir)) {
   rmSync(serverDestDir, { recursive: true, force: true });
 }
-// dereference: true converts symlinks to real copies — required so that
-// the Tauri AppImage bundle doesn't contain dangling absolute symlinks.
-cpSync(standaloneDir, serverDestDir, { recursive: true, dereference: true });
+const isInsideNodeModules = (p) => p.split(/[\\/]/).includes("node_modules");
+cpSync(standaloneDir, serverDestDir, {
+  recursive: true,
+  filter: (src) => !isInsideNodeModules(src),
+});
 
-// 1b. Fix pnpm symlinks in apps/web/node_modules — Next.js standalone with pnpm
-//     produces relative symlinks (next → ../../../.pnpm/...); cpSync turns them
-//     into absolute symlinks pointing into the source tree. Tauri's DEB bundler
-//     skips symlinks entirely, so next/react never make it into the package.
-//     Replace each symlink with a real copy dereferenced from the pnpm store.
-const appWebModulesDir = join(serverDestDir, "apps", "web", "node_modules");
-if (existsSync(appWebModulesDir)) {
-  for (const entry of readdirSync(appWebModulesDir, { withFileTypes: true })) {
-    if (!entry.isSymbolicLink()) continue;
-    const linkPath = join(appWebModulesDir, entry.name);
-    const realTarget = realpathSync(linkPath);
-    // Remove ONLY the link, never recurse through it. On Windows these entries
-    // are directory junctions pointing into the real pnpm store; a recursive
-    // rmSync traverses the junction and DELETES the store contents (this wiped
-    // packages like `next` out of node_modules). unlinkSync removes the reparse
-    // point itself; rmdirSync is the fallback for dir junctions that reject
-    // unlink. Neither touches the target.
-    try {
-      unlinkSync(linkPath);
-    } catch {
-      rmdirSync(linkPath);
+// 1b. Rebuild node_modules as a FLAT tree of real package copies, hoisted from
+//     the standalone's .pnpm virtual store. Each real package dir
+//     (.pnpm/<id>/node_modules/<pkg>) is copied once into server/node_modules/
+//     <pkg>; the dependency *symlinks* pnpm places alongside are skipped (each
+//     dep is copied from its own .pnpm entry). server.js then resolves every
+//     module by walking up to this single flat node_modules — no symlinks, no
+//     cycles, so it works identically on Windows/macOS/Linux.
+const standalonePnpmStore = join(standaloneDir, "node_modules", ".pnpm");
+const destNodeModules = join(serverDestDir, "node_modules");
+function hoistRealPackages(innerModsDir) {
+  for (const entry of readdirSync(innerModsDir, { withFileTypes: true })) {
+    if (entry.name.startsWith(".")) continue;
+    // Only real directories are package files; skip the dependency symlinks.
+    if (!entry.isDirectory()) continue;
+    const src = join(innerModsDir, entry.name);
+    if (entry.name.startsWith("@")) {
+      // Scope dir (e.g. @swc) — recurse to copy each real scoped package.
+      for (const scoped of readdirSync(src, { withFileTypes: true })) {
+        if (!scoped.isDirectory()) continue;
+        const dest = join(destNodeModules, entry.name, scoped.name);
+        if (!existsSync(dest)) cpSync(join(src, scoped.name), dest, { recursive: true });
+      }
+    } else {
+      const dest = join(destNodeModules, entry.name);
+      if (!existsSync(dest)) cpSync(src, dest, { recursive: true });
     }
-    cpSync(realTarget, linkPath, { recursive: true, dereference: true });
-    console.log(`  resolved symlink: apps/web/node_modules/${entry.name}`);
   }
 }
-
-// 1c. Hoist pnpm virtual store → flat server/node_modules so next and its runtime
-//     deps (styled-jsx, busboy, @next/env, etc.) resolve via standard Node.js
-//     module resolution. The standalone output puts everything in .pnpm/ but
-//     omits the top-level hoisted symlinks that pnpm normally creates.
-const pnpmVirtualStore = join(serverDestDir, "node_modules", ".pnpm");
-const rootNodeModules = join(serverDestDir, "node_modules");
-if (existsSync(pnpmVirtualStore)) {
-  for (const storeEntry of readdirSync(pnpmVirtualStore)) {
-    const innerMods = join(pnpmVirtualStore, storeEntry, "node_modules");
-    if (!existsSync(innerMods)) continue;
-    for (const entry of readdirSync(innerMods, { withFileTypes: true })) {
-      if (entry.name.startsWith(".")) continue;
-      const srcPath = join(innerMods, entry.name);
-      if (entry.name.startsWith("@")) {
-        // Scoped package dir (@next, @swc, etc.) — hoist each sub-package inside it
-        const scopeDestDir = join(rootNodeModules, entry.name);
-        if (!existsSync(scopeDestDir)) mkdirSync(scopeDestDir, { recursive: true });
-        for (const scoped of readdirSync(srcPath, { withFileTypes: true })) {
-          if (scoped.name.startsWith(".")) continue;
-          const scopedDest = join(scopeDestDir, scoped.name);
-          if (!existsSync(scopedDest)) {
-            cpSync(join(srcPath, scoped.name), scopedDest, { recursive: true, dereference: true });
-          }
-        }
-      } else {
-        const destPath = join(rootNodeModules, entry.name);
-        if (!existsSync(destPath)) {
-          cpSync(srcPath, destPath, { recursive: true, dereference: true });
-        }
-      }
-    }
+if (existsSync(standalonePnpmStore)) {
+  mkdirSync(destNodeModules, { recursive: true });
+  for (const id of readdirSync(standalonePnpmStore)) {
+    const inner = join(standalonePnpmStore, id, "node_modules");
+    if (existsSync(inner)) hoistRealPackages(inner);
   }
-  console.log("  pnpm store hoisted → server/node_modules/");
+  console.log("  flat node_modules built from .pnpm store");
 }
 
 // 2. Static assets — in a pnpm monorepo the standalone tree mirrors the repo
