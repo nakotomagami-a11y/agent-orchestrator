@@ -9,7 +9,7 @@
  *   pnpm exec next build && node scripts/prepare-bundle.mjs
  */
 
-import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync, realpathSync } from "node:fs";
+import { copyFileSync, mkdirSync, cpSync, rmSync, rmdirSync, unlinkSync, readdirSync, existsSync, chmodSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -43,7 +43,17 @@ if (existsSync(appWebModulesDir)) {
     if (!entry.isSymbolicLink()) continue;
     const linkPath = join(appWebModulesDir, entry.name);
     const realTarget = realpathSync(linkPath);
-    rmSync(linkPath, { recursive: true, force: true });
+    // Remove ONLY the link, never recurse through it. On Windows these entries
+    // are directory junctions pointing into the real pnpm store; a recursive
+    // rmSync traverses the junction and DELETES the store contents (this wiped
+    // packages like `next` out of node_modules). unlinkSync removes the reparse
+    // point itself; rmdirSync is the fallback for dir junctions that reject
+    // unlink. Neither touches the target.
+    try {
+      unlinkSync(linkPath);
+    } catch {
+      rmdirSync(linkPath);
+    }
     cpSync(realTarget, linkPath, { recursive: true, dereference: true });
     console.log(`  resolved symlink: apps/web/node_modules/${entry.name}`);
   }
