@@ -1,0 +1,49 @@
+# {{PROJECT_NAME}}
+
+Frontend project. {{FRONTEND}} + TypeScript + Tailwind + Zustand.
+
+## What this is
+
+One-liner: _replace this with a sentence-long description of what the app does and who uses it_.
+
+## Stack
+
+- **Framework**: {{FRONTEND}}
+- **Language**: TypeScript, strict mode. No `any` outside `node_modules/`.
+- **Styling**: Tailwind CSS v4. **Token classes only** (`text-fg`, `bg-bg-2`, `border-line`). Never inline `style={{ color: "..." }}`. Never raw color names (`text-red-500`). When the design needs a new color, add a token in `globals.css`.
+- **State**: Local component state first. `useState` / `useReducer`. Lift to **Zustand** only when state is shared by two components that don't share a parent-child relationship.
+- **Data fetching**: TanStack Query. Server state lives there, not in Zustand.
+- **Forms**: react-hook-form + Zod resolver. Validation schemas live next to the form.
+- **Testing**: Vitest + Testing Library. Test behavior, not implementation.
+
+## House rules (non-negotiable)
+
+1. **No inline styles.** Token classes via Tailwind. If you need a one-off value (e.g. an animation delay), use Tailwind's arbitrary value syntax `[animation-delay:240ms]`.
+2. **No raw color classes.** `text-red-500` is banned. Use semantic tokens (`text-danger`, `text-warn`).
+3. **One component per file.** File name matches the export. Kebab-case file, PascalCase component: `button-group.tsx` exports `ButtonGroup`.
+4. **Props interface above the component.** Inline `({ a, b }: { a: string }) => ...` is fine for trivial sub-components only.
+5. **No `any`.** Use `unknown` + narrowing, or define the type. If a third-party type is missing, declare it in `src/types/`.
+6. **No barrel exports** outside designated public-API files. Direct imports keep tree-shaking honest.
+7. **Server state goes through TanStack Query.** No raw `fetch` calls in components.
+
+## Before you change X, read Y
+
+- Adding a new store → `docs/state-management.md`
+- Styling anything → `docs/styling.md`
+- Creating a new component → `docs/component-conventions.md`
+- Big architectural change → `ARCHITECTURE.md` + add an ADR to `DECISIONS.md`
+
+## Out of scope
+
+These are explicitly NOT this project's job. Push back if asked:
+
+- Authentication backend (use the backend service or a third-party - this app consumes auth, doesn't implement it)
+- Email sending, payment processing, file storage (backend concerns)
+- SEO for content beyond what {{FRONTEND}} supports natively
+- _add project-specific exclusions here_
+
+## Memory
+
+- This file is read on every Claude session start. Keep it current.
+- Long-running gotchas, "we tried X and it broke" notes, and project conventions go in `DECISIONS.md`.
+- Specific task plans go in `PLAN.md`.

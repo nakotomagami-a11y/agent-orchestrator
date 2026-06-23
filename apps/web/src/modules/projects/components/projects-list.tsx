@@ -1,86 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
-import { ModalShell } from "@/components/ui/modal-shell";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import { useProjects, useCreateProject } from "../hooks/use-projects";
+import { useProjects } from "../hooks/use-projects";
 import type { ProjectSummary } from "@agent-office/shared/types";
-
-function CreateProjectModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const createProject = useCreateProject();
-  const [name, setName] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (open) { setName(""); setTimeout(() => inputRef.current?.focus(), 50); }
-  }, [open]);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    await createProject.mutateAsync({ name: name.trim() });
-    onClose();
-  }
-
-  return (
-    <ModalShell
-      open={open}
-      onClose={onClose}
-      title="New project"
-      size="sm"
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex items-center px-4 py-[7px] rounded-[8px] text-[13px] font-medium text-txt-2 bg-transparent border border-line hover:bg-bg-3 hover:text-txt transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            form="create-project-form"
-            disabled={!name.trim() || createProject.isPending}
-            className="inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold text-white bg-acc hover:bg-[var(--acc-hover)] disabled:opacity-40 transition-colors border-none cursor-pointer"
-          >
-            {createProject.isPending ? "Creating…" : "Create project"}
-          </button>
-        </>
-      }
-    >
-      <form id="create-project-form" onSubmit={(e) => { void handleSubmit(e); }}>
-        <label className="block text-[12px] text-txt-3 font-[var(--font-mono)] mb-[8px]">
-          Project name
-        </label>
-        <div className="relative">
-          <Icon
-            name="folder"
-            size={17}
-            className="absolute left-[12px] top-1/2 -translate-y-1/2 text-txt-3 pointer-events-none"
-          />
-          <input
-            ref={inputRef}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="my-project"
-            className="w-full bg-[rgba(255,255,255,0.04)] rounded-[10px] pl-[38px] pr-[12px] py-[11px] text-[14px] text-txt outline-none border-0
-              hover:bg-[rgba(255,255,255,0.07)] hover:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]
-              focus:bg-[rgba(255,255,255,0.07)] focus:shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]
-              transition-[background,box-shadow] duration-150
-              placeholder:text-[rgba(255,255,255,0.22)]"
-          />
-        </div>
-      </form>
-    </ModalShell>
-  );
-}
+import { BootstrapProjectModal } from "./bootstrap-project-modal";
 
 function shortenCwd(cwd: string): { prefix: string } {
   // Replace /home/<user>/ with ~/
@@ -199,7 +130,7 @@ export function ProjectsList() {
     />
   );
 
-  const modal = <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />;
+  const modal = <BootstrapProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />;
 
   if (isLoading) {
     return (

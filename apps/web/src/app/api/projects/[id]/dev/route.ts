@@ -59,7 +59,51 @@ function scriptToName(key: string): string {
   return key.replace(/^(dev|start)[.:-]/, "").replace(/[-:]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function detectDevCommands(cwd: string, pm: string): DetectedCommand[] {
+// Scan a single directory's package.json for dev-style scripts. When `opts` is
+// given the dir is a subfolder (e.g. frontend/), so keys/names are prefixed to
+// stay unique and a `cwd` override is attached so it spawns in that subfolder.
+function collectPkgCommands(
+  dir: string,
+  opts?: { keyPrefix: string; namePrefix: string },
+): DetectedCommand[] {
+  const pkgPath = join(dir, "package.json");
+  if (!existsSync(pkgPath)) return [];
+  const out: DetectedCommand[] = [];
+  try {
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+      scripts?: Record<string, string>;
+      dependencies?: Record<string, string>;
+      devDependencies?: Record<string, string>;
+    };
+    const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+    const isNextJs = "next" in allDeps;
+    const scripts = pkg.scripts ?? {};
+    const pm = detectPackageManager(dir);
+
+    // Sort so bare "dev"/"start" come before "dev:*"
+    const keys = Object.keys(scripts).sort((a, b) => {
+      const aBase = !a.includes(":") && !a.includes("-");
+      const bBase = !b.includes(":") && !b.includes("-");
+      return aBase === bBase ? a.localeCompare(b) : aBase ? -1 : 1;
+    });
+
+    for (const key of keys) {
+      if (!DEV_SCRIPT_RE.test(key)) continue;
+      if (SKIP_SCRIPT_RE.test(key)) continue;
+      const isThisNext = isNextJs && (key === "dev" || key === "start");
+      out.push({
+        key: opts ? `${opts.keyPrefix}-${key}` : key,
+        name: opts ? `${opts.namePrefix} · ${scriptToName(key)}` : scriptToName(key),
+        argv: [pm, "run", key],
+        portMode: isThisNext ? "next" : "env",
+        ...(opts ? { cwd: dir } : {}),
+      });
+    }
+  } catch { /* ignore */ }
+  return out;
+}
+
+function detectDevCommands(cwd: string): DetectedCommand[] {
   // 1. .ao.json custom override - takes full priority
   const aoPath = join(cwd, ".ao.json");
   if (existsSync(aoPath)) {
@@ -110,38 +154,16 @@ function detectDevCommands(cwd: string, pm: string): DetectedCommand[] {
     });
   }
 
-  // 3. package.json scripts
-  const pkgPath = join(cwd, "package.json");
-  if (existsSync(pkgPath)) {
-    try {
-      const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
-        scripts?: Record<string, string>;
-        dependencies?: Record<string, string>;
-        devDependencies?: Record<string, string>;
-      };
-      const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
-      const isNextJs = "next" in allDeps;
-      const scripts = pkg.scripts ?? {};
-
-      // Sort so bare "dev"/"start" come before "dev:*"
-      const keys = Object.keys(scripts).sort((a, b) => {
-        const aBase = !a.includes(":") && !a.includes("-");
-        const bBase = !b.includes(":") && !b.includes("-");
-        return aBase === bBase ? a.localeCompare(b) : aBase ? -1 : 1;
-      });
-
-      for (const key of keys) {
-        if (!DEV_SCRIPT_RE.test(key)) continue;
-        if (SKIP_SCRIPT_RE.test(key)) continue;
-        const isThisNext = isNextJs && (key === "dev" || key === "start");
-        commands.push({
-          key,
-          name: scriptToName(key),
-          argv: [pm, "run", key],
-          portMode: isThisNext ? "next" : "env",
-        });
-      }
-    } catch { /* ignore */ }
+  // 3. package.json scripts — root, plus the single-app subfolders the project
+  // bootstrapper emits (frontend/, backend/) and other common layouts. Each
+  // subfolder carries its own cwd so it spawns in the right directory.
+  commands.push(...collectPkgCommands(cwd));
+  for (const sub of ["frontend", "backend", "web", "client", "server", "api"]) {
+    const subDir = join(cwd, sub);
+    if (existsSync(join(subDir, "package.json"))) {
+      const label = sub.charAt(0).toUpperCase() + sub.slice(1);
+      commands.push(...collectPkgCommands(subDir, { keyPrefix: sub, namePrefix: label }));
+    }
   }
 
   return commands;
@@ -236,9 +258,13 @@ export async function GET(_req: Request, { params }: Params) {
   }
 
   const pm = detectPackageManager(cwd);
-  const hasPackageJson = existsSync(join(cwd, "package.json"));
-  const hasNodeModules = existsSync(join(cwd, "node_modules"));
-  const commands = detectDevCommands(cwd, pm);
+  const commands = detectDevCommands(cwd);
+  // Report package.json/node_modules presence from wherever the dev commands
+  // actually live (root, or a frontend/ subfolder for bootstrapped projects),
+  // so the Install button and button-visibility logic stay accurate.
+  const primaryDir = commands[0]?.cwd ?? cwd;
+  const hasPackageJson = existsSync(join(primaryDir, "package.json")) || existsSync(join(cwd, "package.json"));
+  const hasNodeModules = existsSync(join(primaryDir, "node_modules"));
   return NextResponse.json({ hasPackageJson, hasNodeModules, pm, commands });
 }
 
@@ -261,8 +287,7 @@ export async function POST(req: Request, { params }: Params) {
       return NextResponse.json({ error: "invalid_json" }, { status: 400 });
     }
   }
-  const pm = detectPackageManager(cwd);
-  const commands = detectDevCommands(cwd, pm);
+  const commands = detectDevCommands(cwd);
 
   const command = (body.commandKey ? commands.find((c) => c.key === body.commandKey) : null) ?? commands[0];
   if (!command) {

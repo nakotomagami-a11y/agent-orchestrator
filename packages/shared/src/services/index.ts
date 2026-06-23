@@ -2,6 +2,7 @@ export * as agents from "./agents";
 export * as db from "./db";
 export * as history from "./history";
 export * as projects from "./projects";
+export * as projectBootstrap from "./project-bootstrap";
 export * as skills from "./skills";
 export * as runs from "./runs";
 export * as summon from "./summon";

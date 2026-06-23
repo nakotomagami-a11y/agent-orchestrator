@@ -188,3 +188,12 @@ export const savedPromptsQuerySchema = z.object({
   q: z.string().optional(),
   category: z.string().optional(),
 });
+
+export const bootstrapProjectSchema = z.object({
+  name: z.string().min(1).max(100),
+  slug: z.string().regex(/^[a-z0-9][a-z0-9-]*$/).max(60).optional(),
+  description: z.string().max(500).optional(),
+  frontend: z.enum(["none", "next", "vite", "react"]),
+  backend: z.enum(["none", "node", "python"]),
+  initGit: z.boolean().optional(),
+});

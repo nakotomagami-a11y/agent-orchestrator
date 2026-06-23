@@ -7,9 +7,9 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import { useCreateProject, useProjects } from "@/modules/projects/hooks/use-projects";
-import { useSettings } from "@/modules/settings/hooks/use-settings";
+import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
+import { BootstrapProjectModal } from "@/modules/projects/components/bootstrap-project-modal";
 import {
   useActiveProjectHydration,
   useActiveProjectStore,
@@ -44,17 +44,11 @@ export function ProjectSwitcher() {
   const activeId = useActiveProjectStore((s) => s.id);
   const setActiveId = useActiveProjectStore((s) => s.setId);
 
-  const createProject = useCreateProject();
-  const settingsQ = useSettings();
-  const projectsRoot = settingsQ.data?.projectsRoot ?? "";
-
   const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const [newName, setNewName] = useState("");
+  const [bootstrapOpen, setBootstrapOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const nameInputRef = useRef<HTMLInputElement>(null);
   const menuId = useId();
 
   const pathProjectId = currentProjectIdFromPath(pathname);
@@ -104,41 +98,19 @@ export function ProjectSwitcher() {
   }, [open]);
 
   useEffect(() => {
-    if (!open) {
-      setCreating(false);
-      setNewName("");
-      return;
-    }
-    setActiveIndex(0);
+    if (open) setActiveIndex(0);
   }, [open]);
 
   const navigate = (href: string, projectId: string | null) => {
     setActiveId(projectId);
     setOpen(false);
-    setCreating(false);
-    setNewName("");
     router.push(href);
   };
 
-  const openCreate = () => {
-    setCreating(true);
-    setNewName("");
+  const openBootstrap = () => {
+    setOpen(false);
+    setBootstrapOpen(true);
   };
-
-  const cancelCreate = () => {
-    setCreating(false);
-    setNewName("");
-  };
-
-  const submitCreate = async () => {
-    const name = newName.trim();
-    const project = await createProject.mutateAsync(name ? { name } : {});
-    navigate(PAGE_ROUTES.project(project.id), project.id);
-  };
-
-  useEffect(() => {
-    if (creating) nameInputRef.current?.focus();
-  }, [creating]);
 
   const onKey = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
@@ -181,6 +153,9 @@ export function ProjectSwitcher() {
         </span>
         <Icon name="chevron-down" size={11} />
       </button>
+
+      <BootstrapProjectModal open={bootstrapOpen} onClose={() => setBootstrapOpen(false)} />
+
       {open ? (
         <div
           ref={menuRef}
@@ -256,73 +231,25 @@ export function ProjectSwitcher() {
             )}
           </div>
 
-          {creating ? (
-            <div className="px-[10px] pb-[10px] flex flex-col gap-1.5">
-              <input
-                ref={nameInputRef}
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder={t("project_switcher.new_project_placeholder")}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); submitCreate(); }
-                  if (e.key === "Escape") { e.preventDefault(); cancelCreate(); }
-                }}
-                className="w-full px-2 py-[5px] text-[13px] bg-bg-2 border border-line rounded text-txt outline-none box-border font-[inherit]"
-              />
-              {projectsRoot && newName.trim() && (
-                <div className="font-mono text-[10.5px] text-txt-3 truncate" title={`${projectsRoot}/${newName.trim()}`}>
-                  {projectsRoot}/{newName.trim()}
-                </div>
-              )}
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  disabled={createProject.isPending}
-                  onClick={submitCreate}
-                  className={cn("flex-1 px-2 py-1 text-xs bg-acc border-0 rounded cursor-pointer text-[var(--acc-fg,#fff)] font-[inherit]", createProject.isPending && "opacity-60 cursor-default")}
-                >
-                  {createProject.isPending
-                    ? t("project_switcher.new_project_creating")
-                    : t("project_switcher.new_project_create")}
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelCreate}
-                  className="px-2 py-1 text-xs bg-transparent text-txt-2 border border-line rounded cursor-pointer font-[inherit]"
-                >
-                  {t("project_switcher.new_project_cancel")}
-                </button>
-              </div>
-              {createProject.isError ? (
-                <div className="text-[11px] text-status-error">
-                  {createProject.error instanceof Error
-                    ? createProject.error.message
-                    : String(createProject.error)}
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 border-t border-line bg-bg-2 gap-[2px] p-[6px]">
-              <button
-                type="button"
-                role="menuitem"
-                className="flex items-center gap-2 text-txt-2 py-[7px] px-[10px] rounded-[6px] text-[12.5px] hover:bg-bg-3 hover:text-txt transition-[background,color] duration-[100ms]"
-                onClick={openCreate}
-              >
-                <Icon name="plus" size={13} /> {t("project_switcher.new_project")}
-              </button>
-              <button
-                type="button"
-                role="menuitem"
-                className="flex items-center gap-2 text-txt-2 py-[7px] px-[10px] rounded-[6px] text-[12.5px] hover:bg-bg-3 hover:text-txt transition-[background,color] duration-[100ms]"
-                onMouseEnter={() => setActiveIndex(rows.length - 1)}
-                onClick={() => navigate(PAGE_ROUTES.projects, currentId)}
-              >
-                <Icon name="settings" size={13} /> {t("project_switcher.manage")}
-              </button>
-            </div>
-          )}
+          <div className="grid grid-cols-2 border-t border-line bg-bg-2 gap-[2px] p-[6px]">
+            <button
+              type="button"
+              role="menuitem"
+              className="flex items-center gap-2 text-txt-2 py-[7px] px-[10px] rounded-[6px] text-[12.5px] hover:bg-bg-3 hover:text-txt transition-[background,color] duration-[100ms]"
+              onClick={openBootstrap}
+            >
+              <Icon name="plus" size={13} /> {t("project_switcher.new_project")}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              className="flex items-center gap-2 text-txt-2 py-[7px] px-[10px] rounded-[6px] text-[12.5px] hover:bg-bg-3 hover:text-txt transition-[background,color] duration-[100ms]"
+              onMouseEnter={() => setActiveIndex(rows.length - 1)}
+              onClick={() => navigate(PAGE_ROUTES.projects, currentId)}
+            >
+              <Icon name="settings" size={13} /> {t("project_switcher.manage")}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

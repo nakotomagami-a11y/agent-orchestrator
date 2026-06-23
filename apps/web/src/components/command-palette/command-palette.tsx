@@ -190,7 +190,7 @@ export function CommandPalette() {
     <div
       role="presentation"
       onClick={close}
-      className="fixed inset-0 bg-black/40 z-[1000] flex items-start justify-center pt-[15vh]"
+      className="app-modal-backdrop fixed inset-0 bg-black/40 z-[100] flex items-start justify-center pt-[15vh]"
     >
       {/* Panel */}
       <div

@@ -462,6 +462,26 @@ html:not(.tauri) .\[grid-template-rows\:38px_1fr\] {
   border: none !important;
 }
 
+/* Browser mode: titlebar fills the viewport edge (no Tauri chrome inset). */
+html:not(.tauri) .app-titlebar {
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-left: 0 !important;
+  border-right: 0 !important;
+  border-top: 0 !important;
+}
+
+/* Modal backdrops that should NOT cover the titlebar. Any fixed-position
+   overlay that adds this class will start 8px below the titlebar regardless
+   of chrome state (browser, Tauri framed, Tauri maximized). Overrides
+   Tailwind's `inset-0` top via !important. */
+.app-modal-backdrop {
+  top: calc(var(--chrome-inset, 0px) + 46px) !important;
+}
+
 /* ─── Office scene background ─── */
 /* Overrides any old cached inline style with the ocean background image. */
 .office-scene {
@@ -772,3 +792,7 @@ html:not(.tauri) .\[grid-template-rows\:38px_1fr\] {
   background: var(--line-2);
 }
 .ses-new:hover { color: var(--acc); }
+/* hmr-trigger-1782138858 */
+
+/* DEBUG_MARKER */
+.debug-marker-test { color: red; }

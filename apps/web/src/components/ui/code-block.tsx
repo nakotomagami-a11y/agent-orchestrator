@@ -10,6 +10,7 @@ export type CodeBlockProps = {
   title?: string;
   copyLabel?: string;
   copiedLabel?: string;
+  wrap?: boolean;
 };
 
 export function CodeBlock({
@@ -18,6 +19,7 @@ export function CodeBlock({
   title,
   copyLabel = "Copy",
   copiedLabel = "Copied",
+  wrap = false,
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
 
@@ -35,7 +37,7 @@ export function CodeBlock({
   const lineCount = body.split("\n").length;
 
   return (
-    <pre className="code-block bg-[#1c1714] font-mono text-[12.5px] leading-[1.65] rounded-[10px] overflow-x-auto">
+    <pre className={`code-block bg-[#1c1714] font-mono text-[12.5px] leading-[1.65] rounded-[10px] ${wrap ? "overflow-x-hidden" : "overflow-x-auto"}`}>
       <div className="head">
         <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#C7BFB7]">
           {lang ?? "code"}
@@ -55,7 +57,7 @@ export function CodeBlock({
         </button>
       </div>
       <code
-        className="block text-[#e8ddd5] p-[14px_16px]"
+        className={`block text-[#e8ddd5] p-[14px_16px]${wrap ? " whitespace-pre-wrap break-words" : ""}`}
         dangerouslySetInnerHTML={{ __html: highlighted }}
       />
     </pre>

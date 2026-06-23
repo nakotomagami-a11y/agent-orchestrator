@@ -32,3 +32,6 @@ apps/web/src-tauri/gen/
 # Large binaries — Tauri sidecar Node runtime and release archives
 apps/web/src-tauri/binaries/
 *.zip
+
+# Agent Office spawns per-agent git worktrees here — never commit them
+.worktrees/

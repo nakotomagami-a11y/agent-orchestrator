@@ -86,7 +86,7 @@ export function AddAgentModal({ open, projectId, onClose, onProjectChange }: Add
   if (!open) return null;
 
   const content = (
-    <div className="fixed inset-0 flex items-center justify-center p-[24px] bg-[rgba(8,6,5,0.72)] z-[200] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(10px)] after:[-webkit-backdrop-filter:blur(10px)] after:pointer-events-none" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
+    <div className="app-modal-backdrop fixed inset-0 flex items-center justify-center p-[24px] bg-[rgba(8,6,5,0.72)] z-[200] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(10px)] after:[-webkit-backdrop-filter:blur(10px)] after:pointer-events-none" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
       <div className="relative bg-bg-1 border border-line flex flex-col overflow-hidden [width:min(820px,100%)] max-h-[calc(100vh-48px)] rounded-[16px] [box-shadow:0_32px_64px_-12px_rgba(0,0,0,0.7)] z-[1]" role="dialog" aria-modal="true">
         {targetId ? (
           <AgentPickerStep
@@ -342,6 +342,7 @@ function AgentPickerStep({
                     rosterCount={rosterCounts[a.name] ?? 0}
                     stagedCount={staged[a.name] ?? 0}
                     onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
+                    onRemove={() => setStaged((prev) => { const n = (prev[a.name] ?? 0) - 1; if (n <= 0) { const next = { ...prev }; delete next[a.name]; return next; } return { ...prev, [a.name]: n }; })}
                   />
                 ))}
               </>
@@ -364,6 +365,7 @@ function AgentPickerStep({
                     rosterCount={rosterCounts[a.name] ?? 0}
                     stagedCount={staged[a.name] ?? 0}
                     onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
+                    onRemove={() => setStaged((prev) => { const n = (prev[a.name] ?? 0) - 1; if (n <= 0) { const next = { ...prev }; delete next[a.name]; return next; } return { ...prev, [a.name]: n }; })}
                   />
                 ))}
               </>
@@ -379,6 +381,7 @@ function AgentPickerStep({
                 rosterCount={0}
                 stagedCount={staged[a.name] ?? 0}
                 onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
+                onRemove={() => setStaged((prev) => { const n = (prev[a.name] ?? 0) - 1; if (n <= 0) { const next = { ...prev }; delete next[a.name]; return next; } return { ...prev, [a.name]: n }; })}
               />
             ))}
           </>
@@ -430,7 +433,7 @@ function AgentPickerStep({
 
 function AgentRow({
   name, description, defaultModel, unit, category,
-  rosterCount, stagedCount, onAdd,
+  rosterCount, stagedCount, onAdd, onRemove,
 }: {
   name: string;
   description?: string | null;
@@ -440,6 +443,7 @@ function AgentRow({
   rosterCount: number;
   stagedCount: number;
   onAdd: () => void;
+  onRemove: () => void;
 }) {
   const inOffice = rosterCount > 0;
   const added = stagedCount > 0 || inOffice;
@@ -476,20 +480,36 @@ function AgentRow({
         )}
       </div>
       <div className="flex items-center shrink-0 gap-[4px]">
-        <button
-          type="button"
-          className={`inline-flex items-center font-semibold whitespace-nowrap cursor-pointer shrink-0 gap-[6px] py-[8px] rounded-[8px] text-[12.5px] transition-[background,border-color,color] duration-[120ms] font-[inherit] border${added ? " bg-[rgba(34,197,94,0.10)] border-[rgba(34,197,94,0.30)] text-[var(--working)] pl-[10px] pr-[14px] hover:bg-[rgba(34,197,94,0.18)] hover:border-[rgba(34,197,94,0.45)] hover:text-[var(--working)]" : " bg-bg-3 border-line text-txt-2 px-[14px] hover:bg-acc hover:text-white hover:border-[var(--acc)]"}`}
-          onClick={onAdd}
-        >
-          {added ? (
-            <>
+        {added ? (
+          <div className="inline-flex items-center gap-[4px]">
+            {stagedCount > 0 && (
+              <button
+                type="button"
+                className="inline-flex items-center justify-center shrink-0 w-[30px] h-[34px] rounded-[8px] border bg-[rgba(34,197,94,0.10)] border-[rgba(34,197,94,0.30)] text-[var(--working)] transition-[background,border-color] duration-[120ms] hover:bg-[rgba(239,68,68,0.12)] hover:border-[rgba(239,68,68,0.35)] hover:text-status-error"
+                onClick={onRemove}
+                aria-label="Remove one"
+              >
+                <Icon name="minus" size={12} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="inline-flex items-center font-semibold whitespace-nowrap cursor-pointer shrink-0 gap-[6px] py-[8px] pl-[10px] pr-[14px] rounded-[8px] text-[12.5px] transition-[background,border-color,color] duration-[120ms] font-[inherit] border bg-[rgba(34,197,94,0.10)] border-[rgba(34,197,94,0.30)] text-[var(--working)] hover:bg-[rgba(34,197,94,0.18)] hover:border-[rgba(34,197,94,0.45)]"
+              onClick={onAdd}
+            >
               <Icon name="check" size={12} /> Added
               <span className="rounded-full text-white inline-grid place-items-center bg-[var(--working)] px-[6px] font-[var(--font-mono)] text-[10px] min-w-[18px] h-[18px]">{inOffice ? rosterCount + stagedCount : stagedCount}</span>
-            </>
-          ) : (
-            <><Icon name="plus" size={12} /> Add</>
-          )}
-        </button>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="inline-flex items-center font-semibold whitespace-nowrap cursor-pointer shrink-0 gap-[6px] py-[8px] px-[14px] rounded-[8px] text-[12.5px] transition-[background,border-color,color] duration-[120ms] font-[inherit] border bg-bg-3 border-line text-txt-2 hover:bg-acc hover:text-white hover:border-[var(--acc)]"
+            onClick={onAdd}
+          >
+            <Icon name="plus" size={12} /> Add
+          </button>
+        )}
       </div>
     </div>
   );

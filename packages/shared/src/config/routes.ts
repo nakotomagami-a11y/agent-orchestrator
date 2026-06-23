@@ -39,6 +39,7 @@ export const API_ROUTES = {
   memoryGlobal: "/api/memory/global",
 
   projects: "/api/projects",
+  projectsBootstrap: "/api/projects/bootstrap",
   project: (id: string) => `/api/projects/${encodeURIComponent(id)}`,
   projectMemory: (id: string) => `/api/projects/${encodeURIComponent(id)}/memory`,
   projectRoster: (id: string) => `/api/projects/${encodeURIComponent(id)}/roster`,

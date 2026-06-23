@@ -17,12 +17,16 @@ import { ResizeHandles } from "@/components/layout/resize-handles";
  * Wraps every protected page in the GNOME window chrome + sidebar, plus
  * global overlays (agent-details + Claude limits modals) so any trigger
  * elsewhere in the app can open them.
+ *
+ * The Titlebar is rendered as a SIBLING of GnomeWindow (not a child) so it
+ * sits in its own stacking context above any portal-rendered modal. The
+ * GnomeWindow reserves a 38px row at the top for the titlebar to overlay.
  */
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <>
     <ResizeHandles />
-    <GnomeWindow titlebar={<Titlebar />}>
+    <GnomeWindow>
       <MainShell>{children}</MainShell>
       <AgentDetailsModal />
       <ClaudeLimitsModal />
@@ -34,6 +38,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <MobileBottomNav />
       <FlutterModal />
     </GnomeWindow>
+    <Titlebar />
     </>
   );
 }

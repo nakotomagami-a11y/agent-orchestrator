@@ -301,7 +301,13 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     stream.startTs && (phase === "working" || phase === "streaming")
       ? Math.floor((Date.now() - stream.startTs) / 1000)
       : 0;
-  const totalTok = stream.usage.tokensIn + stream.usage.tokensOut;
+  const threadHistoryTok = thread.reduce((acc, item) => {
+    if (item.kind === "system-done") {
+      return acc + (item.tokensIn ?? 0) + (item.tokensOut ?? 0);
+    }
+    return acc;
+  }, 0);
+  const totalTok = threadHistoryTok + stream.usage.tokensIn + stream.usage.tokensOut;
   const liveStats =
     elapsedSec > 0
       ? `${fmtElapsed(elapsedSec)}${totalTok > 0 ? ` · ${totalTok.toLocaleString()} tok` : ""}`
