@@ -60,6 +60,7 @@ export const queryKeys = {
       [...queryKeys.runs.all, "list", normalizeRunsFilter(filters)] as const,
     detail: (id: string) => [...queryKeys.runs.all, "detail", id] as const,
     children: (id: string) => [...queryKeys.runs.all, "children", id] as const,
+    tree: (id: string) => [...queryKeys.runs.all, "tree", id] as const,
   },
 
   prompts: {

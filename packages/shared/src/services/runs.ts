@@ -7,7 +7,7 @@
 import { spawn, type ChildProcessByStdio } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
-import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseSubAgentEvent, SseSubAgentUpdateEvent, SseToolEvent, SseUsageEvent, SubAgentStatus } from "../types/index";
+import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseRateLimitEvent, SseSubAgentEvent, SseSubAgentUpdateEvent, SseToolEvent, SseUsageEvent, SubAgentStatus, WorkflowNode } from "../types/index";
 import { log } from "./log";
 import { buildAugmentedPath } from "./paths";
 import { pushRun } from "./store";
@@ -22,6 +22,7 @@ export type SseEvent =
   | { name: "usage"; data: SseUsageEvent }
   | { name: "done"; data: SseDoneEvent }
   | { name: "error"; data: SseErrorEvent }
+  | { name: "rate-limit"; data: SseRateLimitEvent }
   | { name: "subagent"; data: SseSubAgentEvent }
   | { name: "subagent-update"; data: SseSubAgentUpdateEvent };
 
@@ -63,6 +64,21 @@ interface LiveRun {
   parentRunId?: string;
   /** IDs of child runs spawned by Task tool calls. */
   childRunIds: string[];
+  /**
+   * Sub-agent records keyed by the spawning tool_use id. Lets us correlate the
+   * later `tool_result` line back to the sub-agent so we can finalize its card
+   * even when the child never registers in `liveRuns` (native Task/Agent and
+   * Bash `claude -p` spawns both run outside this process's run registry).
+   */
+  subAgents: Map<string, SubAgentRecord>;
+}
+
+interface SubAgentRecord {
+  subRunId: string;
+  agentId: string;
+  prompt: string;
+  startTs: number;
+  status: SubAgentStatus;
 }
 
 // Hard wall-clock cap. The process is "active" as long as it is alive —
@@ -151,6 +167,51 @@ export function getLiveRunAsPersistedRun(runId: string): PersistedRun | undefine
   };
 }
 
+/**
+ * Build the spawn tree rooted at `rootId` by walking `parentRunId` links in the
+ * DB and overlaying in-flight `liveRuns` state (fresher tokens/cost/status for
+ * runs still streaming). Depth-capped and cycle-guarded. Returns null when the
+ * root run is unknown.
+ */
+export function buildRunTree(rootId: string, maxDepth = 6): WorkflowNode | null {
+  const visited = new Set<string>();
+
+  const toNode = (run: PersistedRun, depth: number): WorkflowNode => {
+    visited.add(run.id);
+    const live = liveRuns.get(run.id);
+    const status = live?.status ?? run.status;
+    const durMs = live
+      ? (live.status === "running" ? Date.now() - live.startTs : (live.finishedAt ?? Date.now()) - live.startTs)
+      : run.durMs;
+
+    const children: WorkflowNode[] =
+      depth >= maxDepth
+        ? []
+        : db
+            .getChildRuns(run.id)
+            .filter((c) => !visited.has(c.id))
+            .map((c) => toNode(c, depth + 1));
+
+    return {
+      runId: run.id,
+      agentId: run.agentId,
+      agentName: run.agentName,
+      status,
+      prompt: run.prompt,
+      startTs: run.ts,
+      durMs,
+      tokensIn: live?.tokensIn ?? run.tokensIn,
+      tokensOut: live?.tokensOut ?? run.tokensOut,
+      cost: live?.cost ?? run.cost,
+      children,
+    };
+  };
+
+  const root = getLiveRunAsPersistedRun(rootId) ?? db.getRun(rootId);
+  if (!root) return null;
+  return toNode(root, 0);
+}
+
 export function getRunningRuns(): PersistedRun[] {
   return Array.from(liveRuns.values())
     .filter((r) => r.status === "running")
@@ -223,6 +284,7 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     eventLog: [],
     parentRunId: opts.parentRunId,
     childRunIds: [],
+    subAgents: new Map(),
   };
   liveRuns.set(runId, run);
   acquireInhibit();
@@ -410,7 +472,7 @@ function pumpStderr(run: LiveRun): void {
 interface StreamEvent {
   type?: string;
   event?: { type?: string; delta?: { type?: string; text?: string }; content_block?: { type?: string; name?: string; input?: unknown } };
-  message?: { content?: Array<{ type: string; text?: string; name?: string; input?: unknown }>; usage?: { input_tokens?: number; output_tokens?: number } };
+  message?: { content?: Array<{ type: string; id?: string; text?: string; name?: string; input?: unknown; tool_use_id?: string; content?: unknown; is_error?: boolean }>; usage?: { input_tokens?: number; output_tokens?: number } };
   usage?: { input_tokens?: number; output_tokens?: number };
   total_cost_usd?: number;
   session_id?: string;
@@ -464,13 +526,19 @@ function handleStreamLine(run: LiveRun, line: string): void {
         broadcast(run, { name: "chunk", data: { runId: run.id, text: block.text } });
       } else if (block.type === "tool_use") {
         const toolName = block.name ?? "tool";
+        // Phase-0 ground-truth probe. Enable with AO_DEBUG_TOOLS=1 to capture the
+        // exact tool name / input shape the installed Claude CLI emits for spawns.
+        if (process.env.AO_DEBUG_TOOLS) {
+          log.info("tool.debug", { runId: run.id, name: toolName, input: block.input });
+        }
         broadcast(run, {
           name: "tool",
           data: { runId: run.id, name: toolName, input: block.input },
         });
         db.insertToolCall(run.id, toolName, block.input, Date.now());
-        if (toolName === "Agent") {
-          spawnSubAgentRecord(run, block.input);
+        const spawn = detectSubAgentSpawn(toolName, block.input, run.agentId);
+        if (spawn) {
+          spawnSubAgentRecord(run, block.id, spawn);
         }
       }
     }
@@ -487,6 +555,19 @@ function handleStreamLine(run: LiveRun, line: string): void {
     return;
   }
 
+  // `user` events carry tool_result blocks. A result for a tool_use that spawned
+  // a sub-agent is the terminal signal for that sub-agent's card (native Task /
+  // Agent and Bash `claude -p` children run outside liveRuns, so the live bridge
+  // never fires for them).
+  if (evt.type === "user" && evt.message?.content) {
+    for (const block of evt.message.content) {
+      if (block.type === "tool_result" && typeof block.tool_use_id === "string") {
+        finalizeSubAgentFromResult(run, block.tool_use_id, block);
+      }
+    }
+    return;
+  }
+
   if (evt.type === "rate_limit_event") {
     const info = evt.rate_limit_info;
     if (info?.status && info.status !== "allowed") {
@@ -496,11 +577,12 @@ function handleStreamLine(run: LiveRun, line: string): void {
         ? ` Resets at ${new Date(resetsAt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}.`
         : "";
       const limitType = info.rateLimitType ? ` (${info.rateLimitType} limit)` : "";
+      // Broadcast a warning — do NOT kill the run. The user decides to stop or
+      // continue; the CLI will exit on its own if Anthropic hard-blocks it.
       broadcast(run, {
-        name: "error",
-        data: { runId: run.id, message: `Rate limited by Anthropic API${limitType}.${resetMsg}` },
+        name: "rate-limit",
+        data: { runId: run.id, message: `Rate limited by Anthropic API${limitType}.${resetMsg}`, resetsAt },
       });
-      if (run.status === "running") finalizeRun(run, 1);
     }
     return;
   }
@@ -599,12 +681,90 @@ function extractChildAgentId(input: unknown, fallback: string): string {
   return fallback;
 }
 
-function spawnSubAgentRecord(parentRun: LiveRun, input: unknown): void {
+/** Tool names that always denote a sub-agent spawn in the current Claude CLI. */
+const SUB_AGENT_TOOL_NAMES = new Set(["Task", "Agent"]);
+
+/**
+ * Single source of truth for "did this tool call spawn a sub-agent?". Matches
+ * three summon styles so a card is created in exactly one place:
+ *   1. Native Task/Agent tool (known name, or structural `subagent_type` /
+ *      `description`+`prompt` shape so it survives future tool renames).
+ *   2. Bash `claude -p --agent <id> "<prompt>"` spawns.
+ * Returns the resolved child agent id + prompt, or null when it is an ordinary
+ * tool call.
+ */
+export function detectSubAgentSpawn(
+  toolName: string,
+  input: unknown,
+  fallbackAgentId: string,
+): { agentId: string; prompt: string } | null {
+  const obj =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : null;
+
+  const structural =
+    !!obj &&
+    (typeof obj.subagent_type === "string" ||
+      (typeof obj.description === "string" && typeof obj.prompt === "string"));
+
+  if (SUB_AGENT_TOOL_NAMES.has(toolName) || structural) {
+    return {
+      agentId: extractChildAgentId(input, fallbackAgentId),
+      prompt: extractTaskPrompt(input),
+    };
+  }
+
+  if (toolName === "Bash" && obj && typeof obj.command === "string") {
+    const parsed = parseClaudeBashSpawn(obj.command);
+    if (parsed) {
+      return { agentId: parsed.agentId ?? fallbackAgentId, prompt: parsed.prompt };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Parse a Bash command that shells out to the Claude CLI in non-interactive
+ * print mode (`claude -p` / `--print`) with an `--agent <id>`. Returns null for
+ * any Bash command that is not such a spawn.
+ */
+export function parseClaudeBashSpawn(
+  command: string,
+): { agentId?: string; prompt: string } | null {
+  if (!/(^|[\s;&|(])claude(\s|$)/.test(command)) return null;
+  if (!/(^|\s)(-p|--print)(\s|=|$)/.test(command)) return null;
+
+  const agentMatch = command.match(/--agent(?:\s+|=)(?:"([^"]+)"|'([^']+)'|(\S+))/);
+  const agentId = agentMatch ? (agentMatch[1] ?? agentMatch[2] ?? agentMatch[3]) : undefined;
+
+  return { agentId, prompt: extractBashPrompt(command) };
+}
+
+function extractBashPrompt(command: string): string {
+  const pFlag = command.match(/(?:-p|--print)(?:\s+|=)(?:"([^"]*)"|'([^']*)')/);
+  if (pFlag) return (pFlag[1] ?? pFlag[2] ?? "").trim();
+  // Otherwise the last quoted string in the command is usually the prompt.
+  const quotes = [...command.matchAll(/"([^"]*)"|'([^']*)'/g)];
+  const last = quotes.at(-1);
+  if (last) return (last[1] ?? last[2] ?? "").trim();
+  return command.trim();
+}
+
+function spawnSubAgentRecord(
+  parentRun: LiveRun,
+  toolUseId: string | undefined,
+  spawn: { agentId: string; prompt: string },
+): void {
   const subRunId = randomUUID();
-  const prompt = extractTaskPrompt(input);
-  const childAgentId = extractChildAgentId(input, parentRun.agentId);
+  const { agentId: childAgentId, prompt } = spawn;
+  const startTs = Date.now();
 
   parentRun.childRunIds.push(subRunId);
+  if (toolUseId) {
+    parentRun.subAgents.set(toolUseId, { subRunId, agentId: childAgentId, prompt, startTs, status: "running" });
+  }
 
   // Insert a placeholder row so the run detail page can be navigated to.
   try {
@@ -621,7 +781,7 @@ function spawnSubAgentRecord(parentRun: LiveRun, input: unknown): void {
       model: parentRun.model,
       effort: parentRun.effort,
       cwd: parentRun.cwd,
-      startedAt: Date.now(),
+      startedAt: startTs,
       parentRunId: parentRun.id,
     });
   } catch (err) {
@@ -644,6 +804,70 @@ function spawnSubAgentRecord(parentRun: LiveRun, input: unknown): void {
   // but possible if the same process created it). Normally the child registers
   // itself into liveRuns via its own startRun call after we emit the event.
   bridgeChildToParent(parentRun, subRunId);
+}
+
+/**
+ * Terminal update for a sub-agent driven by the parent stream's `tool_result`.
+ * This is the only completion signal for native Task/Agent and Bash children,
+ * which never register in `liveRuns` so `bridgeChildToParent` stays dormant.
+ */
+function finalizeSubAgentFromResult(
+  parentRun: LiveRun,
+  toolUseId: string,
+  block: { content?: unknown; is_error?: boolean },
+): void {
+  const record = parentRun.subAgents.get(toolUseId);
+  if (!record || record.status !== "running") return;
+
+  const output = stringifyToolResult(block.content);
+  const lastLine = output ? output.trimEnd().split("\n").pop()?.trim() || undefined : undefined;
+  const status: SubAgentStatus = block.is_error ? "error" : "done";
+  record.status = status;
+
+  try {
+    db.updateRun(record.subRunId, {
+      status: status === "done" ? "done" : "error",
+      exitCode: status === "done" ? 0 : 1,
+      output,
+      tokensIn: 0,
+      tokensOut: 0,
+      costUsd: 0,
+      durMs: Math.max(0, Date.now() - record.startTs),
+      endedAt: Date.now(),
+    });
+  } catch (err) {
+    log.warn("subagent.finalize_failed", { subRunId: record.subRunId, err: String(err) });
+  }
+
+  broadcast(parentRun, {
+    name: "subagent-update",
+    data: {
+      type: "subagent-update",
+      subRunId: record.subRunId,
+      status,
+      tokensIn: 0,
+      tokensOut: 0,
+      cost: 0,
+      lastOutputLine: lastLine,
+    },
+  });
+}
+
+function stringifyToolResult(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (part && typeof part === "object" && "text" in part) {
+          const text = (part as { text?: unknown }).text;
+          return typeof text === "string" ? text : "";
+        }
+        return typeof part === "string" ? part : "";
+      })
+      .join("");
+  }
+  if (content == null) return "";
+  return typeof content === "object" ? JSON.stringify(content) : String(content);
 }
 
 function finalizeRun(run: LiveRun, exitCode: number): void {

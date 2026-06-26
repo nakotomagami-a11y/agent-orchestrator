@@ -11,7 +11,7 @@ import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { groupRows, isAgentRow, looksLikeQuestion } from "../utils/thread-rows";
 
 const LIVE_PHASES = new Set<ChatPhase>(["sending", "connecting", "working", "streaming"]);
-const CONVERSATIONAL_KINDS = new Set<string>(["you", "agent-text", "system-done", "system-error", "agent-subagent"]);
+const CONVERSATIONAL_KINDS = new Set<string>(["you", "agent-text", "system-done", "system-error", "system-rate-limit", "agent-subagent"]);
 
 /** How many items to render at first. The transcript may hold thousands;
  *  rendering the whole list on every token would be a frame-drop nightmare. */
@@ -33,6 +33,10 @@ export type ChatThreadProps = {
   onSubmit?: (text: string) => void;
   /** Repairs a missing git worktree for the current instance, then auto-retries. */
   onRepairWorktree?: () => Promise<void>;
+  /** Abort the active run (Stop button on rate-limit warning). */
+  onAbortRun?: () => void;
+  /** Dismiss a rate-limit warning card (Continue button). */
+  onDismissRateLimit?: (itemId: string) => void;
   phase: ChatPhase;
   phaseHint?: string;
   phaseStats?: string;
@@ -48,7 +52,7 @@ const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
   { lbl: "Explain", text: "Walk me through how this part of the system handles errors." },
 ];
 
-export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairWorktree, phase, phaseHint, phaseStats, queuedMessage, onCancelQueue }: ChatThreadProps) {
+export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairWorktree, onAbortRun, onDismissRateLimit, phase, phaseHint, phaseStats, queuedMessage, onCancelQueue }: ChatThreadProps) {
   const t = useTranslations("chat_thread");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
@@ -317,6 +321,8 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
                           }
                         : undefined
                     }
+                    onStopRun={row.item.kind === "system-rate-limit" ? onAbortRun : undefined}
+                    onDismissRateLimit={row.item.kind === "system-rate-limit" && onDismissRateLimit ? () => onDismissRateLimit(row.item.id) : undefined}
                   />
                 );
               }

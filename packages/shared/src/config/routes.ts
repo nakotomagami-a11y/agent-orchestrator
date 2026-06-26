@@ -89,6 +89,7 @@ export const API_ROUTES = {
   runStream: (id: string) => `/api/runs/${encodeURIComponent(id)}/stream`,
   runAbort: (id: string) => `/api/runs/${encodeURIComponent(id)}/abort`,
   runChildren: (id: string) => `/api/runs/${encodeURIComponent(id)}/children`,
+  runTree: (id: string) => `/api/runs/${encodeURIComponent(id)}/tree`,
 
   summon: "/api/summon",
   broadcast: "/api/broadcast",

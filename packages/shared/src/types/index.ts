@@ -94,6 +94,25 @@ export interface PersistedRun {
   parentRunId?: string;
 }
 
+/**
+ * A node in the live spawn tree for a run. Built by walking `parentRunId` links
+ * (DB) and overlaying in-flight `liveRuns` state. Powers the Workflow pill/tree.
+ */
+export interface WorkflowNode {
+  runId: string;
+  agentId: string;
+  agentName: string;
+  status: PersistedRun["status"];
+  prompt: string;
+  startTs: number;
+  durMs: number;
+  tokensIn: number;
+  tokensOut: number;
+  cost: number;
+  currentTool?: string;
+  children: WorkflowNode[];
+}
+
 export interface AgentInstance {
   instanceId: string;
   agentId: string;
@@ -189,13 +208,14 @@ export interface SummonRequest {
 
 export type ContextProfile = "tight" | "balanced" | "deep";
 
-export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "attached" | "subagent" | "subagent-update";
+export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "attached" | "subagent" | "subagent-update" | "rate-limit";
 
 export interface SseChunkEvent { runId: string; text: string }
 export interface SseToolEvent { runId: string; name: string; input?: unknown }
 export interface SseUsageEvent { runId: string; tokensIn: number; tokensOut: number; cost: number }
 export interface SseDoneEvent { runId: string; exitCode: number; sessionId?: string; durationMs?: number; tokensIn?: number; tokensOut?: number; cost?: number }
 export interface SseErrorEvent { runId: string; message: string }
+export interface SseRateLimitEvent { runId: string; message: string; resetsAt?: number }
 export interface SseAttachedEvent {
   runId: string;
   output: string;
@@ -235,6 +255,7 @@ export type RunStreamEvent =
   | { name: "usage"; data: SseUsageEvent }
   | { name: "done"; data: SseDoneEvent }
   | { name: "error"; data: SseErrorEvent }
+  | { name: "rate-limit"; data: SseRateLimitEvent }
   | { name: "subagent"; data: SseSubAgentEvent }
   | { name: "subagent-update"; data: SseSubAgentUpdateEvent };
 

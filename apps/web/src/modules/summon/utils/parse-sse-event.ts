@@ -40,6 +40,7 @@ const doneSchema = z.object({
   cost: z.number().optional(),
 });
 const errorSchema = z.object({ runId: z.string(), message: z.string() });
+const rateLimitSchema = z.object({ runId: z.string(), message: z.string(), resetsAt: z.number().optional() });
 
 const subAgentStatusSchema = z.enum(["queued", "running", "cancelling", "done", "error", "cancelled", "timeout"]);
 
@@ -70,6 +71,7 @@ const eventSchemas = {
   usage: usageSchema,
   done: doneSchema,
   error: errorSchema,
+  "rate-limit": rateLimitSchema,
   subagent: subagentSchema,
   "subagent-update": subagentUpdateSchema,
 } as const;
@@ -117,27 +119,12 @@ export function applySseEvent(
       error: null,
     }))
     .with({ name: "tool" }, ({ data }) => {
-      if (data.name === "Agent") {
-        // The Agent tool fires twice: once at content_block_start (input: {}) and
-        // once from the assistant event with the complete input. Skip the empty one
-        // — it carries no useful information, and creating a card from it produces
-        // a duplicate ghost item that the full-input card would immediately follow.
-        const isEmpty =
-          !data.input ||
-          (typeof data.input === "object" && !Array.isArray(data.input) && Object.keys(data.input as object).length === 0);
-        if (isEmpty) {
-          return { thread: prev.thread, usage: prev.usage, done: false, error: null };
-        }
-        const { name, prompt } = extractSubagentInfo(data.input);
-        return {
-          thread: closeStreaming([
-            ...prev.thread,
-            { kind: "agent-subagent" as const, id: newId(), name, prompt, status: "running" as const, startTs: Date.now() },
-          ]),
-          usage: prev.usage,
-          done: false,
-          error: null,
-        };
+      // Sub-agent spawns get their own card via the dedicated `subagent` event,
+      // so suppress the raw tool card here to avoid a duplicate. Covers native
+      // Task/Agent tools and Bash `claude -p --agent` spawns, and both the empty
+      // content_block_start fire and the full assistant fire.
+      if (isSubAgentSpawnTool(data.name, data.input)) {
+        return { thread: prev.thread, usage: prev.usage, done: false, error: null };
       }
       return {
         thread: closeStreaming([
@@ -254,6 +241,12 @@ export function applySseEvent(
         error: data.message,
       };
     })
+    .with({ name: "rate-limit" }, ({ data }) => ({
+      thread: closeStreaming([...prev.thread, { kind: "system-rate-limit" as const, id: newId(), message: data.message, resetsAt: data.resetsAt }]),
+      usage: prev.usage,
+      done: false,
+      error: null,
+    }))
     .exhaustive();
 }
 
@@ -274,16 +267,31 @@ function closeStreaming(thread: ThreadItem[]): ThreadItem[] {
   );
 }
 
-function extractSubagentInfo(input: unknown): { name: string; prompt: string } {
+const SPAWN_TOOL_NAMES = new Set(["Task", "Agent"]);
+
+/**
+ * Client mirror of the server's `detectSubAgentSpawn` predicate. Kept local
+ * because the server helper pulls in node-only deps. Matches native Task/Agent
+ * tools (by name or `subagent_type` / `description`+`prompt` shape) and Bash
+ * `claude -p --agent` spawns.
+ */
+function isSubAgentSpawnTool(name: string, input: unknown): boolean {
+  if (SPAWN_TOOL_NAMES.has(name)) return true;
   if (input && typeof input === "object" && !Array.isArray(input)) {
     const obj = input as Record<string, unknown>;
-    const desc = typeof obj.description === "string" ? obj.description.trim() : undefined;
-    const prompt = typeof obj.prompt === "string" ? obj.prompt.trim() : undefined;
-    const name = desc ?? (prompt ? (prompt.length > 48 ? prompt.slice(0, 45) + "…" : prompt) : "sub-agent");
-    return { name, prompt: prompt ?? desc ?? JSON.stringify(input) };
+    if (typeof obj.subagent_type === "string") return true;
+    if (typeof obj.description === "string" && typeof obj.prompt === "string") return true;
+    if (name === "Bash" && typeof obj.command === "string" && isClaudeBashSpawn(obj.command)) return true;
   }
-  const str = typeof input === "string" ? input.trim() : JSON.stringify(input);
-  return { name: str.length > 48 ? str.slice(0, 45) + "…" : str, prompt: str };
+  return false;
+}
+
+function isClaudeBashSpawn(command: string): boolean {
+  return (
+    /(^|[\s;&|(])claude(\s|$)/.test(command) &&
+    /(^|\s)(-p|--print)(\s|=|$)/.test(command) &&
+    /--agent(\s|=)/.test(command)
+  );
 }
 
 function formatToolArg(input: unknown): string | undefined {

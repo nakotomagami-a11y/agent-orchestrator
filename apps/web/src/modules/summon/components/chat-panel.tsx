@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 import { ChatHead } from "./chat-head";
+import { WorkflowPill } from "./workflow-pill";
 import { ChatThread } from "./chat-thread";
 import { Composer } from "./composer";
 import type { ChatPhase } from "./live-status";
@@ -348,6 +349,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
         <ChatHead
           agent={agent}
           onNew={newThread}
+          actions={activeRunId ? <WorkflowPill runId={activeRunId} active={isStreaming} /> : null}
         />
       )}
 
@@ -443,6 +445,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
               }
             : undefined
         }
+        onAbortRun={onAbort}
+        onDismissRateLimit={(id) => setThread((prev) => prev.filter((it) => it.id !== id))}
         phase={phase}
         phaseHint={phaseHint(phase, stream.usage)}
         phaseStats={liveStats}

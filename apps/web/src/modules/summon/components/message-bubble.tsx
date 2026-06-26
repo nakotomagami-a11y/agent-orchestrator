@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { match } from "ts-pattern";
 import { cn } from "@/lib/cn";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
@@ -17,6 +17,8 @@ import {
   highlightTS,
   inlineMd,
 } from "../utils/message-format";
+import { useClaudeLimitsStore, periodStart, periodEnd } from "@/lib/claude-limits-store";
+import { useRuns } from "@/modules/runs/hooks/use-runs";
 
 // ── Expanded-state context ────────────────────────────────────────────────────
 // A stable Map<id, open> lives in ChatThread (via useRef) so that collapsible
@@ -526,6 +528,10 @@ export type MessageBubbleProps = {
   onRetry?: () => void;
   /** Called when the user repairs a missing worktree on a cwd error card. */
   onRepair?: () => Promise<void> | void;
+  /** Stop the active run from a rate-limit warning card. */
+  onStopRun?: () => void;
+  /** Dismiss the rate-limit warning card (Continue — run keeps going). */
+  onDismissRateLimit?: () => void;
   /** When true, hides the avatar (consecutive messages from the same sender). */
   hideAvatar?: boolean;
 };
@@ -533,6 +539,96 @@ export type MessageBubbleProps = {
 /** Heuristic: a run error caused by a missing/stale git worktree directory. */
 function isWorktreeError(message: string): boolean {
   return /cwd not a directory/i.test(message) && /\.worktrees/.test(message);
+}
+
+function RateLimitCard({
+  message,
+  resetsAt,
+  onStop,
+  onDismiss,
+}: {
+  message: string;
+  resetsAt?: number;
+  onStop?: () => void;
+  onDismiss?: () => void;
+}) {
+  const quotaUsd = useClaudeLimitsStore((s) => s.quotaUsd);
+  const period   = useClaudeLimitsStore((s) => s.period);
+  const runsQ    = useRuns({ limit: 500 });
+  const allRuns  = runsQ.data ?? [];
+
+  const pctLabel = useMemo(() => {
+    if (quotaUsd <= 0) return null;
+    const start = periodStart(period);
+    const end   = periodEnd(period);
+    const cost  = allRuns
+      .filter((r) => r.ts >= start && r.ts < end)
+      .reduce((s, r) => s + (r.cost || 0), 0);
+    const pct = Math.round((cost / quotaUsd) * 100);
+    return `${pct}% of $${quotaUsd} cap`;
+  }, [allRuns, quotaUsd, period]);
+
+  // Countdown to reset
+  const [secsLeft, setSecsLeft] = useState<number | null>(
+    resetsAt ? Math.max(0, resetsAt - Math.floor(Date.now() / 1000)) : null,
+  );
+  useEffect(() => {
+    if (secsLeft === null) return;
+    if (secsLeft <= 0) return;
+    const id = setInterval(() => {
+      setSecsLeft((s) => (s !== null && s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [secsLeft]);
+
+  const fmtCountdown = (s: number) => {
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}h ${m}m`;
+    if (m > 0) return `${m}m ${sec}s`;
+    return `${sec}s`;
+  };
+
+  return (
+    <div className="border border-[rgba(234,179,8,0.30)] border-l-[3px] border-l-[#ca8a04] rounded-[8px] px-[14px] py-3 bg-[rgba(234,179,8,0.05)] flex items-start gap-[10px]">
+      <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[rgba(234,179,8,0.12)] text-[#ca8a04] shrink-0">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="font-semibold text-ao-fg-0 text-[13.5px]">Rate limited</span>
+          {pctLabel && (
+            <span className="font-mono text-[11px] px-[6px] py-[2px] rounded-full bg-[rgba(234,179,8,0.12)] text-[#ca8a04]">{pctLabel}</span>
+          )}
+        </div>
+        <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono leading-[1.5]">{message}</div>
+        {secsLeft !== null && secsLeft > 0 && (
+          <div className="mt-[4px] font-mono text-[11.5px] text-ao-fg-3">
+            Resets in <span className="text-[#ca8a04]">{fmtCountdown(secsLeft)}</span>
+          </div>
+        )}
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            onClick={onStop}
+            disabled={!onStop}
+            className="text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
+          >
+            <Icon name="stop" size={11} /> Stop agent
+          </button>
+          <button
+            onClick={onDismiss}
+            disabled={!onDismiss}
+            className="text-[#ca8a04] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
+          >
+            <Icon name="refresh" size={11} /> Continue
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ErrorCard({
@@ -586,7 +682,7 @@ function ErrorCard({
   );
 }
 
-export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, onRepair, hideAvatar }: MessageBubbleProps) {
+export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, onRepair, onStopRun, onDismissRateLimit, hideAvatar }: MessageBubbleProps) {
   const avatar = agent.short[0]?.toUpperCase() ?? "?";
 
   return match(item)
@@ -656,6 +752,9 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
     .with({ kind: "agent-subagent" }, (item) => <SubAgentCard item={item} />)
     .with({ kind: "agent-thinking" }, (item) => (
       <ThinkingRow id={item.id} text={item.text} avatar={avatar} hideAvatar={hideAvatar} />
+    ))
+    .with({ kind: "system-rate-limit" }, (item) => (
+      <RateLimitCard message={item.message} resetsAt={item.resetsAt} onStop={onStopRun} onDismiss={onDismissRateLimit} />
     ))
     .with({ kind: "system-error" }, (item) => (
       <ErrorCard message={item.message} onRetry={onRetry} onRepair={onRepair} />

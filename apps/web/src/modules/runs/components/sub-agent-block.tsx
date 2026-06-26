@@ -15,9 +15,9 @@ import { groupByBatch } from "../utils/group-batch";
 
 // ── Status rendering ───────────────────────────────────────────────────────────
 
-type SubAgentDisplayStatus = PersistedRun["status"] | "running";
+export type SubAgentDisplayStatus = PersistedRun["status"] | "running";
 
-function StatusBadge({ status }: { status: SubAgentDisplayStatus }) {
+export function StatusBadge({ status }: { status: SubAgentDisplayStatus }) {
   if (status === "running") {
     return (
       <span className="inline-flex items-center gap-[5px] font-mono text-[10px] tracking-[0.06em] uppercase text-[var(--ao-ok)] px-[7px] py-[1px] rounded-full border border-[rgba(78,185,111,0.25)] bg-[var(--ao-ok-soft)]">
