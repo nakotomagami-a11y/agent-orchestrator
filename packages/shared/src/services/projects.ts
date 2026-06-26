@@ -4,7 +4,7 @@
 
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { join, sep } from "node:path";
-import type { AgentInstance, AppSettings, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
+import type { AgentInstance, AppSettings, PlanetConfig, PlanetType, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
 import { expandTilde, PROJECTS_DIR } from "./paths";
 import { ensureDir, writeFileAtomic } from "./fs-atomic";
 import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlValue } from "./yaml";
@@ -40,11 +40,30 @@ function parseMetadataFile(content: string): ParsedMetadata {
   return { meta: yamlToProjectMeta(raw), memory: (m[2] ?? "").trim() };
 }
 
+const PLANET_TYPES = new Set<PlanetType>(["gas-giant", "rocky", "dry", "terran", "ice", "islands", "lava", "black-hole", "galaxy", "star", "asteroid"]);
+
+function parsePlanetConfig(raw: unknown): PlanetConfig | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const o = raw as Record<string, unknown>;
+  const type = o.type as string;
+  if (!PLANET_TYPES.has(type as PlanetType)) return undefined;
+  const seed = typeof o.seed === "number" ? o.seed : undefined;
+  const paletteIdx = typeof o.paletteIdx === "number" ? o.paletteIdx : 0;
+  if (seed === undefined) return undefined;
+  const out: PlanetConfig = { type: type as PlanetType, seed, paletteIdx };
+  if (typeof o.pixels === "number") out.pixels = Math.round(o.pixels);
+  if (typeof o.rotation === "number") out.rotation = o.rotation;
+  if (typeof o.dither === "boolean") out.dither = o.dither;
+  return out;
+}
+
 function yamlToProjectMeta(m: YamlMapping): Partial<ProjectMeta> {
   const out: Partial<ProjectMeta> = {};
   if (typeof m.name === "string") out.name = m.name;
   if (typeof m.description === "string") out.description = m.description;
   if (Array.isArray(m.roster)) out.roster = normalizeRoster(m.roster);
+  const planet = parsePlanetConfig(m.planet);
+  if (planet) out.planet = planet;
   return out;
 }
 
@@ -124,6 +143,14 @@ function writeMetadata(id: string, meta: Partial<ProjectMeta>, memory: string): 
   if (Array.isArray(meta.roster) && meta.roster.length > 0) {
     fmObj.roster = rosterToYaml(meta.roster);
   }
+  if (meta.planet) {
+    const p = meta.planet;
+    const pObj: Record<string, unknown> = { type: p.type, seed: p.seed, paletteIdx: p.paletteIdx };
+    if (p.pixels !== undefined) pObj.pixels = p.pixels;
+    if (p.rotation !== undefined) pObj.rotation = p.rotation;
+    if (p.dither !== undefined) pObj.dither = p.dither;
+    fmObj.planet = pObj as unknown as YamlValue;
+  }
   const fmStr = Object.keys(fmObj).length === 0 ? "" : stringifyYaml(fmObj).trim();
   const body = memory.trim();
   let content = "";
@@ -140,6 +167,7 @@ function projectFromScan(entry: ScannedEntry): Project {
     cwd: entry.fullPath,
     roster: normalizeRoster(md?.meta.roster),
   };
+  if (md?.meta.planet) meta.planet = md.meta.planet;
   return { id: entry.id, meta, memory: md?.memory ?? "" };
 }
 
@@ -165,6 +193,7 @@ export function listProjectSummaries(): ProjectSummary[] {
         cwd: p.meta.cwd,
         instanceCount: p.meta.roster.length,
         lastRunAt: lastRuns.get(p.id),
+        planet: p.meta.planet,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));
@@ -506,6 +535,32 @@ export interface CreateProjectInput {
   name?: string;
   description?: string;
   roster?: unknown[];
+  planet?: PlanetConfig;
+}
+
+const PLANET_TYPE_PALETTE_COUNTS: Record<PlanetType, number> = {
+  "gas-giant": 6,
+  "rocky": 5,
+  "dry": 5,
+  "terran": 5,
+  "ice": 5,
+  "islands": 5,
+  "lava": 5,
+  "black-hole": 5,
+  "galaxy": 5,
+  "star": 5,
+  "asteroid": 5,
+};
+
+function autoRandomPlanet(): PlanetConfig {
+  const types: PlanetType[] = ["gas-giant", "rocky", "dry", "terran", "ice", "islands", "lava", "black-hole", "galaxy", "star", "asteroid"];
+  const type = types[Math.floor(Math.random() * types.length)]!;
+  const paletteCount = PLANET_TYPE_PALETTE_COUNTS[type];
+  return {
+    type,
+    seed: Math.floor(Math.random() * 999999999),
+    paletteIdx: Math.floor(Math.random() * paletteCount),
+  };
 }
 
 export function createProject(input: CreateProjectInput): Project {
@@ -526,6 +581,7 @@ export function createProject(input: CreateProjectInput): Project {
     description: input.description ?? "",
     cwd: scanned.fullPath,
     roster: normalizeRoster(input.roster),
+    planet: input.planet ?? autoRandomPlanet(),
   };
   writeMetadata(id, meta, "");
   log.info("project.metadata_created", { id });

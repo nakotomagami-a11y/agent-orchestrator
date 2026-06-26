@@ -136,11 +136,23 @@ export interface AgentInstance {
   worktreeMissing?: boolean;
 }
 
+export type PlanetType = "gas-giant" | "rocky" | "dry" | "terran" | "ice" | "islands" | "lava" | "black-hole" | "galaxy" | "star" | "asteroid";
+
+export interface PlanetConfig {
+  type: PlanetType;
+  seed: number;
+  paletteIdx: number;
+  pixels?: number;   // logical pixel density 10-120, default 50
+  rotation?: number; // radians 0-6.28, default derived from seed
+  dither?: boolean;  // dither mode, default true
+}
+
 export interface ProjectMeta {
   name: string;
   description: string;
   cwd?: string;
   roster: AgentInstance[];
+  planet?: PlanetConfig;
 }
 
 export interface AppSettings {
@@ -174,6 +186,7 @@ export interface ProjectSummary {
   cwd?: string;
   instanceCount: number;
   lastRunAt?: number;
+  planet?: PlanetConfig;
 }
 
 export interface HealthInfo {

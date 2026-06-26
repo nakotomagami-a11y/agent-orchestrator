@@ -13,7 +13,7 @@ import { SettingsTab } from "./tabs/settings-tab";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useActiveProjectStore } from "@/lib/active-project-store";
-import { useProject, useAddInstance } from "@/modules/projects/hooks/use-projects";
+import { useProject, useAddInstance, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
 import type { AgentInstance } from "@agent-office/shared/types";
@@ -205,6 +205,7 @@ export function AgentDetailsModal() {
   }, [selectedId]);
 
   const addMut = useAddInstance();
+  const removeMut = useRemoveInstance();
 
   const [tab, setTab] = useState<Tab>("conversation");
   const changeTab = (t: Tab) => { setTab(t); setActiveTab(t); };
@@ -331,7 +332,7 @@ export function AgentDetailsModal() {
   return (
     <Portal>
       <div
-        className="app-modal-backdrop fixed inset-0 flex items-center justify-center p-8 z-[100] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(43,30,24,0.6),rgba(10,8,7,0.95)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(20,16,14,0.55)] after:pointer-events-none"
+        className="app-modal-backdrop fixed inset-0 flex items-center justify-center p-8 z-[100] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(18,18,28,0.65),rgba(6,6,12,0.96)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(10,10,18,0.58)] after:pointer-events-none"
         role="presentation"
         onClick={closeInspector}
       >
@@ -415,8 +416,8 @@ export function AgentDetailsModal() {
           ) : (
             <>
           {/* ── Agent header ── */}
-          <div className="flex items-center gap-[14px] px-6 py-4 border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
-            <div className="relative shrink-0">
+          <div className="flex items-center gap-[14px] px-6 h-[84px] border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
+            <div className="relative shrink-0 w-[40px] h-[70px] flex items-center justify-center">
               <AgentAvatar unit={agent.unitChoice} size={40} label={agent.name} />
               <span className={`absolute right-[-2px] bottom-[-2px] w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
                 isWorking
@@ -513,6 +514,24 @@ export function AgentDetailsModal() {
                 >
                   <Icon name="refresh" size={13} /> Discard
                 </button>
+              )}
+              {activeProjectId && selectedInstanceId && (
+                <Tooltip content="Delete this instance" side="bottom" delayMs={400}>
+                  <button
+                    type="button"
+                    aria-label="Delete this agent instance"
+                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-ao-fg-3 hover:text-[var(--ao-bad)] hover:bg-[var(--ao-bad-soft)] border border-transparent hover:border-[rgba(217,83,79,0.25)] transition-all duration-[120ms] disabled:opacity-40"
+                    disabled={removeMut.isPending}
+                    onClick={() => {
+                      removeMut.mutate(
+                        { projectId: activeProjectId, instanceId: selectedInstanceId },
+                        { onSuccess: closeInspector }
+                      );
+                    }}
+                  >
+                    <Icon name="trash" size={14} />
+                  </button>
+                </Tooltip>
               )}
             </div>
           </div>

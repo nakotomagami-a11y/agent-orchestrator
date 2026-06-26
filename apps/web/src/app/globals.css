@@ -3,7 +3,7 @@
 @source "../**/*.{ts,tsx}";
 
 /* ─────────────────────────────────────────────────────────────────
-   Agent Office — Yaru / Modern GNOME
+   Agent Office — Obsidian / GNOME dark
    ───────────────────────────────────────────────────────────────── */
 
 /* Dark mode — applied when [data-theme="dark"] is on any ancestor */
@@ -61,9 +61,9 @@
   --color-ao-fg-1:   var(--ao-fg-1);
   --color-ao-fg-2:   var(--ao-fg-2);
   --color-ao-fg-3:   var(--ao-fg-3);
-  --color-ao-accent:      #E95420;
-  --color-ao-accent-soft: rgba(233, 84, 32, 0.14);
-  --color-ao-accent-line: rgba(233, 84, 32, 0.32);
+  --color-ao-accent:      #7c6af5;
+  --color-ao-accent-soft: rgba(124, 106, 245, 0.14);
+  --color-ao-accent-line: rgba(124, 106, 245, 0.30);
   --color-ao-ok:       #4eb96f;
   --color-ao-ok-soft:  rgba(78, 185, 111, 0.14);
   --color-ao-warn:     #e6b35a;
@@ -82,50 +82,42 @@
   --radius-ao-xl: 20px;
 
   /* Box shadows — defined directly to avoid self-referencing var() */
-  --shadow-1: 0 1px 0 rgba(40,30,25,0.04), 0 1px 2px rgba(40,30,25,0.06);
-  --shadow-2: 0 2px 6px rgba(40,30,25,0.06), 0 8px 24px rgba(40,30,25,0.08);
-  --shadow-3: 0 8px 24px rgba(40,30,25,0.10), 0 24px 64px rgba(40,30,25,0.14);
-  --shadow-window: 0 1px 0 rgba(255,255,255,0.5) inset,
-                   0 20px 50px rgba(40,30,25,0.18),
-                   0 4px 14px rgba(40,30,25,0.10);
+  --shadow-1: 0 1px 0 rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-2: 0 2px 6px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.08);
+  --shadow-3: 0 8px 24px rgba(0,0,0,0.10), 0 24px 64px rgba(0,0,0,0.14);
+  --shadow-window: 0 1px 0 rgba(255,255,255,0.4) inset,
+                   0 20px 50px rgba(0,0,0,0.18),
+                   0 4px 14px rgba(0,0,0,0.10);
 
   /* Breakpoints */
   --breakpoint-mobile: 600px;
 }
 
 :root {
-  --yaru-orange:    #E95420;
-  --yaru-orange-2:  #F5814C;
-  --yaru-aubergine: #2C001E;
-  --yaru-purple:    #77216F;
-  --yaru-warm:      #FDF6F1;
+  --bg-0: #f2f3f5;
+  --bg-1: #ffffff;
+  --bg-2: #f2f3f5;
+  --bg-3: #e3e5e8;
+  --bg-elev: #ffffff;
 
-  --bg-0: #FAF8F6;
-  --bg-1: #FFFFFF;
-  --bg-2: #F4F1ED;
-  --bg-3: #ECE7E1;
-  --bg-elev: #FFFFFF;
+  --line:        rgba(0, 0, 0, 0.06);
+  --line-2:      rgba(0, 0, 0, 0.10);
+  --line-strong: rgba(0, 0, 0, 0.18);
 
-  --line:        rgba(40, 30, 25, 0.08);
-  --line-2:      rgba(40, 30, 25, 0.14);
-  --line-strong: rgba(40, 30, 25, 0.22);
+  --txt:   #2e3338;
+  --txt-2: #6e7681;
+  --txt-3: #9ea6b0;
+  --txt-4: #c4c9d1;
 
-  --txt:   #1E1A18;
-  --txt-2: #4A4340;
-  --txt-3: #8A8079;
-  --txt-4: #B3A99F;
-
-  --acc:        var(--yaru-orange);
-  --acc-hover:  #D44A1B;
-  --acc-faint:  rgba(233, 84, 32, 0.10);
-  --acc-tint:   rgba(233, 84, 32, 0.16);
+  --acc:        #7c6af5;
+  --acc-hover:  #6a58e6;
+  --acc-faint:  rgba(124, 106, 245, 0.10);
+  --acc-tint:   rgba(124, 106, 245, 0.16);
   --acc-ink:    #FFFFFF;
-
-  --aub:        var(--yaru-aubergine);
 
   --working: #22c55e;
   --done:    #16a34a;
-  --idle:    #B3A99F;
+  --idle:    #9ea6b0;
   --queued:  #eab308;
   --error:   #ef4444;
   --thinking:#f97316;
@@ -135,77 +127,74 @@
   --r-lg: 14px;
   --r-xl: 20px;
 
-  /* ao-modal palette — light values. Warm cream backgrounds and
-     near-black foregrounds, harmonising with the app's cream gradient. */
-  --ao-bg-0:   #f1ebe3;
-  --ao-bg-1:   #fbf6ef;
-  --ao-bg-2:   #f5efe6;
-  --ao-bg-3:   #ece5dc;
-  --ao-bg-4:   #e3dbd1;
-  --ao-line-0: rgba(30, 26, 24, 0.06);
-  --ao-line-1: rgba(30, 26, 24, 0.10);
-  --ao-line-2: rgba(30, 26, 24, 0.18);
-  --ao-fg-0:   #1E1A18;
-  --ao-fg-1:   #4A4340;
-  --ao-fg-2:   #6d655f;
-  --ao-fg-3:   #8A8079;
+  /* ao-modal palette — light values */
+  --ao-bg-0:   #e3e5e8;
+  --ao-bg-1:   #ffffff;
+  --ao-bg-2:   #f2f3f5;
+  --ao-bg-3:   #e3e5e8;
+  --ao-bg-4:   #d8dbe0;
+  --ao-line-0: rgba(0, 0, 0, 0.04);
+  --ao-line-1: rgba(0, 0, 0, 0.08);
+  --ao-line-2: rgba(0, 0, 0, 0.14);
+  --ao-fg-0:   #2e3338;
+  --ao-fg-1:   #4a5260;
+  --ao-fg-2:   #6e7681;
+  --ao-fg-3:   #9ea6b0;
   --ao-shadow-modal:
-    0 0 0 1px rgba(30, 26, 24, 0.06),
-    0 30px 60px -20px rgba(30, 26, 24, 0.18),
-    0 50px 120px -40px rgba(30, 26, 24, 0.22);
+    0 0 0 1px rgba(0, 0, 0, 0.06),
+    0 30px 60px -20px rgba(0, 0, 0, 0.12),
+    0 50px 120px -40px rgba(0, 0, 0, 0.10);
 }
 
 [data-theme="dark"] {
-  --bg-0: #1E1A18;
-  --bg-1: #2A2522;
-  --bg-2: #322C28;
-  --bg-3: #3B342F;
-  --bg-elev: #2F2925;
+  --bg-0: #0f0f0f;
+  --bg-1: #1a1a1a;
+  --bg-2: #202020;
+  --bg-3: #2a2a2a;
+  --bg-elev: #1a1a1a;
 
-  --line:        rgba(255, 240, 230, 0.06);
-  --line-2:      rgba(255, 240, 230, 0.10);
-  --line-strong: rgba(255, 240, 230, 0.18);
+  --line:        rgba(255, 255, 255, 0.06);
+  --line-2:      rgba(255, 255, 255, 0.10);
+  --line-strong: rgba(255, 255, 255, 0.18);
 
-  --txt:   #F4EFEA;
-  --txt-2: #C7BFB7;
-  --txt-3: #8A8079;
-  --txt-4: #5E5651;
+  --txt:   #dcddde;
+  --txt-2: #999999;
+  --txt-3: #555555;
+  --txt-4: #333333;
 
-  --acc-faint:  rgba(233, 84, 32, 0.16);
-  --acc-tint:   rgba(233, 84, 32, 0.24);
+  --acc:        #7c6af5;
+  --acc-faint:  rgba(124, 106, 245, 0.12);
+  --acc-tint:   rgba(124, 106, 245, 0.20);
+
+  --idle:    #666666;
 
   --shadow-window: 0 1px 0 rgba(255,255,255,0.04) inset,
-                   0 20px 50px rgba(0,0,0,0.45),
-                   0 4px 14px rgba(0,0,0,0.25);
+                   0 20px 50px rgba(0,0,0,0.50),
+                   0 4px 14px rgba(0,0,0,0.30);
 
-  /* ao-modal palette — dark values (the original hard-coded values,
-     relocated from .ao-modal so they participate in the theme cascade). */
-  --ao-bg-0:   #14100e;
-  --ao-bg-1:   #1c1815;
-  --ao-bg-2:   #221d1a;
-  --ao-bg-3:   #2a2421;
-  --ao-bg-4:   #322b27;
-  --ao-line-0: rgba(255, 245, 235, 0.06);
-  --ao-line-1: rgba(255, 245, 235, 0.10);
-  --ao-line-2: rgba(255, 245, 235, 0.16);
-  --ao-fg-0:   #f4eee7;
-  --ao-fg-1:   #d2c7bd;
-  --ao-fg-2:   #9b9089;
-  --ao-fg-3:   #6d655f;
+  /* ao-modal palette — dark values */
+  --ao-bg-0:   #0f0f0f;
+  --ao-bg-1:   #1a1a1a;
+  --ao-bg-2:   #202020;
+  --ao-bg-3:   #2a2a2a;
+  --ao-bg-4:   #333333;
+  --ao-line-0: rgba(255, 255, 255, 0.04);
+  --ao-line-1: rgba(255, 255, 255, 0.07);
+  --ao-line-2: rgba(255, 255, 255, 0.12);
+  --ao-fg-0:   #dcddde;
+  --ao-fg-1:   #999999;
+  --ao-fg-2:   #666666;
+  --ao-fg-3:   #444444;
   --ao-shadow-modal:
-    0 0 0 1px rgba(255,245,235,0.06),
-    0 30px 60px -20px rgba(0,0,0,0.6),
-    0 50px 120px -40px rgba(0,0,0,0.8);
+    0 24px 80px rgba(0,0,0,0.70),
+    0 0 0 1px rgba(255,255,255,0.06);
 }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body {
   font-family: var(--font-sans);
-  background:
-    radial-gradient(1200px 700px at 80% -10%, rgba(233,84,32,0.20), transparent 60%),
-    radial-gradient(900px 700px at -10% 110%, rgba(119,33,111,0.20), transparent 55%),
-    linear-gradient(180deg, #F4EAE0 0%, #ECDDD2 50%, #E8D2C2 100%);
+  background: #f2f3f5;
   background-attachment: fixed;
   color: var(--txt);
   -webkit-font-smoothing: antialiased;
@@ -215,10 +204,7 @@ body {
 }
 
 [data-theme="dark"] body {
-  background:
-    radial-gradient(1200px 700px at 80% -10%, rgba(233,84,32,0.22), transparent 60%),
-    radial-gradient(900px 700px at -10% 110%, rgba(119,33,111,0.30), transparent 55%),
-    linear-gradient(180deg, #2C001E 0%, #1a1014 100%);
+  background: #0f0f0f;
   background-attachment: fixed;
 }
 
@@ -359,8 +345,8 @@ body {
 
 /* ─── @keyframes ─── */
 @keyframes pulseDot {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(233,84,32,0.5); }
-  50%      { box-shadow: 0 0 0 6px rgba(233,84,32,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124,106,245,0.5); }
+  50%      { box-shadow: 0 0 0 6px rgba(124,106,245,0); }
 }
 @keyframes blink { 50% { opacity: 0; } }
 @keyframes thinkBounce {
@@ -478,7 +464,7 @@ html:not(.tauri) .app-titlebar {
 /* Modal backdrop covers from the top edge of the viewport; the titlebar
    sits above it at z-[200] so it always stays accessible. */
 .app-modal-backdrop {
-  top: 0 !important;
+  top: 36px !important;
 }
 
 /* ─── Office scene background ─── */
@@ -536,10 +522,10 @@ html:not(.tauri) .app-titlebar {
      and shadow tokens (--ao-bg-*, --ao-line-*, --ao-fg-*,
      --ao-shadow-modal) live at :root (light) and [data-theme="dark"]
      (dark) so the modal automatically follows the active app theme. */
-  --ao-accent: #E95420;
-  --ao-accent-soft: rgba(233, 84, 32, 0.14);
-  --ao-accent-softer: rgba(233, 84, 32, 0.08);
-  --ao-accent-line: rgba(233, 84, 32, 0.32);
+  --ao-accent:         #7c6af5;
+  --ao-accent-soft:    rgba(124, 106, 245, 0.14);
+  --ao-accent-softer:  rgba(124, 106, 245, 0.07);
+  --ao-accent-line:    rgba(124, 106, 245, 0.26);
   --ao-ok: #4eb96f;
   --ao-ok-soft: rgba(78, 185, 111, 0.14);
   --ao-warn: #e6b35a;
@@ -604,7 +590,7 @@ html:not(.tauri) .app-titlebar {
 }
 
 /* ao-codeblock — generated code block HTML */
-.ao-modal .ao-codeblock { margin: 12px 0 14px; border: 1px solid var(--ao-line-1); border-radius: 10px; overflow: hidden; background: #0e0b09; }
+.ao-modal .ao-codeblock { margin: 12px 0 14px; border: 1px solid var(--ao-line-1); border-radius: 10px; overflow: hidden; background: #0a0a0f; }
 .ao-modal .ao-codeblock .ao-head {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
   background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--ao-line-0);

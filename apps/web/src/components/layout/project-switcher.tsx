@@ -5,7 +5,9 @@ import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { PlanetConfig } from "@agent-office/shared/types";
 import { Icon } from "@/components/ui/icon";
+import { PlanetCanvas } from "@/components/ui/planet-canvas";
 import { cn } from "@/lib/cn";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
@@ -22,16 +24,6 @@ function currentProjectIdFromPath(pathname: string | null): string | null {
   return match && match[1] ? decodeURIComponent(match[1]) : null;
 }
 
-function projectGradient(id: string): string {
-  const colors = [
-    ["#d63a14","#b1280c"], ["#5a8b6f","#2f5a3e"], ["#2A6FDB","#1b4fa8"],
-    ["#c792ea","#7a4fa8"], ["#e6b35a","#a87a20"], ["#4eb96f","#2a7a40"],
-  ];
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) & 0xffff;
-  const [a, b] = colors[hash % colors.length]!;
-  return `linear-gradient(135deg, ${a}, ${b})`;
-}
 
 export function ProjectSwitcher() {
   const t = useTranslations();
@@ -148,9 +140,7 @@ export function ProjectSwitcher() {
         onClick={() => setOpen((v) => !v)}
       >
         {currentId ? (
-          <span className="grid place-items-center shrink-0 text-white font-bold w-[18px] h-[18px] rounded text-[10px]" style={{ background: projectGradient(currentId) }}>
-            {triggerLabel.slice(0, 1).toUpperCase()}
-          </span>
+          <PlanetCanvas projectId={currentId} config={current?.planet} size={18} className="rounded-full overflow-hidden shrink-0" />
         ) : (
           <Icon name="folder" size={13} />
         )}
@@ -229,6 +219,7 @@ export function ProjectSwitcher() {
                     highlighted={activeIndex === rowIndex}
                     healthDot={healthDot}
                     projectId={p.id}
+                    planetConfig={p.planet}
                     onHover={() => setActiveIndex(rowIndex)}
                     onSelect={() => navigate(PAGE_ROUTES.project(p.id), p.id)}
                   />
@@ -285,6 +276,7 @@ type RowProps = {
   onHover: () => void;
   onSelect: () => void;
   projectId?: string | null;
+  planetConfig?: PlanetConfig;
 };
 
 function ProjectRow({
@@ -298,6 +290,7 @@ function ProjectRow({
   onHover,
   onSelect,
   projectId,
+  planetConfig,
 }: RowProps) {
   return (
     <Link
@@ -312,9 +305,7 @@ function ProjectRow({
       )}
     >
       {projectId ? (
-        <span className="grid place-items-center shrink-0 text-white font-bold w-[32px] h-[32px] rounded-[8px] text-[12px] border border-[rgba(255,255,255,0.08)]" style={{ background: projectGradient(projectId) }}>
-          {primary.slice(0, 1).toUpperCase()}
-        </span>
+        <PlanetCanvas projectId={projectId} config={planetConfig} size={32} className="rounded-full overflow-hidden shrink-0" />
       ) : (
         <span className="grid place-items-center shrink-0 text-white font-bold w-[32px] h-[32px] rounded-[8px] text-[12px] border border-[rgba(255,255,255,0.08)] bg-bg-3">
           <Icon name="folder" size={13} className="text-txt-3" />

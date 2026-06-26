@@ -47,7 +47,7 @@ export function Titlebar() {
     document.documentElement.style.setProperty("--chrome-inset", `${inset}px`);
   }, [maximized]);
 
-  const dotBg = { close: "bg-[#E95420]", min: "bg-[#FFC107]", max: "bg-[#4CAF50]" } as const;
+  const dotBg = { close: "bg-[#FF5F57]", min: "bg-[#FFBD2E]", max: "bg-[#28C840]" } as const;
 
   const dotProps = (kind: "close" | "min" | "max") => ({
     className: `${dotBg[kind]} w-[14px] h-[14px] rounded-full inline-flex items-center justify-center text-[9px] leading-none cursor-pointer border border-[rgba(0,0,0,0.08)] [color:rgba(0,0,0,0.5)]`,
@@ -72,19 +72,21 @@ export function Titlebar() {
         maximized && "top-0 left-0 right-0 rounded-none border-l-0 border-r-0 border-t-0",
       )}
     >
-      <div className="grid items-center h-full px-3 select-none [grid-template-columns:1fr_auto_1fr] bg-[linear-gradient(180deg,var(--bg-2),var(--bg-1))] dark:bg-[linear-gradient(180deg,#3a322c,#2A2522)] border-b border-line rounded-t-[10px]">
+      <div className="grid items-center h-full px-3 select-none [grid-template-columns:1fr_auto_1fr] bg-bg-2 border-b border-line rounded-t-[10px]">
         <div className="flex items-center gap-2">
-          <div className="flex gap-2">
-            <span {...dotProps("close")} />
-            <span {...dotProps("min")} />
-            <span {...dotProps("max")} />
-          </div>
+          {isTauri() && (
+            <div className="flex gap-2">
+              <span {...dotProps("close")} />
+              <span {...dotProps("min")} />
+              <span {...dotProps("max")} />
+            </div>
+          )}
           <ProjectSwitcher />
         </div>
         <div className="font-semibold text-[13px] text-txt-2 flex items-center gap-2 max-[600px]:hidden" data-tauri-drag-region>
           <span
             aria-hidden
-            className="inline-block w-4 h-4 rounded-[4px] bg-[linear-gradient(135deg,var(--yaru-orange),var(--yaru-purple))]"
+            className="inline-block w-4 h-4 rounded-[4px] bg-[linear-gradient(135deg,#5c4bb8,#7c6af5)]"
           />
           {t("app.name")} - {t("app.studio_subtitle")}
         </div>

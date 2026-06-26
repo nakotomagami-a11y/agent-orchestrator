@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
+import { PlanetCanvas } from "@/components/ui/planet-canvas";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useProjects } from "../hooks/use-projects";
 import type { ProjectSummary } from "@agent-office/shared/types";
@@ -46,7 +47,7 @@ function ProjectRow({ p }: { p: ProjectSummary }) {
       ].join(" ")}
       style={{ gridTemplateColumns: "20px 1fr auto auto" }}
     >
-      <Icon name="folder" className="shrink-0 text-[var(--ao-fg-3)]" />
+      <PlanetCanvas projectId={p.id} config={p.planet} size={20} className="shrink-0 rounded-full overflow-hidden" />
 
       <div className="min-w-0">
         <div className={["text-[13px] font-semibold leading-snug", isEmpty ? "" : ""].join(" ")}>

@@ -371,7 +371,7 @@ function SidebarFoot({ spendToday }: { spendToday: number }) {
         aria-label={t("common.open_settings")}
         aria-expanded={open}
       >
-        <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-white font-bold text-[12px] [background:linear-gradient(135deg,#77216F,#E95420)] shrink-0" aria-hidden>
+        <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-white font-bold text-[12px] [background:linear-gradient(135deg,#5c4bb8,#7c6af5)] shrink-0" aria-hidden>
           P
         </div>
         <div className="min-w-0 max-[1024px]:hidden">

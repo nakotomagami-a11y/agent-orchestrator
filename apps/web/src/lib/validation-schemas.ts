@@ -28,11 +28,21 @@ export const settingsScanQuerySchema = z.object({
   includeExcluded: z.string().optional(),
 });
 
+const planetConfigSchema = z.object({
+  type: z.enum(["gas-giant", "rocky", "dry", "terran", "ice", "islands", "lava", "black-hole", "galaxy", "star", "asteroid"]),
+  seed: z.number().int(),
+  paletteIdx: z.number().int().min(0),
+  pixels: z.number().int().min(10).max(300).optional(),
+  rotation: z.number().optional(),
+  dither: z.boolean().optional(),
+});
+
 export const projectMetaPatchSchema = z.object({
   meta: z
     .object({
       name: z.string().optional(),
       description: z.string().optional(),
+      planet: planetConfigSchema.optional(),
       roster: z
         .array(
           z.object({

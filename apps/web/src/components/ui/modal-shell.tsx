@@ -86,7 +86,7 @@ export function ModalShell({
       <div
         role="presentation"
         onClick={onClose}
-        className="app-modal-backdrop fixed inset-0 bg-[rgba(20,14,12,0.45)] backdrop-blur-sm flex items-center justify-center p-5 z-[100]"
+        className="app-modal-backdrop fixed inset-0 bg-[rgba(10,10,18,0.55)] backdrop-blur-sm flex items-center justify-center p-5 z-[100]"
       >
         <div
           ref={ref}

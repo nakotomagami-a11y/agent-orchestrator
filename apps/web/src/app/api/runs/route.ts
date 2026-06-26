@@ -16,7 +16,15 @@ export async function GET(request: Request) {
   const liveRunning = runsService.getRunningRuns();
   const liveIds = new Set(liveRunning.map((r) => r.id));
   const persisted = store.getRuns({ agentId: q.agent, projectId: q.project, instanceId: q.instance, limit: Math.min(limit + liveRunning.length, 500) });
-  const all = [...liveRunning, ...persisted.filter((r) => !liveIds.has(r.id))];
+  // Persisted runs that still carry status='running' but are absent from the
+  // live registry are orphans (crash, HMR reload, test seed, etc.). Expose
+  // them as 'error' so statusFromRuns doesn't forever mark the agent working.
+  const all = [
+    ...liveRunning,
+    ...persisted
+      .filter((r) => !liveIds.has(r.id))
+      .map((r) => r.status === "running" ? { ...r, status: "error" as const, exitCode: r.exitCode ?? -1 } : r),
+  ];
 
   // Live runs are not pre-filtered by the DB query so apply the same filters.
   const filtered = all.filter((r) => {

@@ -13,6 +13,84 @@ import { Icon, type IconName } from "@/components/ui/icon";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { BodyHistoryPanel } from "@/modules/agents/components/body-history-panel";
 import { highlightMd } from "@/components/ui/code-editor";
+import { Portal } from "@/components/ui/portal";
+
+function SelectField({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: readonly string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const openMenu = () => {
+    if (triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    setOpen(true);
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (
+        !triggerRef.current?.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
+      ) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => (open ? setOpen(false) : openMenu())}
+        className="w-full flex items-center justify-between gap-2 text-left text-ao-fg-0 text-[13.5px] bg-transparent border-0 outline-none cursor-pointer"
+      >
+        <span className="font-mono">{value}</span>
+        <Icon
+          name="chevron-down"
+          size={13}
+          className={`text-ao-fg-2 shrink-0 transition-transform duration-[120ms] ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && (
+        <Portal>
+          <div
+            ref={dropdownRef}
+            className="fixed z-[300] bg-ao-bg-1 border border-ao-line-2 rounded-[var(--ao-radius-md)] shadow-[var(--ao-shadow-modal)] py-1"
+            style={{ top: pos.top, left: pos.left, width: pos.width }}
+          >
+            {options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={`w-full text-left px-[10px] py-[7px] text-[12.5px] font-mono transition-[background,color] duration-[80ms] ${
+                  opt === value
+                    ? "bg-[var(--ao-accent-soft)] text-[var(--ao-accent)]"
+                    : "text-ao-fg-0 hover:bg-ao-bg-3"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </Portal>
+      )}
+    </>
+  );
+}
 
 const TOOL_ICONS: Record<string, IconName> = {
   Read: "folder", Write: "edit", Edit: "edit", Bash: "terminal-ao",
@@ -223,18 +301,22 @@ function SettingsForm({
             <div className="grid grid-cols-2 gap-[var(--ao-gap-section)] max-[760px]:grid-cols-1">
               <div className="flex flex-col gap-[6px]">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Model</label>
-                <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
-                  <select className="ao-select flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px] appearance-none pr-[30px]" value={v.model} onChange={set("model")}>
-                    {MODEL_OPTS.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
+                <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms]">
+                  <SelectField
+                    value={v.model}
+                    onChange={(val) => setV((p) => ({ ...p, model: val }))}
+                    options={MODEL_OPTS}
+                  />
                 </div>
               </div>
               <div className="flex flex-col gap-[6px]">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Effort</label>
-                <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
-                  <select className="ao-select flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px] appearance-none pr-[30px]" value={v.effort} onChange={set("effort")}>
-                    {EFFORT_OPTS.map((e) => <option key={e} value={e}>{e}</option>)}
-                  </select>
+                <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms]">
+                  <SelectField
+                    value={v.effort}
+                    onChange={(val) => setV((p) => ({ ...p, effort: val }))}
+                    options={EFFORT_OPTS}
+                  />
                 </div>
               </div>
             </div>

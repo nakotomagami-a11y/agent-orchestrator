@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
 import { PageHeader } from "@/components/ui/page-header";
+import { PlanetCanvas } from "@/components/ui/planet-canvas";
+import { PlanetEditorModal } from "@/components/ui/planet-editor-modal";
 import { useGitStatus, useProject, useUpdateProject } from "../hooks/use-projects";
 import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { ProjectActivity } from "./project-activity";
@@ -37,6 +39,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [copiedPath, setCopiedPath] = useState(false);
+  const [planetEditorOpen, setPlanetEditorOpen] = useState(false);
   const [pendingDanger, setPendingDanger] = useState<"reset" | "delete" | null>(null);
   const [dangerWorking, setDangerWorking] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -86,7 +89,6 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
 
   const memValue = memoryOverride ?? project.memory;
   const rosterCount = project.meta.roster.length;
-  const initials = project.meta.name.slice(0, 2).toUpperCase();
   const rosterIds = new Set(project.meta.roster.map((r) => r.agentId));
   const projectWorkingCount = allAgents.filter(
     (a) => rosterIds.has(a.id) && (a.status === "working" || a.status === "thinking"),
@@ -182,6 +184,13 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
     <>
       {header}
       <AddAgentModal open={addOpen} projectId={id} onClose={() => setAddOpen(false)} />
+      <PlanetEditorModal
+        open={planetEditorOpen}
+        projectId={id}
+        current={project?.meta.planet}
+        onSave={(cfg) => { void updateMut.mutateAsync({ id, patch: { meta: { planet: cfg } } }); }}
+        onClose={() => setPlanetEditorOpen(false)}
+      />
     <div className="overflow-auto p-0 overflow-hidden flex flex-col">
       {/* ps-body */}
       <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-[28px] pt-[22px] pb-[48px] gap-[16px] [&>*]:shrink-0">
@@ -194,9 +203,23 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           <div className="relative z-[1] p-[24px_26px]">
             {/* Top row */}
             <div className="flex items-start gap-[18px]">
-              <div className="grid place-items-center text-white font-bold shrink-0 text-[22px] tracking-tight" style={{ width: 56, height: 56, borderRadius: 14, background: "linear-gradient(135deg, #5a8b6f 0%, #2f5a3e 100%)", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 16px rgba(47,90,62,0.4)" }}>
-                {initials}
-              </div>
+              <button
+                type="button"
+                onClick={() => setPlanetEditorOpen(true)}
+                title="Change planet"
+                className="relative shrink-0 group cursor-pointer border-0 bg-transparent p-0"
+                style={{ width: 56, height: 56 }}
+              >
+                <PlanetCanvas
+                  projectId={id}
+                  config={project.meta.planet}
+                  size={56}
+                  className="rounded-full overflow-hidden"
+                />
+                <span className="absolute inset-0 rounded-full flex items-center justify-center bg-[rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <Icon name="edit" size={16} className="text-white" />
+                </span>
+              </button>
               <div className="flex-1 min-w-0 pt-[2px]">
                 <div className="flex items-center gap-[10px] flex-wrap">
                   <h2 className="font-bold m-0 text-[20px] tracking-[-0.01em] text-txt">{project.meta.name}</h2>

@@ -15,6 +15,7 @@
     "tauri:build": "tauri build"
   },
   "dependencies": {
+    "@agent-office/pixel-planets": "workspace:*",
     "@agent-office/shared": "workspace:*",
     "@agent-office/ui": "workspace:*",
     "@tailwindcss/postcss": "^4.3.0",

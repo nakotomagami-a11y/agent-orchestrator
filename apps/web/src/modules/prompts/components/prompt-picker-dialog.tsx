@@ -276,7 +276,7 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
       {/* Backdrop */}
       <div
         role="presentation"
-        className="app-modal-backdrop fixed inset-0 bg-[rgba(20,14,12,0.55)] backdrop-blur-sm flex items-start justify-center pt-[10vh] px-[16px] z-[200]"
+        className="app-modal-backdrop fixed inset-0 bg-[rgba(10,10,18,0.60)] backdrop-blur-sm flex items-start justify-center pt-[10vh] px-[16px] z-[200]"
         onClick={onClose}
       >
         {/* Dialog panel */}
