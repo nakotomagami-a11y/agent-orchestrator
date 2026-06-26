@@ -49,9 +49,10 @@ export async function POST(request: Request) {
   const instance = projects.findInstance(project, req.instanceId);
 
   let cwd: string | undefined;
-  // Prefer instance.cwd (worktree path) over project cwd, falling back to the
-  // explicit request cwd and finally project.meta.cwd.
-  const instanceCwd = instance?.cwd;
+  // Prefer the instance worktree (self-healing: recreates a missing worktree or
+  // clears a dead pin so it falls back to the shared cwd), then the explicit
+  // request cwd, and finally project.meta.cwd.
+  const instanceCwd = projects.resolveInstanceCwd(project, instance);
   const requestedCwd = instanceCwd ?? projects.resolveSummonCwd(req.cwd, project);
   if (requestedCwd) {
     const expanded = paths.expandTilde(requestedCwd);

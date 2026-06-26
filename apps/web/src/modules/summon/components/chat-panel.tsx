@@ -25,6 +25,7 @@ import { useProject } from "@/modules/projects/hooks/use-projects";
 import { Button } from "@/components/ui/button";
 import type { ThreadItem } from "../utils/thread-types";
 import { useBranchStore } from "@/lib/branch-store";
+import { repairWorktree } from "@/lib/api/roster";
 
 export type ChatPanelProps = {
   agent: OfficeAgent;
@@ -435,6 +436,13 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
         agent={agent}
         onPickSuggestion={(text) => setPendingSeed(text)}
         onSubmit={isStreaming ? undefined : onSubmit}
+        onRepairWorktree={
+          projectId && instanceId
+            ? async () => {
+                await repairWorktree(projectId, instanceId);
+              }
+            : undefined
+        }
         phase={phase}
         phaseHint={phaseHint(phase, stream.usage)}
         phaseStats={liveStats}

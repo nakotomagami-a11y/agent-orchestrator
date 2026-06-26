@@ -52,6 +52,8 @@ export const API_ROUTES = {
   projectRoster: (id: string) => `/api/projects/${encodeURIComponent(id)}/roster`,
   projectRosterItem: (projectId: string, instanceId: string) =>
     `/api/projects/${encodeURIComponent(projectId)}/roster/${encodeURIComponent(instanceId)}`,
+  projectRosterRepairWorktree: (projectId: string, instanceId: string) =>
+    `/api/projects/${encodeURIComponent(projectId)}/roster/${encodeURIComponent(instanceId)}/repair-worktree`,
   projectUploads: (id: string) => `/api/projects/${encodeURIComponent(id)}/uploads`,
   projectUploadFile: (id: string, filename: string) =>
     `/api/projects/${encodeURIComponent(id)}/uploads/${encodeURIComponent(filename)}`,

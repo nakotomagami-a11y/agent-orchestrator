@@ -32,6 +32,97 @@ export function worktreeBranch(instanceId: string): string {
   return `agent/${instanceId}-${Date.now()}`;
 }
 
+/** Returns true if the worktree directory for an instance exists on disk and is a directory. */
+export function worktreeDirExists(projectCwd: string, instanceId: string): boolean {
+  const p = worktreePath(projectCwd, instanceId);
+  try {
+    return existsSync(p) && statSync(p).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/** Returns true if a local branch with the given name exists in the repo. */
+function branchExists(projectCwd: string, branch: string): boolean {
+  if (!branch) return false;
+  try {
+    execFileSync("git", ["show-ref", "--verify", "--quiet", `refs/heads/${branch}`], {
+      cwd: projectCwd,
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ensure a worktree directory exists for an instance, recreating it if missing.
+ * Idempotent — safe to call before every run.
+ * - If the directory already exists, returns its descriptor unchanged.
+ * - Otherwise prunes stale git registrations, then recreates the worktree,
+ *   reusing the original branch when it still exists and falling back to a
+ *   fresh branch when it doesn't.
+ * - Returns the worktree descriptor, or null if recreation failed (the caller
+ *   should then fall back to the shared project cwd).
+ */
+export function ensureWorktree(
+  projectCwd: string,
+  instanceId: string,
+  existingBranch?: string,
+): { branch: string; basePath: string; createdAt: number } | null {
+  const basePath = worktreePath(projectCwd, instanceId);
+
+  if (worktreeDirExists(projectCwd, instanceId)) {
+    return { branch: existingBranch ?? "", basePath, createdAt: Date.now() };
+  }
+
+  // A deleted directory can leave a dangling git registration that blocks re-add.
+  try {
+    execFileSync("git", ["worktree", "prune"], {
+      cwd: projectCwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch {
+    /* best-effort */
+  }
+
+  // Prefer reusing the instance's original branch so prior work is recovered.
+  if (existingBranch && branchExists(projectCwd, existingBranch)) {
+    try {
+      execFileSync("git", ["worktree", "add", basePath, existingBranch], {
+        cwd: projectCwd,
+        stdio: ["ignore", "pipe", "pipe"],
+      });
+      log.info("worktree.recreated", { projectCwd, instanceId, branch: existingBranch, basePath });
+      return { branch: existingBranch, basePath, createdAt: Date.now() };
+    } catch (err) {
+      log.warn("worktree.recreate_existing_branch_failed", {
+        instanceId,
+        branch: existingBranch,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  // Fall back to a brand-new branch off HEAD.
+  const branch = worktreeBranch(instanceId);
+  try {
+    execFileSync("git", ["worktree", "add", basePath, "-b", branch], {
+      cwd: projectCwd,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    log.info("worktree.recreated_new_branch", { projectCwd, instanceId, branch, basePath });
+    return { branch, basePath, createdAt: Date.now() };
+  } catch (err) {
+    log.warn("worktree.recreate_failed", {
+      instanceId,
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return null;
+  }
+}
+
 /**
  * Create a git worktree for an agent instance.
  * - Creates .worktrees/ directory if it doesn't exist.

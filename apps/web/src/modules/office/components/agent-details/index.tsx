@@ -78,6 +78,14 @@ function InstanceCard({
         <div className="font-mono text-[12px] font-semibold text-ao-fg-0 min-w-0 truncate">
           {label}
         </div>
+        {instance.worktreeMissing && (
+          <span
+            title="Git worktree missing — open this instance and click Repair worktree"
+            className="ml-auto inline-flex items-center gap-1 shrink-0 px-[6px] h-[18px] rounded-[9px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] text-[10px] font-semibold border border-[rgba(217,83,79,0.30)]"
+          >
+            <Icon name="wrench" size={10} /> repair
+          </span>
+        )}
       </div>
       <div className="font-mono text-[11px] text-ao-fg-2 leading-[1.4] line-clamp-2 min-h-[28px]">
         {lastLine}

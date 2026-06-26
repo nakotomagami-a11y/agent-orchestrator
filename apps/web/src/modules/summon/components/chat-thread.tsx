@@ -31,6 +31,8 @@ export type ChatThreadProps = {
   onPickSuggestion?: (text: string) => void;
   /** Direct submit - used by inline clarify reply. */
   onSubmit?: (text: string) => void;
+  /** Repairs a missing git worktree for the current instance, then auto-retries. */
+  onRepairWorktree?: () => Promise<void>;
   phase: ChatPhase;
   phaseHint?: string;
   phaseStats?: string;
@@ -46,7 +48,7 @@ const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
   { lbl: "Explain", text: "Walk me through how this part of the system handles errors." },
 ];
 
-export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, phaseHint, phaseStats, queuedMessage, onCancelQueue }: ChatThreadProps) {
+export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairWorktree, phase, phaseHint, phaseStats, queuedMessage, onCancelQueue }: ChatThreadProps) {
   const t = useTranslations("chat_thread");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
@@ -307,6 +309,14 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, phase, ph
                     onReply={isQuestion && onSubmit ? onSubmit : undefined}
                     onRerun={row.item.kind === "you" && onSubmit ? onSubmit : undefined}
                     onRetry={lastYouText ? () => onSubmit!(lastYouText) : undefined}
+                    onRepair={
+                      onRepairWorktree
+                        ? async () => {
+                            await onRepairWorktree();
+                            if (lastYouText) onSubmit?.(lastYouText);
+                          }
+                        : undefined
+                    }
                   />
                 );
               }

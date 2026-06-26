@@ -3,7 +3,7 @@
 // Rosters of agent instances live in that frontmatter.
 
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 import type { AgentInstance, AppSettings, Project, ProjectMeta, ProjectSummary, ScannedEntry } from "../types/index";
 import { expandTilde, PROJECTS_DIR } from "./paths";
 import { ensureDir, writeFileAtomic } from "./fs-atomic";
@@ -11,7 +11,15 @@ import { isYamlMapping, parseYaml, stringifyYaml, type YamlMapping, type YamlVal
 import { log } from "./log";
 import { readSettings, scanProjects, slugify, isFeatureEnabled } from "./settings";
 import { getDb } from "./db";
-import { isGitRepo, createWorktree, removeWorktree, reconcileWorktrees } from "./worktrees";
+import {
+  isGitRepo,
+  createWorktree,
+  removeWorktree,
+  reconcileWorktrees,
+  worktreePath,
+  worktreeDirExists,
+  ensureWorktree,
+} from "./worktrees";
 
 function metadataFile(id: string): string {
   return join(PROJECTS_DIR, id, "project.md");
@@ -354,7 +362,20 @@ export function reconcileAllWorktrees(settings: AppSettings | null): void {
     const rosterInstanceIds = new Set(roster.map((i) => i.instanceId));
 
     try {
+      // Direction 1: remove worktree directories with no roster entry.
       reconcileWorktrees(cwd, rosterInstanceIds);
+
+      // Direction 2: heal roster entries whose worktree directory is missing —
+      // recreate when possible, otherwise clear the dead pin so the instance
+      // falls back to the shared project cwd instead of bricking on next run.
+      const project = readProject(entry.id);
+      if (project) {
+        for (const instance of project.meta.roster) {
+          if (!hasWorktreeIntent(instance)) continue;
+          if (worktreeDirExists(cwd, instance.instanceId)) continue;
+          resolveInstanceCwd(project, instance);
+        }
+      }
     } catch (err) {
       log.warn("reconcile.project_failed", {
         projectId: entry.id,
@@ -382,6 +403,102 @@ export function resolveSummonCwd(
   const r = requested?.trim();
   if (r) return r;
   return project?.meta.cwd?.trim() || undefined;
+}
+
+const WORKTREE_PIN = `${sep}.worktrees${sep}`;
+
+/** True when the instance is meant to run in its own git worktree. */
+function hasWorktreeIntent(instance: AgentInstance): boolean {
+  return !!instance.worktree || (!!instance.cwd && instance.cwd.includes(WORKTREE_PIN));
+}
+
+/** Remove a dead worktree pin from the roster so the instance falls back to the shared cwd. */
+function clearStaleWorktree(projectId: string, instanceId: string): void {
+  const p = readProject(projectId);
+  if (!p) return;
+  const idx = p.meta.roster.findIndex((i) => i.instanceId === instanceId);
+  if (idx === -1) return;
+  const inst = { ...p.meta.roster[idx]! };
+  if (inst.cwd === undefined && inst.worktree === undefined) return;
+  delete inst.cwd;
+  delete inst.worktree;
+  const roster = [...p.meta.roster];
+  roster[idx] = inst;
+  writeMetadata(projectId, { ...p.meta, roster }, p.memory);
+  log.info("project.worktree_pin_cleared", { projectId, instanceId });
+}
+
+/**
+ * True when the instance is pinned to a git worktree whose directory is missing
+ * on disk. Used to surface a "needs repair" badge in the UI. Read-only — does
+ * not mutate the roster.
+ */
+export function instanceWorktreeMissing(project: Project | null, instance: AgentInstance): boolean {
+  if (!project || !hasWorktreeIntent(instance)) return false;
+  const projectCwd = project.meta.cwd;
+  if (!projectCwd) return true;
+  return !worktreeDirExists(projectCwd, instance.instanceId);
+}
+
+/**
+ * Resolve the working directory for a run, self-healing a missing worktree.
+ *
+ * For worktree-backed instances:
+ *  - returns the worktree path when it exists (correcting a drifted absolute
+ *    path, e.g. after the repo was moved);
+ *  - otherwise recreates the worktree (reusing the original branch when
+ *    possible) and persists the corrected pin;
+ *  - if recreation is impossible, clears the dead pin and returns undefined so
+ *    the agent degrades to the shared project cwd instead of erroring.
+ *
+ * Returns the absolute cwd, or undefined to defer to resolveSummonCwd.
+ */
+export function resolveInstanceCwd(
+  project: Project | null,
+  instance: AgentInstance | null,
+): string | undefined {
+  if (!project || !instance) return undefined;
+  if (!hasWorktreeIntent(instance)) return instance.cwd?.trim() || undefined;
+
+  const projectCwd = project.meta.cwd;
+  if (!projectCwd || !isGitRepo(projectCwd)) {
+    clearStaleWorktree(project.id, instance.instanceId);
+    return undefined;
+  }
+
+  const expected = worktreePath(projectCwd, instance.instanceId);
+
+  if (worktreeDirExists(projectCwd, instance.instanceId)) {
+    if (instance.cwd !== expected) {
+      patchInstance(project.id, instance.instanceId, {
+        cwd: expected,
+        ...(instance.worktree ? { worktree: { ...instance.worktree, basePath: expected } } : {}),
+      });
+    }
+    return expected;
+  }
+
+  const recreated = ensureWorktree(projectCwd, instance.instanceId, instance.worktree?.branch);
+  if (recreated) {
+    patchInstance(project.id, instance.instanceId, {
+      cwd: recreated.basePath,
+      worktree: {
+        branch: recreated.branch || instance.worktree?.branch || "",
+        basePath: recreated.basePath,
+        createdAt: instance.worktree?.createdAt ?? recreated.createdAt,
+      },
+    });
+    log.info("project.worktree_healed", {
+      projectId: project.id,
+      instanceId: instance.instanceId,
+      branch: recreated.branch,
+    });
+    return recreated.basePath;
+  }
+
+  clearStaleWorktree(project.id, instance.instanceId);
+  log.warn("project.worktree_unhealable", { projectId: project.id, instanceId: instance.instanceId });
+  return undefined;
 }
 
 export interface CreateProjectInput {

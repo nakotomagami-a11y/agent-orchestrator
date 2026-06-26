@@ -524,11 +524,69 @@ export type MessageBubbleProps = {
   onRerun?: (text: string) => void;
   /** Called when the user clicks Retry on an error card. */
   onRetry?: () => void;
+  /** Called when the user repairs a missing worktree on a cwd error card. */
+  onRepair?: () => Promise<void> | void;
   /** When true, hides the avatar (consecutive messages from the same sender). */
   hideAvatar?: boolean;
 };
 
-export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, hideAvatar }: MessageBubbleProps) {
+/** Heuristic: a run error caused by a missing/stale git worktree directory. */
+function isWorktreeError(message: string): boolean {
+  return /cwd not a directory/i.test(message) && /\.worktrees/.test(message);
+}
+
+function ErrorCard({
+  message,
+  onRetry,
+  onRepair,
+}: {
+  message: string;
+  onRetry?: () => void;
+  onRepair?: () => Promise<void> | void;
+}) {
+  const [repairing, setRepairing] = useState(false);
+  const showRepair = onRepair && isWorktreeError(message);
+
+  const handleRepair = async () => {
+    if (!onRepair || repairing) return;
+    setRepairing(true);
+    try {
+      await onRepair();
+    } finally {
+      setRepairing(false);
+    }
+  };
+
+  return (
+    <div className="border border-[rgba(217,83,79,0.30)] border-l-[3px] border-l-[var(--ao-bad)] rounded-[8px] px-[14px] py-3 bg-[rgba(217,83,79,0.05)] flex items-start gap-[10px]">
+      <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><Icon name="x" size={13} /></div>
+      <div className="flex-1">
+        <div className="font-semibold text-ao-fg-0 text-[13.5px]">Run error</div>
+        <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono">{message}</div>
+        <div className="mt-2 flex items-center gap-3">
+          {showRepair && (
+            <button
+              onClick={handleRepair}
+              disabled={repairing}
+              className="text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
+            >
+              <Icon name="wrench" size={11} /> {repairing ? "Repairing…" : "Repair worktree"}
+            </button>
+          )}
+          <button
+            onClick={onRetry}
+            disabled={!onRetry || repairing}
+            className="text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
+          >
+            <Icon name="refresh" size={11} /> Retry
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, onRepair, hideAvatar }: MessageBubbleProps) {
   const avatar = agent.short[0]?.toUpperCase() ?? "?";
 
   return match(item)
@@ -600,14 +658,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       <ThinkingRow id={item.id} text={item.text} avatar={avatar} hideAvatar={hideAvatar} />
     ))
     .with({ kind: "system-error" }, (item) => (
-      <div className="border border-[rgba(217,83,79,0.30)] border-l-[3px] border-l-[var(--ao-bad)] rounded-[8px] px-[14px] py-3 bg-[rgba(217,83,79,0.05)] flex items-start gap-[10px]">
-        <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><Icon name="x" size={13} /></div>
-        <div className="flex-1">
-          <div className="font-semibold text-ao-fg-0 text-[13.5px]">Run error</div>
-          <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono">{item.message}</div>
-          <button onClick={onRetry} disabled={!onRetry} className="mt-2 text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"><Icon name="refresh" size={11} /> Retry</button>
-        </div>
-      </div>
+      <ErrorCard message={item.message} onRetry={onRetry} onRepair={onRepair} />
     ))
     .with({ kind: "system-done" }, (item) => {
       const totalTok =

@@ -109,6 +109,12 @@ export interface AgentInstance {
     basePath: string; // e.g. "/path/to/project/.worktrees/frontend-craftsman-abc1"
     createdAt: number; // unix ms
   };
+  /**
+   * Transient (never persisted): set by the project read API when the instance
+   * is pinned to a git worktree whose directory is missing on disk, so the UI
+   * can surface a "needs repair" badge. Healed automatically on next run/boot.
+   */
+  worktreeMissing?: boolean;
 }
 
 export interface ProjectMeta {
