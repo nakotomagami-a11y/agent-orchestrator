@@ -18,6 +18,7 @@ import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
 import { useFlutterStore } from "@/lib/flutter-store";
 import { useThemeStore } from "@/lib/theme-store";
+import { abortAllRuns } from "@/lib/api/runs-ops";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 
 // ---------------------------------------------------------------------------
@@ -60,7 +61,7 @@ const COMMANDS: Command[] = [
     icon: "stop",
     section: "Actions",
     action: () => {
-      void fetch("/api/runs/abort-all", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+      void abortAllRuns();
     },
   },
   // ── Tools ─────────────────────────────────────────────────────────────────

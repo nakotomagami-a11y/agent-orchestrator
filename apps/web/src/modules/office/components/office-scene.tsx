@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, startTransition, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/components/ui/icon";
-import { OfficeMap, TILE, type AgentPositions, type VisibleRange } from "./office-map";
+import { TILE, type AgentPositions, type VisibleRange } from "./office-map";
 import { OfficeMapOverlay } from "./office-map-overlay";
 import { OfficePixiCanvas } from "./office-pixi-canvas";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
@@ -21,6 +21,7 @@ import { useOfficeAgents } from "../hooks/use-office-agents";
 import { useOfficeStore } from "../hooks/use-office-store";
 import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
 import { useOfficeAutoSave } from "../hooks/use-office-auto-save";
+import { getUiSettings, patchUiSettings } from "@/lib/api/ui-settings";
 import { useOfficeKeyboardShortcuts } from "../hooks/use-office-keyboard-shortcuts";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
@@ -167,9 +168,8 @@ export function OfficeScene({
   // Map layout (grid/decorations/grass) is shared by default; a per-project
   // copy is used when office-map-custom:{projectId} === "true".
   useEffect(() => {
-    fetch("/api/ui-settings")
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
+    getUiSettings()
+      .then((data) => {
         const customMap = projectId
           ? data[`office-map-custom:${projectId}`] === "true"
           : false;
@@ -213,8 +213,6 @@ export function OfficeScene({
   // Multi-instance data: roster + feature flag + spend
   const settingsQ = useSettings();
   const isMultiInstance = settingsQ.data?.features?.multiInstance === true;
-  // Pixi renderer is on by default; explicitly set features.newOfficeRenderer=false to revert to DOM path
-  const usePixiRenderer = settingsQ.data?.features?.newOfficeRenderer !== false;
   const projectQ = useProject(projectId);
   const rosterInstances = projectQ.data?.meta.roster ?? EMPTY_ROSTER;
   const spendQ = useProjectSpend(isMultiInstance ? projectId : null);
@@ -502,11 +500,7 @@ export function OfficeScene({
     if (!projectId) return;
     setUseCustomMap(true);
     // Persist the flag; the save effects will fork current state to project keys.
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [`office-map-custom:${projectId}`]: "true" }),
-    }).catch(() => {});
+    patchUiSettings({ [`office-map-custom:${projectId}`]: "true" }).catch(() => {});
   }, [projectId]);
 
   // Revert back to the shared global map layout for this project.
@@ -515,16 +509,11 @@ export function OfficeScene({
     if (!projectId) return;
     setSceneLoaded(false); // block saves while we reload global state
     setUseCustomMap(false);
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [`office-map-custom:${projectId}`]: "false" }),
-    })
+    patchUiSettings({ [`office-map-custom:${projectId}`]: "false" })
       .catch(() => {})
       .finally(() => {
-        fetch("/api/ui-settings")
-          .then((r) => r.json())
-          .then((data: Record<string, string>) => {
+        getUiSettings()
+          .then((data) => {
             if (data["office-grid"]) {
               const g = parseGrid(data["office-grid"]);
               setGrid(g ?? makeSeedGrid());
@@ -599,79 +588,47 @@ export function OfficeScene({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
-      {/* Transform wrapper: pan + zoom applied here, OfficeMap anchored at 0,0 */}
-      {usePixiRenderer ? (
-        <>
-          {/* PixiJS visual layer — camera controlled via panX/panY/zoom props */}
-          {containerSize && (
-            <OfficePixiCanvas
-              width={containerSize.w}
-              height={containerSize.h}
-              panX={panX}
-              panY={panY}
-              zoom={zoom}
-              grid={grid}
-              decorations={decorations}
-              grassColor={grassColor}
-              agentPositions={agentPositions}
-              agentsById={agentsById}
-              agentSearch={agentSearch}
-              isMultiInstance={isMultiInstance}
-              rosterInstances={rosterInstances}
-              spendByInstance={spendByInstance}
-            />
-          )}
-          {/* Interaction overlay — same world transform, handles build mode + agent clicks */}
-          <div
-            className="absolute left-0 top-0 origin-top-left pointer-events-none"
-            style={{
-              width: GRID_COLS * TILE,
-              height: GRID_ROWS * TILE,
-              transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-            }}
-          >
-            <OfficeMapOverlay
-              grid={grid}
-              decorations={decorations}
-              agentPositions={agentPositions}
-              agentsById={agentsById}
-              buildMode={buildMode}
-              tool={tool}
-              visibleRange={visibleCellRange}
-              onCellClick={onCellClick}
-              onAgentClick={onAgentClick}
-              onAgentDrop={onAgentDrop}
-            />
-          </div>
-        </>
-      ) : (
-        <div
-          className="absolute left-0 top-0 origin-top-left"
-          style={{
-            width: GRID_COLS * TILE,
-            height: GRID_ROWS * TILE,
-            transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
-          }}
-        >
-          <OfficeMap
-            grid={grid}
-            decorations={decorations}
-            agentPositions={agentPositions}
-            agentsById={agentsById}
-            grassColor={grassColor}
-            editable={buildMode}
-            tool={tool}
-            agentSearch={agentSearch}
-            onCellClick={onCellClick}
-            onAgentDrop={onAgentDrop}
-            onAgentClick={onAgentClick}
-            rosterInstances={rosterInstances}
-            isMultiInstance={isMultiInstance}
-            spendByInstance={spendByInstance}
-            visibleRange={visibleCellRange}
-          />
-        </div>
+      {/* PixiJS visual layer — camera controlled via panX/panY/zoom props */}
+      {containerSize && (
+        <OfficePixiCanvas
+          width={containerSize.w}
+          height={containerSize.h}
+          panX={panX}
+          panY={panY}
+          zoom={zoom}
+          grid={grid}
+          decorations={decorations}
+          grassColor={grassColor}
+          agentPositions={agentPositions}
+          agentsById={agentsById}
+          agentSearch={agentSearch}
+          isMultiInstance={isMultiInstance}
+          rosterInstances={rosterInstances}
+          spendByInstance={spendByInstance}
+        />
       )}
+      {/* Interaction overlay — same world transform, handles build mode + agent clicks */}
+      <div
+        className="absolute left-0 top-0 origin-top-left pointer-events-none"
+        style={{
+          width: GRID_COLS * TILE,
+          height: GRID_ROWS * TILE,
+          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+        }}
+      >
+        <OfficeMapOverlay
+          grid={grid}
+          decorations={decorations}
+          agentPositions={agentPositions}
+          agentsById={agentsById}
+          buildMode={buildMode}
+          tool={tool}
+          visibleRange={visibleCellRange}
+          onCellClick={onCellClick}
+          onAgentClick={onAgentClick}
+          onAgentDrop={onAgentDrop}
+        />
+      </div>
 
       {/* Canvas tools - top-left: zoom + recenter (hidden in build mode) */}
       <AnimatePresence initial={false}>

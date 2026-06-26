@@ -2,37 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { ModalShell } from "@/components/ui/modal-shell";
+import { getDbStats, runSeed, type DbStats, type SeedAction } from "@/lib/api/dev-seed";
 
-type SeedAction = "office" | "memory" | "all" | "clear" | "clear-all-runs" | "fix-orphans";
 type BtnState = "idle" | "loading" | "done" | "error";
-
-interface DbStats {
-  runsCount: number;
-  messagesCount: number;
-  orphansCount: number;
-  dbSizeBytes: number;
-  agentsCount: number;
-  dbPath: string;
-}
-
-async function callSeed(action: SeedAction): Promise<string> {
-  const res = await fetch("/api/dev/seed", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action }),
-  });
-  const body = await res.json() as { message?: string; error?: string };
-  if (!res.ok) throw new Error(body.error ?? "seed failed");
-  return body.message ?? "Done.";
-}
-
-async function fetchStats(): Promise<DbStats> {
-  const res = await fetch("/api/dev/seed");
-  if (!res.ok) throw new Error("failed to load stats");
-  return res.json() as Promise<DbStats>;
-}
 
 function fmtBytes(n: number): string {
   if (n < 1024) return `${n} B`;
@@ -94,11 +67,9 @@ export function DevMenu() {
   const [messages, setMessages] = useState<Partial<Record<SeedAction, string>>>({});
   const [copied, setCopied] = useState(false);
   const queryClient = useQueryClient();
-  const settingsQ = useSettings();
-  const pixiEnabled = settingsQ.data?.features?.newOfficeRenderer !== false;
 
   const loadStats = useCallback(async () => {
-    try { setStats(await fetchStats()); } catch { /* ignore */ }
+    try { setStats(await getDbStats()); } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -109,7 +80,7 @@ export function DevMenu() {
     setStates(s => ({ ...s, [action]: "loading" }));
     setMessages(m => ({ ...m, [action]: undefined }));
     try {
-      const msg = await callSeed(action);
+      const msg = await runSeed(action);
       setStates(s => ({ ...s, [action]: "done" }));
       setMessages(m => ({ ...m, [action]: msg }));
       await queryClient.invalidateQueries();
@@ -119,15 +90,6 @@ export function DevMenu() {
       setStates(s => ({ ...s, [action]: "idle" }));
       setMessages(m => ({ ...m, [action]: e instanceof Error ? e.message : "error" }));
     }
-  }
-
-  async function togglePixiRenderer() {
-    await fetch("/api/settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ features: { newOfficeRenderer: !pixiEnabled } }),
-    });
-    await queryClient.invalidateQueries();
   }
 
   async function copyDbPath() {
@@ -207,24 +169,6 @@ export function DevMenu() {
                 <span className="truncate text-txt-4 text-[10px]">{stats?.dbPath ?? "…"}</span>
               </button>
             </div>
-          </div>
-
-          {/* ── Renderer ── */}
-          <div>
-            <SectionLabel>Renderer</SectionLabel>
-            <button
-              type="button"
-              onClick={() => void togglePixiRenderer()}
-              className="w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-[12px] font-mono bg-bg-2 border border-line hover:border-line-2 text-txt-2 hover:text-txt transition-colors"
-            >
-              <span>PixiJS renderer</span>
-              <span className={`text-[11px] px-1.5 py-0.5 rounded font-semibold ${pixiEnabled ? "bg-green-900/40 text-green-400" : "bg-bg-3 text-txt-4"}`}>
-                {pixiEnabled ? "ON" : "OFF"}
-              </span>
-            </button>
-            <p className="text-[10.5px] text-txt-4 font-mono text-center mt-1">
-              {pixiEnabled ? "GPU canvas · reload to apply if just changed" : "DOM path · click to switch to PixiJS"}
-            </p>
           </div>
 
           {/* ── Utilities ── */}

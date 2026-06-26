@@ -16,8 +16,17 @@ import { useFlutterStore } from "@/lib/flutter-store";
 import { useFlutterDevices } from "@/modules/flutter/hooks/use-flutter-devices";
 import { useDevServerStore } from "@/lib/dev-server-store";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import type { DetectedCommand } from "@/app/api/projects/[id]/dev/route";
-import type { ProcessInfo } from "@/app/api/processes/route";
+import {
+  getDevConfig,
+  startDevCommand,
+  installDeps,
+  getBuildInfo,
+  startBuild as startProjectBuild,
+  clearBuildCache,
+  openProjectFolder,
+} from "@/lib/api/dev-server";
+import { listProcesses, getProcess, killProcess } from "@/lib/api/processes";
+import { abortAllRuns, listRuns } from "@/lib/api/runs-ops";
 
 // Shared compact button style for all toolbar action buttons
 const TBTN = "inline-flex items-center gap-[5px] px-[9px] h-[30px] rounded-[7px] text-[12px] text-txt-2 border border-transparent hover:bg-bg-3 hover:text-txt transition-[background,color,border-color] duration-[120ms] cursor-pointer select-none shrink-0";
@@ -39,9 +48,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
 
   const devQ = useQuery({
     queryKey: ["project-dev-config", projectId],
-    queryFn: () =>
-      fetch(`/api/projects/${projectId}/dev`)
-        .then((r) => r.json() as Promise<{ hasPackageJson: boolean; hasNodeModules: boolean; commands: DetectedCommand[] }>),
+    queryFn: () => getDevConfig(projectId),
     staleTime: 60_000,
   });
 
@@ -58,8 +65,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   useEffect(() => {
     if (commands.length === 0 || store.isReconciled(projectId)) return;
     store.markReconciled(projectId);
-    fetch("/api/processes")
-      .then((r) => r.json() as Promise<ProcessInfo[]>)
+    listProcesses()
       .then((processes) => {
         const mine = processes.filter((p) => p.projectId === projectId);
         if (mine.length === 0) return;
@@ -109,12 +115,8 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   async function runInstall() {
     setInstall("installing");
     try {
-      const res = await fetch(`/api/projects/${projectId}/install`, { method: "POST" });
-      if (res.ok) {
-        setInstall("done");
-      } else {
-        setInstall("needed");
-      }
+      await installDeps(projectId);
+      setInstall("done");
     } catch {
       setInstall("needed");
     }
@@ -123,13 +125,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   async function startCmd(key: string) {
     setKeyState(key, { phase: "starting" });
     try {
-      const res = await fetch(`/api/projects/${projectId}/dev`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ commandKey: key }),
-      });
-      const body = await res.json() as { port?: number; url?: string; pid?: number };
-      if (!res.ok) { setKeyState(key, { phase: "idle" }); return; }
+      const body = await startDevCommand(projectId, key);
       setKeyState(key, { phase: "running", pid: body.pid ?? 0, port: body.port ?? null, url: body.url ?? null });
     } catch {
       setKeyState(key, { phase: "idle" });
@@ -140,7 +136,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
     const s = getState(key);
     if (s.phase !== "running") return;
     setKeyState(key, { phase: "stopping" });
-    try { await fetch(`/api/processes/${s.pid}`, { method: "DELETE" }); } catch { /* best-effort */ }
+    try { await killProcess(s.pid); } catch { /* best-effort */ }
     setKeyState(key, { phase: "idle" });
   }
 
@@ -323,7 +319,7 @@ export function OpenFolderButton({ projectId }: { projectId: string }) {
   return (
     <Tooltip content="Open project folder" side="bottom">
       <button type="button" className={TBTN}
-        onClick={() => { void fetch(`/api/projects/${projectId}/open-folder`, { method: "POST" }); }}>
+        onClick={() => { void openProjectFolder(projectId); }}>
         <Icon name="folder" size={13} />
       </button>
     </Tooltip>
@@ -334,7 +330,7 @@ export function OpenInVSCodeButton({ projectId }: { projectId: string }) {
   return (
     <Tooltip content="Open in VS Code" side="bottom">
       <button type="button" className={TBTN}
-        onClick={() => { void fetch(`/api/projects/${projectId}/open-folder?app=code`, { method: "POST" }); }}>
+        onClick={() => { void openProjectFolder(projectId, "code"); }}>
         <Icon name="code" size={13} />
       </button>
     </Tooltip>
@@ -375,8 +371,7 @@ export function KillAgentsButton({ projectId }: { projectId: string }) {
   const countQ = useQuery({
     queryKey: ["project-running-count", projectId],
     queryFn: () =>
-      fetch(`/api/runs?project=${projectId}&limit=100`)
-        .then((r) => r.json() as Promise<Array<{ status: string }>>)
+      listRuns({ project: projectId, limit: 100 })
         .then((rs) => rs.filter((r) => r.status === "running").length),
     refetchInterval: 4000,
     staleTime: 2000,
@@ -385,11 +380,7 @@ export function KillAgentsButton({ projectId }: { projectId: string }) {
   if (count === 0) return null;
 
   async function killAll() {
-    await fetch("/api/runs/abort-all", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId }),
-    });
+    await abortAllRuns(projectId);
   }
 
   return (
@@ -415,8 +406,8 @@ export function ClearCacheButton({ projectId }: { projectId: string }) {
     if (phase !== "idle") return;
     setPhase("clearing");
     try {
-      const res = await fetch(`/api/projects/${projectId}/clear-cache`, { method: "POST" });
-      setPhase(res.ok ? "done" : "error");
+      await clearBuildCache(projectId);
+      setPhase("done");
     } catch {
       setPhase("error");
     }
@@ -461,9 +452,7 @@ export function BuildButton({ projectId }: { projectId: string }) {
 
   const buildQ = useQuery({
     queryKey: ["project-build-check", projectId],
-    queryFn: () =>
-      fetch(`/api/projects/${projectId}/build`)
-        .then((r) => r.json() as Promise<{ hasBuild: boolean }>),
+    queryFn: () => getBuildInfo(projectId),
     staleTime: 60_000,
   });
 
@@ -473,16 +462,13 @@ export function BuildButton({ projectId }: { projectId: string }) {
     if (phase !== "idle") return;
     setPhase("building");
     try {
-      const res = await fetch(`/api/projects/${projectId}/build`, { method: "POST" });
-      if (!res.ok) { setPhase("error"); setTimeout(() => setPhase("idle"), 3000); return; }
-      const body = await res.json() as { pid?: number | null };
+      const body = await startProjectBuild(projectId);
       if (!body.pid) { setPhase("done"); setTimeout(() => setPhase("idle"), 2000); return; }
 
       const pid = body.pid;
       pollRef.current = setInterval(async () => {
-        const check = await fetch(`/api/processes/${pid}`).catch(() => null);
-        if (!check?.ok) return;
-        const data = await check.json() as { alive?: boolean };
+        const data = await getProcess(pid).catch(() => null);
+        if (!data) return;
         if (!data.alive) {
           clearInterval(pollRef.current!);
           pollRef.current = null;

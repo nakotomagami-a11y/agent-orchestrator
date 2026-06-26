@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { patchUiSettings } from "@/lib/api/ui-settings";
 import type { DecorationsMap } from "../components/decorations";
 import type { AgentPositions } from "../components/office-map";
 import type { GrassColor } from "../components/grass-colors";
@@ -18,11 +19,7 @@ export function useOfficeAutoSave(params: {
     if (!sceneLoaded) return;
     const key = useCustomMap && projectId ? `office-grid:${projectId}` : "office-grid";
     const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: JSON.stringify(grid) }),
-      }).catch(() => { /* best-effort */ });
+      patchUiSettings({ [key]: JSON.stringify(grid) }).catch(() => { /* best-effort */ });
     }, 400);
     return () => clearTimeout(timer);
   }, [grid, sceneLoaded, useCustomMap, projectId]);
@@ -31,11 +28,7 @@ export function useOfficeAutoSave(params: {
     if (!sceneLoaded) return;
     const key = useCustomMap && projectId ? `office-decorations:${projectId}` : "office-decorations";
     const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: JSON.stringify(decorations) }),
-      }).catch(() => { /* best-effort */ });
+      patchUiSettings({ [key]: JSON.stringify(decorations) }).catch(() => { /* best-effort */ });
     }, 400);
     return () => clearTimeout(timer);
   }, [decorations, sceneLoaded, useCustomMap, projectId]);
@@ -44,11 +37,7 @@ export function useOfficeAutoSave(params: {
     if (!sceneLoaded) return;
     const key = projectId ? `office-agents:${projectId}` : "office-agents";
     const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: JSON.stringify(agentPositions) }),
-      }).catch(() => { /* best-effort */ });
+      patchUiSettings({ [key]: JSON.stringify(agentPositions) }).catch(() => { /* best-effort */ });
     }, 400);
     return () => clearTimeout(timer);
   }, [agentPositions, sceneLoaded, projectId]);
@@ -57,11 +46,7 @@ export function useOfficeAutoSave(params: {
     if (!sceneLoaded) return;
     const key = useCustomMap && projectId ? `office-grass-color:${projectId}` : "office-grass-color";
     const timer = setTimeout(() => {
-      fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [key]: grassColor }),
-      }).catch(() => { /* best-effort */ });
+      patchUiSettings({ [key]: grassColor }).catch(() => { /* best-effort */ });
     }, 400);
     return () => clearTimeout(timer);
   }, [grassColor, sceneLoaded, useCustomMap, projectId]);

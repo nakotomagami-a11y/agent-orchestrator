@@ -9,6 +9,14 @@ import type { ThreadItem } from "../utils/thread-types";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useCreateSavedPrompt } from "@/modules/prompts/hooks/use-saved-prompts";
+import { splitProse, type ProseItem } from "@/lib/markdown";
+import {
+  fmtDuration,
+  extractImages,
+  stripAttachmentFooter,
+  highlightTS,
+  inlineMd,
+} from "../utils/message-format";
 
 // ── Expanded-state context ────────────────────────────────────────────────────
 // A stable Map<id, open> lives in ChatThread (via useRef) so that collapsible
@@ -31,68 +39,6 @@ function useExpandedState(id: string): [boolean, () => void] {
     });
   }, [id]);
   return [open, toggle];
-}
-
-// ── Duration formatter ────────────────────────────────────────────────────────
-function fmtDuration(ms: number): string {
-  const sec = Math.round(ms / 1000);
-  if (sec < 60) return `${sec}s`;
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  if (m < 60) return s > 0 ? `${m}m ${s}s` : `${m}m`;
-  const h = Math.floor(m / 60);
-  const rm = m % 60;
-  return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
-}
-
-// ── Image handling ────────────────────────────────────────────────────────────
-const IMG_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i;
-
-/** Convert a local upload path to a servable API URL, or return http(s) URLs as-is. */
-function pathToUrl(raw: string): string | null {
-  // Agent uploads: ~/.claude/agents/_uploads/{agentId}/{filename}
-  const agentM = raw.match(/\.claude\/agents\/_uploads\/([^/\s]+)\/([^/\s]+)$/);
-  if (agentM && IMG_EXT.test(agentM[2]!)) {
-    return `/api/agents/${encodeURIComponent(agentM[1]!)}/uploads/${encodeURIComponent(agentM[2]!)}`;
-  }
-  // Project uploads: ~/.claude/projects/{projectId}/_uploads/{filename}
-  const projM = raw.match(/\.claude\/projects\/([^/\s]+)\/_uploads\/([^/\s]+)$/);
-  if (projM && IMG_EXT.test(projM[2]!)) {
-    return `/api/projects/${encodeURIComponent(projM[1]!)}/uploads/${encodeURIComponent(projM[2]!)}`;
-  }
-  // Plain HTTP/HTTPS image URL
-  if (/^https?:\/\/.+/i.test(raw) && IMG_EXT.test(raw.split("?")[0]!)) {
-    return raw;
-  }
-  return null;
-}
-
-/** Extract image references from message text, returning their API URLs. */
-function extractImages(text: string): string[] {
-  const urls: string[] = [];
-  const seen = new Set<string>();
-  // Absolute paths ending in image extension
-  const pathRe = /(\/[^\s,'"<>()[\]]+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = pathRe.exec(text)) !== null) {
-    const raw = m[1]!;
-    if (!IMG_EXT.test(raw)) continue;
-    const url = pathToUrl(raw);
-    if (url && !seen.has(url)) { seen.add(url); urls.push(url); }
-  }
-  // HTTP/HTTPS URLs
-  const urlRe = /https?:\/\/[^\s,'"<>()[\]]+/g;
-  while ((m = urlRe.exec(text)) !== null) {
-    const raw = m[0]!;
-    if (!IMG_EXT.test(raw.split("?")[0]!)) continue;
-    if (!seen.has(raw)) { seen.add(raw); urls.push(raw); }
-  }
-  return urls;
-}
-
-/** Strip the attachment footer that Claude Code appends ("Attachments (read these...)\n- /path"). */
-function stripAttachmentFooter(text: string): string {
-  return text.replace(/\n\nAttachments \(read these with your tools\):[^\n]*(?:\n- [^\n]+)*/g, "").trimEnd();
 }
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
@@ -153,61 +99,6 @@ function ImageStrip({ urls }: { urls: string[] }) {
       {urls.map((url) => <InlineImage key={url} src={url} />)}
     </div>
   );
-}
-
-type ProseItem = string | { type: "code"; lang: string; body: string };
-
-// ── Syntax highlighter ────────────────────────────────────────────────────────
-function highlightTS(src: string): string {
-  const esc = (s: string) =>
-    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  let out = esc(src);
-  out = out.replace(/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)/g, "\x01C\x01$1\x02");
-  out = out.replace(/(['"`])((?:\\.|(?!\1).)*)\1/g, "\x01S\x01$&\x02");
-  out = out.replace(
-    /\b(?:import|from|export|async|await|function|return|const|let|var|if|else|new|class|interface|type|extends|implements|public|private|protected|throw|try|catch|null|true|false|void)\b/g,
-    "\x01K\x01$&\x02",
-  );
-  out = out.replace(/\b(?:Request|Response|Date|Promise|Session|Map)\b/g, "\x01T\x01$&\x02");
-  out = out.replace(/\b\d+(?:\.\d+)?\b/g, "\x01N\x01$&\x02");
-  out = out.replace(/\b([a-zA-Z_$][\w$]*)(?=\()/g, "\x01F\x01$&\x02");
-  return out
-    .replace(/\x01C\x01([\s\S]*?)\x02/gs, '<span class="tk-com">$1</span>')
-    .replace(/\x01S\x01([\s\S]*?)\x02/g,  '<span class="tk-str">$1</span>')
-    .replace(/\x01K\x01([\s\S]*?)\x02/g,  '<span class="tk-key">$1</span>')
-    .replace(/\x01T\x01([\s\S]*?)\x02/g,  '<span class="tk-typ">$1</span>')
-    .replace(/\x01N\x01([\s\S]*?)\x02/g,  '<span class="tk-num">$1</span>')
-    .replace(/\x01F\x01([\s\S]*?)\x02/g,  '<span class="tk-fn">$1</span>');
-}
-
-// ── Inline markdown ───────────────────────────────────────────────────────────
-function inlineMd(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
-}
-
-// ── Parse text string into prose items (handles ```fenced``` blocks) ──────────
-function parseText(text: string): ProseItem[] {
-  const items: ProseItem[] = [];
-  const re = /```(\w*)\n([\s\S]*?)```/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) {
-      for (const line of text.slice(last, m.index).split("\n")) items.push(line);
-    }
-    items.push({ type: "code", lang: m[1] || "text", body: (m[2] ?? "").replace(/\n$/, "") });
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) {
-    for (const line of text.slice(last).split("\n")) items.push(line);
-  }
-  return items;
 }
 
 function copyText(text: string) {
@@ -658,7 +549,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       );
     })
     .with({ kind: "agent-text" }, (item) => {
-      const proseItems = parseText(item.text);
+      const proseItems = splitProse(item.text);
       const agentImgs = extractImages(item.text);
       const showClarify = isQuestion && !item.streaming && !!onReply;
       return (

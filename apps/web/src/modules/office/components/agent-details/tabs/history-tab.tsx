@@ -1,95 +1,41 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRuns } from "@/modules/runs/hooks/use-runs";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { Icon } from "@/components/ui/icon";
-
-function fmtDur(ms: number): string {
-  if (!ms) return "-";
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
-  const m = Math.floor(ms / 60_000);
-  const s = Math.round((ms % 60_000) / 1000);
-  return `${m}m ${s}s`;
-}
-
-function fmtNum(n: number): string {
-  if (n >= 1_000_000) return `${parseFloat((n / 1_000_000).toFixed(1))}M`;
-  if (n >= 1_000) return `${parseFloat((n / 1_000).toFixed(1))}K`;
-  return String(n);
-}
-
-function relTime(ts: number): string {
-  const diff = Date.now() - ts;
-  const m = Math.round(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.round(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.round(h / 24)}d ago`;
-}
-
-function dayLabel(ts: number): string {
-  const d = new Date(ts);
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (d.toDateString() === today.toDateString()) return "Today";
-  if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-}
+import { formatCompactNumber } from "@/modules/runs/utils/format-run-meta";
+import { useAgentHistory } from "@/modules/office/hooks/use-agent-history";
+import {
+  formatHistoryDuration,
+  formatRelativeTime,
+  runTokens,
+} from "@/modules/office/utils/history-format";
 
 export function HistoryTab({ agentId }: { agentId: string }) {
-  const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "ok" | "bad">("all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [confirmWipe, setConfirmWipe] = useState(false);
-  const qc = useQueryClient();
 
-  // Don't filter by instanceId - standalone agents always store runs as
-  // instance_id="default" regardless of the UI's selectedInstanceId.
-  const runsQ = useRuns({ agentId, limit: 200 });
+  const {
+    isLoading,
+    allRuns,
+    totalCost,
+    totalTokens,
+    successRate,
+    groups,
+    query: q,
+    setQuery: setQ,
+    filter,
+    setFilter,
+    wipe,
+    isWiping,
+  } = useAgentHistory(agentId, { onWiped: () => setConfirmWipe(false) });
 
-  const wipeMutation = useMutation({
-    mutationFn: () =>
-      fetch(`/api/runs?agent=${encodeURIComponent(agentId)}`, { method: "DELETE" }).then((r) => r.json()),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.runs.all });
-      setConfirmWipe(false);
-    },
-  });
-  const allRuns = runsQ.data ?? [];
-
-  if (runsQ.isLoading) {
+  if (isLoading) {
     return (
       <div className="px-6 pt-5 pb-6 flex-1 flex flex-col">
         <Skeleton width="100%" height={180} />
       </div>
     );
-  }
-
-  const totalCost = allRuns.reduce((s, r) => s + (r.cost || 0), 0);
-  const totalTokens = allRuns.reduce((s, r) => s + (r.tokensIn || 0) + (r.tokensOut || 0), 0);
-  const successRate = allRuns.length
-    ? Math.round(100 * allRuns.filter((r) => r.status === "done").length / allRuns.length)
-    : 0;
-
-  const filtered = allRuns.filter((r) => {
-    if (filter === "ok" && r.status !== "done") return false;
-    if (filter === "bad" && r.status === "done") return false;
-    if (q && !`${r.agentId} ${r.prompt}`.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  });
-
-  // Group by calendar day
-  const groups: { day: string; runs: typeof filtered }[] = [];
-  for (const r of filtered) {
-    const day = dayLabel(r.ts);
-    let g = groups.find((x) => x.day === day);
-    if (!g) { g = { day, runs: [] }; groups.push(g); }
-    g.runs.push(r);
   }
 
   return (
@@ -98,11 +44,11 @@ export function HistoryTab({ agentId }: { agentId: string }) {
       <div className="grid grid-cols-4 gap-[10px] mb-[16px]">
         <div className="p-[12px_14px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md">
           <div className="text-[10.5px] text-ao-fg-2 uppercase tracking-[0.1em] font-mono mb-[4px]">Total runs</div>
-          <div className="text-[18px] font-bold text-ao-fg-0">{fmtNum(allRuns.length)}</div>
+          <div className="text-[18px] font-bold text-ao-fg-0">{formatCompactNumber(allRuns.length)}</div>
         </div>
         <div className="p-[12px_14px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md">
           <div className="text-[10.5px] text-ao-fg-2 uppercase tracking-[0.1em] font-mono mb-[4px]">Tokens used</div>
-          <div className="text-[18px] font-bold text-ao-fg-0">{fmtNum(totalTokens)}</div>
+          <div className="text-[18px] font-bold text-ao-fg-0">{formatCompactNumber(totalTokens)}</div>
         </div>
         <div className="p-[12px_14px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md">
           <div className="text-[10.5px] text-ao-fg-2 uppercase tracking-[0.1em] font-mono mb-[4px]">Spend</div>
@@ -151,10 +97,10 @@ export function HistoryTab({ agentId }: { agentId: string }) {
             <button
               type="button"
               className="inline-flex items-center gap-2 px-[14px] py-[9px] rounded-ao-md bg-ao-bg-2 border border-ao-bad text-ao-bad text-[13px] hover:text-ao-fg-0 hover:border-ao-line-2"
-              onClick={() => wipeMutation.mutate()}
-              disabled={wipeMutation.isPending}
+              onClick={() => wipe()}
+              disabled={isWiping}
             >
-              {wipeMutation.isPending ? "Wiping…" : "Yes, wipe"}
+              {isWiping ? "Wiping…" : "Yes, wipe"}
             </button>
             <button type="button" className="inline-flex items-center gap-2 px-[14px] py-[9px] rounded-ao-md bg-ao-bg-2 border border-ao-line-1 text-ao-fg-1 text-[13px] hover:text-ao-fg-0 hover:border-ao-line-2" onClick={() => setConfirmWipe(false)}>
               Cancel
@@ -193,7 +139,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
               </span>
               <span className="flex-1 h-px bg-[var(--ao-line-0)]" />
               <span className="font-mono">
-                ${g.runs.reduce((s, r) => s + (r.cost || 0), 0).toFixed(3)} · {fmtNum(g.runs.reduce((s, r) => s + (r.tokensIn || 0) + (r.tokensOut || 0), 0))}
+                ${g.cost.toFixed(3)} · {formatCompactNumber(g.tokens)}
               </span>
             </div>
             {g.runs.map((r) => {
@@ -231,13 +177,13 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                       </div>
                     </div>
                     {/* Cells */}
-                    <span className="font-mono text-[12px] text-ao-fg-2 whitespace-nowrap">{fmtDur(r.durMs)}</span>
+                    <span className="font-mono text-[12px] text-ao-fg-2 whitespace-nowrap">{formatHistoryDuration(r.durMs)}</span>
                     <span className="font-mono text-[12px] text-ao-fg-1 whitespace-nowrap">
-                      {fmtNum((r.tokensIn || 0) + (r.tokensOut || 0))}
+                      {formatCompactNumber(runTokens(r))}
                       <span className="text-ao-fg-2"> tok</span>
                     </span>
                     <span className="font-mono text-[12px] text-ao-fg-1 whitespace-nowrap">${(r.cost || 0).toFixed((r.cost || 0) < 0.1 ? 3 : 2)}</span>
-                    <span className="font-mono text-[12px] text-ao-fg-2 whitespace-nowrap">{relTime(r.ts)}</span>
+                    <span className="font-mono text-[12px] text-ao-fg-2 whitespace-nowrap">{formatRelativeTime(r.ts)}</span>
                     {/* Chevron */}
                     <span
                       className={[
@@ -275,8 +221,8 @@ export function HistoryTab({ agentId }: { agentId: string }) {
                       <div className="col-span-2 flex gap-[18px] flex-wrap pt-[4px] border-t border-dashed border-[var(--ao-line-0)] mt-[-4px]">
                         {[
                           { lbl: "run id",   val: r.id },
-                          { lbl: "duration", val: fmtDur(r.durMs) },
-                          { lbl: "tokens",   val: fmtNum((r.tokensIn || 0) + (r.tokensOut || 0)) },
+                          { lbl: "duration", val: formatHistoryDuration(r.durMs) },
+                          { lbl: "tokens",   val: formatCompactNumber(runTokens(r)) },
                           { lbl: "cost",     val: `$${(r.cost || 0).toFixed(4)}` },
                           { lbl: "model",    val: r.model || "-" },
                         ].map(({ lbl, val }) => (

@@ -139,9 +139,6 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
               ))}
             </Select>
           </Field>
-          <Field label={t("agent_form.label_room")}>
-            <TextInput value={values.room} onChange={update("room")} placeholder={t("agent_form.placeholder_room")} />
-          </Field>
           <SectionDivider label="Capabilities" />
           <Field label={t("agent_form.label_skills")} span={2}>
             <TextInput value={values.skills} onChange={update("skills")} placeholder={t("agent_form.placeholder_skills")} />

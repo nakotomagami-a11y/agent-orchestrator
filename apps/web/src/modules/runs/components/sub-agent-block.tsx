@@ -7,9 +7,11 @@ import { apiFetch } from "@agent-office/shared/hooks/api";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { API_ROUTES, PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { PersistedRun } from "@agent-office/shared/types";
+import { abortRun } from "@/lib/api/runs-ops";
 import { Icon } from "@/components/ui/icon";
 import { POLL } from "@/lib/polling";
 import { formatCost, formatDuration } from "../utils/format-run-meta";
+import { groupByBatch } from "../utils/group-batch";
 
 // ── Status rendering ───────────────────────────────────────────────────────────
 
@@ -51,7 +53,7 @@ function CancelButton({ runId }: { runId: string }) {
     if (cancelling) return;
     setCancelling(true);
     try {
-      await fetch(API_ROUTES.runAbort(runId), { method: "POST" });
+      await abortRun(runId);
     } catch {
       setCancelling(false);
     }
@@ -147,29 +149,6 @@ function SubAgentRow({ run }: { run: PersistedRun }) {
 }
 
 // ── Parallel batch group ───────────────────────────────────────────────────────
-
-const PARALLEL_WINDOW_MS = 2_000;
-
-function groupByBatch(runs: PersistedRun[]): Array<PersistedRun[]> {
-  const groups: Array<PersistedRun[]> = [];
-  let current: PersistedRun[] = [];
-  let batchAnchor = 0;
-
-  for (const run of runs) {
-    if (current.length === 0) {
-      current.push(run);
-      batchAnchor = run.ts;
-    } else if (Math.abs(run.ts - batchAnchor) <= PARALLEL_WINDOW_MS) {
-      current.push(run);
-    } else {
-      groups.push(current);
-      current = [run];
-      batchAnchor = run.ts;
-    }
-  }
-  if (current.length > 0) groups.push(current);
-  return groups;
-}
 
 function BatchGroup({ runs }: { runs: PersistedRun[] }) {
   const [open, setOpen] = useState(false);

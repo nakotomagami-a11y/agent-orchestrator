@@ -10,6 +10,7 @@ import {
   EMPTY_FORM,
   type AgentFormValues,
   type FormError,
+  countDirty,
   slugifyId,
   toBody,
   validateForm,
@@ -48,13 +49,6 @@ type Effort = (typeof EFFORT_OPTS)[number];
 type Perm = "auto" | "ask" | "deny";
 
 const DESC_MAX = 240;
-
-function countDirty(values: AgentFormValues): number {
-  return (Object.keys(EMPTY_FORM) as (keyof AgentFormValues)[]).filter(
-    (k) => values[k] !== EMPTY_FORM[k]
-  ).length;
-}
-
 
 /* ── Section card ─────────────────────────────────────────────── */
 
@@ -290,7 +284,7 @@ export function NewAgentForm() {
                 <div className="flex flex-col gap-[5px]">
                   <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px] justify-between">
                     <span>Description</span>
-                    <span className="font-normal normal-case tracking-[0]" style={{ color: values.desc.length > DESC_MAX ? "var(--error)" : "var(--txt-4)" }}>
+                    <span className={`font-normal normal-case tracking-[0] ${values.desc.length > DESC_MAX ? "text-status-error" : "text-txt-4"}`}>
                       {values.desc.length}/{DESC_MAX}
                     </span>
                   </label>
@@ -334,39 +328,23 @@ export function NewAgentForm() {
               </div>
             </div>
 
-            <div className="grid gap-[14px]" style={{ gridTemplateColumns: "1fr 1fr" }}>
-              {/* Effort */}
-              <div className="flex flex-col gap-[5px]">
-                <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px]">Effort</label>
-                <div className="effort-slider grid bg-bg-1 border border-line gap-[4px] p-[4px] rounded-[8px]" style={{ gridTemplateColumns: "repeat(5,1fr)" }}>
-                  {EFFORTS.map((e) => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      className={`flex flex-col items-center cursor-pointer bg-transparent border-none px-[10px] py-[8px] rounded-[6px] font-[var(--font-mono)] text-[12px] gap-[2px] transition-[background,color] duration-[120ms] hover:not(.active):bg-bg-3 hover:not(.active):text-txt${values.effort === e.id ? " active bg-acc-faint text-acc" : " text-txt-3"}`}
-                      onClick={() => set("effort", e.id)}
-                    >
-                      <Bars count={e.bars} />
-                      {e.id}
-                    </button>
-                  ))}
-                </div>
-                <div className="text-txt-3 text-[11px] mt-[1px]">higher effort → more thinking tokens before responding</div>
+            {/* Effort */}
+            <div className="flex flex-col gap-[5px]">
+              <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px]">Effort</label>
+              <div className="effort-slider grid bg-bg-1 border border-line gap-[4px] p-[4px] rounded-[8px]" style={{ gridTemplateColumns: "repeat(5,1fr)" }}>
+                {EFFORTS.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    className={`flex flex-col items-center cursor-pointer bg-transparent border-none px-[10px] py-[8px] rounded-[6px] font-[var(--font-mono)] text-[12px] gap-[2px] transition-[background,color] duration-[120ms] hover:not(.active):bg-bg-3 hover:not(.active):text-txt${values.effort === e.id ? " active bg-acc-faint text-acc" : " text-txt-3"}`}
+                    onClick={() => set("effort", e.id)}
+                  >
+                    <Bars count={e.bars} />
+                    {e.id}
+                  </button>
+                ))}
               </div>
-
-              {/* Room */}
-              <div className="flex flex-col gap-[5px]">
-                <label className="uppercase flex items-center text-txt-3 font-semibold text-[11px] tracking-[0.06em] gap-[5px] mb-[1px]">Room <span className="text-txt-4 normal-case tracking-[0] font-[var(--font-sans)]">· optional</span></label>
-                <div className="flex items-center bg-bg-1 border border-line rounded-[7px] px-[10px] transition-[border-color] duration-[120ms] focus-within:border-[var(--acc-tint)]">
-                  <input
-                    className="flex-1 bg-transparent border-none outline-none text-txt text-[13px] font-[inherit] py-[9px]"
-                    value={values.room}
-                    onChange={(e) => set("room", e.target.value)}
-                    placeholder="e.g. Build"
-                  />
-                </div>
-                <div className="text-txt-3 text-[11px] mt-[1px]">where this agent lives in the office island</div>
-              </div>
+              <div className="text-txt-3 text-[11px] mt-[1px]">higher effort → more thinking tokens before responding</div>
             </div>
 
             {/* Permission */}

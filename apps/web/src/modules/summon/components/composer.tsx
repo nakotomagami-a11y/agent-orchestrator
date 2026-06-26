@@ -14,6 +14,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { uploadAttachment, fetchClipboardImage } from "@/lib/api/uploads";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
 import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
 import { isTauri } from "@/lib/tauri-window";
@@ -165,17 +166,10 @@ export function Composer({
     const localId = nextAttachmentId();
     setAttachments((prev) => [...prev, { localId, name: file.name, pending: true }]);
     try {
-      const form = new FormData();
-      form.append("file", file);
       const target = projectId
         ? API_ROUTES.projectUploads(projectId)
         : API_ROUTES.agentUploads(agentId);
-      const res = await fetch(target, { method: "POST", body: form });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? `HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { filename: string; path: string; size: number };
+      const data = await uploadAttachment(target, file);
       setAttachments((prev) =>
         prev.map((a) =>
           a.localId === localId
@@ -222,10 +216,8 @@ export function Composer({
         // Image paste in Tauri: clipboardData is empty due to WebKit2GTK's clipboard
         // isolation. Read the image directly from the Wayland compositor via wl-paste.
         e.preventDefault();
-        void fetch("/api/clipboard-image", { method: "POST" })
-          .then(async (res) => {
-            if (!res.ok) return;
-            const blob = await res.blob();
+        void fetchClipboardImage()
+          .then((blob) => {
             if (blob.size > 100) {
               const ext = (blob.type || "image/png").split("/")[1] ?? "png";
               void uploadOne(new File([blob], `pasted-${Date.now()}.${ext}`, { type: blob.type || "image/png" }));

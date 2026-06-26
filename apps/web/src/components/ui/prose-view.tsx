@@ -2,35 +2,13 @@
 
 import React from "react";
 import { CodeBlock } from "./code-block";
-
-type ProseItem = string | { type: "code"; lang: string; body: string };
+import { splitProse, escapeHtml, type ProseItem } from "@/lib/markdown";
 
 function inlineMd(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
+  return escapeHtml(s)
     .replace(/`([^`]+)`/g, '<code class="px-[3px] py-[1px] rounded-[4px] bg-[rgba(255,255,255,0.08)] text-[#e8ddd5] font-mono text-[0.9em]">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>");
-}
-
-function parseMd(text: string): ProseItem[] {
-  const items: ProseItem[] = [];
-  const re = /```(\w*)\n([\s\S]*?)```/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) {
-      for (const line of text.slice(last, m.index).split("\n")) items.push(line);
-    }
-    items.push({ type: "code", lang: m[1] || "text", body: (m[2] ?? "").replace(/\n$/, "") });
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) {
-    for (const line of text.slice(last).split("\n")) items.push(line);
-  }
-  return items;
 }
 
 function Prose({ items }: { items: ProseItem[] }) {
@@ -91,7 +69,7 @@ function Prose({ items }: { items: ProseItem[] }) {
 }
 
 export function ProseView({ body }: { body: string }) {
-  const items = parseMd(body);
+  const items = splitProse(body);
   return (
     <div className="text-[13px] text-txt">
       <Prose items={items} />

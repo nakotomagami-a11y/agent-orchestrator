@@ -35,3 +35,7 @@ apps/web/src-tauri/binaries/
 
 # Agent Office spawns per-agent git worktrees here — never commit them
 .worktrees/
+
+# Local symlink to the Obsidian vault docs folder (machine-specific path,
+# points outside the repo — would be a broken symlink for other developers)
+/docs

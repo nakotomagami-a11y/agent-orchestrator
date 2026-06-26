@@ -79,6 +79,27 @@ The compound-component pattern works well for primitives.
 - Extract to a sibling file when it grows beyond ~50 lines OR gets reused.
 - Don't preemptively extract - components in the same file are fine until they aren't.
 
+## Split logic from markup
+
+`.tsx` files are for JSX. Logic that isn't markup does not live in them.
+
+| Kind of logic | Where it goes |
+| --- | --- |
+| Pure helpers — formatting, parsing, grouping, classification (no React) | `src/<feature>/utils/<name>.ts` (or `src/lib/<name>.ts` if cross-feature) |
+| Stateful / derived logic — a `useState` + `useMemo` cluster, data wiring, mutations, effects | a hook in `src/<feature>/hooks/use-<name>.ts` |
+| JSX | stays in the `.tsx` |
+
+A component should read as: call a hook, map the result, render.
+
+- Never declare a module-scope `function foo()` or a fat `reduce`/`filter`/`for`
+  block inside a component file — extract it to a util or hook.
+- If the same helper appears in two files, move it to a shared util **immediately**.
+- Reuse an existing util before writing a near-duplicate. Keep a view-specific
+  variant only when its output genuinely differs (and say why).
+
+Stays inline: trivial one-off expressions, tiny event handlers
+(`onClick={() => setOpen(!open)}`), and UI-only state with no derived logic.
+
 ## Imports
 
 Use absolute imports for our code (`@/components/ui/button`). Relative imports for files in the same folder.

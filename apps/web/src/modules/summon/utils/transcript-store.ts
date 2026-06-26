@@ -1,6 +1,8 @@
 // Persists per-instance chat transcripts to the server DB via /api/transcripts.
 // Keyed by `<agentId>::<instanceId>`. Async - callers must await or fire-and-forget.
 
+import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { apiClient } from "@/lib/api-client";
 import type { ThreadItem } from "./thread-types";
 
 const MAX_ITEMS_PER_KEY = 5000;
@@ -33,9 +35,11 @@ function freeze(items: ThreadItem[]): ThreadItem[] {
 export async function loadTranscript(key: string): Promise<Transcript | null> {
   const { agentId, instanceId } = parseKey(key);
   try {
-    const res = await fetch(`/api/transcripts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`);
-    if (!res.ok) return null;
-    const data = await res.json() as { items: string; activeRunId?: string | null; sessionId?: string | null; updatedAt?: number } | null;
+    const res = await apiClient.get<{ items: string; activeRunId?: string | null; sessionId?: string | null; updatedAt?: number } | null>(
+      API_ROUTES.transcripts,
+      { params: { agentId, instanceId } },
+    );
+    const data = res.data;
     if (!data) return null;
     let items: ThreadItem[] = [];
     try { items = JSON.parse(data.items) as ThreadItem[]; } catch { items = []; }
@@ -58,17 +62,14 @@ export async function saveTranscript(
 ): Promise<void> {
   const { agentId, instanceId } = parseKey(key);
   try {
-    await fetch(
-      `/api/transcripts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`,
+    await apiClient.put(
+      API_ROUTES.transcripts,
       {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: JSON.stringify(freeze(items).slice(-MAX_ITEMS_PER_KEY)),
-          activeRunId: activeRunId ?? null,
-          sessionId: sessionId !== undefined ? sessionId : null,
-        }),
+        items: JSON.stringify(freeze(items).slice(-MAX_ITEMS_PER_KEY)),
+        activeRunId: activeRunId ?? null,
+        sessionId: sessionId !== undefined ? sessionId : null,
       },
+      { params: { agentId, instanceId } },
     );
   } catch { /* best-effort */ }
 }
@@ -76,10 +77,7 @@ export async function saveTranscript(
 export async function clearTranscript(key: string): Promise<void> {
   const { agentId, instanceId } = parseKey(key);
   try {
-    await fetch(
-      `/api/transcripts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`,
-      { method: "DELETE" },
-    );
+    await apiClient.delete(API_ROUTES.transcripts, { params: { agentId, instanceId } });
   } catch { /* best-effort */ }
 }
 
@@ -87,10 +85,11 @@ export async function listAgentTranscripts(
   agentId: string,
 ): Promise<Array<{ instanceId: string; sessionId: string | null; updatedAt: number }>> {
   try {
-    const res = await fetch(`/api/transcripts?agentId=${encodeURIComponent(agentId)}`);
-    if (!res.ok) return [];
-    const data = await res.json() as Array<{ instanceId: string; sessionId: string | null; updatedAt: number }>;
-    return Array.isArray(data) ? data : [];
+    const res = await apiClient.get<Array<{ instanceId: string; sessionId: string | null; updatedAt: number }>>(
+      API_ROUTES.transcripts,
+      { params: { agentId } },
+    );
+    return Array.isArray(res.data) ? res.data : [];
   } catch {
     return [];
   }

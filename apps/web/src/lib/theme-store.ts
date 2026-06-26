@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { create } from "zustand";
+import { getUiSettings, patchUiSettings } from "@/lib/api/ui-settings";
 
 export type Theme = "light" | "dark";
 
@@ -29,11 +30,7 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   setTheme: (next) => {
     writeDom(next);
     set({ theme: next });
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ theme: next }),
-    }).catch(() => { /* best-effort */ });
+    patchUiSettings({ theme: next }).catch(() => { /* best-effort */ });
   },
   toggle: () => {
     const next: Theme = get().theme === "dark" ? "light" : "dark";
@@ -46,9 +43,8 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     writeDom(fallback);
     set({ theme: fallback, hydrated: true });
     // Then fetch the stored preference
-    fetch("/api/ui-settings")
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
+    getUiSettings()
+      .then((data) => {
         const stored = data["theme"];
         if (stored === "dark" || stored === "light") {
           writeDom(stored);

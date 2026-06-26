@@ -8,6 +8,7 @@ import { ExpandedStateContext, MessageBubble, ToolGroupRow } from "./message-bub
 import { LiveStatus, type ChatPhase } from "./live-status";
 import type { ThreadItem } from "../utils/thread-types";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
+import { groupRows, isAgentRow, looksLikeQuestion } from "../utils/thread-rows";
 
 const LIVE_PHASES = new Set<ChatPhase>(["sending", "connecting", "working", "streaming"]);
 const CONVERSATIONAL_KINDS = new Set<string>(["you", "agent-text", "system-done", "system-error", "agent-subagent"]);
@@ -23,41 +24,6 @@ const LOAD_MORE_STEP = 50;
  *  While the user is inside this band, the thread keeps auto-scrolling on
  *  new tokens; once they scroll above it, auto-follow is paused. */
 const STICK_THRESHOLD_PX = 80;
-
-/** Either a single thread item or a consecutive run of agent-tool calls.
- *  Grouping happens at the thread layer so a chain of tool invocations reads
- *  as one rail with a single avatar, not N independent messages. */
-type RenderRow =
-  | { kind: "single"; item: ThreadItem }
-  | { kind: "tool-chain"; id: string; tools: Array<Extract<ThreadItem, { kind: "agent-tool" }>> };
-
-function looksLikeQuestion(text: string): boolean {
-  const nonEmpty = text.split("\n").filter((l) => l.trim());
-  return nonEmpty.slice(-5).some((l) => l.trimEnd().endsWith("?"));
-}
-
-function isAgentRow(row: RenderRow): boolean {
-  if (row.kind === "tool-chain") return true;
-  const k = row.item.kind;
-  return k === "agent-text" || k === "agent-tool" || k === "agent-thinking" || k === "agent-subagent";
-}
-
-function groupRows(items: ThreadItem[]): RenderRow[] {
-  const rows: RenderRow[] = [];
-  for (const item of items) {
-    const prev = rows[rows.length - 1];
-    if (item.kind === "agent-tool" && prev?.kind === "tool-chain") {
-      prev.tools.push(item);
-      continue;
-    }
-    if (item.kind === "agent-tool") {
-      rows.push({ kind: "tool-chain", id: `chain-${item.id}`, tools: [item] });
-      continue;
-    }
-    rows.push({ kind: "single", item });
-  }
-  return rows;
-}
 
 export type ChatThreadProps = {
   items: ThreadItem[];

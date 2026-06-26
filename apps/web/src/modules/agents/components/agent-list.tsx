@@ -12,7 +12,7 @@ import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import type { ApiAgent } from "@agent-office/shared/types";
 import { useAgents } from "../hooks/use-agents";
-import { categorize, tallyCategories } from "../utils/categorize";
+import { categorize, categoryColor, tallyCategories } from "../utils/categorize";
 
 /**
  * Agent gallery. Card grid styled after the v3 `TemplatesView`, with a
@@ -324,14 +324,4 @@ function AgentCard({
       </div>
     </div>
   );
-}
-
-function categoryColor(cat: string): string {
-  const m: Record<string, string> = {
-    Engineering: "#3b82f6", QA: "#10b981", Design: "#ec4899",
-    "AI & Data": "#8b5cf6", Security: "#ef4444", Docs: "#f59e0b",
-    Marketing: "#f97316", Research: "#06b6d4", Strategy: "#8b5cf6",
-    Build: "#e95420",
-  };
-  return m[cat] ?? "#8A8079";
 }

@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { create } from "zustand";
 import { match } from "ts-pattern";
 import { type LimitsPeriod, type HardCap, parseLimits as parseLimitsCore, periodStart, periodEnd } from "@/lib/claude-limits";
+import { getUiSettings, patchUiSettings } from "@/lib/api/ui-settings";
+import { getAccount } from "@/lib/api/account";
 
 export type { LimitsPeriod, HardCap };
 export { periodStart, periodEnd };
@@ -60,20 +62,13 @@ export const useClaudeLimitsStore = create<LimitsState>((set, get) => ({
     set(merged);
     // Persist only user-configurable fields (plan comes from credentials, not stored here)
     const toSave = { quotaUsd: merged.quotaUsd, period: merged.period, hardCap: merged.hardCap };
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "claude-limits": JSON.stringify(toSave) }),
-    }).catch(() => { /* best-effort */ });
+    patchUiSettings({ "claude-limits": JSON.stringify(toSave) }).catch(() => { /* best-effort */ });
   },
   hydrate: () => {
     if (get().hydrated) return;
     set({ hydrated: true });
     // Load user settings and real plan in parallel
-    Promise.all([
-      fetch("/api/ui-settings").then((r) => r.json() as Promise<Record<string, string>>),
-      fetch("/api/account").then((r) => r.json() as Promise<{ plan: ClaudePlan }>),
-    ])
+    Promise.all([getUiSettings(), getAccount()])
       .then(([settings, account]) => {
         const stored = settings["claude-limits"];
         const limits = stored ? parseLimits(stored) : DEFAULTS;

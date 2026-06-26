@@ -9,25 +9,15 @@ import { useGitStatus, useProject, useUpdateProject } from "../hooks/use-project
 import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { ProjectActivity } from "./project-activity";
 import { AddAgentModal } from "./add-agent-modal";
-import { apiFetch } from "@agent-office/shared/hooks/api";
+import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { exportProject, importState } from "@/lib/api/save";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { ProjectActionsBar } from "@/modules/office/components/office-toolbar";
-
-function relativeTime(ts: number): string {
-  const diff = Date.now() - ts;
-  const m = Math.floor(diff / 60_000);
-  if (m < 2) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  if (d < 30) return `${d}d ago`;
-  return `${Math.floor(d / 30)}mo ago`;
-}
+import { relativeTime } from "../utils/format";
 
 export type ProjectDetailProps = { id: string };
 
@@ -132,10 +122,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
   };
 
   const handleExport = async () => {
-    const url = `/api/save/export?projectId=${encodeURIComponent(id)}${includeHistory ? "&history=1" : ""}`;
-    const res = await fetch(url);
-    if (!res.ok) return;
-    const blob = await res.blob();
+    const blob = await exportProject(id, includeHistory).catch(() => null);
+    if (!blob) return;
     const project = projectQ.data;
     const slug = project
       ? project.meta.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
@@ -158,19 +146,13 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
     try {
       const text = await file.text();
       const json = JSON.parse(text) as unknown;
-      const res = await fetch("/api/save/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(json),
-      });
-      const data = await res.json() as { agentCount?: number; detail?: string; error?: string };
-      if (res.ok) {
-        setImportStatus({ ok: true, msg: t("project_detail.import_success", { count: data.agentCount }) });
-      } else {
-        setImportStatus({ ok: false, msg: data.detail ?? data.error ?? "Import failed" });
-      }
+      const data = await importState(json);
+      setImportStatus({ ok: true, msg: t("project_detail.import_success", { count: data.agentCount }) });
     } catch (err) {
-      setImportStatus({ ok: false, msg: String(err) });
+      const msg = err instanceof ApiError
+        ? ((err.data?.detail as string | undefined) ?? err.message)
+        : String(err);
+      setImportStatus({ ok: false, msg });
     } finally {
       setImporting(false);
       if (fileRef.current) fileRef.current.value = "";

@@ -1,5 +1,8 @@
 // Persists per-conversation composer draft text via /api/drafts.
 
+import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { apiClient } from "@/lib/api-client";
+
 function parseKey(key: string): { agentId: string; instanceId: string } {
   const idx = key.indexOf("::");
   if (idx === -1) return { agentId: key, instanceId: "default" };
@@ -9,10 +12,8 @@ function parseKey(key: string): { agentId: string; instanceId: string } {
 export async function loadDraft(key: string): Promise<string> {
   const { agentId, instanceId } = parseKey(key);
   try {
-    const res = await fetch(`/api/drafts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`);
-    if (!res.ok) return "";
-    const data = await res.json() as { text: string };
-    return typeof data.text === "string" ? data.text : "";
+    const res = await apiClient.get<{ text: string }>(API_ROUTES.drafts, { params: { agentId, instanceId } });
+    return typeof res.data.text === "string" ? res.data.text : "";
   } catch {
     return "";
   }
@@ -21,14 +22,7 @@ export async function loadDraft(key: string): Promise<string> {
 export async function saveDraft(key: string, text: string): Promise<void> {
   const { agentId, instanceId } = parseKey(key);
   try {
-    await fetch(
-      `/api/drafts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      },
-    );
+    await apiClient.put(API_ROUTES.drafts, { text }, { params: { agentId, instanceId } });
   } catch { /* best-effort */ }
 }
 

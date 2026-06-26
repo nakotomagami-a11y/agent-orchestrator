@@ -2,12 +2,7 @@
 
 import { useState } from "react";
 import { cn } from "@/lib/cn";
-
-// ── html escape ───────────────────────────────────────────────────────────────
-
-function esc(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
+import { escapeHtml as esc } from "@/lib/markdown";
 
 // ── Syntax highlight helpers (exported so other editors can reuse) ─────────────
 

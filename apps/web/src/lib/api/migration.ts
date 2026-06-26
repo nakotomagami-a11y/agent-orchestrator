@@ -9,16 +9,12 @@
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { apiClient } from "@/lib/api-client";
 
-export type UiSettingsPatch = Record<string, string>;
+export { patchUiSettings, type UiSettingsPatch } from "./ui-settings";
 
 export interface TranscriptPayload {
   items: string;
   activeRunId: string | null;
   sessionId: string | null;
-}
-
-export async function patchUiSettings(patch: UiSettingsPatch): Promise<void> {
-  await apiClient.patch(API_ROUTES.uiSettings, patch);
 }
 
 export async function putTranscript(

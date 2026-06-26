@@ -8,7 +8,7 @@ export async function GET() {
   return NextResponse.json(settings.readSettings());
 }
 
-/** Partial-update for feature flags: PATCH { features: { newOfficeRenderer: boolean } } */
+/** Partial-update for feature flags: PATCH { features: { multiInstance: boolean } } */
 export async function PATCH(request: Request) {
   const raw: unknown = await request.json();
   const current = settings.readSettings();

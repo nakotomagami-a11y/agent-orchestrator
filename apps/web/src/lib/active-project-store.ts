@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { create } from "zustand";
+import { getUiSettings, patchUiSettings } from "@/lib/api/ui-settings";
 
 type ActiveProjectState = {
   id: string | null;
@@ -13,18 +14,13 @@ export const useActiveProjectStore = create<ActiveProjectState>((set, get) => ({
   hydrated: false,
   setId: (next) => {
     set({ id: next });
-    fetch("/api/ui-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ "active-project": next ?? "" }),
-    }).catch(() => { /* best-effort */ });
+    patchUiSettings({ "active-project": next ?? "" }).catch(() => { /* best-effort */ });
   },
   hydrate: () => {
     if (get().hydrated) return;
     set({ hydrated: true });
-    fetch("/api/ui-settings")
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
+    getUiSettings()
+      .then((data) => {
         const stored = data["active-project"];
         set({ id: stored && stored.length > 0 ? stored : null });
       })

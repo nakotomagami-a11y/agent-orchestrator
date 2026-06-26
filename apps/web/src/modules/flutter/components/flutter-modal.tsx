@@ -6,6 +6,14 @@ import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon } from "@/components/ui/icon";
 import { useFlutterStore } from "@/lib/flutter-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
+import { ApiError } from "@/lib/api-client";
+import { getProcess, getProcessLogs, sendProcessStdin } from "@/lib/api/processes";
+import {
+  getFlutterRunStatus,
+  startFlutterRun,
+  stopFlutterRun,
+  launchFlutterMirror,
+} from "@/lib/api/flutter";
 import { useFlutterDevices } from "../hooks/use-flutter-devices";
 import type { FlutterDevice } from "../hooks/use-flutter-devices";
 
@@ -73,19 +81,17 @@ function LogView({ pid }: { pid: number | null }) {
 
   useEffect(() => {
     if (!pid) { setLines([]); return; }
+    const activePid = pid;
     let cancelled = false;
     let lastCount = 0;
 
     async function poll() {
       if (cancelled) return;
       try {
-        const res = await fetch(`/api/processes/${pid}/logs`);
-        if (res.ok) {
-          const data = await res.json() as { lines: string[]; exitCode: number | null; found: boolean };
-          if (data.lines.length !== lastCount) {
-            lastCount = data.lines.length;
-            setLines(data.lines.slice(-80).map((text) => ({ text, key: lineKey.current++ })));
-          }
+        const data = await getProcessLogs(activePid);
+        if (data.lines.length !== lastCount) {
+          lastCount = data.lines.length;
+          setLines(data.lines.slice(-80).map((text) => ({ text, key: lineKey.current++ })));
         }
       } catch { /* ignore */ }
       if (!cancelled) setTimeout(poll, 1500);
@@ -159,11 +165,7 @@ function ScreenPanel({ deviceId }: { deviceId: string | null }) {
   }, []);
 
   async function launchMirror() {
-    await fetch("/api/flutter/mirror", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ deviceId }),
-    });
+    await launchFlutterMirror(deviceId);
   }
 
   return (
@@ -273,12 +275,11 @@ function RunPanel({
 
   // Reconcile on mount: check if flutter is already running
   useEffect(() => {
-    const key = effectivePath
-      ? `?customPath=${encodeURIComponent(effectivePath)}`
-      : projectId ? `?projectId=${encodeURIComponent(projectId)}` : null;
-    if (!key) return;
-    fetch(`/api/flutter/run${key}`)
-      .then((r) => r.json() as Promise<{ pid: number | null; alive: boolean }>)
+    const target = effectivePath
+      ? { customPath: effectivePath }
+      : projectId ? { projectId } : null;
+    if (!target) return;
+    getFlutterRunStatus(target)
       .then(({ pid, alive }) => {
         if (alive && pid) setRunState({ phase: "running", pid });
       })
@@ -296,13 +297,10 @@ function RunPanel({
     async function poll() {
       if (cancelled) return;
       try {
-        const res = await fetch(`/api/processes/${pid}`);
-        if (res.ok) {
-          const data = await res.json() as { alive: boolean };
-          if (!data.alive) {
-            setRunState({ phase: "idle" });
-            return;
-          }
+        const data = await getProcess(pid);
+        if (!data.alive) {
+          setRunState({ phase: "idle" });
+          return;
         }
       } catch { /* ignore */ }
       if (!cancelled) pollRef.current = setTimeout(poll, 3000);
@@ -315,31 +313,31 @@ function RunPanel({
     if (!deviceId || (!effectivePath && !projectId)) return;
     setRunState({ phase: "starting" });
     try {
-      const res = await fetch("/api/flutter/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ projectId: effectivePath ? undefined : projectId, deviceId, customPath: effectivePath ?? undefined }),
+      const body = await startFlutterRun({
+        projectId: effectivePath ? undefined : projectId ?? undefined,
+        deviceId,
+        customPath: effectivePath ?? undefined,
       });
-      const body = await res.json() as { pid?: number; error?: string };
-      if (!res.ok || !body.pid) {
+      if (!body.pid) {
         setRunState({ phase: "error", message: body.error ?? "Failed to start flutter run" });
         setTimeout(() => setRunState({ phase: "idle" }), 6000);
         return;
       }
       setRunState({ phase: "running", pid: body.pid });
-    } catch {
-      setRunState({ phase: "error", message: "Network error — is the server running?" });
-      setTimeout(() => setRunState({ phase: "idle" }), 4000);
+    } catch (e) {
+      const serverError = e instanceof ApiError && e.status !== 0;
+      setRunState({
+        phase: "error",
+        message: serverError ? e.message : "Network error — is the server running?",
+      });
+      setTimeout(() => setRunState({ phase: "idle" }), serverError ? 6000 : 4000);
     }
   }
 
   async function stopRun() {
     setRunState({ phase: "stopping" });
     try {
-      const qs = effectivePath
-        ? `customPath=${encodeURIComponent(effectivePath)}`
-        : `projectId=${encodeURIComponent(projectId ?? "")}`;
-      await fetch(`/api/flutter/run?${qs}`, { method: "DELETE" });
+      await stopFlutterRun(effectivePath ? { customPath: effectivePath } : { projectId: projectId ?? "" });
     } catch { /* best-effort */ }
     setRunState({ phase: "idle" });
   }
@@ -351,11 +349,7 @@ function RunPanel({
 
   async function sendStdin(data: string) {
     if (!pid) return;
-    await fetch(`/api/processes/${pid}/stdin`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data }),
-    });
+    await sendProcessStdin(pid, data);
   }
 
   return (

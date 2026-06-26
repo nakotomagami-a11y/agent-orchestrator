@@ -25,6 +25,9 @@ export const PAGE_ROUTES = {
 export const API_ROUTES = {
   health: "/api/health",
   templates: "/api/templates",
+  account: "/api/account",
+  clipboardImage: "/api/clipboard-image",
+  devSeed: "/api/dev/seed",
 
   agents: "/api/agents",
   agentsBulk: "/api/agents/bulk",
@@ -52,6 +55,23 @@ export const API_ROUTES = {
   projectUploads: (id: string) => `/api/projects/${encodeURIComponent(id)}/uploads`,
   projectUploadFile: (id: string, filename: string) =>
     `/api/projects/${encodeURIComponent(id)}/uploads/${encodeURIComponent(filename)}`,
+  projectGitStatus: (id: string) => `/api/projects/${encodeURIComponent(id)}/git-status`,
+  projectDev: (id: string) => `/api/projects/${encodeURIComponent(id)}/dev`,
+  projectBuild: (id: string) => `/api/projects/${encodeURIComponent(id)}/build`,
+  projectInstall: (id: string) => `/api/projects/${encodeURIComponent(id)}/install`,
+  projectOpenFolder: (id: string) => `/api/projects/${encodeURIComponent(id)}/open-folder`,
+  projectClearCache: (id: string) => `/api/projects/${encodeURIComponent(id)}/clear-cache`,
+
+  processes: "/api/processes",
+  process: (pid: number) => `/api/processes/${pid}`,
+  processLogs: (pid: number) => `/api/processes/${pid}/logs`,
+  processStdin: (pid: number) => `/api/processes/${pid}/stdin`,
+
+  flutterRun: "/api/flutter/run",
+  flutterMirror: "/api/flutter/mirror",
+
+  saveExport: "/api/save/export",
+  saveImport: "/api/save/import",
 
   skillsRegistry: "/api/skills/registry",
   skillsInstalled: "/api/skills/installed",
@@ -62,6 +82,7 @@ export const API_ROUTES = {
   skillUpdate: (name: string) => `/api/skills/${encodeURIComponent(name)}/update`,
 
   runs: "/api/runs",
+  runsAbortAll: "/api/runs/abort-all",
   run: (id: string) => `/api/runs/${encodeURIComponent(id)}`,
   runStream: (id: string) => `/api/runs/${encodeURIComponent(id)}/stream`,
   runAbort: (id: string) => `/api/runs/${encodeURIComponent(id)}/abort`,

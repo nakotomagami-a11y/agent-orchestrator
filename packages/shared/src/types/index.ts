@@ -124,7 +124,6 @@ export interface AppSettings {
   firstRunComplete: boolean;
   features?: {
     multiInstance?: boolean;
-    newOfficeRenderer?: boolean;
   };
 }
 

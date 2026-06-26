@@ -31,6 +31,17 @@ export function categorize(agent: ApiAgent): string {
   return "Other";
 }
 
+/** Brand color for a department/category tag. Falls back to a neutral grey. */
+export function categoryColor(cat: string): string {
+  const m: Record<string, string> = {
+    Engineering: "#3b82f6", QA: "#10b981", Design: "#ec4899",
+    "AI & Data": "#8b5cf6", Security: "#ef4444", Docs: "#f59e0b",
+    Marketing: "#f97316", Research: "#06b6d4", Strategy: "#8b5cf6",
+    Build: "#e95420",
+  };
+  return m[cat] ?? "#8A8079";
+}
+
 /**
  * Count agents per category. Used by the filter chips to show how many
  * agents are in each bucket.

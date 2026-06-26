@@ -58,7 +58,7 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 - **Next.js 15** (App Router) + **React 19** + **TypeScript**
 - **Tailwind CSS v4** + custom design system (Ubuntu Yaru / GNOME aesthetic - Yaru orange `#E95420` + aubergine)
 - **Pixi.js v8** for the isometric office canvas
-- **Zustand** for client stores, **TanStack Query** + **axios** for server state (API calls live in `src/lib/api/` modules — see [`apps/web/docs/data-fetching.md`](apps/web/docs/data-fetching.md))
+- **Zustand** for client stores, **TanStack Query** + **axios** for server state (API calls live in `src/lib/api/` modules — see [`docs/data-fetching.md`](docs/data-fetching.md))
 - **better-sqlite3** at `~/.claude/agent-office/db.sqlite` - runs, messages, transcripts, drafts, pipelines, saved prompts, UI state
 - **framer-motion** for page + modal transitions
 - **ts-pattern** + **zod** for typed control flow and validation
