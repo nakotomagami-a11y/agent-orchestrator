@@ -557,15 +557,17 @@ function RateLimitCard({
   const runsQ    = useRuns({ limit: 500 });
   const allRuns  = runsQ.data ?? [];
 
-  const pctLabel = useMemo(() => {
-    if (quotaUsd <= 0) return null;
+  const usageLabel = useMemo(() => {
     const start = periodStart(period);
     const end   = periodEnd(period);
     const cost  = allRuns
       .filter((r) => r.ts >= start && r.ts < end)
       .reduce((s, r) => s + (r.cost || 0), 0);
-    const pct = Math.round((cost / quotaUsd) * 100);
-    return `${pct}% of $${quotaUsd} cap`;
+    if (quotaUsd > 0) {
+      const pct = Math.round((cost / quotaUsd) * 100);
+      return `used ${pct}%`;
+    }
+    return `$${cost.toFixed(2)} spent`;
   }, [allRuns, quotaUsd, period]);
 
   // Countdown to reset
@@ -600,9 +602,7 @@ function RateLimitCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-semibold text-ao-fg-0 text-[13.5px]">Rate limited</span>
-          {pctLabel && (
-            <span className="font-mono text-[11px] px-[6px] py-[2px] rounded-full bg-[rgba(234,179,8,0.12)] text-[#ca8a04]">{pctLabel}</span>
-          )}
+          <span className="font-mono text-[11px] px-[6px] py-[2px] rounded-full bg-[rgba(234,179,8,0.12)] text-[#ca8a04]">{usageLabel}</span>
         </div>
         <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono leading-[1.5]">{message}</div>
         {secsLeft !== null && secsLeft > 0 && (

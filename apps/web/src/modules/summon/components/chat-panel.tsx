@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { match } from "ts-pattern";
 import { ChatHead } from "./chat-head";
@@ -62,6 +63,7 @@ export type ChatPanelProps = {
  */
 export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNavigateTab, noHeader, newThreadSignal, onActiveRunChange }: ChatPanelProps) {
   const qc = useQueryClient();
+  const wfDebugRunId = useSearchParams().get("wf_debug");
   const summon = useSummon();
   const abort = useAbortRun();
   const projectQ = useProject(projectId ?? null);
@@ -349,7 +351,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
         <ChatHead
           agent={agent}
           onNew={newThread}
-          actions={activeRunId ? <WorkflowPill runId={activeRunId} active={isStreaming} /> : null}
+          actions={(activeRunId ?? wfDebugRunId) ? <WorkflowPill runId={(activeRunId ?? wfDebugRunId)!} active={isStreaming} /> : null}
         />
       )}
 
