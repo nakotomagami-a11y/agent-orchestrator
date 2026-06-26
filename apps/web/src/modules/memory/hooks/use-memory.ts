@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { match } from "ts-pattern";
 import { apiFetch } from "@agent-office/shared/hooks/api";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 
@@ -14,25 +15,19 @@ export type MemoryScope =
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function endpointFor(scope: MemoryScope): string {
-  switch (scope.kind) {
-    case "global":
-      return API_ROUTES.memoryGlobal;
-    case "project":
-      return API_ROUTES.projectMemory(scope.id);
-    case "agent":
-      return API_ROUTES.agentMemory(scope.id);
-  }
+  return match(scope)
+    .with({ kind: "global" }, () => API_ROUTES.memoryGlobal)
+    .with({ kind: "project" }, (s) => API_ROUTES.projectMemory(s.id))
+    .with({ kind: "agent" }, (s) => API_ROUTES.agentMemory(s.id))
+    .exhaustive();
 }
 
 function queryKeyFor(scope: MemoryScope): readonly unknown[] {
-  switch (scope.kind) {
-    case "global":
-      return ["memory", "global"] as const;
-    case "project":
-      return ["memory", "project", scope.id] as const;
-    case "agent":
-      return ["memory", "agent", scope.id] as const;
-  }
+  return match(scope)
+    .with({ kind: "global" }, () => ["memory", "global"] as const)
+    .with({ kind: "project" }, (s) => ["memory", "project", s.id] as const)
+    .with({ kind: "agent" }, (s) => ["memory", "agent", s.id] as const)
+    .exhaustive();
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────

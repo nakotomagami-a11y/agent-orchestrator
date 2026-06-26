@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { match } from "ts-pattern";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
 import { useCompareStore } from "@/lib/compare-store";
@@ -11,6 +12,21 @@ const AGENT_TABS: AgentTab[] = ["conversation", "history", "memory", "settings"]
 function isAgentTab(v: string | null): v is AgentTab {
   return AGENT_TABS.includes(v as AgentTab);
 }
+
+// Keys (besides "modal") that describe modal payloads; cleared unless kept.
+const PAYLOAD_KEYS = ["run", "agent", "tab", "instance"] as const;
+function clearPayload(sp: URLSearchParams, keep: readonly string[] = []) {
+  for (const k of PAYLOAD_KEYS) if (!keep.includes(k)) sp.delete(k);
+}
+
+// The single source of truth for "which modal is open", resolved by priority
+// from the independent modal stores.
+type ModalState =
+  | { kind: "limits" }
+  | { kind: "processes" }
+  | { kind: "compare"; runId: string }
+  | { kind: "agent"; agentId: string; instanceId: string | null; tab: AgentTab | null }
+  | { kind: "none" };
 
 // Syncs ?modal= search param ↔ modal store state.
 // Mount: reads URL and opens the correct modal.
@@ -28,14 +44,12 @@ export function ModalUrlSync() {
   const compareOpen  = useCompareStore((s) => s.open);
   const compareRunId = useCompareStore((s) => s.baseRunId);
   const openCompare  = useCompareStore((s) => s.openWith);
-  const closeCompare = useCompareStore((s) => s.close);
 
   const inspectorOpen       = useOfficeStore((s) => s.inspectorOpen);
   const selectedId          = useOfficeStore((s) => s.selectedId);
   const selectedInstanceId  = useOfficeStore((s) => s.selectedInstanceId);
   const activeTab           = useOfficeStore((s) => s.activeTab);
   const select              = useOfficeStore((s) => s.select);
-  const closeInspector      = useOfficeStore((s) => s.closeInspector);
 
   // Prevent the store-watch effect from firing while we're applying URL state.
   const applyingUrl = useRef(false);
@@ -45,31 +59,24 @@ export function ModalUrlSync() {
     const modal = params.get("modal");
     if (!modal) return;
     applyingUrl.current = true;
-    switch (modal) {
-      case "limits":
-        setLimitsOpen(true);
-        break;
-      case "processes":
-        setProcessesOpen(true);
-        break;
-      case "compare": {
+    match(modal)
+      .with("limits", () => setLimitsOpen(true))
+      .with("processes", () => setProcessesOpen(true))
+      .with("compare", () => {
         const runId = params.get("run");
         if (runId) openCompare(runId);
-        break;
-      }
-      case "agent": {
+      })
+      .with("agent", () => {
         const agentId = params.get("agent");
+        if (!agentId) return;
         const tab = params.get("tab");
         const instanceId = params.get("instance");
-        if (agentId) {
-          select(agentId, {
-            tab: isAgentTab(tab) ? tab : undefined,
-            instanceId: instanceId ?? null,
-          });
-        }
-        break;
-      }
-    }
+        select(agentId, {
+          tab: isAgentTab(tab) ? tab : undefined,
+          instanceId: instanceId ?? null,
+        });
+      })
+      .otherwise(() => {});
     setTimeout(() => { applyingUrl.current = false; }, 0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -77,38 +84,59 @@ export function ModalUrlSync() {
   // ── Store → URL ───────────────────────────────────────────────────────────
   useEffect(() => {
     if (applyingUrl.current) return;
-    const url = new URL(window.location.href);
-    const prev = url.searchParams.get("modal");
 
-    if (limitsOpen) {
-      url.searchParams.set("modal", "limits");
-      for (const k of ["run", "agent", "tab", "instance"]) url.searchParams.delete(k);
-    } else if (processesOpen) {
-      url.searchParams.set("modal", "processes");
-      for (const k of ["run", "agent", "tab", "instance"]) url.searchParams.delete(k);
-    } else if (compareOpen && compareRunId) {
-      url.searchParams.set("modal", "compare");
-      url.searchParams.set("run", compareRunId);
-      for (const k of ["agent", "tab", "instance"]) url.searchParams.delete(k);
-    } else if (inspectorOpen && selectedId) {
-      url.searchParams.set("modal", "agent");
-      url.searchParams.set("agent", selectedId);
-      if (selectedInstanceId) url.searchParams.set("instance", selectedInstanceId);
-      else url.searchParams.delete("instance");
-      if (activeTab && activeTab !== "conversation") url.searchParams.set("tab", activeTab);
-      else url.searchParams.delete("tab");
-      for (const k of ["run"]) url.searchParams.delete(k);
-    } else {
-      url.searchParams.delete("modal");
-      for (const k of ["run", "agent", "tab", "instance"]) url.searchParams.delete(k);
-    }
+    const state: ModalState =
+      limitsOpen ? { kind: "limits" }
+      : processesOpen ? { kind: "processes" }
+      : compareOpen && compareRunId ? { kind: "compare", runId: compareRunId }
+      : inspectorOpen && selectedId
+        ? {
+            kind: "agent",
+            agentId: selectedId,
+            instanceId: selectedInstanceId,
+            tab: activeTab && activeTab !== "conversation" ? activeTab : null,
+          }
+        : { kind: "none" };
+
+    const url = new URL(window.location.href);
+    const sp = url.searchParams;
+    const prev = sp.get("modal");
+
+    match(state)
+      .with({ kind: "limits" }, () => {
+        sp.set("modal", "limits");
+        clearPayload(sp);
+      })
+      .with({ kind: "processes" }, () => {
+        sp.set("modal", "processes");
+        clearPayload(sp);
+      })
+      .with({ kind: "compare" }, ({ runId }) => {
+        sp.set("modal", "compare");
+        sp.set("run", runId);
+        clearPayload(sp, ["run"]);
+      })
+      .with({ kind: "agent" }, ({ agentId, instanceId, tab }) => {
+        sp.set("modal", "agent");
+        sp.set("agent", agentId);
+        if (instanceId) sp.set("instance", instanceId);
+        else sp.delete("instance");
+        if (tab) sp.set("tab", tab);
+        else sp.delete("tab");
+        clearPayload(sp, ["agent", "instance", "tab"]);
+      })
+      .with({ kind: "none" }, () => {
+        sp.delete("modal");
+        clearPayload(sp);
+      })
+      .exhaustive();
 
     const next = url.pathname + url.search;
     const current = window.location.pathname + window.location.search;
     if (next !== current) {
       // push when opening (adds history entry so back closes it),
       // replace when closing (don't pollute history with closed state)
-      const opening = !prev && url.searchParams.has("modal");
+      const opening = !prev && sp.has("modal");
       if (opening) router.push(next, { scroll: false });
       else router.replace(next, { scroll: false });
     }

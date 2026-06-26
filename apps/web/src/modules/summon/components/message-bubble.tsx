@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { match } from "ts-pattern";
 import { cn } from "@/lib/cn";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
@@ -639,8 +640,8 @@ export type MessageBubbleProps = {
 export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, hideAvatar }: MessageBubbleProps) {
   const avatar = agent.short[0]?.toUpperCase() ?? "?";
 
-  switch (item.kind) {
-    case "you": {
+  return match(item)
+    .with({ kind: "you" }, (item) => {
       const youImgs = extractImages(item.text);
       const youText = stripAttachmentFooter(item.text);
       return (
@@ -655,9 +656,8 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
           </div>
         </div>
       );
-    }
-
-    case "agent-text": {
+    })
+    .with({ kind: "agent-text" }, (item) => {
       const proseItems = parseText(item.text);
       const agentImgs = extractImages(item.text);
       const showClarify = isQuestion && !item.streaming && !!onReply;
@@ -696,36 +696,29 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
           </div>
         </div>
       );
-    }
-
-    case "agent-tool":
-      return (
-        <ToolGroupRow
-          id={item.id}
-          tools={[{ id: item.id, name: item.name, arg: item.arg }]}
-          avatar={avatar}
-        />
-      );
-
-    case "agent-subagent":
-      return <SubAgentCard item={item} />;
-
-    case "agent-thinking":
-      return <ThinkingRow id={item.id} text={item.text} avatar={avatar} hideAvatar={hideAvatar} />;
-
-    case "system-error":
-      return (
-        <div className="border border-[rgba(217,83,79,0.30)] border-l-[3px] border-l-[var(--ao-bad)] rounded-[8px] px-[14px] py-3 bg-[rgba(217,83,79,0.05)] flex items-start gap-[10px]">
-          <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><Icon name="x" size={13} /></div>
-          <div className="flex-1">
-            <div className="font-semibold text-ao-fg-0 text-[13.5px]">Run error</div>
-            <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono">{item.message}</div>
-            <button onClick={onRetry} disabled={!onRetry} className="mt-2 text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"><Icon name="refresh" size={11} /> Retry</button>
-          </div>
+    })
+    .with({ kind: "agent-tool" }, (item) => (
+      <ToolGroupRow
+        id={item.id}
+        tools={[{ id: item.id, name: item.name, arg: item.arg }]}
+        avatar={avatar}
+      />
+    ))
+    .with({ kind: "agent-subagent" }, (item) => <SubAgentCard item={item} />)
+    .with({ kind: "agent-thinking" }, (item) => (
+      <ThinkingRow id={item.id} text={item.text} avatar={avatar} hideAvatar={hideAvatar} />
+    ))
+    .with({ kind: "system-error" }, (item) => (
+      <div className="border border-[rgba(217,83,79,0.30)] border-l-[3px] border-l-[var(--ao-bad)] rounded-[8px] px-[14px] py-3 bg-[rgba(217,83,79,0.05)] flex items-start gap-[10px]">
+        <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><Icon name="x" size={13} /></div>
+        <div className="flex-1">
+          <div className="font-semibold text-ao-fg-0 text-[13.5px]">Run error</div>
+          <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono">{item.message}</div>
+          <button onClick={onRetry} disabled={!onRetry} className="mt-2 text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"><Icon name="refresh" size={11} /> Retry</button>
         </div>
-      );
-
-    case "system-done": {
+      </div>
+    ))
+    .with({ kind: "system-done" }, (item) => {
       const totalTok =
         item.tokensIn !== undefined || item.tokensOut !== undefined
           ? (item.tokensIn ?? 0) + (item.tokensOut ?? 0)
@@ -760,11 +753,6 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
           <span className="flex-1 h-[1px] bg-[var(--ao-line-0)]" />
         </div>
       );
-    }
-
-    default: {
-      const _exhaustive: never = item;
-      return null;
-    }
-  }
+    })
+    .exhaustive();
 }

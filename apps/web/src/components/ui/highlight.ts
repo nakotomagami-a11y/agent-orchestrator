@@ -1,7 +1,27 @@
+/**
+ * Dependency-free syntax highlighter. `highlight(src, lang)` returns an HTML
+ * string of `<span class="hl-*">` tokens, designed to be injected via
+ * `dangerouslySetInnerHTML` (see `code-block.tsx`). The `.hl-*` classes are
+ * styled in CSS: hl-k keyword, hl-s string, hl-c comment, hl-fn function/key,
+ * hl-n number, hl-i literal.
+ *
+ * SECURITY: the output is trusted markup only because every piece of source
+ * text passes through `esc()` first — via `span()` for tokens and via the
+ * `esc(ch)` fallbacks in `tokenize`/`highlightMarkdown`. The only literal HTML
+ * is static (`<span>`, `<strong>`, `<em>`, markdown link punctuation), never
+ * user-derived. Any new code path that emits source text MUST route it through
+ * `esc`/`span`, or it becomes an XSS hole.
+ */
+import { match } from "ts-pattern";
+
+// HTML-escape the three markup-significant chars. The escape boundary for the
+// whole module — all dynamic text must pass through here.
 function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Wrap a source slice in a highlight token. Escapes `s` before interpolation,
+// so callers may pass raw source safely.
 function span(cls: string, s: string): string {
   return `<span class="${cls}">${esc(s)}</span>`;
 }
@@ -197,22 +217,17 @@ function highlightMarkdown(src: string): string {
 
 // ── public API ────────────────────────────────────────────────────────────
 
+/**
+ * Highlight `src` for `lang`, returning escaped HTML. Unknown languages fall
+ * back to `esc(src)` (plain, escaped text). Result is safe for
+ * `dangerouslySetInnerHTML`.
+ */
 export function highlight(src: string, lang: string): string {
-  switch (lang) {
-    case "bash":
-    case "sh":
-      return tokenize(src, BASH_RULES);
-    case "yaml":
-    case "yml":
-      return tokenize(src, YAML_RULES);
-    case "json":
-      return tokenize(src, JSON_RULES);
-    case "sql":
-      return tokenize(src, SQL_RULES);
-    case "markdown":
-    case "md":
-      return highlightMarkdown(src);
-    default:
-      return esc(src);
-  }
+  return match(lang)
+    .with("bash", "sh", () => tokenize(src, BASH_RULES))
+    .with("yaml", "yml", () => tokenize(src, YAML_RULES))
+    .with("json", () => tokenize(src, JSON_RULES))
+    .with("sql", () => tokenize(src, SQL_RULES))
+    .with("markdown", "md", () => highlightMarkdown(src))
+    .otherwise(() => esc(src));
 }

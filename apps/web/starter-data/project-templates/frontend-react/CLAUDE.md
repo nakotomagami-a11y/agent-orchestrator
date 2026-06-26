@@ -12,7 +12,8 @@ One-liner: _replace this with a sentence-long description of what the app does a
 - **Language**: TypeScript, strict mode. No `any` outside `node_modules/`.
 - **Styling**: Tailwind CSS v4. **Token classes only** (`text-fg`, `bg-bg-2`, `border-line`). Never inline `style={{ color: "..." }}`. Never raw color names (`text-red-500`). When the design needs a new color, add a token in `globals.css`.
 - **State**: Local component state first. `useState` / `useReducer`. Lift to **Zustand** only when state is shared by two components that don't share a parent-child relationship.
-- **Data fetching**: TanStack Query. Server state lives there, not in Zustand.
+- **Data fetching**: **TanStack Query + axios**. Server state lives there, not in Zustand. Every backend call goes through an API module in `src/lib/api/<resource>.ts` (axios), consumed by a Query hook. Never bare `fetch`. See `docs/data-fetching.md`.
+- **Control flow**: **ts-pattern**. Use `match(...).exhaustive()` instead of `switch` / `if-else if` chains over unions, status strings, and event keys.
 - **Forms**: react-hook-form + Zod resolver. Validation schemas live next to the form.
 - **Testing**: Vitest + Testing Library. Test behavior, not implementation.
 
@@ -24,11 +25,13 @@ One-liner: _replace this with a sentence-long description of what the app does a
 4. **Props interface above the component.** Inline `({ a, b }: { a: string }) => ...` is fine for trivial sub-components only.
 5. **No `any`.** Use `unknown` + narrowing, or define the type. If a third-party type is missing, declare it in `src/types/`.
 6. **No barrel exports** outside designated public-API files. Direct imports keep tree-shaking honest.
-7. **Server state goes through TanStack Query.** No raw `fetch` calls in components.
+7. **Server state goes through TanStack Query.** No raw `fetch` calls in components or hooks. Every endpoint is a function in an API module under `src/lib/api/` (axios); URLs come from a central routes config, never hardcoded inline.
+8. **`match()` over `switch`/`if-else` chains.** Use ts-pattern for any branch driven by a value (discriminated union, status, key). Prefer `.exhaustive()`.
 
 ## Before you change X, read Y
 
 - Adding a new store → `docs/state-management.md`
+- Calling the backend / adding an endpoint → `docs/data-fetching.md`
 - Styling anything → `docs/styling.md`
 - Creating a new component → `docs/component-conventions.md`
 - Big architectural change → `ARCHITECTURE.md` + add an ADR to `DECISIONS.md`

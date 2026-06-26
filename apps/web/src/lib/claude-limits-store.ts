@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { create } from "zustand";
+import { match } from "ts-pattern";
 import { type LimitsPeriod, type HardCap, parseLimits as parseLimitsCore, periodStart, periodEnd } from "@/lib/claude-limits";
 
 export type { LimitsPeriod, HardCap };
@@ -91,12 +92,12 @@ export function useClaudeLimitsHydration() {
 }
 
 export function planLabel(plan: ClaudePlan): string {
-  switch (plan) {
-    case "free": return "Free";
-    case "pro": return "Pro";
-    case "max": return "Max";
-    case "api": return "API";
-    case "custom": return "Custom";
-  }
+  return match(plan)
+    .with("free", () => "Free")
+    .with("pro", () => "Pro")
+    .with("max", () => "Max")
+    .with("api", () => "API")
+    .with("custom", () => "Custom")
+    .exhaustive();
 }
 

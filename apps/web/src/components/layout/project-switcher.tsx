@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -113,20 +114,25 @@ export function ProjectSwitcher() {
   };
 
   const onKey = (e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      setOpen(false);
-      triggerRef.current?.focus();
-    } else if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIndex((i) => (i + 1) % rows.length);
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIndex((i) => (i - 1 + rows.length) % rows.length);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const row = rows[activeIndex];
-      if (row) navigate(row.href, row.projectId);
-    }
+    match(e.key)
+      .with("Escape", () => {
+        setOpen(false);
+        triggerRef.current?.focus();
+      })
+      .with("ArrowDown", () => {
+        e.preventDefault();
+        setActiveIndex((i) => (i + 1) % rows.length);
+      })
+      .with("ArrowUp", () => {
+        e.preventDefault();
+        setActiveIndex((i) => (i - 1 + rows.length) % rows.length);
+      })
+      .with("Enter", () => {
+        e.preventDefault();
+        const row = rows[activeIndex];
+        if (row) navigate(row.href, row.projectId);
+      })
+      .otherwise(() => {});
   };
 
   return (

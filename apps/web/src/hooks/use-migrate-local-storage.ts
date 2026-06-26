@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { patchUiSettings, putTranscript, putDraft } from "@/lib/api/migration";
 
 const LEGACY_KEYS = {
   transcripts: "agent-office:chat-transcripts:v1",
@@ -45,11 +46,7 @@ async function runMigration(): Promise<void> {
     if (gc) uiPatch["office-grass-color"] = gc;
 
     if (Object.keys(uiPatch).length > 0) {
-      await fetch("/api/ui-settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(uiPatch),
-      });
+      await patchUiSettings(uiPatch);
     }
 
     // Migrate transcripts
@@ -61,18 +58,11 @@ async function runMigration(): Promise<void> {
           const idx = key.indexOf("::");
           const agentId = idx === -1 ? key : key.slice(0, idx);
           const instanceId = idx === -1 ? "default" : key.slice(idx + 2) || "default";
-          await fetch(
-            `/api/transcripts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                items: JSON.stringify(t.items ?? []),
-                activeRunId: t.activeRunId ?? null,
-                sessionId: t.sessionId ?? null,
-              }),
-            },
-          );
+          await putTranscript(agentId, instanceId, {
+            items: JSON.stringify(t.items ?? []),
+            activeRunId: t.activeRunId ?? null,
+            sessionId: t.sessionId ?? null,
+          });
         }
       } catch { /* skip bad transcript data */ }
     }
@@ -87,14 +77,7 @@ async function runMigration(): Promise<void> {
           const idx = key.indexOf("::");
           const agentId = idx === -1 ? key : key.slice(0, idx);
           const instanceId = idx === -1 ? "default" : key.slice(idx + 2) || "default";
-          await fetch(
-            `/api/drafts?agentId=${encodeURIComponent(agentId)}&instanceId=${encodeURIComponent(instanceId)}`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ text }),
-            },
-          );
+          await putDraft(agentId, instanceId, text);
         }
       } catch { /* skip */ }
     }

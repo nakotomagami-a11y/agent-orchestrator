@@ -474,12 +474,11 @@ html:not(.tauri) .app-titlebar {
   border-top: 0 !important;
 }
 
-/* Modal backdrops that should NOT cover the titlebar. Any fixed-position
-   overlay that adds this class will start 8px below the titlebar regardless
-   of chrome state (browser, Tauri framed, Tauri maximized). Overrides
-   Tailwind's `inset-0` top via !important. */
+
+/* Modal backdrop covers from the top edge of the viewport; the titlebar
+   sits above it at z-[200] so it always stays accessible. */
 .app-modal-backdrop {
-  top: calc(var(--chrome-inset, 0px) + 46px) !important;
+  top: 0 !important;
 }
 
 /* ─── Office scene background ─── */

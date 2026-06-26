@@ -38,6 +38,10 @@ export const API_ROUTES = {
 
   memoryGlobal: "/api/memory/global",
 
+  uiSettings: "/api/ui-settings",
+  transcripts: "/api/transcripts",
+  drafts: "/api/drafts",
+
   projects: "/api/projects",
   projectsBootstrap: "/api/projects/bootstrap",
   project: (id: string) => `/api/projects/${encodeURIComponent(id)}`,
