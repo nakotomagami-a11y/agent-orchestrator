@@ -5,14 +5,16 @@ export type AgentAction = "idle" | "axe" | "pickaxe" | "knife" | "hammer";
 /**
  * Determines the action animation and flip flag for an agent based on its
  * tile and surrounding decorations. Shared by both the DOM and Pixi renderers.
+ * Action animations are pawn-exclusive; all other kinds always return idle.
  */
 export function getAgentActionAndFlip(
   x: number,
   y: number,
   isWorking: boolean,
+  kind: string,
   decorations: DecorationsMap,
 ): { action: AgentAction; flip: boolean } {
-  if (!isWorking) return { action: "idle", flip: false };
+  if (!isWorking || kind !== "pawn") return { action: "idle", flip: false };
   const has = (nx: number, ny: number, f: string): boolean => {
     const stack = decorations[decorationKey(nx, ny)];
     return !!stack && stack.some((k) => familyOf(k) === f);

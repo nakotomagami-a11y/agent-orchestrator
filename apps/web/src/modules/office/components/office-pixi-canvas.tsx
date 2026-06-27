@@ -599,17 +599,21 @@ async function buildAgentLayer(
   for (const [key, ref] of Object.entries(agentPositions)) {
     const agent = agentsById.get(ref.agentId);
     if (!agent) continue;
-    const def = UNIT_DEFS[agent.unitChoice.kind];
+    const { faction, kind } = agent.unitChoice;
+    const def = UNIT_DEFS[kind];
     const [xs, ys] = key.split(",");
     const x = Number(xs);
     const y = Number(ys);
-    const isWorking =
-      agent.status === "working" || agent.status === "thinking";
-    const { action } = getAgentActionAndFlip(x, y, isWorking, decorations);
+    const isWorking = agent.status === "working" || agent.status === "thinking";
+    const { action } = getAgentActionAndFlip(x, y, isWorking, kind, decorations);
     const state = getSheetState(action, def);
-    neededUrls.add(unitSheetSrc(agent.unitChoice.faction, agent.unitChoice.kind, state));
-    // Also preload idle for when agent becomes idle
-    neededUrls.add(unitSheetSrc(agent.unitChoice.faction, agent.unitChoice.kind, "idle"));
+    neededUrls.add(unitSheetSrc(faction, kind, state));
+    neededUrls.add(unitSheetSrc(faction, kind, "idle"));
+    // Pawn action sheets only exist for the black faction; preload them so
+    // non-black pawns can fall back to them during working animations.
+    if (kind === "pawn" && state !== "idle") {
+      neededUrls.add(unitSheetSrc("black", "pawn", state));
+    }
   }
 
   await Promise.all(
@@ -631,22 +635,32 @@ async function buildAgentLayer(
     })
     .sort((a, b) => a.y - b.y);
 
+  // Feet Y target: world pixels below a tile's top edge where all units'
+  // ground contact should land. Derived from the default-sized unit formula
+  // so existing units are unchanged: (TILE + AGENT_SIZE) / 2 = 80.
+  const TARGET_FEET_Y = (TILE + AGENT_SIZE) / 2;
+
   // ── Build a Container per agent ────────────────────────────────────────────
   for (const { x, y, ref } of sortedEntries) {
     const agent = agentsById.get(ref.agentId);
     if (!agent) continue;
 
-    const def = UNIT_DEFS[agent.unitChoice.kind];
-    const isWorking =
-      agent.status === "working" || agent.status === "thinking";
-    const { action, flip } = getAgentActionAndFlip(x, y, isWorking, decorations);
+    const { faction, kind } = agent.unitChoice;
+    const def = UNIT_DEFS[kind];
+    const isWorking = agent.status === "working" || agent.status === "thinking";
+    const { action, flip } = getAgentActionAndFlip(x, y, isWorking, kind, decorations);
     const state = getSheetState(action, def);
 
-    // Resolve the texture; fall back to idle if the action sheet failed to load
-    let sheetUrl = unitSheetSrc(agent.unitChoice.faction, agent.unitChoice.kind, state);
+    // Resolve texture. For pawn action sheets that only exist for black faction,
+    // fall back to black/pawn/<state> before giving up and using idle.
+    let sheetUrl = unitSheetSrc(faction, kind, state);
     let sheetTex: Texture | null = Assets.get<Texture>(sheetUrl) ?? null;
+    if (!sheetTex && state !== "idle" && kind === "pawn") {
+      sheetUrl = unitSheetSrc("black", "pawn", state);
+      sheetTex = Assets.get<Texture>(sheetUrl) ?? null;
+    }
     if (!sheetTex && state !== "idle") {
-      sheetUrl = unitSheetSrc(agent.unitChoice.faction, agent.unitChoice.kind, "idle");
+      sheetUrl = unitSheetSrc(faction, kind, "idle");
       sheetTex = Assets.get<Texture>(sheetUrl) ?? null;
     }
     if (!sheetTex) continue;
@@ -686,15 +700,17 @@ async function buildAgentLayer(
     const spriteXFlip = agentSize - spriteX;
 
     // ── Agent position on tile ─────────────────────────────────────────────
-    // Feet-anchored: all units share the same ground line (FEET_Y px below
-    // the tile top) so larger units extend upward rather than downward.
-    // FEET_Y = (TILE + AGENT_SIZE) / 2 preserves the original positioning
-    // for units with sizeMultiplier = 1.
-    const FEET_Y = (TILE + AGENT_SIZE) / 2; // 80 px from tile top
+    // groundY: native-frame Y of the feet contact point.
+    // Falls back to bbox.y + bbox.h for units that don't need it.
+    // The lancer's bbox.h = 272 includes ~136 px of empty space below the
+    // feet; without an explicit groundY it anchors to the wrong position.
+    const groundNativeY = def.groundY ?? (def.bbox.y + def.bbox.h);
+    const feetInContainer = spriteY + groundNativeY * spriteScale;
+
     const onBridge = isBridgeCell(x, y, grid, decorations);
     const agentLeft = x * TILE + (TILE - agentSize) / 2;
     const agentTop =
-      y * TILE + FEET_Y - agentSize - (onBridge ? Math.round(TILE * 0.35) : 0);
+      y * TILE + TARGET_FEET_Y - feetInContainer - (onBridge ? Math.round(TILE * 0.35) : 0);
 
     // Container at the tile position; AnimatedSprite inside with the offset
     const agentContainer = new Container();
