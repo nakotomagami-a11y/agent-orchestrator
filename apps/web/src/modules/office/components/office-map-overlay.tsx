@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
+import { UNIT_DEFS } from "@/components/ui/unit-sprite.utils";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import { decorationKey, familyOf, type DecorationsMap } from "./decorations";
 import type { BuildTool } from "./office-build-toolbar";
@@ -19,6 +20,21 @@ import {
   type AgentPositions,
   type VisibleRange,
 } from "./office-map";
+
+// Compute the CSS box position + size for a unit so its feet align with the
+// same ground line used by the PixiJS canvas (TARGET_FEET_Y = (TILE+AGENT_SIZE)/2).
+function unitBoxAt(kind: string, tx: number, ty: number) {
+  const def = UNIT_DEFS[kind as keyof typeof UNIT_DEFS];
+  const agentSize = def ? Math.round(AGENT_SIZE * (def.sizeMultiplier ?? 1)) : AGENT_SIZE;
+  const left = tx * TILE + (TILE - agentSize) / 2;
+  if (!def) return { left, top: ty * TILE + (TILE - AGENT_SIZE) / 2, size: AGENT_SIZE };
+  const scale = agentSize / Math.max(def.bbox.w, def.bbox.h);
+  const padY = (agentSize - def.bbox.h * scale) / 2;
+  const groundNativeY = def.groundY ?? (def.bbox.y + def.bbox.h);
+  const feetInBox = padY + (groundNativeY - def.bbox.y) * scale;
+  const TARGET_FEET_Y = (TILE + AGENT_SIZE) / 2;
+  return { left, top: ty * TILE + TARGET_FEET_Y - feetInBox, size: agentSize };
+}
 
 // ─── Interaction overlay for the PixiJS renderer path ─────────────────────────
 // Sits on top of the Pixi canvas at the same world transform. Handles build-mode
@@ -215,8 +231,7 @@ export function OfficeMapOverlay({
         const hRef = agentPositions[agentHoverKey];
         const hAgent = hRef ? agentsById.get(hRef.agentId) : null;
         if (!hAgent) return null;
-        const left = hx * TILE + (TILE - AGENT_SIZE) / 2;
-        const top = hy * TILE + (TILE - AGENT_SIZE) / 2;
+        const { left, top, size: agentSize } = unitBoxAt(hAgent.unitChoice.kind, hx, hy);
         return (
           <div
             aria-hidden
@@ -224,13 +239,13 @@ export function OfficeMapOverlay({
             style={{
               left,
               top,
-              width: AGENT_SIZE,
-              height: AGENT_SIZE,
+              width: agentSize,
+              height: agentSize,
               transform: "scale(1.12)",
               filter: "drop-shadow(0 0 5px #fbbf24) drop-shadow(0 0 3px #fbbf24)",
             }}
           >
-            <UnitSprite unit={hAgent.unitChoice} size={AGENT_SIZE} action="idle" animate={false} />
+            <UnitSprite unit={hAgent.unitChoice} size={agentSize} action="idle" animate={false} />
           </div>
         );
       })()}
@@ -241,8 +256,7 @@ export function OfficeMapOverlay({
         if (!agent) return null;
         const valid = validitySet instanceof Set ? validitySet.has(decorationKey(hover.x, hover.y)) : false;
         const tint = valid ? "#22c55e" : "#ef4444";
-        const left = hover.x * TILE + (TILE - AGENT_SIZE) / 2;
-        const top = hover.y * TILE + (TILE - AGENT_SIZE) / 2;
+        const { left, top, size: agentSize } = unitBoxAt(agent.unitChoice.kind, hover.x, hover.y);
         return (
           <div
             aria-hidden
@@ -250,12 +264,12 @@ export function OfficeMapOverlay({
             style={{
               left,
               top,
-              width: AGENT_SIZE,
-              height: AGENT_SIZE,
+              width: agentSize,
+              height: agentSize,
               filter: `drop-shadow(0 0 4px ${tint}) drop-shadow(0 0 2px ${tint})`,
             }}
           >
-            <UnitSprite unit={agent.unitChoice} size={AGENT_SIZE} action="idle" animate={false} />
+            <UnitSprite unit={agent.unitChoice} size={agentSize} action="idle" animate={false} />
           </div>
         );
       })()}

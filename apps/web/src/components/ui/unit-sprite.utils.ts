@@ -56,6 +56,14 @@ interface UnitDef {
    * stand on the same ground line regardless of this value. Default: 1.
    */
   sizeMultiplier?: number;
+  /**
+   * Native Y pixel coordinate of the ground contact point (feet) within one
+   * sprite frame. When absent, falls back to `bbox.y + bbox.h`.
+   * Needed for the lancer: its bbox.h = 272 extends to y=296, but the actual
+   * boot contact is at y=185 (pixel-verified). The lance tip swings through
+   * the remaining bbox area and must not drive the feet anchor.
+   */
+  groundY?: number;
 }
 
 export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
@@ -103,6 +111,7 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     bbox: { x: 96, y: 24, w: 128, h: 272 },
     label: "Lancer",
     sizeMultiplier: 2.5,
+    groundY: 185,
   },
 };
 

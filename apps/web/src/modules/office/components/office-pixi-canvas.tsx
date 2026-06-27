@@ -702,8 +702,8 @@ async function buildAgentLayer(
     // ── Agent position on tile ─────────────────────────────────────────────
     // groundY: native-frame Y of the feet contact point.
     // Falls back to bbox.y + bbox.h for units that don't need it.
-    // The lancer's bbox.h = 272 includes ~136 px of empty space below the
-    // feet; without an explicit groundY it anchors to the wrong position.
+    // Lancer: actual boot contact at y=185 (pixel-verified); lance tip
+    // swings through the rest of the bbox and must not drive the anchor.
     const groundNativeY = def.groundY ?? (def.bbox.y + def.bbox.h);
     const feetInContainer = spriteY + groundNativeY * spriteScale;
 

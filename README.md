@@ -8,17 +8,26 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 
 ### Orchestration
 - **Summon** any agent against any project with live SSE-streamed output and full transcript history
+- **Workflow spawn tree** - live sub-agent tree with per-node status badges and cost; shown in chat via the WorkflowPill dropdown while an orchestration is running
 - **Multi-instance agents** - run the same agent 3x in parallel on different scopes (each gets its own transcript, draft, and run history)
 - **Pipelines** - multi-step orchestrator dispatch: one agent plans, dispatched subagents execute, results streamed back
 - **Broadcast** - blast the same prompt to N agents at once
-- **Saved prompts library** - curated, reusable prompts surfaced from your real history (not generic dev-101 templates)
+- **Saved prompts library** - curated, reusable prompts surfaced from your real history
 - **Abort all** - kill every running agent with one click
+- **Rate-limit warning** - dedicated card in the chat thread when a run hits API rate limits
 
 ### The office
-- **Isometric pixel-art floor** rendered with Pixi.js - drag agents from the sidebar onto grass tiles, decorate with plants/desks/whiteboards, persist the whole scene to SQLite
-- **Live status overlays** - colored status dots on each cubicle (idle / running / error)
-- **Ghost cards** during drag, smooth pan/zoom, scroll-to-cursor zoom
-- **Build mode** - paint terrain, place decorations, repaint grass colors, full edit/erase
+- **Isometric pixel-art floor** rendered with Pixi.js - drag agents from the sidebar onto grass tiles, decorate the scene, persist to SQLite
+- **Animated unit sprites** - 5 factions × 5 unit kinds (Pawn, Warrior, Archer, Monk, Lancer); each agent gets a sprite set by its `unit` frontmatter field
+- **Pawn action animations** - working pawns switch sprite sheets based on surroundings: axe near trees, pickaxe on rocks, knife near sheep, hammer otherwise
+- **5 grass color themes** - Meadow (yellow), Forest (green), Spring (light), Marsh (olive), Frost (teal); per-scene choice
+- **Cards view** - toggle between isometric grid and compact card layout from the office toolbar
+- **Build mode** - paint terrain, flood-fill (F), place 60+ decorations, swap grass colour, full undo/redo (Cmd+Z), decoration search
+- **Auto-tiling path tiles** - dirt paths connect to cardinal neighbours automatically; drawn via PixiJS Graphics (no PNG dependency)
+- **Bridges** - place horizontal/vertical bridge planks on water; end-caps auto-render on adjacent land tiles; agents stand elevated on bridges
+- **Voronoi water shader** - animated teal cellular water pattern behind the island
+- **Pixel-planet project icons** - each project gets a deterministic procedural WebGL2 planet icon (11 types: gas giant, rocky, terran, ice world, lava, etc.)
+- **Smooth pan/zoom** - Ctrl+Scroll zooms to cursor; arrow keys / drag to pan
 
 ### Knowledge & memory
 - **Per-agent memory editor** - edit `~/.claude/agents/<id>.md` definitions inline
@@ -34,7 +43,7 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 - **Command palette** (Cmd/Ctrl+K) - jump to any agent, project, run, or page
 
 ### Integrations
-- **Git worktrees** - each project's worktree tree is tracked and surfaced
+- **Git worktrees** - each project's worktree tree is tracked and surfaced; missing worktrees auto-recreated on next summon
 - **Branch detection** - active branch shown next to project
 - **Dev-server tracking** - long-running dev servers managed and visible in the Processes modal
 - **Clipboard image paste** - paste screenshots straight into the composer
@@ -43,12 +52,13 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 
 ### Reliability
 - **Crash recovery** - orphan runs left over from a crash are auto-marked on next boot; interrupted pipelines surface a recovery banner
+- **Self-healing worktrees** - if an instance's worktree directory goes missing, it is recreated automatically rather than bricking the instance
 - **Atomic file writes** for every persisted markdown asset
 - **WAL-mode SQLite** with foreign keys on
 - **Export/import** the full app state for backup or migration
 
 ### Platform
-- **Browser** at `localhost:3001` for daily use
+- **Browser** at `localhost:3000` for daily use
 - **Tauri desktop bundle** with custom GNOME-style titlebar for a native feel
 - **Mobile bottom nav** - the office is responsive enough to triage from a phone
 - **i18n** via next-intl (English shipped, structure for more)
@@ -57,7 +67,8 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 
 - **Next.js 15** (App Router) + **React 19** + **TypeScript**
 - **Tailwind CSS v4** + custom design system (Ubuntu Yaru / GNOME aesthetic - Yaru orange `#E95420` + aubergine)
-- **Pixi.js v8** for the isometric office canvas
+- **Pixi.js v8** for the isometric office canvas (GPU-accelerated; PixiJS Graphics for procedural path tiles)
+- **`@agent-office/pixel-planets`** — in-house WebGL2 procedural planet renderer; one shared GL context for all project icons
 - **Zustand** for client stores, **TanStack Query** + **axios** for server state (API calls live in `src/lib/api/` modules — see [`docs/data-fetching.md`](docs/data-fetching.md))
 - **better-sqlite3** at `~/.claude/agent-office/db.sqlite` - runs, messages, transcripts, drafts, pipelines, saved prompts, UI state
 - **framer-motion** for page + modal transitions
@@ -69,11 +80,12 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 
 ```
 apps/
-  web/        Next.js app (UI + API routes + SSE runner)
-  landing/    Static marketing site
+  web/            Next.js app (UI + API routes + SSE runner)
+  landing/        Static marketing site
 packages/
-  shared/     Types, DB layer, services (runs, agents, pipelines, skills, worktrees, ...)
-  ui/         Shared design-system primitives
+  shared/         Types, DB layer, services (runs, agents, pipelines, skills, worktrees, ...)
+  ui/             Shared design-system primitives
+  pixel-planets/  WebGL2 procedural planet renderer (@agent-office/pixel-planets)
 ```
 
 Inside `apps/web/src`:

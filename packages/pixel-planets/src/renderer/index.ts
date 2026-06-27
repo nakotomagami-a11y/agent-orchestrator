@@ -99,9 +99,13 @@ function drawLayer(
   // Shader-specific uniforms
   switch (layer.shader) {
     case "gas": {
-      // Planet disc radius as a fraction of canvas UV.
-      // 0.7 factor shrinks the disc so the ring has a visible gap around it.
-      const planetR  = (1 / (canvasScale * 2)) * 0.7;
+      // For gas-giant (canvasScale>1) the 0.7 factor shrinks the disc to leave
+      // a visible gap for the ring. For cloud layers on terran/ice/islands
+      // (canvasScale=1) the disc must fill the whole canvas so clouds align
+      // with the terrain disc (identity: uvOff=0, uvScale=1).
+      const planetR  = canvasScale > 1
+        ? (1 / (canvasScale * 2)) * 0.7
+        : 0.5;
       const uvOff    = 0.5 - planetR;
       const uvScale  = 1 / (2 * planetR);
       setUniform(gl, prog, "pixels",        params.pixels * uvScale);
