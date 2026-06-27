@@ -142,9 +142,10 @@ export interface PlanetConfig {
   type: PlanetType;
   seed: number;
   paletteIdx: number;
-  pixels?: number;   // logical pixel density 10-120, default 50
-  rotation?: number; // radians 0-6.28, default derived from seed
+  pixels?: number;   // logical pixel density 10-300, default 50
+  rotation?: number; // radians, default derived from seed
   dither?: boolean;  // dither mode, default true
+  customPalette?: [number, number, number][][]; // per-layer color overrides (RGB 0-1)
 }
 
 export interface ProjectMeta {

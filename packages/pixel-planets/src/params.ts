@@ -40,8 +40,9 @@ interface LayerTemplate {
 
 export const LAYER_TEMPLATES: Record<PlanetType, LayerTemplate[]> = {
   "gas-giant": [
-    { shader: "gas", cloudCover: 0.00, timeScaleFactor: 0.005, timeSpeed: 0.7  },
-    { shader: "gas", cloudCover: 0.35, timeScaleFactor: 0.005, timeSpeed: 0.47 },
+    { shader: "gas",      cloudCover: 0.00, timeScaleFactor: 0.005, timeSpeed: 0.7  },
+    { shader: "gas",      cloudCover: 0.35, timeScaleFactor: 0.005, timeSpeed: 0.47 },
+    { shader: "gas-ring",               timeScaleFactor: 0.003, timeSpeed: 0.2  },
   ],
   "rocky": [
     { shader: "rock",    timeScaleFactor: 0.02,  timeSpeed: 0.2   },
@@ -88,16 +89,20 @@ export const LAYER_TEMPLATES: Record<PlanetType, LayerTemplate[]> = {
 
 /**
  * Types that render outside the circular clip boundary.
- * The renderer omits the CSS `rounded-full` clip for these.
+ * Includes black-hole (accretion ring) and gas-giant (Saturn ring).
  */
-export const FREEFORM_TYPES = new Set<PlanetType>(["asteroid", "galaxy", "star"]);
+export const FREEFORM_TYPES = new Set<PlanetType>(["asteroid", "galaxy", "star", "black-hole", "gas-giant"]);
 
 /**
  * Oversize multipliers for types whose effects extend beyond the planet disc.
- * The offscreen canvas is `displaySize × canvasScale`, then downscaled to display.
+ *
+ * The WebGL offscreen canvas is `discSize × canvasScale`. The display canvas
+ * is also `discSize × canvasScale` so the disc appears at `discSize` pixels
+ * and the surrounding effects (blobs, flares, ring) fill the extra space.
  */
-const CANVAS_SCALE: Partial<Record<PlanetType, number>> = {
+export const CANVAS_SCALE: Partial<Record<PlanetType, number>> = {
   "black-hole": 3,
+  "gas-giant":  2,
   "star": 2,
 };
 
@@ -135,9 +140,13 @@ function getFallbackLayers(type: PlanetType, rng: () => number, size: number): P
       const base = cosineScheme(Math.floor(rng() * 4) + 8, rng() * 0.5 + 0.3, 1.0, rng);
       const cols1 = Array.from({ length: 4 }, (_, i) => darkened(darkened(base[i]!, i / 6), 0.7));
       const cols2 = Array.from({ length: 4 }, (_, i) => lightened(darkened(base[i + 4]!, i / 4), (1 - i / 4) * 0.5));
+      // Ring: 3 bright colors (light tones from the outer base) + 3 dark colors
+      const ringBright = [lightened(base[5]!, 0.3), lightened(base[6]!, 0.2), lightened(base[7]!, 0.1)] as RGB[];
+      const ringDark   = [darkened(base[0]!, 0.35), darkened(base[1]!, 0.45), darkened(base[2]!, 0.55)] as RGB[];
       return [
-        { shader: "gas", colors: toRGBA(cols1), cloudCover: 0.0,                        timeScale: makeTimeScale(size, templates[0]!) },
-        { shader: "gas", colors: toRGBA(cols2), cloudCover: rng() * 0.22 + 0.28,        timeScale: makeTimeScale(size, templates[1]!) },
+        { shader: "gas",      colors: toRGBA(cols1), cloudCover: 0.0,                 timeScale: makeTimeScale(size, templates[0]!) },
+        { shader: "gas",      colors: toRGBA(cols2), cloudCover: rng() * 0.22 + 0.28, timeScale: makeTimeScale(size, templates[1]!) },
+        { shader: "gas-ring", colors: toRGBA([...ringBright, ...ringDark]),            timeScale: makeTimeScale(size, templates[2]!) },
       ];
     }
     case "rocky": {
@@ -277,7 +286,7 @@ export function getPlanetParams(projectId: string, config?: PlanetConfig): Plane
   const dither = config.dither ?? true;
 
   const layers: PlanetLayer[] = templates.map((tmpl, i) => {
-    const paletteColors = palette.layers[i] ?? palette.layers[0]!;
+    const paletteColors = (config.customPalette?.[i] ?? palette.layers[i] ?? palette.layers[0]!) as RGB[];
     let cloudCover = tmpl.cloudCover;
     // Vary cloud coverage slightly per seed so clouds look different on each planet
     if (tmpl.shader === "gas" && cloudCover !== undefined && cloudCover > 0) {
@@ -285,7 +294,7 @@ export function getPlanetParams(projectId: string, config?: PlanetConfig): Plane
     }
     return {
       shader: tmpl.shader,
-      colors: toRGBA(paletteColors as RGB[]),
+      colors: toRGBA(paletteColors),
       cloudCover,
       riverCutoff: tmpl.riverCutoff,
       landCutoff:  tmpl.landCutoff,

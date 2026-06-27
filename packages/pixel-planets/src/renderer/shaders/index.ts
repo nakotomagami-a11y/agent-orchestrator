@@ -6,6 +6,7 @@ import type { ShaderName } from "../../types";
 
 import { VERT_SRC }            from "./vert";
 import { GAS_FRAG_SRC }        from "./gas";
+import { GAS_RING_FRAG_SRC }   from "./gas-ring";
 import { ROCK_FRAG_SRC }       from "./rock";
 import { CRATERS_FRAG_SRC }    from "./craters";
 import { TERRAIN_FRAG_SRC }    from "./terrain";
@@ -24,6 +25,7 @@ export { VERT_SRC };
 /** Map from ShaderName to compiled fragment shader source. */
 export const FRAG_SHADERS: Record<ShaderName, string> = {
   "gas":              GAS_FRAG_SRC,
+  "gas-ring":         GAS_RING_FRAG_SRC,
   "rock":             ROCK_FRAG_SRC,
   "craters":          CRATERS_FRAG_SRC,
   "terrain":          TERRAIN_FRAG_SRC,

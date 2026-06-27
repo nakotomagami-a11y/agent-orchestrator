@@ -2,10 +2,23 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { PlanetConfig, PlanetType } from "@agent-office/shared/types";
-import { PLANET_TYPE_DEFS, randomPlanetOfType } from "@/lib/planet-seed";
+import { PLANET_TYPE_DEFS, FREEFORM_TYPES, CANVAS_SCALE, randomPlanetOfType } from "@/lib/planet-seed";
 import { ModalShell } from "./modal-shell";
 import { PlanetCanvas } from "./planet-canvas";
 import { Icon } from "./icon";
+
+function rgbToHex(rgb: [number, number, number]): string {
+  const clamp = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0");
+  return `#${clamp(rgb[0])}${clamp(rgb[1])}${clamp(rgb[2])}`;
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+  return [
+    parseInt(hex.slice(1, 3), 16) / 255,
+    parseInt(hex.slice(3, 5), 16) / 255,
+    parseInt(hex.slice(5, 7), 16) / 255,
+  ];
+}
 
 interface PlanetEditorModalProps {
   open: boolean;
@@ -16,7 +29,6 @@ interface PlanetEditorModalProps {
 }
 
 const PLANET_TYPES: PlanetType[] = ["gas-giant", "rocky", "dry", "terran", "ice", "islands", "lava", "black-hole", "galaxy", "star", "asteroid"];
-const FREEFORM_TYPES = new Set<PlanetType>(["asteroid", "galaxy", "star"]);
 
 const DEFAULT_PIXELS = 50;
 const PREVIEW_SIZES = [168, 96, 54] as const;
@@ -50,15 +62,32 @@ export function PlanetEditorModal({
       ...d,
       type,
       paletteIdx: Math.min(d.paletteIdx, palettes.length - 1),
+      customPalette: undefined,
     }));
   }, []);
 
-  const setPalette = useCallback((idx: number) => setDraft((d) => ({ ...d, paletteIdx: idx })), []);
+  const setPalette = useCallback((idx: number) => {
+    setDraft((d) => ({ ...d, paletteIdx: idx, customPalette: undefined }));
+  }, []);
 
   const randomize = useCallback(() => {
     const r = randomPlanetOfType(draft.type);
-    setDraft((d) => ({ ...d, seed: r.seed, paletteIdx: r.paletteIdx }));
+    setDraft((d) => ({ ...d, seed: r.seed, paletteIdx: r.paletteIdx, customPalette: undefined }));
   }, [draft.type]);
+
+  const handleCustomColor = useCallback((layerIdx: number, colorIdx: number, hex: string) => {
+    const rgb = hexToRgb(hex);
+    setDraft((d) => {
+      const baseLayers = PLANET_TYPE_DEFS[d.type].palettes[d.paletteIdx]?.layers ?? [];
+      const current = d.customPalette ?? baseLayers.map((l) => l.map((c) => [...c] as [number, number, number]));
+      const next = current.map((layer, li) =>
+        li === layerIdx
+          ? layer.map((c, ci) => (ci === colorIdx ? rgb : c) as [number, number, number])
+          : layer,
+      );
+      return { ...d, customPalette: next };
+    });
+  }, []);
 
   const handleSave = () => {
     onSave(draft);
@@ -102,20 +131,24 @@ export function PlanetEditorModal({
       <div className="flex gap-[18px]">
         {/* Left: size previews */}
         <div className="shrink-0 flex flex-col items-center gap-[14px] pt-[2px]">
-          <div className="text-[9px] font-mono text-txt-4 uppercase tracking-wide">Preview</div>
-          {PREVIEW_SIZES.map((sz, i) => (
-            <div key={sz} className="flex flex-col items-center gap-[4px]">
-              <div className="flex items-center justify-center" style={{ width: 168, height: sz }}>
-                <PlanetCanvas
-                  projectId={`${projectId}-editor`}
-                  config={draft}
-                  size={sz}
-                  className={freeformCls}
-                />
+          <div className="text-[9px] font-mono text-txt-3 uppercase tracking-wide">Preview</div>
+          {PREVIEW_SIZES.map((sz, i) => {
+            const scale = CANVAS_SCALE[draft.type] ?? 1;
+            const previewSize = Math.round(sz / scale);
+            return (
+              <div key={sz} className="flex flex-col items-center gap-[4px]">
+                <div className="flex items-center justify-center overflow-hidden" style={{ width: 168, height: sz }}>
+                  <PlanetCanvas
+                    projectId={`${projectId}-editor`}
+                    config={draft}
+                    size={previewSize}
+                    className={freeformCls}
+                  />
+                </div>
+                <span className="text-[9px] font-mono text-txt-3">{PREVIEW_LABELS[i]}</span>
               </div>
-              <span className="text-[8px] font-mono text-txt-4">{PREVIEW_LABELS[i]}</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Right: all controls */}
@@ -140,7 +173,7 @@ export function PlanetEditorModal({
 
           {/* Planet type grid */}
           <div>
-            <div className="text-[9px] font-mono text-txt-4 uppercase tracking-wide mb-[5px]">Type</div>
+            <div className="text-[9px] font-mono text-txt-3 uppercase tracking-wide mb-[5px]">Type</div>
             <div className="grid grid-cols-4 gap-[4px]">
               {PLANET_TYPES.map((t) => {
                 const def = PLANET_TYPE_DEFS[t];
@@ -164,9 +197,8 @@ export function PlanetEditorModal({
                       className={FREEFORM_TYPES.has(t) ? "" : "rounded-full overflow-hidden"}
                     />
                     <span className={[
-                      "text-[8px] font-mono leading-[1.2] text-center w-full px-[1px]",
-                      "overflow-hidden",
-                      selected ? "text-acc" : "text-txt-3",
+                      "text-[9px] font-mono leading-[1.2] text-center w-full px-[1px] overflow-hidden",
+                      selected ? "text-acc" : "text-txt-2",
                     ].join(" ")}>
                       {def.label}
                     </span>
@@ -178,7 +210,7 @@ export function PlanetEditorModal({
 
           {/* Seed */}
           <div className="flex items-center gap-[6px]">
-            <label className="text-[9px] font-mono text-txt-4 uppercase tracking-wide shrink-0 w-[40px]">Seed</label>
+            <label className="text-[9px] font-mono text-txt-3 uppercase tracking-wide shrink-0 w-[40px]">Seed</label>
             <input
               type="number"
               value={draft.seed}
@@ -202,7 +234,7 @@ export function PlanetEditorModal({
 
           {/* Pixels */}
           <div className="flex items-center gap-[6px]">
-            <label className="text-[9px] font-mono text-txt-4 uppercase tracking-wide shrink-0 w-[40px]">Pixels</label>
+            <label className="text-[9px] font-mono text-txt-3 uppercase tracking-wide shrink-0 w-[40px]">Pixels</label>
             <input
               type="range"
               min={10}
@@ -217,7 +249,7 @@ export function PlanetEditorModal({
 
           {/* Rotation */}
           <div className="flex items-center gap-[6px]">
-            <label className="text-[9px] font-mono text-txt-4 uppercase tracking-wide shrink-0 w-[40px]">Rotate</label>
+            <label className="text-[9px] font-mono text-txt-3 uppercase tracking-wide shrink-0 w-[40px]">Rotate</label>
             <input
               type="range"
               min={0}
@@ -235,7 +267,7 @@ export function PlanetEditorModal({
 
           {/* Dither */}
           <div className="flex items-center gap-[6px]">
-            <label className="text-[9px] font-mono text-txt-4 uppercase tracking-wide shrink-0 w-[40px]">Dither</label>
+            <label className="text-[9px] font-mono text-txt-3 uppercase tracking-wide shrink-0 w-[40px]">Dither</label>
             <button
               type="button"
               onClick={() => setDraft((d) => ({ ...d, dither: !(d.dither ?? true) }))}
@@ -252,29 +284,56 @@ export function PlanetEditorModal({
 
           {/* Palette */}
           <div>
-            <div className="text-[9px] font-mono text-txt-4 uppercase tracking-wide mb-[5px]">Palette</div>
+            <div className="text-[9px] font-mono text-txt-3 uppercase tracking-wide mb-[5px]">Palette</div>
             <div className="grid grid-cols-3 gap-[4px]">
               {typeDef.palettes.map((palette, idx) => {
                 const selected = draft.paletteIdx === idx;
+                // For the selected palette apply any custom overrides; others show preset
+                const effectiveLayers: [number, number, number][][] = selected && draft.customPalette
+                  ? draft.customPalette as [number, number, number][][]
+                  : palette.layers as [number, number, number][][];
+
                 return (
                   <button
                     key={idx}
                     type="button"
                     onClick={() => setPalette(idx)}
                     className={[
-                      "flex items-center gap-[7px] px-[8px] py-[5px] rounded-[8px] border transition-all duration-100 cursor-pointer text-left",
+                      "flex flex-col gap-[6px] px-[8px] py-[7px] rounded-[8px] border transition-all duration-100 cursor-pointer text-left",
                       selected
                         ? "bg-[rgba(255,120,60,0.10)] border-[rgba(255,120,60,0.45)]"
                         : "bg-bg-2 border-line hover:bg-bg-3 hover:border-line-2",
                     ].join(" ")}
                   >
-                    <PlanetCanvas
-                      projectId={`${projectId}-pal-${idx}`}
-                      config={{ type: draft.type, seed: draft.seed, paletteIdx: idx, pixels: draft.pixels, dither: draft.dither }}
-                      size={22}
-                      className={`shrink-0 ${isFreeform ? "" : "rounded-full overflow-hidden"}`}
-                    />
-                    <span className={["text-[11px] font-semibold leading-tight truncate", selected ? "text-acc" : "text-txt-2"].join(" ")}>
+                    {/* Color bar — each color fills an equal slice of the full width */}
+                    <div className="flex w-full h-[28px] rounded-[5px] overflow-hidden">
+                      {effectiveLayers.map((layer, li) =>
+                        layer.map((rgb, ci) => {
+                          const hex = rgbToHex(rgb);
+                          return (
+                            <div
+                              key={`${li}-${ci}`}
+                              className="relative flex-1"
+                              style={{ background: hex }}
+                              title={selected ? "Click to change color" : undefined}
+                              onClick={selected ? (e) => e.stopPropagation() : undefined}
+                            >
+                              {selected && (
+                                <input
+                                  type="color"
+                                  value={hex}
+                                  onChange={(e) => handleCustomColor(li, ci, e.target.value)}
+                                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer border-none p-0"
+                                  aria-label={`Layer ${li + 1} color ${ci + 1}`}
+                                />
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                    {/* Palette name */}
+                    <span className={["text-[11px] font-semibold leading-tight truncate w-full", selected ? "text-acc" : "text-txt-2"].join(" ")}>
                       {palette.name}
                     </span>
                   </button>

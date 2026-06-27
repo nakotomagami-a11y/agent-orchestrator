@@ -50,7 +50,8 @@ export type DecoFamily =
   | "sheep"
   | "gold_mine"
   | "cursed_chest"
-  | "bridge";
+  | "bridge"
+  | "path";
 
 export type DecorationKind =
   | "bush"
@@ -114,7 +115,8 @@ export type DecorationKind =
   | "butterfly_pink"
   | "butterfly_red"
   | "butterfly_white"
-  | "butterfly_yellow";
+  | "butterfly_yellow"
+  | "path";
 
 export interface DecorationDef {
   label: string;
@@ -140,6 +142,14 @@ export interface DecorationDef {
    *     standing on the tile rather than hanging from its top edge.
    */
   anchor?: "bottom" | "center";
+  /** For 2D tilesheets (not horizontal strips): total sheet pixel width. */
+  sheetW?: number;
+  /** For 2D tilesheets: total sheet pixel height. */
+  sheetH?: number;
+  /** Preview tile column index within a 2D tilesheet. */
+  previewCol?: number;
+  /** Preview tile row index within a 2D tilesheet. */
+  previewRow?: number;
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -552,6 +562,20 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     frameW: 16, frameH: 16, frames: 5,
     terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
+  },
+
+  // ─ Path (64×64 per tile, land-only). Auto-tile: the renderer picks the
+  //   correct tile from the 4×4 sheet (path.png) based on which of the 4
+  //   cardinal neighbours also carry a "path" decoration. Single "path"
+  //   family so at most one path tile occupies a cell at a time. The
+  //   sheetW/sheetH/previewCol/previewRow fields tell DecoSprite to show
+  //   the cross tile (col 3, row 3) as the toolbar thumbnail. ──────────
+  path: {
+    label: "Path",
+    src: "/tiles/path.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "land", family: "path",
+    sheetW: 256, sheetH: 256, // full sheet size; previewCol/Row=0 → isolated tile at (0,0)
   },
 
   // ─ Bridges (static 64×64, water-only). Only the middle plank is

@@ -314,8 +314,8 @@ function OfficeCard({
       onKeyDown={e => e.key === "Enter" && onSelect(agent.id)}
     >
       <div className="grid items-center gap-[12px] [grid-template-columns:48px_1fr_auto]">
-        <div className="bg-bg-3 border border-line grid place-items-center relative overflow-visible w-[48px] h-[48px] rounded-[12px] before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.10),transparent_60%)] before:rounded-[inherit]">
-          <AgentAvatar unit={agent.unitChoice} size={42} />
+        <div className="grid place-items-center relative overflow-visible w-[48px] h-[48px] before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:[background:radial-gradient(circle_at_75%_80%,rgba(255,255,255,0.10),transparent_60%)] before:rounded-[inherit]">
+          <AgentAvatar unit={agent.unitChoice} size={50} />
           <span className={cn(
             "absolute rounded-full w-[14px] h-[14px] bottom-[-2px] right-[-2px] border-2 border-bg-2",
             agent.status === "working" ? "bg-[var(--working)] [box-shadow:0_0_8px_var(--working)]" :

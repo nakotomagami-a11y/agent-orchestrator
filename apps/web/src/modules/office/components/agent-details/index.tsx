@@ -416,10 +416,10 @@ export function AgentDetailsModal() {
           ) : (
             <>
           {/* ── Agent header ── */}
-          <div className="flex items-center gap-[14px] px-6 h-[84px] border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
+          <div className="flex items-center gap-[14px] px-6 h-[72px] border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
             <div className="relative shrink-0 w-[40px] h-[70px] flex items-center justify-center">
-              <AgentAvatar unit={agent.unitChoice} size={40} label={agent.name} />
-              <span className={`absolute right-[-2px] bottom-[-2px] w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
+              <AgentAvatar unit={agent.unitChoice} size={70} label={agent.name} />
+              <span className={`absolute right-[-2px] bottom-0 mb-2 w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
                 isWorking
                   ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]"
                   : "bg-[var(--ao-fg-3)]"

@@ -140,7 +140,7 @@ export function ProjectSwitcher() {
         onClick={() => setOpen((v) => !v)}
       >
         {currentId ? (
-          <PlanetCanvas projectId={currentId} config={current?.planet} size={18} className="rounded-full overflow-hidden shrink-0" />
+          <PlanetCanvas projectId={currentId} config={current?.planet} size={18} className="rounded-full shrink-0" />
         ) : (
           <Icon name="folder" size={13} />
         )}
@@ -305,7 +305,7 @@ function ProjectRow({
       )}
     >
       {projectId ? (
-        <PlanetCanvas projectId={projectId} config={planetConfig} size={32} className="rounded-full overflow-hidden shrink-0" />
+        <PlanetCanvas projectId={projectId} config={planetConfig} size={32} className="rounded-full shrink-0" />
       ) : (
         <span className="grid place-items-center shrink-0 text-white font-bold w-[32px] h-[32px] rounded-[8px] text-[12px] border border-[rgba(255,255,255,0.08)] bg-bg-3">
           <Icon name="folder" size={13} className="text-txt-3" />

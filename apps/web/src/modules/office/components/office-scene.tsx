@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { TILE, type AgentPositions, type VisibleRange } from "./office-map";
 import { OfficeMapOverlay } from "./office-map-overlay";
 import { OfficePixiCanvas } from "./office-pixi-canvas";
+import { WaterShaderCanvas } from "./water-shader-canvas";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
   DECORATIONS,
@@ -588,6 +589,9 @@ export function OfficeScene({
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
     >
+      {/* Water shader — renders behind PixiJS; only active in iso view */}
+      {/* <WaterShaderCanvas active={view === "iso"} zoomRef={zoomRef} panRef={panRef} /> */}
+
       {/* PixiJS visual layer — camera controlled via panX/panY/zoom props */}
       {containerSize && (
         <OfficePixiCanvas

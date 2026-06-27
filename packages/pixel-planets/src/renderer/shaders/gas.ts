@@ -35,6 +35,11 @@ uniform float size;
 uniform int   OCTAVES;
 uniform float seed;
 uniform float time;
+// When the canvas is oversized (e.g. 3× for gas-giant with ring), remap the
+// full-canvas UV into planet-disc UV [0,1] before any disc calculations.
+// For a 1× canvas: uv_offset=0, uv_scale=1 → identity transform.
+uniform float uv_offset;   // = (canvasScale-1) / (2*canvasScale)
+uniform float uv_scale;    // = canvasScale
 in  vec2 UV;
 layout(location=0) out vec4 fragColor;
 
@@ -77,7 +82,12 @@ vec2 rotate(vec2 coord, float angle) {
   return coord + 0.5;
 }
 void main() {
-  vec2 uv = floor(UV * pixels) / pixels;
+  // Pixelate at full canvas resolution, then remap into disc UV [0,1].
+  // For a 1× canvas uv_offset=0 / uv_scale=1 → identity; for a 3× canvas
+  // the disc occupies the center third and is expanded back to [0,1].
+  vec2 uv_raw = floor(UV * pixels) / pixels;
+  vec2 uv = (uv_raw - uv_offset) * uv_scale;
+
   float d_light  = distance(uv, light_origin);
   float d_circle = distance(uv, vec2(0.5));
   float a = step(d_circle, 0.49999);
@@ -86,8 +96,8 @@ void main() {
   uv.y += smoothstep(0.0, cloud_curve, abs(uv.x - 0.4));
   float c = cloud_alpha(uv * vec2(1.0, stretch));
   vec4 col = colors[0];
-  if (c < cloud_cover + 0.03)     col = colors[1];
-  if (d_light + c * 0.2 > light_border_1) col = colors[2];
-  if (d_light + c * 0.2 > light_border_2) col = colors[3];
+  if (c < cloud_cover + 0.03)               col = colors[1];
+  if (d_light + c * 0.2 > light_border_1)   col = colors[2];
+  if (d_light + c * 0.2 > light_border_2)   col = colors[3];
   fragColor = vec4(col.rgb, step(cloud_cover, c) * a * col.a);
 }`;

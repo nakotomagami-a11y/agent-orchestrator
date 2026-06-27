@@ -73,6 +73,17 @@ export interface PlanetConfig {
    * Creates the characteristic chunky colour stepping. Defaults to true.
    */
   dither?: boolean;
+
+  /**
+   * Per-layer color overrides. When present, these replace the colors from the
+   * named palette (`paletteIdx`). Structure mirrors `PaletteDef.layers`:
+   * `customPalette[layerIndex][colorIndex]` is an RGB triple (values 0–1).
+   *
+   * Set by the editor when the user adjusts individual swatch colors. Storing it
+   * on the config keeps saves fully self-contained — no reference to the preset
+   * palette needed at render time.
+   */
+  customPalette?: [number, number, number][][];
 }
 
 // ---------------------------------------------------------------------------
@@ -85,6 +96,7 @@ export interface PlanetConfig {
  */
 export type ShaderName =
   | "gas"            // gas-giant cloud bands
+  | "gas-ring"       // Saturn-style tilted ring (composited over gas layers)
   | "rock"           // rocky surface with dithered shadows
   | "craters"        // crater overlay (composited over rock)
   | "terrain"        // land masses with optional river channels

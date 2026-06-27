@@ -48,7 +48,7 @@ export type { PlanetTypeDef, PaletteDef } from "./palettes/index";
 // Parameters — converts a serialisable PlanetConfig into GPU-ready PlanetParams
 // ---------------------------------------------------------------------------
 
-export { getPlanetParams, LAYER_TEMPLATES, FREEFORM_TYPES } from "./params";
+export { getPlanetParams, LAYER_TEMPLATES, FREEFORM_TYPES, CANVAS_SCALE } from "./params";
 
 // ---------------------------------------------------------------------------
 // Random helpers — for "Randomize" buttons and first-run planet generation

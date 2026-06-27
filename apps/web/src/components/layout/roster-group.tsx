@@ -115,8 +115,8 @@ export function RosterGroup({
         aria-expanded={isMulti ? expanded : undefined}
       >
         {/* Avatar + LED */}
-        <div className="relative w-[30px] h-[30px]">
-          <AgentAvatar unit={agent.unitChoice} size={30} className="rounded-[8px] border border-line" />
+        <div className="relative w-8 h-8">
+          <AgentAvatar unit={agent.unitChoice} size={40} />
           <span className={agentLedClass(aggregated)} />
         </div>
 

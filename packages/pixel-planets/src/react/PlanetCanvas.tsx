@@ -23,10 +23,20 @@
  *   a prop changes, React re-runs the effect, we unregister the old key and
  *   register a new one. The renderer then re-computes params on the next frame.
  *   This is O(1) and avoids unnecessary re-renders.
+ *
+ * Sizing and the wrapper div
+ *   For star (2×) and black-hole (3×), the WebGL canvas is larger than `size`
+ *   so the disc fills `size` pixels and the effects (blobs, flares, ring) fill
+ *   the extra space. A wrapper div is always sized to `size × size` and
+ *   flex-centers the canvas inside — callers control overflow via `className`:
+ *
+ *     overflow-hidden rounded-full   → clips to a circle (good for list icons)
+ *     (omit overflow-hidden)         → effects bleed outside the box (good for
+ *                                      large previews and freeform types)
  */
 import { memo, useEffect, useRef } from "react";
 import type { PlanetConfig } from "../types";
-import { getPlanetParams } from "../params";
+import { getPlanetParams, CANVAS_SCALE } from "../params";
 import { PlanetRenderer } from "../renderer/index";
 
 // ---------------------------------------------------------------------------
@@ -60,16 +70,19 @@ export interface PlanetCanvasProps {
   config?: PlanetConfig;
 
   /**
-   * Display size in CSS pixels. The canvas element is sized to this value;
-   * the WebGL offscreen canvas may render at a higher resolution (for planet
-   * types that need extra canvas space — star 2×, black hole 3×) and is then
-   * downscaled via `drawImage`.
+   * Disc diameter in CSS pixels. The wrapper div is always `size × size`.
+   * The inner canvas may be larger for star/black-hole types (effects overflow).
    *
    * @default 32
    */
   size?: number;
 
-  /** Forwarded to the `<canvas>` element. */
+  /**
+   * Applied to the wrapper div. Use this to control:
+   *   - Layout behaviour (`shrink-0`, `block`, …)
+   *   - Clipping (`overflow-hidden rounded-full` for a circle icon)
+   *   - Freeform bleed (omit `overflow-hidden` to let effects extend outside)
+   */
   className?: string;
 }
 
@@ -80,6 +93,11 @@ export const PlanetCanvas = memo(function PlanetCanvas({
   className,
 }: PlanetCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // For star (2×) and black-hole (3×), the canvas is larger than the wrapper
+  // so the disc appears at `size` px and surrounding effects fill the margin.
+  const canvasScale = config ? (CANVAS_SCALE[config.type] ?? 1) : 1;
+  const canvasSize = size * canvasScale;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -101,15 +119,17 @@ export const PlanetCanvas = memo(function PlanetCanvas({
     return () => renderer.unregister(key);
   }, [projectId, config, size]);
 
-  // imageRendering: pixelated prevents the browser from blurring the
-  // pixel-art output when drawing to a canvas smaller than its CSS size.
   return (
-    <canvas
-      ref={canvasRef}
-      width={size}
-      height={size}
+    <div
       className={className}
-      style={{ imageRendering: "pixelated", display: "block" }}
-    />
+      style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={canvasSize}
+        height={canvasSize}
+        style={{ imageRendering: "pixelated", display: "block", flexShrink: 0 }}
+      />
+    </div>
   );
 });

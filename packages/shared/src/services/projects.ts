@@ -54,6 +54,18 @@ function parsePlanetConfig(raw: unknown): PlanetConfig | undefined {
   if (typeof o.pixels === "number") out.pixels = Math.round(o.pixels);
   if (typeof o.rotation === "number") out.rotation = o.rotation;
   if (typeof o.dither === "boolean") out.dither = o.dither;
+  if (Array.isArray(o.customPalette)) {
+    const cp = (o.customPalette as unknown[]).map((layer) => {
+      if (!Array.isArray(layer)) return null;
+      return (layer as unknown[]).map((c) => {
+        if (!Array.isArray(c) || c.length !== 3) return null;
+        const [r, g, b] = c as unknown[];
+        if (typeof r !== "number" || typeof g !== "number" || typeof b !== "number") return null;
+        return [r, g, b] as [number, number, number];
+      }).filter((c): c is [number, number, number] => c !== null);
+    }).filter((l): l is [number, number, number][] => l !== null);
+    if (cp.length > 0) out.customPalette = cp;
+  }
   return out;
 }
 

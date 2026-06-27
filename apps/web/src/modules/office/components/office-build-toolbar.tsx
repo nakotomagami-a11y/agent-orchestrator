@@ -313,6 +313,10 @@ function DecoSprite({ def, size }: { def: DecorationDef; size: number }) {
   const scale = Math.min(size / def.frameW, size / def.frameH);
   const drawW = def.frameW * scale;
   const drawH = def.frameH * scale;
+  const sheetW = def.sheetW ?? def.frameW * def.frames;
+  const sheetH = def.sheetH ?? def.frameH;
+  const srcX = (def.previewCol ?? 0) * def.frameW;
+  const srcY = (def.previewRow ?? 0) * def.frameH;
   return (
     <span
       aria-hidden
@@ -322,8 +326,8 @@ function DecoSprite({ def, size }: { def: DecorationDef; size: number }) {
         height: drawH,
         backgroundImage: `url(${def.src})`,
         backgroundRepeat: "no-repeat",
-        backgroundSize: `${def.frames * drawW}px ${drawH}px`,
-        backgroundPosition: "0 0",
+        backgroundSize: `${sheetW * scale}px ${sheetH * scale}px`,
+        backgroundPosition: `-${srcX * scale}px -${srcY * scale}px`,
         imageRendering: "pixelated",
         flexShrink: 0,
       }}

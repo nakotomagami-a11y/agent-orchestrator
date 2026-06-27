@@ -5,6 +5,7 @@ import {
   Application,
   Assets,
   Container,
+  Graphics,
   Rectangle,
   Sprite,
   Texture,
@@ -39,6 +40,15 @@ const FOAM_ANIM_SPEED = 10 / 60;
 // Agent sprite constants
 const AGENT_SIZE = 96;
 const UNIT_ANIM_SPEED = 8 / 60; // 8 fps at ~60fps ticker
+
+// Path tiles are drawn with PixiJS Graphics (no PNG needed).
+// Geometry constants — TILE=64, path band is 36px centred, 2px dark border.
+const PATH_M = 14;          // margin: px from tile edge to path edge
+const PATH_P = 36;          // path width in px  (TILE - 2*PATH_M = 36)
+const PATH_B = 2;           // border width in px
+const PATH_C_BORDER = 0x4A2E10; // dark rich brown outline
+const PATH_C_FILL   = 0xB8884E; // warm earthy tan fill
+const PATH_C_LIGHT  = 0xD0A86A; // lighter centre highlight
 
 // Bridge cap auto-render sources
 const BRIDGE_CAP_SRCS = {
@@ -279,6 +289,44 @@ export function OfficePixiCanvas({
   return <div ref={containerRef} className="absolute inset-0 w-full h-full" />;
 }
 
+// ─── Path tile renderer ────────────────────────────────────────────────────────
+// Draws one 64×64 path tile using PixiJS Graphics so we need no external PNG.
+// n/e/s/w = whether that cardinal neighbour is also a path cell.
+function drawPathGraphics(n: boolean, e: boolean, s: boolean, w: boolean): Graphics {
+  const g = new Graphics();
+  const M = PATH_M;
+  const P = PATH_P;
+  const B = PATH_B;
+
+  // 1. Border (dark) — slightly expanded rects drawn first, fill on top reveals the ring
+  g.rect(M - B, M - B, P + 2 * B, P + 2 * B);
+  if (n) g.rect(M - B, 0,         P + 2 * B, M + B);
+  if (s) g.rect(M - B, M + P - B, P + 2 * B, M + B);
+  if (e) g.rect(M + P - B, M - B, M + B,     P + 2 * B);
+  if (w) g.rect(0,         M - B, M + B,     P + 2 * B);
+  g.fill({ color: PATH_C_BORDER });
+
+  // 2. Main fill (earthy tan)
+  g.rect(M, M, P, P);
+  if (n) g.rect(M, 0,     P, M);
+  if (s) g.rect(M, M + P, P, M);
+  if (e) g.rect(M + P, M, M, P);
+  if (w) g.rect(0, M,     M, P);
+  g.fill({ color: PATH_C_FILL });
+
+  // 3. Centre highlight strip — lighter 12px band along the middle of the path band
+  const HL = 12;
+  const HO = M + (P - HL) / 2; // offset from tile edge to highlight start
+  g.rect(HO, HO, HL, HL);
+  if (n) g.rect(HO, B,        HL, HO - B);
+  if (s) g.rect(HO, M + P,    HL, M - B);
+  if (e) g.rect(M + P, HO,    M - B, HL);
+  if (w) g.rect(B,     HO,    HO - B, HL);
+  g.fill({ color: PATH_C_LIGHT });
+
+  return g;
+}
+
 // ─── Static layer builder (renamed from buildPixiScene) ────────────────────────
 async function buildStaticLayers(
   staticContainer: Container,
@@ -304,6 +352,7 @@ async function buildStaticLayers(
     for (const kind of stack) usedKinds.add(kind);
   }
   for (const kind of usedKinds) {
+    if (kind === "path") continue; // drawn via Graphics — no texture needed
     urls.add(DECORATIONS[kind].src);
   }
 
@@ -427,7 +476,27 @@ async function buildStaticLayers(
   }
   decoEntries.sort((a, b) => a.y - b.y || a.layer - b.layer);
 
+  // Path neighbour helper used inside the decoration loop below.
+  const hasPath = (cx: number, cy: number): boolean => {
+    const stack = decorations[`${cx},${cy}`];
+    return !!stack && stack.includes("path");
+  };
+
   for (const { x, y, kind } of decoEntries) {
+    // ── Path: draw with Graphics (no external PNG) ──────────────────────
+    if (kind === "path") {
+      const g = drawPathGraphics(
+        hasPath(x, y - 1),
+        hasPath(x + 1, y),
+        hasPath(x, y + 1),
+        hasPath(x - 1, y),
+      );
+      g.x = x * TILE;
+      g.y = y * TILE;
+      decoLayer.addChild(g);
+      continue;
+    }
+
     const def = DECORATIONS[kind];
     const baseTex = textureMap.get(def.src);
     if (!baseTex) continue;
