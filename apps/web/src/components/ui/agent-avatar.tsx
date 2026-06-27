@@ -9,7 +9,7 @@ import { type UnitFaction, type UnitKind, type UnitSelection } from "./unit-spri
 // Both orderings differ from the UNIT_FACTIONS / UNIT_KINDS constants, so we
 // use separate arrays here to map the selection to the correct portrait file.
 const AVATAR_FACTION_ORDER: UnitFaction[] = ["blue", "red", "yellow", "purple", "black"];
-const AVATAR_KIND_ORDER:    UnitKind[]    = ["warrior", "pawn", "archer", "monk", "lancer"];
+const AVATAR_KIND_ORDER:    UnitKind[]    = ["warrior", "lancer", "archer", "monk", "pawn"];
 
 function slotFor(unit: UnitSelection): number {
   const fi = AVATAR_FACTION_ORDER.indexOf(unit.faction);
