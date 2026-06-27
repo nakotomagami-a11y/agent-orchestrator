@@ -19,10 +19,16 @@ export function getAgentActionAndFlip(
     const stack = decorations[decorationKey(nx, ny)];
     return !!stack && stack.some((k) => familyOf(k) === f);
   };
-  const hasTree = has(x, y, "tree") || has(x, y + 1, "tree") || has(x, y + 2, "tree");
+  // Trees are tall — check the agent's cell, one cell above, and all four
+  // cardinal neighbours (plus their y+1 row) so standing next to a tree fires axe.
+  const treeRight = has(x + 1, y, "tree") || has(x + 1, y + 1, "tree");
+  const treeLeft  = has(x - 1, y, "tree") || has(x - 1, y + 1, "tree");
+  const treeNear  = has(x, y, "tree") || has(x, y - 1, "tree")
+                 || has(x, y + 1, "tree") || has(x, y + 2, "tree");
+  const hasTree = treeRight || treeLeft || treeNear;
   const sheepRight = has(x + 1, y, "sheep");
   const sheepLeft = has(x - 1, y, "sheep");
-  if (hasTree) return { action: "axe", flip: false };
+  if (hasTree) return { action: "axe", flip: treeLeft && !treeRight };
   if (has(x, y, "rock")) return { action: "pickaxe", flip: false };
   if (sheepRight || sheepLeft) return { action: "knife", flip: !sheepRight && sheepLeft };
   return { action: "hammer", flip: false };
