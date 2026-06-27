@@ -1,10 +1,15 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { UNIT_FACTIONS, UNIT_KINDS, type UnitSelection } from "./unit-sprite.utils";
+import { UNIT_KINDS, type UnitFaction, type UnitSelection } from "./unit-sprite.utils";
+
+// Avatar PNGs are ordered: blue(1-5), red(6-10), yellow(11-15), purple(16-20), black(21-25).
+// This differs from UNIT_FACTIONS which has purple before yellow, so we use a
+// separate order constant here to map faction → correct portrait file.
+const AVATAR_FACTION_ORDER: UnitFaction[] = ["blue", "red", "yellow", "purple", "black"];
 
 function slotFor(unit: UnitSelection): number {
-  const fi = UNIT_FACTIONS.indexOf(unit.faction);
+  const fi = AVATAR_FACTION_ORDER.indexOf(unit.faction);
   const ki = UNIT_KINDS.indexOf(unit.kind);
   if (fi === -1 || ki === -1) return 1;
   return fi * UNIT_KINDS.length + ki + 1;

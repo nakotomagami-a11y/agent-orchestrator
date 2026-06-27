@@ -668,24 +668,33 @@ async function buildAgentLayer(
       }),
     );
 
-    // ── Sprite math: scale bbox to AGENT_SIZE ──────────────────────────────
-    const spriteScale = AGENT_SIZE / Math.max(def.bbox.w, def.bbox.h);
-    const padX = (AGENT_SIZE - def.bbox.w * spriteScale) / 2;
-    const padY = (AGENT_SIZE - def.bbox.h * spriteScale) / 2;
+    // Per-unit canvas size: lancers have a tall bbox due to the spear so
+    // we scale up their container to match visual weight with other units.
+    const agentSize = Math.round(AGENT_SIZE * (def.sizeMultiplier ?? 1));
+
+    // ── Sprite math: scale bbox to agentSize ───────────────────────────────
+    const spriteScale = agentSize / Math.max(def.bbox.w, def.bbox.h);
+    const padX = (agentSize - def.bbox.w * spriteScale) / 2;
+    const padY = (agentSize - def.bbox.h * spriteScale) / 2;
     const spriteX = padX - def.bbox.x * spriteScale;
     const spriteY = padY - def.bbox.y * spriteScale;
     // Mirror: when flipping (scale.x = -spriteScale), the pixel at frame-coord fx
     // renders at: container_x = spriteX' + fx * (-spriteScale)
-    // To match CSS scaleX(-1) around the 96px wide box:
-    //   container_x_flipped = AGENT_SIZE - (spriteX + fx * spriteScale)
-    // → spriteX'(flip) = AGENT_SIZE - spriteX
-    const spriteXFlip = AGENT_SIZE - spriteX;
+    // To match CSS scaleX(-1) around the agentSize-wide box:
+    //   container_x_flipped = agentSize - (spriteX + fx * spriteScale)
+    // → spriteX'(flip) = agentSize - spriteX
+    const spriteXFlip = agentSize - spriteX;
 
     // ── Agent position on tile ─────────────────────────────────────────────
+    // Feet-anchored: all units share the same ground line (FEET_Y px below
+    // the tile top) so larger units extend upward rather than downward.
+    // FEET_Y = (TILE + AGENT_SIZE) / 2 preserves the original positioning
+    // for units with sizeMultiplier = 1.
+    const FEET_Y = (TILE + AGENT_SIZE) / 2; // 80 px from tile top
     const onBridge = isBridgeCell(x, y, grid, decorations);
-    const agentLeft = x * TILE + (TILE - AGENT_SIZE) / 2;
+    const agentLeft = x * TILE + (TILE - agentSize) / 2;
     const agentTop =
-      y * TILE + (TILE - AGENT_SIZE) / 2 - (onBridge ? Math.round(TILE * 0.35) : 0);
+      y * TILE + FEET_Y - agentSize - (onBridge ? Math.round(TILE * 0.35) : 0);
 
     // Container at the tile position; AnimatedSprite inside with the offset
     const agentContainer = new Container();
@@ -719,8 +728,8 @@ async function buildAgentLayer(
       // so we don't need the pre-render width/height (which would be 0 before
       // the first render pass in PixiJS v8's lazy-render model)
       badge.anchor.set(1, 1);
-      badge.x = AGENT_SIZE - 2;
-      badge.y = AGENT_SIZE - 2;
+      badge.x = agentSize - 2;
+      badge.y = agentSize - 2;
       agentContainer.addChild(badge);
     }
 
@@ -737,8 +746,8 @@ async function buildAgentLayer(
         },
       });
       pill.anchor.set(1, 1);
-      pill.x = AGENT_SIZE - 2;
-      pill.y = showBadge ? AGENT_SIZE - 14 : AGENT_SIZE - 2;
+      pill.x = agentSize - 2;
+      pill.y = showBadge ? agentSize - 14 : agentSize - 2;
       agentContainer.addChild(pill);
     }
 

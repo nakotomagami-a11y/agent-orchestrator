@@ -48,6 +48,14 @@ interface UnitDef {
   bbox: { x: number; y: number; w: number; h: number };
   /** Human-readable name shown in the unit picker. */
   label: string;
+  /**
+   * Canvas size multiplier relative to the default AGENT_SIZE (96 px).
+   * Units whose bbox is dominated by a weapon extension (e.g. the lancer's
+   * spear) look tiny at 1×; boost them so the character body reads at the
+   * right visual weight on the tile. All units are feet-anchored so they
+   * stand on the same ground line regardless of this value. Default: 1.
+   */
+  sizeMultiplier?: number;
 }
 
 export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
@@ -94,6 +102,7 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     run: { frames: 6 },
     bbox: { x: 96, y: 24, w: 128, h: 272 },
     label: "Lancer",
+    sizeMultiplier: 2.5,
   },
 };
 
