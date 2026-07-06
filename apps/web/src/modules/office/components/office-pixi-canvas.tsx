@@ -157,6 +157,13 @@ export function OfficePixiCanvas({
     let alive = true;
     let initDone = false;
 
+    // Round DPR to the nearest integer so the canvas is always at an exact
+    // integer physical-to-CSS ratio.  Fractional DPR (e.g. 1.25 on Wayland)
+    // combined with image-rendering:pixelated (inherited from the container)
+    // causes nearest-neighbour downscaling artifacts — horizontal teal stripes
+    // visible in WebKitGTK (Tauri) but hidden by Chromium's sub-pixel blending.
+    const resolution = Math.round(window.devicePixelRatio ?? 1) || 1;
+
     app
       .init({
         canvas,
@@ -164,8 +171,12 @@ export function OfficePixiCanvas({
         height,
         backgroundAlpha: 0,
         antialias: false,
-        resolution: window.devicePixelRatio ?? 1,
+        resolution,
         autoDensity: true,
+        // Snap all sprite screen positions to whole pixels so fractional zoom
+        // values don't open 1px gaps between adjacent tiles (visible as teal
+        // stripes on WebKitGTK which doesn't sub-pixel-blend like Chromium).
+        roundPixels: true,
       })
       .then(() => {
         initDone = true;
@@ -187,7 +198,7 @@ export function OfficePixiCanvas({
         // The camera sync effect already fired (with worldRef still null) by the
         // time this async callback resolves, so we must set position here.
         const cam = cameraPropsRef.current;
-        world.position.set(cam.panX, cam.panY);
+        world.position.set(Math.round(cam.panX), Math.round(cam.panY));
         world.scale.set(cam.zoom);
 
         worldRef.current = world;
@@ -234,7 +245,7 @@ export function OfficePixiCanvas({
   useEffect(() => {
     const world = worldRef.current;
     if (!world) return;
-    world.position.set(panX, panY);
+    world.position.set(Math.round(panX), Math.round(panY));
     world.scale.set(zoom);
   }, [panX, panY, zoom]);
 
