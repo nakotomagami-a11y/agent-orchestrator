@@ -382,12 +382,18 @@ async function buildStaticLayers(
     for (const src of Object.values(BRIDGE_CAP_SRCS)) urls.add(src);
   }
 
-  // Batch-load all textures
+  // Batch-load all textures.
+  // Force nearest-neighbour filtering on every source: pixel-art sprites
+  // look correct with nearest, and it prevents bilinear sampling from
+  // bleeding into adjacent tiles in sprite-sheet crops (which is what
+  // causes "house roof" fragments to appear at neighbouring positions in
+  // WebKitGTK — Chromium hides this with sub-pixel blending).
   const textureMap = new Map<string, Texture>();
   await Promise.all(
     [...urls].map(async (url) => {
       try {
         const tex = await Assets.load<Texture>(url);
+        tex.source.scaleMode = "nearest";
         textureMap.set(url, tex);
       } catch (err) {
         console.warn("[PixiJS] failed to load texture:", url, err);
@@ -636,9 +642,9 @@ async function buildAgentLayer(
 
   await Promise.all(
     [...neededUrls].map((url) =>
-      Assets.load<Texture>(url).catch(() => {
-        /* silently skip missing sheets */
-      }),
+      Assets.load<Texture>(url)
+        .then((tex) => { tex.source.scaleMode = "nearest"; })
+        .catch(() => { /* silently skip missing sheets */ }),
     ),
   );
 
