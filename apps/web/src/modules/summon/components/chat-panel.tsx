@@ -84,10 +84,10 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   // flight. Used purely to compute "Xs since last token" against
   // stream.lastEventAt - without this, the staleness display would freeze.
   const [, setTick] = useState(0);
-  // Message typed while a run is in progress - fired automatically once the
-  // current run finishes. Replacing the value discards the previous queued
-  // message, which is the correct behavior for corrections.
-  const [queuedMessage, setQueuedMessage] = useState<string | null>(null);
+  // Messages typed while a run is in progress - fired sequentially, one per
+  // turn, as each preceding run finishes. Each queued message has a stable
+  // id so the UI can cancel a specific item without disturbing the others.
+  const [queuedMessages, setQueuedMessages] = useState<Array<{ id: string; text: string }>>([]);
   const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
   const [contextProfile, setContextProfile] = useState<ContextProfile>("balanced");
 
@@ -212,8 +212,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   };
 
   const onSubmit = (text: string) => {
-    if (isStreaming) {
-      setQueuedMessage(text);
+    if (isStreaming || queuedMessages.length > 0) {
+      setQueuedMessages((prev) => [...prev, { id: `q_${Date.now()}_${prev.length}`, text }]);
       return;
     }
     doSubmit(text);
@@ -225,7 +225,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       abort.mutate(activeRunId, {
         onSuccess: () => {
           setPhaseOverride("aborted");
-          setQueuedMessage(null);
+          setQueuedMessages([]);
         },
       });
     }
@@ -239,7 +239,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     setActiveRunId(null);
     setSessionId(null);
     setPhaseOverride(null);
-    setQueuedMessage(null);
+    setQueuedMessages([]);
     runStartIndexRef.current = null;
     fallbackAttemptedRef.current = null;
   };
@@ -285,20 +285,23 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   const isStreaming =
     phase === "sending" || phase === "connecting" || phase === "working" || phase === "streaming";
 
-  // Fire the queued message once the run finishes and all state (session ID,
-  // activeRunId) has settled. Watching `phase === "idle"` guarantees the done
-  // effect has already committed its state updates in a previous render.
+  // Fire the next queued message once the run finishes and all state (session
+  // ID, activeRunId) has settled. Watching `phase === "idle"` guarantees the
+  // done effect has already committed its state updates in a previous render.
+  // Only one message is dispatched per idle transition; the effect re-runs
+  // when `queuedMessages` shrinks, but the outer `isStreaming` guard on the
+  // next render keeps subsequent items in the queue until their turn.
   useEffect(() => {
     if (phase !== "idle") return;
-    if (!queuedMessage) return;
-    const msg = queuedMessage;
-    setQueuedMessage(null);
-    doSubmit(msg);
+    if (queuedMessages.length === 0) return;
+    const next = queuedMessages[0]!;
+    setQueuedMessages((prev) => prev.slice(1));
+    doSubmit(next.text);
     // doSubmit is defined inline - including it would re-run on every render.
     // The closure captures the right sessionId because this effect only fires
     // after phase becomes idle (i.e. the done effect's state updates landed).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, queuedMessage]);
+  }, [phase, queuedMessages]);
 
   const elapsedSec =
     stream.startTs && (phase === "working" || phase === "streaming")
@@ -450,8 +453,8 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
         phase={phase}
         phaseHint={phaseHint(phase, stream.usage)}
         phaseStats={liveStats}
-        queuedMessage={queuedMessage}
-        onCancelQueue={() => setQueuedMessage(null)}
+        queuedMessages={queuedMessages}
+        onCancelQueuedMessage={(id) => setQueuedMessages((prev) => prev.filter((m) => m.id !== id))}
       />
       {/* key=tKey forces a fresh Composer mount whenever the agent or
           instance changes, ensuring useState re-initialises from the correct

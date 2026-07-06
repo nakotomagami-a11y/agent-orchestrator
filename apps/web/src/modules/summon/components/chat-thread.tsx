@@ -40,9 +40,9 @@ export type ChatThreadProps = {
   phase: ChatPhase;
   phaseHint?: string;
   phaseStats?: string;
-  /** Message queued while agent is running - rendered as a pending bubble at the bottom. */
-  queuedMessage?: string | null;
-  onCancelQueue?: () => void;
+  /** Messages queued while agent is running - rendered as pending bubbles at the bottom. */
+  queuedMessages?: Array<{ id: string; text: string }>;
+  onCancelQueuedMessage?: (id: string) => void;
 };
 
 const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
@@ -52,7 +52,7 @@ const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
   { lbl: "Explain", text: "Walk me through how this part of the system handles errors." },
 ];
 
-export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairWorktree, onAbortRun, onDismissRateLimit, phase, phaseHint, phaseStats, queuedMessage, onCancelQueue }: ChatThreadProps) {
+export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairWorktree, onAbortRun, onDismissRateLimit, phase, phaseHint, phaseStats, queuedMessages, onCancelQueuedMessage }: ChatThreadProps) {
   const t = useTranslations("chat_thread");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
@@ -340,23 +340,27 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
               );
             })}
           </div>
-          {queuedMessage ? (
-            <div className="max-w-[760px] mx-auto px-2 mt-5">
-            <div className="flex flex-row-reverse ml-auto w-fit max-w-[80%] gap-[12px] relative opacity-[0.55]">
-              <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
-              <div className="flex flex-col items-end gap-[6px]">
-                <div className="bg-ao-bg-3 border border-dashed border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0">{queuedMessage}</div>
-                <div className="flex items-center gap-[6px]">
-                  <span className="font-mono text-[10px] tracking-[0.06em] uppercase text-ao-fg-3 bg-ao-bg-3 border border-ao-line-1 rounded-full px-[7px] py-[1px]">queued</span>
-                  <button
-                    type="button"
-                    className="w-4 h-4 rounded-full bg-transparent border border-ao-line-1 text-ao-fg-3 text-[12px] leading-none cursor-pointer grid place-items-center p-0 hover:bg-ao-bg-3 hover:text-ao-fg-1"
-                    onClick={onCancelQueue}
-                    aria-label="Cancel queued message"
-                  >×</button>
+          {queuedMessages && queuedMessages.length > 0 ? (
+            <div className="max-w-[760px] mx-auto px-2 mt-5 flex flex-col gap-3">
+              {queuedMessages.map((q, i) => (
+                <div key={q.id} className="flex flex-row-reverse ml-auto w-fit max-w-[80%] gap-[12px] relative opacity-[0.55]">
+                  <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
+                  <div className="flex flex-col items-end gap-[6px]">
+                    <div className="bg-ao-bg-3 border border-dashed border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0">{q.text}</div>
+                    <div className="flex items-center gap-[6px]">
+                      <span className="font-mono text-[10px] tracking-[0.06em] uppercase text-ao-fg-3 bg-ao-bg-3 border border-ao-line-1 rounded-full px-[7px] py-[1px]">
+                        queued{queuedMessages.length > 1 ? ` ${i + 1}/${queuedMessages.length}` : ""}
+                      </span>
+                      <button
+                        type="button"
+                        className="w-4 h-4 rounded-full bg-transparent border border-ao-line-1 text-ao-fg-3 text-[12px] leading-none cursor-pointer grid place-items-center p-0 hover:bg-ao-bg-3 hover:text-ao-fg-1"
+                        onClick={() => onCancelQueuedMessage?.(q.id)}
+                        aria-label="Cancel queued message"
+                      >×</button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              ))}
             </div>
           ) : null}
           <div className="max-w-[760px] mx-auto px-2 pb-4 mt-5 flex items-center gap-3">

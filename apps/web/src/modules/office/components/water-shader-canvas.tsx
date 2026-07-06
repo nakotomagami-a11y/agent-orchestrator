@@ -72,8 +72,8 @@ const OY = new Float32Array(N * N);
 
 function updatePositions(t: number) {
   for (let k = 0; k < N * N; k++) {
-    OX[k] = 0.5 + 0.42 * Math.sin(FREQ_X[k] + t * AMP_X[k]);
-    OY[k] = 0.5 + 0.42 * Math.sin(FREQ_Y[k] + t * AMP_Y[k]);
+    OX[k] = 0.5 + 0.42 * Math.sin(FREQ_X[k]! + t * AMP_X[k]!);
+    OY[k] = 0.5 + 0.42 * Math.sin(FREQ_Y[k]! + t * AMP_Y[k]!);
   }
 }
 
@@ -115,8 +115,8 @@ function renderTile(tileCtx: CanvasRenderingContext2D, img: ImageData, t: number
           const nx  = ((gx + dx) % N + N) % N;
           const ny  = ((gy + dy) % N + N) % N;
           const k   = ny * N + nx;
-          const rx  = dx + OX[k] - fu;
-          const ry  = dy + OY[k] - fv;
+          const rx  = dx + OX[k]! - fu;
+          const ry  = dy + OY[k]! - fv;
           const dsq = rx * rx + ry * ry;
           if      (dsq < d1sq) { d2sq = d1sq; d1sq = dsq; }
           else if (dsq < d2sq) { d2sq = dsq; }

@@ -72,7 +72,7 @@ export function readAgent(name: string): { info: ApiAgent; body: string } | null
 export function listAgents(): ApiAgent[] {
   if (!existsSync(AGENTS_DIR)) return [];
   return readdirSync(AGENTS_DIR)
-    .filter((f) => f.endsWith(".md") && !f.endsWith(".memory.md") && !f.startsWith("_"))
+    .filter((f) => f.endsWith(".md") && !f.endsWith(".memory.md") && !f.startsWith("_") && !f.includes(".body."))
     .map((f) => readAgent(f.replace(/\.md$/, ""))?.info)
     .filter((a): a is ApiAgent => a !== undefined);
 }
