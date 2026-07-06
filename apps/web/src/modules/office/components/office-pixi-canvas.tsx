@@ -198,8 +198,9 @@ export function OfficePixiCanvas({
         // The camera sync effect already fired (with worldRef still null) by the
         // time this async callback resolves, so we must set position here.
         const cam = cameraPropsRef.current;
+        const snappedZoom = Math.round(cam.zoom * TILE) / TILE;
         world.position.set(Math.round(cam.panX), Math.round(cam.panY));
-        world.scale.set(cam.zoom);
+        world.scale.set(snappedZoom);
 
         worldRef.current = world;
 
@@ -245,8 +246,14 @@ export function OfficePixiCanvas({
   useEffect(() => {
     const world = worldRef.current;
     if (!world) return;
+    // Snap zoom so TILE × zoom is a whole number: every tile boundary lands on
+    // an exact integer screen pixel regardless of the fractional pan offset.
+    // Without this, 64 × 0.46 = 29.44 → tiles alternate 29/30px wide, opening
+    // 1-pixel gaps that show the teal background as horizontal stripes in
+    // WebKitGTK (which doesn't sub-pixel-blend like Chromium).
+    const snappedZoom = Math.round(zoom * TILE) / TILE;
     world.position.set(Math.round(panX), Math.round(panY));
-    world.scale.set(zoom);
+    world.scale.set(snappedZoom);
   }, [panX, panY, zoom]);
 
   // ─── Static layers build: runs whenever terrain/deco/grass data changes ──
