@@ -52,6 +52,8 @@ export const queryKeys = {
     sources: () => [...queryKeys.skills.all, "sources"] as const,
     updates: () => [...queryKeys.skills.all, "updates"] as const,
     detail: (name: string) => [...queryKeys.skills.all, "detail", name] as const,
+    manifest: () => [...queryKeys.skills.all, "manifest"] as const,
+    compatibility: () => [...queryKeys.skills.all, "compatibility"] as const,
   },
 
   runs: {

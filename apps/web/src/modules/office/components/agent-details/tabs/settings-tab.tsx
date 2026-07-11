@@ -11,7 +11,42 @@ import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/shared";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { UnitPicker } from "@/components/ui/unit-picker";
+import { useSkillManifest, type SkillManifestEntry } from "@/modules/skills/hooks/use-skills";
 import { BodyHistoryPanel } from "@/modules/agents/components/body-history-panel";
+
+// ── Skill cost pill helpers ────────────────────────────────────────────────
+
+function formatTokenCost(n: number | undefined): string {
+  if (!n || n <= 0) return "";
+  if (n < 1000) return String(n);
+  return `${(n / 1000).toFixed(1)}k`;
+}
+
+function tierPillClasses(tier: string | undefined): string {
+  switch (tier) {
+    case "low":     return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
+    case "medium":  return "bg-amber-500/10 text-amber-300 border border-amber-500/20";
+    case "high":    return "bg-orange-500/10 text-orange-300 border border-orange-500/20";
+    case "extreme": return "bg-red-500/10 text-red-300 border border-red-500/20";
+    default:        return "bg-ao-line-1/30 text-ao-fg-2 border border-ao-line-1";
+  }
+}
+
+function SkillCostPill({ entry }: { entry: SkillManifestEntry | undefined }) {
+  if (!entry) return null;
+  const cost = formatTokenCost(entry.token_cost_est);
+  if (!cost) return null;
+  const emoji = entry.impact_emoji ?? "";
+  return (
+    <span
+      className={`inline-flex items-center gap-[3px] text-[10.5px] font-mono rounded-full px-2 py-0.5 leading-none ${tierPillClasses(entry.impact_tier)}`}
+      title={`${entry.impact_tier ?? "impact"} · ~${entry.token_cost_est ?? 0} tokens/invocation${entry.workflow_depth ? ` · ${entry.workflow_depth}` : ""}`}
+    >
+      {emoji && <span>{emoji}</span>}
+      <span>{cost}</span>
+    </span>
+  );
+}
 import { highlightMd } from "@/components/ui/code-editor";
 import { Portal } from "@/components/ui/portal";
 
@@ -203,6 +238,14 @@ function SettingsForm({
 
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  const manifestQ = useSkillManifest();
+  const skillManifestBySlug: Record<string, SkillManifestEntry> = (() => {
+    const entries = manifestQ.data?.skills ?? [];
+    const out: Record<string, SkillManifestEntry> = {};
+    for (const s of entries) out[s.slug] = s;
+    return out;
+  })();
+
   useEffect(() => {
     if (resetRef) resetRef.current = handleDiscard;
   }, [resetRef, handleDiscard]);
@@ -376,7 +419,8 @@ function SettingsForm({
                 {skills.map((s) => (
                   <span key={s} className="inline-flex items-center gap-[6px] py-1 pl-[10px] pr-1 bg-[var(--ao-accent-soft)] border border-[var(--ao-accent-line)] rounded-full font-mono text-[12px] text-[var(--ao-accent)]">
                     {s}
-                    <button type="button" className="w-4 h-4 grid place-items-center rounded-full text-current opacity-60 hover:opacity-100 hover:bg-white/[0.06]" onClick={() => setSkills(skills.filter((x) => x !== s))} aria-label="remove">
+                    <SkillCostPill entry={skillManifestBySlug[s]} />
+                    <button type="button" className="inline-flex items-center justify-center w-4 h-4 rounded-full text-current opacity-60 hover:opacity-100 hover:bg-white/[0.06]" onClick={() => setSkills(skills.filter((x) => x !== s))} aria-label="remove">
                       <Icon name="x" size={10} />
                     </button>
                   </span>

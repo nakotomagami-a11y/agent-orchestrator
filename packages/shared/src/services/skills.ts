@@ -440,3 +440,62 @@ export function buildSkillsPrompt(skills: string[]): string {
 export function registrySources(): Array<{ source: string; ref: string }> {
   return REGISTRY_SOURCES.map((s) => ({ source: s.source, ref: s.ref }));
 }
+
+// ── Static skill manifest / compatibility (curated JSON in _skills/) ──────
+//
+// Both files are generated/maintained externally by the user's `_install.py`
+// tool. We expose them to the frontend so the skill picker can show
+// cost/impact info and (future) warn about conflicting selections.
+
+const MANIFEST_PATH = join(SKILLS_DIR, "_manifest.json");
+const COMPATIBILITY_PATH = join(SKILLS_DIR, "_compatibility.json");
+
+export interface SkillManifestEntry {
+  slug: string;
+  source_id?: string;
+  source_path?: string;
+  symlink_status?: string;
+  target?: string;
+  category?: string;
+  workflow_depth?: string;
+  token_cost_est?: number;
+  impact_tier?: string;
+  impact_emoji?: string;
+  description?: string;
+}
+
+export interface SkillManifest {
+  generated_at?: string;
+  generator?: string;
+  cost_indicator_scale?: Record<string, string>;
+  workflow_depth_legend?: Record<string, string>;
+  sources?: Record<string, unknown>;
+  skills: SkillManifestEntry[];
+}
+
+export interface SkillCompatibility {
+  conflicts?: unknown;
+  synergies?: unknown;
+  ab_test_pairs?: unknown;
+  [k: string]: unknown;
+}
+
+export function readManifest(): SkillManifest | null {
+  if (!existsSync(MANIFEST_PATH)) return null;
+  try {
+    return JSON.parse(readFileSync(MANIFEST_PATH, "utf8")) as SkillManifest;
+  } catch (e) {
+    log.warn("skills.manifest_parse_failed", { err: String(e) });
+    return null;
+  }
+}
+
+export function readCompatibility(): SkillCompatibility | null {
+  if (!existsSync(COMPATIBILITY_PATH)) return null;
+  try {
+    return JSON.parse(readFileSync(COMPATIBILITY_PATH, "utf8")) as SkillCompatibility;
+  } catch (e) {
+    log.warn("skills.compatibility_parse_failed", { err: String(e) });
+    return null;
+  }
+}

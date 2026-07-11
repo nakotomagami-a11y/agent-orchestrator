@@ -206,6 +206,12 @@ export function AgentDetailsModal() {
 
   const addMut = useAddInstance();
   const removeMut = useRemoveInstance();
+  const [confirmDeleteInstance, setConfirmDeleteInstance] = useState(false);
+
+  // Cancel any pending delete confirm when switching instance/agent
+  useEffect(() => {
+    setConfirmDeleteInstance(false);
+  }, [selectedId, selectedInstanceId]);
 
   const [tab, setTab] = useState<Tab>("conversation");
   const changeTab = (t: Tab) => { setTab(t); setActiveTab(t); };
@@ -416,7 +422,7 @@ export function AgentDetailsModal() {
           ) : (
             <>
           {/* ── Agent header ── */}
-          <div className="flex items-center gap-[14px] px-6 h-[72px] border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0 min-h-[var(--ao-header-h)]">
+          <div className="flex items-center gap-[14px] px-6 h-[84px] border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0">
             <div className="relative shrink-0 w-[40px] h-[70px] flex items-center justify-center">
               <AgentAvatar unit={agent.unitChoice} size={70} label={agent.name} />
               <span className={`absolute right-[-2px] bottom-0 mb-2 w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
@@ -516,22 +522,48 @@ export function AgentDetailsModal() {
                 </button>
               )}
               {activeProjectId && selectedInstanceId && (
-                <Tooltip content="Delete this instance" side="bottom" delayMs={400}>
-                  <button
-                    type="button"
-                    aria-label="Delete this agent instance"
-                    className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-ao-fg-3 hover:text-[var(--ao-bad)] hover:bg-[var(--ao-bad-soft)] border border-transparent hover:border-[rgba(217,83,79,0.25)] transition-all duration-[120ms] disabled:opacity-40"
-                    disabled={removeMut.isPending}
-                    onClick={() => {
-                      removeMut.mutate(
-                        { projectId: activeProjectId, instanceId: selectedInstanceId },
-                        { onSuccess: closeInspector }
-                      );
-                    }}
-                  >
-                    <Icon name="trash" size={14} />
-                  </button>
-                </Tooltip>
+                confirmDeleteInstance ? (
+                  <span className="inline-flex items-center gap-[6px] h-7 pl-[10px] pr-1 rounded-lg bg-[var(--ao-bad-soft)] border border-[rgba(217,83,79,0.30)] text-[var(--ao-bad)] text-[12.5px]">
+                    <span className="font-mono">delete this instance?</span>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-[4px] h-[22px] px-[8px] rounded-md bg-[var(--ao-bad)] text-white font-semibold text-[11.5px] hover:brightness-110 disabled:opacity-50"
+                      disabled={removeMut.isPending}
+                      onClick={() => {
+                        removeMut.mutate(
+                          { projectId: activeProjectId, instanceId: selectedInstanceId },
+                          {
+                            onSuccess: () => {
+                              setConfirmDeleteInstance(false);
+                              closeInspector();
+                            },
+                          }
+                        );
+                      }}
+                    >
+                      <Icon name="trash" size={11} /> delete
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex items-center h-[22px] px-[8px] rounded-md text-[var(--ao-fg-1)] text-[11.5px] hover:bg-white/[0.05]"
+                      onClick={() => setConfirmDeleteInstance(false)}
+                    >
+                      cancel
+                    </button>
+                  </span>
+                ) : (
+                  <Tooltip content="Delete this instance" side="bottom" delayMs={400}>
+                    <button
+                      type="button"
+                      aria-label="Delete this agent instance"
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-lg text-ao-fg-3 hover:text-[var(--ao-bad)] hover:bg-[var(--ao-bad-soft)] border border-transparent hover:border-[rgba(217,83,79,0.25)] transition-all duration-[120ms] disabled:opacity-40"
+                      disabled={removeMut.isPending}
+                      onClick={() => setConfirmDeleteInstance(true)}
+                    >
+                      <Icon name="trash" size={14} />
+                    </button>
+                  </Tooltip>
+                )
               )}
             </div>
           </div>

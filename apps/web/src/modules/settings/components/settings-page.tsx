@@ -83,17 +83,20 @@ export function SettingsPage() {
                 <Icon name="plus" />
               </Button>
             </div>
-            <div className="flex gap-[6px] flex-wrap">
+            <div className="flex flex-wrap gap-1.5">
               {excluded.map((e) => (
-                <span key={e} className="attach-chip">
+                <span
+                  key={e}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-ao-line-1/20 border border-ao-line-1/40 text-sm text-ao-fg-1 font-mono"
+                >
                   {e}
                   <button
                     type="button"
-                    className="x bg-transparent border-none p-0 text-inherit cursor-pointer inline-flex"
+                    className="ml-0.5 inline-flex items-center justify-center rounded-sm p-0.5 text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-line-1/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ao-accent-line"
                     aria-label={t("settings.exclusion_remove_aria", { name: e })}
                     onClick={() => setExcluded((prev) => prev.filter((x) => x !== e))}
                   >
-                    <Icon name="x" size={11} />
+                    <Icon name="x" size={12} />
                   </button>
                 </span>
               ))}
