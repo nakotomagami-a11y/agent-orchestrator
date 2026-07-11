@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -122,6 +122,273 @@ function SkillCostPill({ entry }: { entry: SkillManifestEntry | undefined }) {
 }
 import { highlightMd } from "@/components/ui/code-editor";
 import { Portal } from "@/components/ui/portal";
+
+// ── Skill autocomplete ────────────────────────────────────────────────────
+//
+// Suggestion-driven chip input. Preserves the existing free-text-add path
+// (Enter/comma commits whatever the user typed) so power users who know
+// slugs by heart still get one-tap adds; opens a dropdown of matching
+// manifest entries for everyone else. Substring match across slug +
+// description + category mirrors the pattern used in command-palette.
+//
+// Combobox pattern per ARIA APG: the <input> owns the combobox role, the
+// dropdown gets listbox, and each row gets option + aria-selected. We wire
+// aria-activedescendant instead of moving DOM focus so the input stays
+// active for typing.
+
+function truncate(s: string | undefined, n: number): string {
+  if (!s) return "";
+  return s.length > n ? s.slice(0, n - 1).trimEnd() + "…" : s;
+}
+
+function filterSkillEntries(
+  entries: SkillManifestEntry[],
+  query: string,
+): SkillManifestEntry[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return entries;
+  return entries.filter((e) => {
+    if (e.slug.toLowerCase().includes(q)) return true;
+    if (e.category && e.category.toLowerCase().includes(q)) return true;
+    if (e.description && e.description.toLowerCase().includes(q)) return true;
+    return false;
+  });
+}
+
+function SkillSuggestionRow({
+  entry,
+  active,
+  selected,
+  onPick,
+  id,
+}: {
+  entry: SkillManifestEntry;
+  active: boolean;
+  selected: boolean;
+  onPick: () => void;
+  id: string;
+}) {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="option"
+      aria-selected={active}
+      onMouseDown={(e) => { e.preventDefault(); onPick(); }}
+      className={`flex items-center gap-[8px] w-full text-left px-[10px] py-[7px] rounded-[6px] transition-[background,color] duration-[80ms] ${
+        active ? "bg-ao-bg-3" : "hover:bg-ao-bg-3"
+      } ${selected ? "opacity-70" : ""}`}
+    >
+      <SkillCostPill entry={entry} />
+      <span className="font-mono text-[12px] text-ao-fg-0 shrink-0">
+        {entry.slug}
+      </span>
+      {entry.category ? (
+        <span className="font-mono text-[10.5px] text-ao-fg-3 uppercase tracking-[0.06em] shrink-0">
+          {entry.category}
+        </span>
+      ) : null}
+      <span className="text-[11.5px] text-ao-fg-2 truncate flex-1 min-w-0">
+        {truncate(entry.description, 50)}
+      </span>
+      {selected ? (
+        <span className="inline-flex items-center gap-[3px] text-[10.5px] font-mono text-[var(--ao-accent)] shrink-0">
+          <Icon name="check" size={10} /> added
+        </span>
+      ) : null}
+    </button>
+  );
+}
+
+function SkillAutocompleteInput({
+  value,
+  onChange,
+  selected,
+  onAdd,
+  onRemove,
+  onFreeTextCommit,
+  manifest,
+  loading,
+  hasChips,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  selected: string[];
+  onAdd: (slug: string) => void;
+  onRemove: (slug: string) => void;
+  /** Commits whatever's typed as a free-text chip (preserves power-user path). */
+  onFreeTextCommit: () => void;
+  manifest: SkillManifestEntry[];
+  loading: boolean;
+  hasChips: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const listboxId = useRef(`skill-listbox-${Math.random().toString(36).slice(2, 8)}`).current;
+  const optionIdPrefix = useRef(`skill-opt-${Math.random().toString(36).slice(2, 8)}`).current;
+
+  const filtered = useMemo(() => filterSkillEntries(manifest, value), [manifest, value]);
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
+
+  // Clamp active index when the filtered list shrinks.
+  useEffect(() => {
+    if (activeIdx >= filtered.length) setActiveIdx(0);
+  }, [filtered.length, activeIdx]);
+
+  // Position the portal dropdown against the input.
+  const measure = () => {
+    if (!inputRef.current) return;
+    const r = inputRef.current.getBoundingClientRect();
+    // Anchor to the chip container (parent) so the popup spans its width.
+    const container = inputRef.current.closest("[data-skill-chip-container]") as HTMLElement | null;
+    const anchor = container?.getBoundingClientRect() ?? r;
+    setPos({ top: anchor.bottom + 4, left: anchor.left, width: anchor.width });
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    measure();
+    const onScroll = () => measure();
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [open]);
+
+  // Close on outside click.
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (
+        !inputRef.current?.contains(e.target as Node) &&
+        !dropdownRef.current?.contains(e.target as Node)
+      ) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  const pick = (entry: SkillManifestEntry) => {
+    if (selectedSet.has(entry.slug)) {
+      // Toggle: click on already-selected removes.
+      onRemove(entry.slug);
+    } else {
+      onAdd(entry.slug);
+    }
+    // Reset the input so the user can pick another.
+    onChange("");
+    setActiveIdx(0);
+    inputRef.current?.focus();
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "ArrowDown") {
+      if (!open) { setOpen(true); return; }
+      if (filtered.length === 0) return;
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(filtered.length - 1, i + 1));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      if (!open) return;
+      if (filtered.length === 0) return;
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(0, i - 1));
+      return;
+    }
+    if (e.key === "Escape") {
+      if (open) { e.preventDefault(); setOpen(false); }
+      return;
+    }
+    if (e.key === "Enter" || e.key === ",") {
+      // Preserve free-text add path: if the dropdown is closed OR there are
+      // no matches, commit whatever's typed. Otherwise pick the active row.
+      if (open && filtered.length > 0) {
+        const entry = filtered[activeIdx];
+        if (entry) {
+          e.preventDefault();
+          pick(entry);
+          return;
+        }
+      }
+      // Fall through to free-text commit.
+      e.preventDefault();
+      onFreeTextCommit();
+      setOpen(false);
+      return;
+    }
+  };
+
+  const activeId =
+    open && filtered.length > 0
+      ? `${optionIdPrefix}-${activeIdx}`
+      : undefined;
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={listboxId}
+        aria-autocomplete="list"
+        aria-activedescendant={activeId}
+        className="bg-transparent border-0 outline-none flex-1 min-w-[100px] text-ao-fg-0 font-mono text-[12.5px] placeholder:text-ao-fg-3"
+        placeholder={hasChips ? "+ add skill" : "add a skill - frontend-design, research, …"}
+        value={value}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => {
+          onChange(e.target.value);
+          setOpen(true);
+          setActiveIdx(0);
+        }}
+        onKeyDown={onKeyDown}
+      />
+      {open ? (
+        <Portal>
+          <div
+            ref={dropdownRef}
+            id={listboxId}
+            role="listbox"
+            aria-label="Available skills"
+            className="fixed z-[300] bg-ao-bg-1 border border-ao-line-2 rounded-[var(--ao-radius-md)] shadow-[var(--ao-shadow-modal)] p-1 max-h-[280px] overflow-y-auto flex flex-col gap-[1px]"
+            style={{ top: pos.top, left: pos.left, width: pos.width }}
+          >
+            {loading ? (
+              <div className="flex items-center gap-2 px-[10px] py-[10px] text-ao-fg-2 font-mono text-[12px]">
+                <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" />
+                Loading skills…
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="px-[10px] py-[10px] text-ao-fg-2 font-mono text-[12px]">
+                {value.trim()
+                  ? <>No matching skills — press <span className="text-ao-fg-0">Enter</span> to add anyway</>
+                  : "No skills available"}
+              </div>
+            ) : (
+              filtered.map((entry, i) => (
+                <SkillSuggestionRow
+                  key={entry.slug}
+                  id={`${optionIdPrefix}-${i}`}
+                  entry={entry}
+                  active={i === activeIdx}
+                  selected={selectedSet.has(entry.slug)}
+                  onPick={() => pick(entry)}
+                />
+              ))
+            )}
+          </div>
+        </Portal>
+      ) : null}
+    </>
+  );
+}
+
 
 function SelectField({
   value,
@@ -491,7 +758,10 @@ function SettingsForm({
             <div className="flex flex-col gap-[6px]">
               <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2"><Icon name="sparkle" size={11} /> Skills</label>
               <SkillConflictWarning conflicts={activeConflicts} />
-              <div className="flex flex-wrap gap-[6px] p-2 pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[42px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
+              <div
+                data-skill-chip-container
+                className="flex flex-wrap gap-[6px] p-2 pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[42px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]"
+              >
                 {skills.map((s) => (
                   <span key={s} className="inline-flex items-center gap-[6px] py-1 pl-[10px] pr-1 bg-[var(--ao-accent-soft)] border border-[var(--ao-accent-line)] rounded-full font-mono text-[12px] text-[var(--ao-accent)]">
                     {s}
@@ -501,15 +771,19 @@ function SettingsForm({
                     </button>
                   </span>
                 ))}
-                <input
-                  className="bg-transparent border-0 outline-none flex-1 min-w-[100px] text-ao-fg-0 font-mono text-[12.5px] placeholder:text-ao-fg-3"
-                  placeholder={skills.length === 0 ? "add a skill - frontend-design, research, …" : "+ add skill"}
+                <SkillAutocompleteInput
                   value={skillInput}
-                  onChange={(e) => setSkillInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addSkill(); } }}
+                  onChange={setSkillInput}
+                  selected={skills}
+                  onAdd={(slug) => { if (!skills.includes(slug)) setSkills([...skills, slug]); }}
+                  onRemove={(slug) => setSkills(skills.filter((x) => x !== slug))}
+                  onFreeTextCommit={addSkill}
+                  manifest={manifestQ.data?.skills ?? []}
+                  loading={manifestQ.isLoading}
+                  hasChips={skills.length > 0}
                 />
               </div>
-              <div className="text-[11.5px] text-ao-fg-2 font-mono">enter to add · comma-separated</div>
+              <div className="text-[11.5px] text-ao-fg-2 font-mono">type to search · enter to add · ↑↓ to navigate</div>
             </div>
 
             <div className="flex flex-col gap-[6px] mt-[14px]">

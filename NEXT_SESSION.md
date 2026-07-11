@@ -1,7 +1,27 @@
 # Next session — start here
 
-**Written:** 2026-07-12 end of polish dispatch (four items landed, uncommitted)
+**Written:** 2026-07-12 (last update: skill autocomplete dispatch, uncommitted)
 **Read this first. Then follow the pointers below.**
+
+---
+
+## 2026-07-12 addendum — Capabilities skill autocomplete
+
+Added suggestion-driven combobox to the Capabilities skill chip input in `agent-details > Settings` tab. One-file change (~282 net-added LOC to `apps/web/src/modules/office/components/agent-details/tabs/settings-tab.tsx`), no new deps, `pnpm typecheck` PASS across all 5 workspace projects.
+
+**What ships:**
+- New `SkillAutocompleteInput` + `SkillSuggestionRow` inline components. Rows show `SkillCostPill` (reused as-is), slug (mono), category (uppercase mono, `--ao-fg-3`), truncated description (~50 chars). Already-selected slugs render at 70% opacity with a "✓ added" hint and clicking them toggles-off (removes).
+- **Free-text add path preserved.** Enter with zero matches (or empty dropdown) falls through to the existing `addSkill()` from `useAgentForm`, so power users who know exact slugs still get one-tap adds.
+- **Keyboard:** ↑/↓ move highlight, Enter picks the highlighted row OR commits free-text if no matches, Escape closes, comma also commits free-text. Focus stays on the input via `aria-activedescendant` (no DOM focus moves).
+- **A11y:** input has `role="combobox"` + `aria-expanded` + `aria-controls` + `aria-autocomplete="list"` + `aria-activedescendant`. Portal dropdown has `role="listbox"` + `aria-label`. Rows have `role="option"` + `aria-selected`. Rolled from scratch since no cmdk/downshift/react-select was in the codebase — followed the existing pattern from `composer.tsx` slash menu.
+- **Filter:** case-insensitive substring across slug + category + description (matches the `useFilter` pattern in `command-palette.tsx`).
+- **Portal + measurement:** dropdown reuses the existing `<Portal>` component and anchors to the chip container (`data-skill-chip-container`) so it spans the full chip-input width and doesn't get clipped by modal overflow. Repositions on scroll/resize.
+- **Empty states:** loading (`Loading skills…` with spinning `refresh` icon) + no matches (`No matching skills — press Enter to add anyway`).
+- Helper text under the input updated from `enter to add · comma-separated` → `type to search · enter to add · ↑↓ to navigate`.
+
+**Did NOT touch:** `SkillCostPill`, `SkillConflictWarning`, `useAgentForm`, `useSkillManifest`. All reused as-is. No CSS Grid introduced. No `any` types. No new library.
+
+**Verification:** `pnpm typecheck` PASS · `git diff | grep -E "\bgrid\b|: any\b|as any\b"` → empty on the added lines · trusted HMR + typecheck for runtime (dev server on 3000 owned by user, not restarted).
 
 ---
 
