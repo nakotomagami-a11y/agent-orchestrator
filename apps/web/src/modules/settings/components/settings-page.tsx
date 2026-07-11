@@ -114,25 +114,29 @@ function ProjectsPane() {
                 <Icon name="plus" />
               </Button>
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-[6px]">
               {excluded.map((e) => (
                 <span
                   key={e}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-ao-line-1/20 border border-ao-line-1/40 text-sm text-ao-fg-1 font-mono"
+                  className="group/tag inline-flex items-stretch h-[24px] rounded-[5px] border border-ao-line-1 bg-ao-bg-3 hover:bg-ao-bg-2 hover:border-[color-mix(in_oklab,var(--ao-line-1)_60%,var(--ao-fg-2))] transition-[background,border-color] duration-[120ms] [box-shadow:inset_0_-1px_0_0_rgba(0,0,0,0.15)] overflow-hidden"
                 >
-                  {e}
+                  <span className="inline-flex items-center gap-[6px] pl-[8px] pr-[8px] font-mono text-[11.5px] text-ao-fg-1 tracking-[-0.005em] leading-none">
+                    <Icon name="folder" size={10} className="text-ao-fg-3 shrink-0" />
+                    <span className="truncate max-w-[220px]">{e}</span>
+                  </span>
                   <button
                     type="button"
-                    className="ml-0.5 inline-flex items-center justify-center rounded-sm p-0.5 text-ao-fg-2 hover:text-ao-fg-0 hover:bg-ao-line-1/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ao-accent-line"
+                    className="inline-flex items-center justify-center w-[22px] border-l border-ao-line-1 text-ao-fg-3 hover:text-ao-bad hover:bg-[color-mix(in_oklab,var(--ao-bad)_18%,transparent)] focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ao-accent-line transition-[background,color] duration-[120ms]"
                     aria-label={t("settings.exclusion_remove_aria", { name: e })}
                     onClick={() => setExcluded((prev) => prev.filter((x) => x !== e))}
+                    title={t("settings.exclusion_remove_aria", { name: e })}
                   >
-                    <Icon name="x" size={12} />
+                    <Icon name="x" size={10} />
                   </button>
                 </span>
               ))}
               {excluded.length === 0 ? (
-                <span className="text-xs text-txt-3">{t("settings.exclusions_empty")}</span>
+                <span className="text-[11.5px] text-ao-fg-3 font-mono italic">{t("settings.exclusions_empty")}</span>
               ) : null}
             </div>
           </div>
