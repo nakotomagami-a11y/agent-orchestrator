@@ -4,7 +4,6 @@ import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type
 import type { QueryClient } from "@tanstack/react-query";
 import type { UseRunStreamResult } from "./use-run-stream";
 import type { ThreadItem } from "../utils/thread-types";
-import { saveTranscript } from "../utils/transcript-store";
 import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
@@ -171,8 +170,11 @@ export function useRunRecovery({
     qc.invalidateQueries({ queryKey: queryKeys.runs.all });
 
     if (stream.phase === "done" && stream.sessionId) {
+      // Setting sessionId triggers ChatPanel's write-through effect, which
+      // saves the full transcript (including the queued-messages backlog).
+      // Calling saveTranscript here directly would clobber that backlog
+      // because this hook has no reference to it.
       setSessionId(stream.sessionId);
-      void saveTranscript(tKey, thread, null, stream.sessionId);
     }
 
     if (!shouldFallback) return;

@@ -41,7 +41,12 @@ export async function PUT(request: Request) {
   const { text, error: bodyErr } = await readBoundedText(request, TRANSCRIPT_MAX_BYTES);
   if (bodyErr) return bodyErr;
 
-  let body: { items?: string; activeRunId?: string | null; sessionId?: string | null };
+  let body: {
+    items?: string;
+    activeRunId?: string | null;
+    sessionId?: string | null;
+    queuedMessages?: string | null;
+  };
   try { body = JSON.parse(text) as typeof body; } catch {
     return badRequest("invalid_json");
   }
@@ -50,7 +55,18 @@ export async function PUT(request: Request) {
       return badRequest("items_not_valid_json");
     }
   }
-  db.saveTranscript(agentId, instanceId, body.items ?? "[]", body.activeRunId ?? null, body.sessionId ?? null);
+  const queuedMessages = typeof body.queuedMessages === "string" ? body.queuedMessages : "[]";
+  try { JSON.parse(queuedMessages); } catch {
+    return badRequest("queued_messages_not_valid_json");
+  }
+  db.saveTranscript(
+    agentId,
+    instanceId,
+    body.items ?? "[]",
+    body.activeRunId ?? null,
+    body.sessionId ?? null,
+    queuedMessages,
+  );
   return NextResponse.json({ ok: true });
 }
 

@@ -186,6 +186,15 @@ const MIGRATIONS: Array<(db: Database.Database) => void> = [
       CREATE INDEX IF NOT EXISTS idx_saved_prompts_created ON saved_prompts(created_at DESC);
     `);
   },
+  // v5 → v6: per-transcript queued-message backlog. Messages typed while a
+  // run is in flight used to live in `useState` on the chat panel, so a reload
+  // or app crash dropped them silently. Stored as a JSON array of
+  // `{ id, text }` so a schema change isn't needed if the shape grows.
+  (db) => {
+    db.exec(`
+      ALTER TABLE transcripts ADD COLUMN queued_messages TEXT NOT NULL DEFAULT '[]';
+    `);
+  },
 ];
 
 function createSchema(db: Database.Database): void {
@@ -197,6 +206,7 @@ function createSchema(db: Database.Database): void {
     if (v < 3) { MIGRATIONS[2]!(db); v = 3; db.pragma("user_version = 3"); }
     if (v < 4) { MIGRATIONS[3]!(db); v = 4; db.pragma("user_version = 4"); }
     if (v < 5) { MIGRATIONS[4]!(db); v = 5; db.pragma("user_version = 5"); }
+    if (v < 6) { MIGRATIONS[5]!(db); v = 6; db.pragma("user_version = 6"); }
   })();
 }
 
@@ -580,25 +590,47 @@ export interface TranscriptRow {
   items: string;
   activeRunId: string | null;
   sessionId: string | null;
+  /** JSON-encoded `Array<{ id: string; text: string }>`. Empty array = none. */
+  queuedMessages: string;
   updatedAt: number;
 }
 
 export function getTranscript(agentId: string, instanceId: string): TranscriptRow | null {
   const row = getDb().prepare(
-    "SELECT items, active_run_id, session_id, updated_at FROM transcripts WHERE agent_id = ? AND instance_id = ?"
-  ).get(agentId, instanceId) as { items: string; active_run_id: string | null; session_id: string | null; updated_at: number } | undefined;
+    "SELECT items, active_run_id, session_id, queued_messages, updated_at FROM transcripts WHERE agent_id = ? AND instance_id = ?"
+  ).get(agentId, instanceId) as {
+    items: string;
+    active_run_id: string | null;
+    session_id: string | null;
+    queued_messages: string | null;
+    updated_at: number;
+  } | undefined;
   if (!row) return null;
-  return { items: row.items, activeRunId: row.active_run_id, sessionId: row.session_id, updatedAt: row.updated_at };
+  return {
+    items: row.items,
+    activeRunId: row.active_run_id,
+    sessionId: row.session_id,
+    queuedMessages: row.queued_messages ?? "[]",
+    updatedAt: row.updated_at,
+  };
 }
 
-export function saveTranscript(agentId: string, instanceId: string, items: string, activeRunId: string | null, sessionId: string | null): void {
+export function saveTranscript(
+  agentId: string,
+  instanceId: string,
+  items: string,
+  activeRunId: string | null,
+  sessionId: string | null,
+  queuedMessages: string = "[]",
+): void {
   getDb().prepare(`
-    INSERT INTO transcripts (agent_id, instance_id, items, active_run_id, session_id, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO transcripts (agent_id, instance_id, items, active_run_id, session_id, queued_messages, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(agent_id, instance_id) DO UPDATE SET
       items=excluded.items, active_run_id=excluded.active_run_id,
-      session_id=excluded.session_id, updated_at=excluded.updated_at
-  `).run(agentId, instanceId, items, activeRunId, sessionId, Date.now());
+      session_id=excluded.session_id, queued_messages=excluded.queued_messages,
+      updated_at=excluded.updated_at
+  `).run(agentId, instanceId, items, activeRunId, sessionId, queuedMessages, Date.now());
 }
 
 export function clearTranscript(agentId: string, instanceId: string): void {

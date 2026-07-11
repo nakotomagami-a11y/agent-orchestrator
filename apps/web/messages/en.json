@@ -142,7 +142,9 @@
     "theme_dark": "Dark",
     "win_close": "Close window",
     "win_min": "Minimise window",
-    "win_max": "Maximise window"
+    "win_max": "Maximise window",
+    "refresh_label": "Refresh view",
+    "refresh_tooltip": "Refresh (Ctrl+R) — refetch all data without reloading the app"
   },
   "project_switcher": {
     "all_projects": "All projects",

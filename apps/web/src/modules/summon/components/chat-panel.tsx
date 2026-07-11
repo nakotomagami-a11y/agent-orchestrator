@@ -87,9 +87,23 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   // Messages typed while a run is in progress - fired sequentially, one per
   // turn, as each preceding run finishes. Each queued message has a stable
   // id so the UI can cancel a specific item without disturbing the others.
+  // Persisted into the transcript row so a page reload or app crash mid-run
+  // doesn't drop queued turns on the floor.
   const [queuedMessages, setQueuedMessages] = useState<Array<{ id: string; text: string }>>([]);
   const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
   const [contextProfile, setContextProfile] = useState<ContextProfile>("balanced");
+
+  // Cross-agent dedup guard. The write-through effect at the bottom of this
+  // component depends on `tKey` AND `thread/activeRunId/sessionId`. When the
+  // agent (or instance) changes, `tKey` updates *this render* while the
+  // thread state hasn't been reset yet (the switch effect below queues those
+  // resets for the next render). Without a guard, the write-through fires
+  // once with { new tKey, previous agent's thread } and overwrites the new
+  // agent's transcript row with the previous agent's messages — the user then
+  // sees agent A's history under agent B's header. `loadedTKeyRef` records
+  // which key the currently-mounted thread/queue state actually belongs to,
+  // and is only advanced after `loadTranscript` resolves successfully.
+  const loadedTKeyRef = useRef<string | null>(null);
 
   const stream = useRunStream(activeRunId);
 
@@ -123,6 +137,11 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
     setActiveRunId(null);
     setSessionId(null);
     setPhaseOverride(null);
+    setQueuedMessages([]);
+    // Invalidate the write-through guard immediately — any write-through that
+    // runs before the load below completes must be a no-op, because the state
+    // in this component still belongs to the *previous* tKey.
+    loadedTKeyRef.current = null;
     resetRecovery();
     let cancelled = false;
     loadTranscript(tKey).then((t) => {
@@ -131,6 +150,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       setThread(items);
       setActiveRunId(t?.activeRunId ?? null);
       setSessionId(t?.sessionId ?? null);
+      setQueuedMessages(t?.queuedMessages ?? []);
       // Pre-set the splice index NOW, before the first render that carries
       // activeRunId — the EventSource opens synchronously on that render and
       // the server sends `attached` in <1ms, always before the probe HTTP
@@ -139,9 +159,18 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
       if (t?.activeRunId) {
         runStartIndexRef.current = items.length;
       }
+      // Commit the write-through guard *last*: from this point on, the
+      // component state genuinely represents `tKey` and write-through may
+      // save changes for this key.
+      loadedTKeyRef.current = tKey;
       setTranscriptLoaded(true);
     }).catch(() => {
-      if (!cancelled) setTranscriptLoaded(true);
+      if (!cancelled) {
+        // Even on load failure the state is "empty for this key" — allow
+        // future edits to be persisted under it.
+        loadedTKeyRef.current = tKey;
+        setTranscriptLoaded(true);
+      }
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,10 +194,18 @@ export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNav
   }, [activeRunId, stream.phase]);
 
   // ── Write-through to server DB ──
+  //
+  // Only save when the currently-mounted state actually belongs to `tKey`.
+  // Without this guard, switching agents during the same commit fires this
+  // effect with a stale closure over the previous agent's `thread` /
+  // `activeRunId` / `sessionId` — SEE the ref declaration above for the full
+  // race description. The ref is advanced by the load effect above only
+  // after `loadTranscript(tKey)` resolves, so the two states can't disagree.
   useEffect(() => {
     if (!transcriptLoaded) return;
-    void saveTranscript(tKey, thread, activeRunId, sessionId);
-  }, [tKey, thread, activeRunId, sessionId, transcriptLoaded]);
+    if (loadedTKeyRef.current !== tKey) return;
+    void saveTranscript(tKey, thread, activeRunId, sessionId, queuedMessages);
+  }, [tKey, thread, activeRunId, sessionId, transcriptLoaded, queuedMessages]);
 
   // ── Branch seed: pre-fill composer when opened via "Branch from here" ──
   const consumeBranchSeed = useBranchStore((s) => s.consumeSeed);

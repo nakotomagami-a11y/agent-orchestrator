@@ -7,10 +7,21 @@ import type { ThreadItem } from "./thread-types";
 
 const MAX_ITEMS_PER_KEY = 5000;
 
+export interface QueuedMessage {
+  id: string;
+  text: string;
+}
+
 export interface Transcript {
   items: ThreadItem[];
   activeRunId?: string | null;
   sessionId?: string | null;
+  /**
+   * Messages the user typed while a run was still in flight. Kept alongside
+   * the transcript so a reload, worktree switch, or app crash mid-run doesn't
+   * drop queued turns on the floor. Empty array = no pending work.
+   */
+  queuedMessages?: QueuedMessage[];
   updatedAt: number;
 }
 
@@ -32,10 +43,32 @@ function freeze(items: ThreadItem[]): ThreadItem[] {
   });
 }
 
+function parseQueuedMessages(raw: string | null | undefined): QueuedMessage[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (entry): entry is QueuedMessage =>
+        typeof entry === "object" && entry !== null &&
+        typeof (entry as QueuedMessage).id === "string" &&
+        typeof (entry as QueuedMessage).text === "string",
+    );
+  } catch {
+    return [];
+  }
+}
+
 export async function loadTranscript(key: string): Promise<Transcript | null> {
   const { agentId, instanceId } = parseKey(key);
   try {
-    const res = await apiClient.get<{ items: string; activeRunId?: string | null; sessionId?: string | null; updatedAt?: number } | null>(
+    const res = await apiClient.get<{
+      items: string;
+      activeRunId?: string | null;
+      sessionId?: string | null;
+      queuedMessages?: string | null;
+      updatedAt?: number;
+    } | null>(
       API_ROUTES.transcripts,
       { params: { agentId, instanceId } },
     );
@@ -47,6 +80,7 @@ export async function loadTranscript(key: string): Promise<Transcript | null> {
       items,
       activeRunId: data.activeRunId ?? null,
       sessionId: data.sessionId ?? null,
+      queuedMessages: parseQueuedMessages(data.queuedMessages),
       updatedAt: data.updatedAt ?? Date.now(),
     };
   } catch {
@@ -59,6 +93,7 @@ export async function saveTranscript(
   items: ThreadItem[],
   activeRunId: string | null = null,
   sessionId?: string | null,
+  queuedMessages: QueuedMessage[] = [],
 ): Promise<void> {
   const { agentId, instanceId } = parseKey(key);
   try {
@@ -68,6 +103,7 @@ export async function saveTranscript(
         items: JSON.stringify(freeze(items).slice(-MAX_ITEMS_PER_KEY)),
         activeRunId: activeRunId ?? null,
         sessionId: sessionId !== undefined ? sessionId : null,
+        queuedMessages: JSON.stringify(queuedMessages),
       },
       { params: { agentId, instanceId } },
     );
