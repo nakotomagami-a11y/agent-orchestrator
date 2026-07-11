@@ -11,7 +11,7 @@ import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/shared";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { UnitPicker } from "@/components/ui/unit-picker";
-import { useSkillManifest, type SkillManifestEntry } from "@/modules/skills/hooks/use-skills";
+import { useSkillManifest, useSkillCompatibility, type SkillManifestEntry, type SkillCompatibility } from "@/modules/skills/hooks/use-skills";
 import { BodyHistoryPanel } from "@/modules/agents/components/body-history-panel";
 
 // ── Skill cost pill helpers ────────────────────────────────────────────────
@@ -30,6 +30,79 @@ function tierPillClasses(tier: string | undefined): string {
     case "extreme": return "bg-red-500/10 text-red-300 border border-red-500/20";
     default:        return "bg-ao-line-1/30 text-ao-fg-2 border border-ao-line-1";
   }
+}
+
+// ── Skill compatibility helpers ───────────────────────────────────────────
+//
+// _compatibility.json is authored by the user's `_install.py` tool at
+// ~/.claude/agents/_skills/_compatibility.json. Each conflict entry has
+// { a, b, severity: "low" | "medium" | "high", reason }. We surface active
+// conflicts (both skills currently selected on this agent) as a compact
+// warning row above the chip list, hover to see the reason.
+
+type ConflictSeverity = "low" | "medium" | "high";
+
+interface SkillConflict {
+  a: string;
+  b: string;
+  severity: ConflictSeverity;
+  reason: string;
+}
+
+function isConflict(raw: unknown): raw is SkillConflict {
+  if (!raw || typeof raw !== "object") return false;
+  const o = raw as Record<string, unknown>;
+  const sev = o.severity;
+  return (
+    typeof o.a === "string" &&
+    typeof o.b === "string" &&
+    typeof o.reason === "string" &&
+    (sev === "low" || sev === "medium" || sev === "high")
+  );
+}
+
+function findActiveConflicts(selected: string[], compat: SkillCompatibility | undefined): SkillConflict[] {
+  if (!compat || !Array.isArray(compat.conflicts) || selected.length < 2) return [];
+  const selectedSet = new Set(selected);
+  return compat.conflicts
+    .filter(isConflict)
+    .filter((c) => selectedSet.has(c.a) && selectedSet.has(c.b));
+}
+
+/** Highest severity in a conflict set — drives the warning row's color. */
+function peakSeverity(conflicts: SkillConflict[]): ConflictSeverity {
+  if (conflicts.some((c) => c.severity === "high")) return "high";
+  if (conflicts.some((c) => c.severity === "medium")) return "medium";
+  return "low";
+}
+
+function severityClasses(sev: ConflictSeverity): string {
+  switch (sev) {
+    case "high":   return "bg-[rgba(217,83,79,0.10)] border-[rgba(217,83,79,0.35)] text-ao-bad";
+    case "medium": return "bg-[var(--ao-warn-soft)] border-[rgba(230,179,90,0.35)] text-[var(--ao-warn)]";
+    case "low":    return "bg-[rgba(230,179,90,0.06)] border-[rgba(230,179,90,0.22)] text-[var(--ao-warn)]";
+  }
+}
+
+function SkillConflictWarning({ conflicts }: { conflicts: SkillConflict[] }) {
+  if (conflicts.length === 0) return null;
+  const sev = peakSeverity(conflicts);
+  const detail = conflicts
+    .map((c) => `${c.a}  ⇄  ${c.b}  [${c.severity}]\n  ${c.reason}`)
+    .join("\n\n");
+  const label = conflicts.length === 1 ? "1 conflict" : `${conflicts.length} conflicts`;
+  return (
+    <div
+      className={`flex items-center gap-2 px-[10px] py-[6px] rounded-ao-md border text-[11.5px] font-mono ${severityClasses(sev)}`}
+      title={detail}
+      role="status"
+    >
+      <Icon name="shield" size={12} />
+      <span>
+        <span className="font-semibold">{label}</span> between selected skills — hover to see details
+      </span>
+    </div>
+  );
 }
 
 function SkillCostPill({ entry }: { entry: SkillManifestEntry | undefined }) {
@@ -239,12 +312,14 @@ function SettingsForm({
   const [historyOpen, setHistoryOpen] = useState(false);
 
   const manifestQ = useSkillManifest();
+  const compatQ = useSkillCompatibility();
   const skillManifestBySlug: Record<string, SkillManifestEntry> = (() => {
     const entries = manifestQ.data?.skills ?? [];
     const out: Record<string, SkillManifestEntry> = {};
     for (const s of entries) out[s.slug] = s;
     return out;
   })();
+  const activeConflicts = findActiveConflicts(skills, compatQ.data);
 
   useEffect(() => {
     if (resetRef) resetRef.current = handleDiscard;
@@ -415,6 +490,7 @@ function SettingsForm({
           <div className="p-[var(--ao-pad-card)]">
             <div className="flex flex-col gap-[6px]">
               <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2"><Icon name="sparkle" size={11} /> Skills</label>
+              <SkillConflictWarning conflicts={activeConflicts} />
               <div className="flex flex-wrap gap-[6px] p-2 pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[42px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
                 {skills.map((s) => (
                   <span key={s} className="inline-flex items-center gap-[6px] py-1 pl-[10px] pr-1 bg-[var(--ao-accent-soft)] border border-[var(--ao-accent-line)] rounded-full font-mono text-[12px] text-[var(--ao-accent)]">

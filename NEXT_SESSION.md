@@ -1,7 +1,29 @@
 # Next session — start here
 
-**Written:** 2026-07-11 end of shipping session (six commits landed)
+**Written:** 2026-07-12 end of polish dispatch (four items landed, uncommitted)
 **Read this first. Then follow the pointers below.**
+
+---
+
+## 2026-07-12 dispatch summary
+
+Four independent polish items shipped in the main checkout (no commits yet — user to review + commit):
+
+1. **Grid → Flex sweep in `planet-editor-modal.tsx`** (~4 LOC net). Replaced `grid grid-cols-4` (type picker) and `grid grid-cols-3` (palette picker) with `flex flex-wrap gap-[4px]` + explicit `basis-[calc(25%-3px)]` / `basis-[calc((100%-8px)/3)]` on each child. Equal-width equal-gap output — visual parity preserved. House-rule violations flagged in `pixel-planets-integration-plan.md` line 94 are now resolved.
+
+2. **"Reroll all" button in planet editor** (~20 LOC add). Sits next to the existing `Randomize` button in the editor's type-name header row. Calls `randomPlanet()` (imported from `@agent-office/pixel-planets` via `@/lib/planet-seed`) for a full type + seed + palette reroll. Existing `Randomize` still keeps the type constant. Preserves user's pixels/rotation/dither prefs — full reroll is planet-appearance only.
+
+3. **Skill compatibility warnings in agent settings** (~78 LOC add in `settings-tab.tsx`). New `SkillConflictWarning` component + `findActiveConflicts` helper narrow the `_compatibility.json.conflicts` array and only surface warnings for pairs where BOTH skills are currently selected on this agent. Warning row renders between the "Skills" label and the chip container. Severity → color (low/medium = amber via `--ao-warn-soft`, high = red via `--ao-bad`). Hover reveals `title=` tooltip with per-pair severity + reason. Zero conflicts → nothing rendered.
+
+4. **`POST /api/dev/backfill-planets`** (~80 LOC new route). Iterates `listProjectSummaries()`, reads each project via `readProject`, and calls `updateProject(id, { meta: { planet } })` with a random config for any project missing `planet:` in its frontmatter. Idempotent (skips projects that already have `planet`). Response shape: `{ backfilled, skipped, projects: [{ id, action }] }`. GET returns 405. Manual trigger: `curl -X POST http://localhost:3000/api/dev/backfill-planets`. Verified live: on the current tree, all 16 projects already have planets so both runs return `{ backfilled: 0, skipped: 16 }` — the endpoint is ready for future projects that predate the feature.
+
+**Verification**:
+- `pnpm typecheck` — PASS across all 5 workspace projects
+- `git diff | grep '+.*grid grid-cols'` — empty (no new grid introduced)
+- Live endpoint tested via `curl` on port 3000 (dev server not restarted)
+- Uncommitted state: 2 modified files + 1 new file (backfill route). Nothing else touched.
+
+Pre-existing CSS Grid violations still in `settings-tab.tsx` lines 379/419/444 (`grid grid-cols-2 max-[760px]:grid-cols-1` and `grid grid-cols-3`) — flagged as future sweep candidates, not in scope for this dispatch.
 
 ---
 

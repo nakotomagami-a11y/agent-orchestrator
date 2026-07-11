@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import type { PlanetConfig, PlanetType } from "@agent-office/shared/types";
-import { PLANET_TYPE_DEFS, FREEFORM_TYPES, CANVAS_SCALE, randomPlanetOfType } from "@/lib/planet-seed";
+import { PLANET_TYPE_DEFS, FREEFORM_TYPES, CANVAS_SCALE, randomPlanet, randomPlanetOfType } from "@/lib/planet-seed";
 import { ModalShell } from "./modal-shell";
 import { PlanetCanvas } from "./planet-canvas";
 import { Icon } from "./icon";
@@ -74,6 +74,19 @@ export function PlanetEditorModal({
     const r = randomPlanetOfType(draft.type);
     setDraft((d) => ({ ...d, seed: r.seed, paletteIdx: r.paletteIdx, customPalette: undefined }));
   }, [draft.type]);
+
+  // Reroll everything — type, seed, palette. Preserves the user's pixels/rotation/dither
+  // display prefs so a full reroll doesn't wipe rendering settings.
+  const rerollAll = useCallback(() => {
+    const r = randomPlanet();
+    setDraft((d) => ({
+      ...d,
+      type: r.type,
+      seed: r.seed,
+      paletteIdx: r.paletteIdx,
+      customPalette: undefined,
+    }));
+  }, []);
 
   const handleCustomColor = useCallback((layerIdx: number, colorIdx: number, hex: string) => {
     const rgb = hexToRgb(hex);
@@ -161,20 +174,32 @@ export function PlanetEditorModal({
                 {typeDef.palettes[draft.paletteIdx]?.name ?? "—"}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={randomize}
-              className="inline-flex items-center gap-[5px] px-[8px] py-[4px] rounded-[6px] text-[11px] font-semibold text-txt-2 bg-bg-3 border border-line hover:bg-[rgba(255,255,255,0.06)] hover:text-txt transition-colors cursor-pointer shrink-0"
-            >
-              <Icon name="refresh" size={11} />
-              Randomize
-            </button>
+            <div className="flex items-center gap-[4px] shrink-0">
+              <button
+                type="button"
+                onClick={randomize}
+                title="Reshuffle seed + palette, keep current type"
+                className="inline-flex items-center gap-[5px] px-[8px] py-[4px] rounded-[6px] text-[11px] font-semibold text-txt-2 bg-bg-3 border border-line hover:bg-[rgba(255,255,255,0.06)] hover:text-txt transition-colors cursor-pointer"
+              >
+                <Icon name="refresh" size={11} />
+                Randomize
+              </button>
+              <button
+                type="button"
+                onClick={rerollAll}
+                title="Reroll type + seed + palette — full random planet"
+                className="inline-flex items-center gap-[5px] px-[8px] py-[4px] rounded-[6px] text-[11px] font-semibold text-txt-2 bg-bg-3 border border-line hover:bg-[rgba(255,255,255,0.06)] hover:text-txt transition-colors cursor-pointer"
+              >
+                <Icon name="sparkle" size={11} />
+                Reroll all
+              </button>
+            </div>
           </div>
 
-          {/* Planet type grid */}
+          {/* Planet type picker — 4 equal columns via flex-wrap (house rule: no CSS grid). */}
           <div>
             <div className="text-[9px] font-mono text-txt-3 uppercase tracking-wide mb-[5px]">Type</div>
-            <div className="grid grid-cols-4 gap-[4px]">
+            <div className="flex flex-wrap gap-[4px]">
               {PLANET_TYPES.map((t) => {
                 const def = PLANET_TYPE_DEFS[t];
                 const selected = draft.type === t;
@@ -184,7 +209,7 @@ export function PlanetEditorModal({
                     type="button"
                     onClick={() => setType(t)}
                     className={[
-                      "flex flex-col items-center gap-[4px] py-[6px] px-[2px] rounded-[8px] border transition-all duration-100 cursor-pointer",
+                      "basis-[calc(25%-3px)] flex flex-col items-center gap-[4px] py-[6px] px-[2px] rounded-[8px] border transition-all duration-100 cursor-pointer",
                       selected
                         ? "bg-[rgba(255,120,60,0.10)] border-[rgba(255,120,60,0.45)]"
                         : "bg-bg-2 border-line hover:bg-bg-3 hover:border-line-2",
@@ -282,10 +307,10 @@ export function PlanetEditorModal({
             </button>
           </div>
 
-          {/* Palette */}
+          {/* Palette picker — 3 equal columns via flex-wrap (house rule: no CSS grid). */}
           <div>
             <div className="text-[9px] font-mono text-txt-3 uppercase tracking-wide mb-[5px]">Palette</div>
-            <div className="grid grid-cols-3 gap-[4px]">
+            <div className="flex flex-wrap gap-[4px]">
               {typeDef.palettes.map((palette, idx) => {
                 const selected = draft.paletteIdx === idx;
                 // For the selected palette apply any custom overrides; others show preset
@@ -299,7 +324,7 @@ export function PlanetEditorModal({
                     type="button"
                     onClick={() => setPalette(idx)}
                     className={[
-                      "flex flex-col gap-[6px] px-[8px] py-[7px] rounded-[8px] border transition-all duration-100 cursor-pointer text-left",
+                      "basis-[calc((100%-8px)/3)] flex flex-col gap-[6px] px-[8px] py-[7px] rounded-[8px] border transition-all duration-100 cursor-pointer text-left",
                       selected
                         ? "bg-[rgba(255,120,60,0.10)] border-[rgba(255,120,60,0.45)]"
                         : "bg-bg-2 border-line hover:bg-bg-3 hover:border-line-2",
