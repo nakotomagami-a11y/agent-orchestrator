@@ -1,18 +1,53 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { TextInput } from "@/components/ui/text-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
+import { Tabs } from "@/components/ui/tabs";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { useScanProjects, useSettings, useWriteSettings } from "../hooks/use-settings";
+import { AboutYouTab } from "./tabs/about-you-tab";
 
+type TabValue = "projects" | "about-you";
 
 export function SettingsPage() {
+  const t = useTranslations();
+  const [tab, setTab] = useState<TabValue>("projects");
+
+  return (
+    <>
+      <Tabs<TabValue>
+        items={[
+          { value: "projects", label: t("settings.tab_projects") },
+          { value: "about-you", label: t("settings.tab_about_you") },
+        ]}
+        value={tab}
+        onChange={setTab}
+        ariaLabel={t("settings.tabs_aria")}
+      />
+      <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
+        {match(tab)
+          .with("projects", () => <ProjectsPane />)
+          .with("about-you", () => <AboutYouTab />)
+          .exhaustive()}
+      </div>
+    </>
+  );
+}
+
+/**
+ * Projects pane — the original single-view settings surface: pick the
+ * projects root, manage exclusions, and preview what the scanner picks up.
+ * Extracted so the About You tab can sit next to it under a Tabs header
+ * without leaking form state across tabs.
+ */
+function ProjectsPane() {
   const t = useTranslations();
   const settingsQ = useSettings();
   const writeMut = useWriteSettings();
@@ -46,15 +81,11 @@ export function SettingsPage() {
   };
 
   if (settingsQ.isLoading) {
-    return (
-      <div className="overflow-auto py-[18px] px-6">
-        <Skeleton width="100%" height={120} />
-      </div>
-    );
+    return <Skeleton width="100%" height={120} />;
   }
 
   return (
-    <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
+    <>
       <Card>
         <CardHeader title={t("settings.projects_root_card_title")} sub={t("settings.projects_root_card_sub")} />
         <div className="p-4 flex flex-col gap-3">
@@ -156,7 +187,6 @@ export function SettingsPage() {
           )}
         </div>
       </Card>
-
-    </div>
+    </>
   );
 }

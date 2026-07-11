@@ -98,6 +98,7 @@ export const API_ROUTES = {
 
   settings: "/api/settings",
   settingsScan: "/api/settings/scan",
+  userAnalysis: "/api/user-analysis",
 
   savedPrompts: "/api/saved-prompts",
   savedPromptById: (id: string) => `/api/saved-prompts/${id}`,

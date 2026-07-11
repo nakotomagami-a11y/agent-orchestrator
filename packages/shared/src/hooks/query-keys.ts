@@ -76,5 +76,6 @@ export const queryKeys = {
     detail: () => [...queryKeys.settings.all, "detail"] as const,
     scan: (root: string, excluded: string[]) =>
       [...queryKeys.settings.all, "scan", root, excluded] as const,
+    userAnalysis: () => [...queryKeys.settings.all, "user-analysis"] as const,
   },
 } as const;

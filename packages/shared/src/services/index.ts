@@ -4,6 +4,7 @@ export * as history from "./history";
 export * as projects from "./projects";
 export * as projectBootstrap from "./project-bootstrap";
 export * as skills from "./skills";
+export * as userAnalysis from "./user-analysis";
 export * as runs from "./runs";
 export * as summon from "./summon";
 export * as templates from "./templates";

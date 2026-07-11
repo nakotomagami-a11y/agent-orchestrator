@@ -379,7 +379,10 @@
     "scanned_card_sub": "{visible} visible · {excluded} excluded",
     "scanned_empty": "nothing under that root",
     "excluded_badge": "excluded",
-    "exclusion_remove_aria": "Remove exclusion {name}"
+    "exclusion_remove_aria": "Remove exclusion {name}",
+    "tab_projects": "Projects",
+    "tab_about_you": "About You",
+    "tabs_aria": "Settings tabs"
   },
   "skills": {
     "title": "Skills",
