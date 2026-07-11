@@ -376,14 +376,14 @@ function SettingsForm({
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Basic info</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
-            <div className="grid grid-cols-2 gap-[var(--ao-gap-section)] max-[760px]:grid-cols-1">
-              <div className="flex flex-col gap-[6px]">
+            <div className="flex flex-row max-[760px]:flex-col gap-[var(--ao-gap-section)]">
+              <div className="flex flex-col gap-[6px] flex-1 basis-0">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Name</label>
                 <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
                   <input value={v.name} onChange={set("name")} placeholder="My Agent" className="flex-1 bg-transparent border-0 outline-none w-full text-ao-fg-0 text-[13.5px]" />
                 </div>
               </div>
-              <div className="flex flex-col gap-[6px]">
+              <div className="flex flex-col gap-[6px] flex-1 basis-0">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">ID (slug) <span className="text-ao-accent">·</span></label>
                 <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms] focus-within:border-ao-accent-line focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)] font-mono">
                   <span className="text-ao-fg-3 font-mono text-[12px]">~/.claude/agents/</span>
@@ -416,8 +416,8 @@ function SettingsForm({
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Execution</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
-            <div className="grid grid-cols-2 gap-[var(--ao-gap-section)] max-[760px]:grid-cols-1">
-              <div className="flex flex-col gap-[6px]">
+            <div className="flex flex-row max-[760px]:flex-col gap-[var(--ao-gap-section)]">
+              <div className="flex flex-col gap-[6px] flex-1 basis-0">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Model</label>
                 <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms]">
                   <SelectField
@@ -427,7 +427,7 @@ function SettingsForm({
                   />
                 </div>
               </div>
-              <div className="flex flex-col gap-[6px]">
+              <div className="flex flex-col gap-[6px] flex-1 basis-0">
                 <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Effort</label>
                 <div className="flex items-center gap-2 px-3 py-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md text-ao-fg-0 text-[13.5px] transition-[border-color,box-shadow] duration-[120ms]">
                   <SelectField
@@ -441,7 +441,7 @@ function SettingsForm({
 
             <div className="flex flex-col gap-[6px] mt-[14px]">
               <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2">Permission mode</label>
-              <div className="grid grid-cols-3 gap-[6px] p-1 bg-ao-bg-4 border border-ao-line-1 rounded-ao-md">
+              <div className="flex gap-[6px] p-1 bg-ao-bg-4 border border-ao-line-1 rounded-ao-md">
                 {(["auto", "ask", "plan"] as const).map((mode) => {
                   const labels = { auto: "Auto", ask: "Ask", plan: "Plan" };
                   const hints  = { auto: "trust all tool calls", ask: "prompt on destructive ops", plan: "read-only mode" };
@@ -451,7 +451,7 @@ function SettingsForm({
                       key={mode}
                       type="button"
                       onClick={() => setV((p) => ({ ...p, pm: mode }))}
-                      className={`px-3 py-2 rounded-[8px] text-[12.5px] flex flex-col items-start gap-0.5 text-left transition-[background,box-shadow] duration-[120ms] ${
+                      className={`px-3 py-2 rounded-[8px] text-[12.5px] flex flex-col items-start gap-0.5 text-left transition-[background,box-shadow] duration-[120ms] flex-1 basis-0 ${
                         active
                           ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1.5px_var(--ao-accent)]"
                           : "text-ao-fg-1 hover:bg-ao-bg-3"
