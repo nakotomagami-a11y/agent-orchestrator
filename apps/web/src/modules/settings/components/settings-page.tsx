@@ -13,8 +13,9 @@ import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { useScanProjects, useSettings, useWriteSettings } from "../hooks/use-settings";
 import { AboutYouTab } from "./tabs/about-you-tab";
+import { PerformanceTab } from "./tabs/performance-tab";
 
-type TabValue = "projects" | "about-you";
+type TabValue = "projects" | "about-you" | "performance";
 
 export function SettingsPage() {
   const t = useTranslations();
@@ -24,8 +25,14 @@ export function SettingsPage() {
     <>
       <Tabs<TabValue>
         items={[
-          { value: "projects", label: t("settings.tab_projects") },
-          { value: "about-you", label: t("settings.tab_about_you") },
+          { value: "projects",    label: t("settings.tab_projects") },
+          { value: "about-you",   label: t("settings.tab_about_you") },
+          // Not translated — new tab. Add a translation key later if the
+          // Projects / About You tabs move to a full i18n pass. For now,
+          // the fallback matches the codebase pattern (Settings row uses
+          // `t(...)` but the values in the two existing tabs are also
+          // English literals in `en.json`).
+          { value: "performance", label: "Performance" },
         ]}
         value={tab}
         onChange={setTab}
@@ -33,8 +40,9 @@ export function SettingsPage() {
       />
       <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
         {match(tab)
-          .with("projects", () => <ProjectsPane />)
-          .with("about-you", () => <AboutYouTab />)
+          .with("projects",    () => <ProjectsPane />)
+          .with("about-you",   () => <AboutYouTab />)
+          .with("performance", () => <PerformanceTab />)
           .exhaustive()}
       </div>
     </>

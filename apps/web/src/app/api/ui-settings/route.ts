@@ -5,6 +5,7 @@ const STATIC_KEYS = new Set([
   "theme",
   "active-project",
   "claude-limits",
+  "performance-mode",
   "office-grid",
   "office-decorations",
   "office-agents",

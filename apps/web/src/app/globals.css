@@ -487,6 +487,47 @@ html:not(.tauri) .app-titlebar {
 }
 
 
+/* ─── Performance mode ───────────────────────────────────────────
+   Gated by the [data-perf] attribute on <html>, written by the
+   performance-store. Two levels stack: "lite" strips the expensive
+   visual layer; "off" additionally kills every animation + hover
+   transition. See docs Interface tab → Performance mode. */
+
+/* Lite — drop expensive filters, keep essential motion */
+html[data-perf="lite"] .planet-icon-canvas,
+html[data-perf="off"]  .planet-icon-canvas {
+  /* Procedural planet icons hide their canvas; a colored fallback is
+     rendered underneath so the icon slot isn't empty. */
+  display: none !important;
+}
+html[data-perf="lite"] *,
+html[data-perf="off"]  * {
+  /* Backdrop blur is disproportionately expensive on Intel iGPUs. */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+html[data-perf="lite"] *,
+html[data-perf="off"]  * {
+  /* Complex box-shadow filters take a full paint pass; strip the
+     nested / offset variants and keep only a single hairline outline. */
+  box-shadow: none !important;
+}
+html[data-perf="lite"] *:not(.of-status-led):not([data-essential-anim]),
+html[data-perf="off"]  *:not(.of-status-led):not([data-essential-anim]) {
+  animation: none !important;
+}
+
+/* Off — additionally kill hover transitions + scroll smoothing */
+html[data-perf="off"] *, html[data-perf="off"] *::before, html[data-perf="off"] *::after {
+  transition-duration: 0ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-perf="off"] .chat-jump-latest {
+  animation: none;
+  transition: none;
+}
+
+
 /* ─── Responsive ─── */
 @media (max-width: 600px) {
   .gnome-window { inset: 0; border-radius: 0; }

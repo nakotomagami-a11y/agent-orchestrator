@@ -444,10 +444,84 @@ Every summon call assembles flags from the agent frontmatter:
 | `AGENT_OFFICE_DOCS_DIR` | Override the docs source directory (default: `apps/web/docs`) |
 | `AGENT_OFFICE_DB_PATH` | Override SQLite path (default: `~/.claude/agent-office/db.sqlite`) |
 | `ANTHROPIC_API_KEY` | Passed to the `claude` subprocess |
+| `AO_DEBUG_TOOLS` | When set (any value), enables verbose tool-call logging in the summon subprocess wrapper. Dev-only. |
+| `DEFAULT_LOCALE` | Override the i18n default locale (defaults to `en`). Used by `next-intl`. |
+| `NODE_ENV` | Standard Node env — `development` / `production`. |
+| `NEXT_RUNTIME` | Internal Next.js signal (`nodejs` vs `edge`). Not user-settable. |
 
 ### PATH augmentation
 
 The Next.js server augments its `PATH` with common install locations (`~/.nvm/versions/*/bin`, `~/.bun/bin`, `/opt/homebrew/bin`) so `claude`, `node`, and `pnpm` resolve regardless of how the app was launched.
+
+### `ui_settings` allow-list
+
+`PATCH /api/ui-settings` refuses any key not on the allow-list. Every key stores a string value up to **10 KB**.
+
+**Static keys** (single global values):
+
+| Key | Purpose |
+|---|---|
+| `theme` | `"light"` \| `"dark"` — active color scheme. |
+| `active-project` | Slug of the currently-selected project. |
+| `claude-limits` | JSON blob for spend-cap configuration. |
+| `performance-mode` | `"full"` \| `"lite"` \| `"off"` — rendering / animation budget. |
+| `office-grid` | Global office grid dimensions fallback. |
+| `office-decorations` | Global decoration placements fallback. |
+| `office-agents` | Global agent positions fallback. |
+| `office-grass-color` | Global floor color fallback. |
+
+**Dynamic key prefixes** (each followed by a project id, e.g. `office-grid:acme-web`):
+
+| Prefix | Purpose |
+|---|---|
+| `office-grid:` | Grid dimensions for one project's office. |
+| `office-decorations:` | Decoration placements. |
+| `office-agents:` | Agent positions on the floor. |
+| `office-grass-color:` | Floor color. |
+| `office-map-custom:` | `"true"` \| `"false"` — whether the map was hand-edited. |
+
+Any other key returns `400 forbidden_key`.
+
+### App settings (`~/.claude/agent-office-settings.json`)
+
+Persisted at `~/.claude/agent-office-settings.json`. Read/write via `GET/PUT /api/settings`.
+
+| Field | Type | Description |
+|---|---|---|
+| `projectsRoot` | string | Parent dir to scan for candidate projects |
+| `excluded` | string[] | Directory names to skip during scan |
+| `firstRunComplete` | boolean | Set to `true` when the first-run wizard finishes |
+| `features.multiInstance` | boolean? | Optional feature flag — enable multi-instance workflow |
+
+### Zustand stores
+
+Client-only state stores (persisted where noted):
+
+| Store | Persistence | What it tracks |
+|---|---|---|
+| `use-office-store` | `zustand/persist` → localStorage | View mode (`iso` \| `cards`), selected agent/instance, inspector-open state, pending-tab, group expansion state |
+| `use-summon-store` | in-memory | Per-instance chat state — message queue, streaming buffers |
+| `active-project-store` | localStorage | Currently-active project slug |
+| `theme-store` | server via `ui_settings.theme` | `light` \| `dark` |
+| `performance-store` | server via `ui_settings.performance-mode` | `full` \| `lite` \| `off` |
+| `claude-limits-store` | server via `ui_settings.claude-limits` | Spend-cap config |
+| `compare-store` | localStorage | Runs selected for compare across route transitions |
+| `palette-store` | in-memory | Command palette open state + last query |
+| `flutter-store` | in-memory | Flutter mirror connection |
+| `dev-server-store` | in-memory | Dev server states per project |
+| `server-process-store` | in-memory | General process tracking |
+| `branch-store` | in-memory | Cached git branch per project |
+| `draft-store` | server via `/api/drafts` | Composer drafts (per agent + instance) |
+| `transcript-store` | in-memory | Current transcript playback state |
+| `processes-store` | in-memory | Processes panel snapshot |
+
+### Dev-only tools
+
+The Dev menu (bundled but hidden by default) exposes DB stats, bulk seed, and cache clear from a single modal. Trigger via a hidden button in the titlebar under development builds. Not available in production builds.
+
+### Reduced motion
+
+A partial `@media (prefers-reduced-motion: reduce)` block in `globals.css` short-circuits several long CSS animations (pulse, shimmer, chat-jump-latest, cursor blink). The Performance mode setting extends this coverage.
 
 ### Dev mode
 

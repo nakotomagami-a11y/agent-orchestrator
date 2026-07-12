@@ -14,13 +14,20 @@ import { useSummonStore } from "@/modules/summon/hooks/use-summon-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
+import { usePerformanceStore } from "@/lib/performance-store";
 import { Button } from "@/components/ui/button";
 import { useMemo } from "react";
 
 export function OfficeView() {
   const t = useTranslations();
-  const view = useOfficeStore((s) => s.view);
+  const storedView = useOfficeStore((s) => s.view);
   const setView = useOfficeStore((s) => s.setView);
+  const perfMode = usePerformanceStore((s) => s.mode);
+
+  // Performance mode forces the cheaper `cards` renderer. The user's stored
+  // preference is preserved — flipping back to `full` restores the iso
+  // renderer without them re-selecting it.
+  const view = perfMode === "full" ? storedView : "cards";
   const selectedId = useOfficeStore((s) => s.selectedId);
   const select = useOfficeStore((s) => s.select);
 

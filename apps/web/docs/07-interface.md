@@ -142,16 +142,35 @@ Frequently-used prompts can be saved and re-used across agents/projects.
 
 ## Command palette (Cmd+K)
 
-Press **Cmd+K** anywhere in the app to open the command palette. It fuzzy-searches across:
+Press **Cmd+K** anywhere in the app to open the command palette. Groups:
 
-- **Agents** — jump to details for any agent
-- **Projects** — switch active project
-- **Saved prompts** — reuse a prompt (increments its usage counter)
-- **Full-text messages** — SQLite FTS across every stored message
-- **Actions** — dispatch commands like "Open Docs", "Toggle Build mode", "Show Processes"
-- **Recent runs** — the last 20 runs, jumping straight to their transcripts
+**Navigate** — jump to any top-level route:
 
-Navigate with ↑/↓, Enter to select, Esc to close.
+- Go to Office
+- Go to Agents
+- Go to Projects
+- Go to Memory
+- Go to Skills
+- Go to Runs
+- Go to Spend
+- Go to Search
+- Go to Activity
+- Go to Docs
+- Go to Settings
+
+**Agents** — one row per installed agent; Enter opens the agent details modal.
+
+**Projects** — one row per project; Enter sets it as the active project.
+
+**Saved prompts** — every prompt from `saved-prompts`. Enter fires `POST /api/saved-prompts/:id/use` (increments the usage counter and updates `lastUsed`), then pastes into the currently-focused composer.
+
+**Full-text messages** — SQLite FTS5 across the `messages` table. Enter jumps to the transcript.
+
+**Recent runs** — last 20 completed runs. Enter jumps to the transcript.
+
+**Actions** — one-shot toggles: Toggle Theme, Toggle Build mode, Open Processes panel, Open Claude Limits modal, Clear Draft, etc.
+
+Navigate with ↑/↓, Enter to select, Esc to close. The palette state is persisted in `palette-store` so reopening within the same session restores the last query.
 
 ## Compare runs modal
 
@@ -191,13 +210,49 @@ Per-row toggles + "Accept all" / "Skip all". On submit:
 
 See [Usage → Roster migration](#/usage) for the full model.
 
-## About You (Settings → About You)
+## Settings page (`/settings`)
+
+The Settings route is a two-tab layout:
+
+### Tab 1 — Projects
+
+- **Projects root** — the parent directory the app scans for candidate projects. Persisted to `~/.claude/agent-office-settings.json` as `projectsRoot`.
+- **Exclusions** — chip input of directory names to skip during scan (e.g. `node_modules`, `.next`, `.git`). Persisted as `excluded[]`.
+- **Preview** — live list of what the scanner picks up under the current root minus exclusions, so you see the effect of your edits before saving.
+- **Save** — writes back via `PUT /api/settings`; `firstRunComplete` is left untouched.
+
+### Tab 2 — About You
 
 Runs the `user-analyst` agent against your local data (message history, run patterns, project inventory) and produces a candid person-portrait. No calls home; everything stays local.
 
-- **Refresh** button — re-runs the analysis
+- **Refresh** button — re-runs the analysis (`POST /api/user-analysis`)
 - **View history** — every past analysis is saved with a timestamp
 - **Export** — download the current analysis as Markdown
+
+> [!NOTE]
+> Global Memory, Skills, Spend, Search, and Activity are top-level routes (`/memory`, `/skills`, `/spend`, `/search`, `/activity`) reached from the sidebar — NOT sub-tabs of Settings. Common misconception because the sidebar groups them together with a "Settings" heading.
+
+### Multi-instance feature flag
+
+`AppSettings.features.multiInstance` (optional, defaults off) toggles whether an agent can be dropped onto the same project more than once. Enable to unlock the multi-instance workflow (per-instance labels, worktrees, chat panels).
+
+## Bootstrap Project modal (`/projects` → New Project)
+
+Scaffolds a fresh project directory from a framework template.
+
+- **Frontend choice** — `next` (Next.js App Router, server components, full-stack), `vite` (SPA, no SSR), `react` (plain library / widget), `none`.
+- **Backend choice** — enumerated on the modal (Fastify / Hono / Express / Django / FastAPI / none).
+- **Name + directory** — where to write the scaffold.
+- **Confirm** — hits `POST /api/projects/bootstrap`; scaffold runs, project row is created, sidebar refreshes.
+
+## Office view — iso vs cards
+
+Two rendering modes for the Office floor, toggled from the office toolbar and persisted in `useOfficeStore.view` (backed by `ui_settings.office-view` on the server):
+
+- `iso` — full isometric floor via PixiJS. Interactive drag-drop, decorations, room walls, agent avatars.
+- `cards` — flat grid of agent cards. No isometric transform, no PixiJS renderer. Faster on low-power machines.
+
+The Performance settings can force-select `cards` — see the Performance section below.
 
 ## Full-text search bar (titlebar)
 
@@ -211,11 +266,11 @@ Filters (chip-selectable):
 - **Date range** — last 7d / 30d / custom
 - **Kind** — `you` / `agent-text` / `tool` / `system`
 
-## Global Memory page (Settings → Global Memory)
+## Global Memory page (the `/memory` route)
 
 The global memory editor. Same textarea as the per-agent memory tab. Applies to every agent, every project. Read on every `summon` call.
 
-## Skills page (Settings → Skills)
+## Skills page (the `/skills` route)
 
 - Installed skills list (from `~/.claude/agents/_skills/`)
 - Registry browser (from configured GitHub sources)
@@ -223,7 +278,7 @@ The global memory editor. Same textarea as the per-agent memory tab. Applies to 
 - Source manager: add/remove GitHub sources for skill discovery
 - Registry cache indicator with `?refresh=1` bypass
 
-## Spend page (Settings → Spend)
+## Spend page (the `/spend` route)
 
 Cost dashboards:
 
@@ -276,7 +331,30 @@ Endpoints: `/api/flutter/{devices,mirror,run,screenshot}`.
 
 ## Themes
 
-The app respects the OS-level `prefers-color-scheme`. Manual override at Settings → Appearance. Theme tokens live in `packages/ui/src/tokens.css`.
+The theme store lives at `apps/web/src/lib/theme-store.ts` and behaves as follows:
+
+- **First load** — reads `ui_settings.theme` from the server. If absent, auto-detects the OS via `window.matchMedia("(prefers-color-scheme: dark)")`.
+- **Applies** — writes `[data-theme="dark"]` on `<html>` so Tailwind's `dark:` variants and the token CSS in `packages/ui/src/tokens.css` flip accordingly.
+- **Toggle** — the sun/moon icon in the titlebar; also exposed via the command palette.
+- **Persistence** — writes back to `ui_settings.theme` on change (best-effort; failures don't block the DOM update).
+
+## Reduced motion (accessibility)
+
+The app partially honors `@media (prefers-reduced-motion: reduce)` — several animations (pulse, shimmer, chat-jump-latest, cursor blink) drop to a single frame. The Performance settings below extend this to every animation regardless of OS setting.
+
+## Performance mode
+
+Global setting persisted to `ui_settings.performance-mode`. Three levels:
+
+| Mode | Effect |
+|---|---|
+| `full` (default) | Everything on: iso office renderer + PixiJS, framer-motion transitions, CSS keyframes, backdrop-blur, drop shadows, procedural planet icons, hover transitions. |
+| `lite` | Office view forced to `cards`. Non-essential CSS animations off. Framer-motion transitions set to 0 ms. Backdrop-blur removed. Planet icons render as flat color fallback. Status LEDs still animate (essential feedback). |
+| `off` | Everything from `lite` PLUS: no hover transitions, no shimmer, no chat message-in animations, no auto-scroll smoothing. Utilitarian rendering. |
+
+Auto-detect: on first launch, if the browser reports `prefers-reduced-motion: reduce`, the default flips to `lite` and a small notice surfaces on the About You tab (not blocking).
+
+Change from Settings → Performance. Takes effect immediately (no reload needed) via the `[data-perf]` attribute on `<html>` gating CSS rules.
 
 ## Notifications
 
