@@ -39,6 +39,7 @@ const MODELS = [
   { id: "haiku",  name: "haiku",  full: MODEL_FULL["haiku"]!,  badge: "fast",  price: "$0.25/Mt", desc: "Light tasks, snappy. Good for orchestration." },
   { id: "sonnet", name: "sonnet", full: MODEL_FULL["sonnet"]!, badge: "smart", price: "$3.00/Mt", desc: "Balanced - the default for most agents." },
   { id: "opus",   name: "opus",   full: MODEL_FULL["opus"]!,   badge: "deep",  price: "$15/Mt", desc: "Hardest reasoning. Slow. Use sparingly." },
+  { id: "fable",  name: "fable",  full: MODEL_FULL["fable"]!,  badge: "test",  price: "—",         desc: "Fable-5 — A/B test variant. Compare against Opus/Sonnet on the same task." },
 ] as const;
 
 const EFFORT_BARS: Record<string, number> = { low: 1, medium: 2, high: 3, xhigh: 4, max: 5 };
