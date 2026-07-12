@@ -13,6 +13,9 @@ const nextConfig = {
   },
   output: "standalone",
   reactStrictMode: true,
+  // Hide the default `X-Powered-By: Next.js` header — fingerprint
+  // suppression, defense-in-depth.
+  poweredByHeader: false,
   transpilePackages: ["@agent-office/shared", "@agent-office/ui"],
   serverExternalPackages: ["better-sqlite3"],
   webpack: (config, { isServer }) => {
@@ -24,6 +27,31 @@ const nextConfig = {
       ];
     }
     return config;
+  },
+  /**
+   * Global security headers. Applied to every response — cheap and
+   * catches whole classes of browser-side attacks.
+   *
+   *   X-Content-Type-Options   — no MIME sniffing (blocks a class of XSS).
+   *   X-Frame-Options          — deny framing (clickjacking).
+   *   Referrer-Policy          — leak nothing on cross-origin nav.
+   *   Permissions-Policy       — turn off features we don't use.
+   */
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options",        value: "DENY" },
+          { key: "Referrer-Policy",        value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+          },
+        ],
+      },
+    ];
   },
 };
 

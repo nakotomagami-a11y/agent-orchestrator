@@ -519,7 +519,17 @@ async function clearDemo() {
   rmSync(officeDir, { recursive: true, force: true });
 }
 
+// Dev-only surface. Prod builds get a 404 so the dev toys never ship.
+function forbidInProd() {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  return null;
+}
+
 export async function POST(request: Request) {
+  const gate = forbidInProd();
+  if (gate) return gate;
   const body = await request.json() as { action?: string };
   const action = body.action;
 
@@ -562,6 +572,8 @@ export async function POST(request: Request) {
 }
 
 export function GET() {
+  const gate = forbidInProd();
+  if (gate) return gate;
   const rawDb = db.getDb();
   const runsCount = (rawDb.prepare("SELECT COUNT(*) as n FROM runs").get() as { n: number }).n;
   const messagesCount = (rawDb.prepare("SELECT COUNT(*) as n FROM messages").get() as { n: number }).n;

@@ -51,6 +51,10 @@ interface BackfillEntry {
 }
 
 export async function POST() {
+  // Dev-only surface. Prod builds get a 404.
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
   const summaries = projects.listProjectSummaries();
 
   const entries: BackfillEntry[] = [];

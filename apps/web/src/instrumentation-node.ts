@@ -23,6 +23,12 @@ import {
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { projects, settings } from "@agent-office/shared/services";
+import { logEnvDiagnostics } from "./lib/env";
+
+// Env validation runs on module import (throws on malformed config).
+// This call surfaces missing-but-not-fatal warnings so the operator
+// sees them in the boot log.
+logEnvDiagnostics();
 
 const SKILLS_DIR = join(homedir(), ".claude", "agents", "_skills");
 
