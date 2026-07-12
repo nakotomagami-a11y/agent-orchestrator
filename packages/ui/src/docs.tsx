@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { DocsRender, extractHeadings, type DocHeading } from "./docs-render";
+import { PageHeader } from "./page-header";
 
 /**
  * `/docs` page — thin fetch-and-render shell.
@@ -197,21 +198,18 @@ export default function DocsPage() {
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-[var(--bg-0)]">
-      {/* ── Header + tabs ───────────────────────────────── */}
-      <div className={`flex-shrink-0 bg-[var(--bg-1)] border-b ${B}`}>
-        <div className="max-w-[1280px] mx-auto px-6 pb-0 pt-7">
-          <div className="flex items-baseline gap-2.5 mb-3">
-            <h1 className="text-[14px] font-semibold tracking-[-0.01em] text-[var(--txt)] leading-none">
-              Documentation
-            </h1>
-            <span className="text-[10.5px] text-[var(--txt-4)] font-[var(--font-mono)]">
-              Agent Office v{process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"}
-            </span>
-          </div>
+      {/* ── Page header ─────────────────────────────────── */}
+      {/* Use the shared PageHeader so /docs matches Agents / Memory /
+          Activity / Settings / Skills. Do NOT hand-roll a header here. */}
+      <PageHeader
+        title="Documentation"
+        sub={`· Agent Office v${process.env.NEXT_PUBLIC_APP_VERSION ?? "dev"}`}
+      />
 
-          {/* Tab bar — rendered from the fetched index so adding a tab in
-              _index.json (or removing one) just works, no code change here. */}
-          <div className="flex flex-wrap">
+      {/* ── Tab bar ─────────────────────────────────────── */}
+      <div className={`flex-shrink-0 bg-[var(--bg-1)] border-b ${B}`}>
+        <div className="max-w-[1280px] mx-auto px-[28px]">
+          <div className="flex flex-wrap pt-3">
             {(index?.tabs ?? []).map((t) => {
               const active = activeId === t.id;
               return (
@@ -233,7 +231,7 @@ export default function DocsPage() {
 
       {/* ── Content ─────────────────────────────────────── */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
-        <div className="max-w-[1280px] mx-auto flex gap-6 px-6 pt-5 pb-10">
+        <div className="max-w-[1280px] mx-auto flex gap-6 px-[28px] pt-5 pb-10">
           <div className="flex-1 min-w-0">
             {!index && (
               <div className="text-[13px] text-[var(--txt-3)] font-mono py-6">Loading docs config…</div>
