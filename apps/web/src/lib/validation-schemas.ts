@@ -34,7 +34,7 @@ const planetConfigSchema = z.object({
   type: z.enum(["gas-giant", "rocky", "dry", "terran", "ice", "islands", "lava", "black-hole", "galaxy", "star", "asteroid"]),
   seed: z.number().int(),
   paletteIdx: z.number().int().min(0),
-  pixels: z.number().int().min(10).max(300).optional(),
+  pixels: z.number().int().min(10).max(1000).optional(),
   rotation: z.number().optional(),
   dither: z.boolean().optional(),
   customPalette: z.array(z.array(rgbTriple)).optional(),

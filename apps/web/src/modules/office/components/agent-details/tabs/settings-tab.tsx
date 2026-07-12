@@ -22,13 +22,37 @@ function formatTokenCost(n: number | undefined): string {
   return `${(n / 1000).toFixed(1)}k`;
 }
 
-function tierPillClasses(tier: string | undefined): string {
+// Tier styling — INLINE STYLES, not Tailwind classes.
+// Diagnostic proved Tailwind wasn't emitting our dynamic
+// `bg-emerald-500/10 text-emerald-300 ring-emerald-500/50` etc. classes:
+// grepping the built stylesheet (.next/static/css/app/layout.css) turned
+// up zero emerald/amber/orange utility class rules. The dev server was
+// serving CSS without those rules, so every "border" / "ring" tier change
+// I made was invisible in the browser — the class name landed on the DOM
+// but there was no matching CSS declaration to apply.
+//
+// Inline style bypasses class-extraction entirely and always renders.
+// Base colors chosen to match Tailwind's default palette so the visual
+// language stays consistent with the rest of the app:
+//   emerald-500 #10b981, amber-500 #f59e0b, orange-500 #f97316, red-500 #ef4444
+type TierStyle = {
+  color: string;
+  background: string;
+  boxShadow: string; // inset 1px ring
+};
+
+function tierPillStyle(tier: string | undefined): TierStyle {
+  const make = (rgb: string, fg: string): TierStyle => ({
+    color: fg,
+    background: `rgba(${rgb}, 0.12)`,
+    boxShadow: `inset 0 0 0 1px rgba(${rgb}, 0.55)`,
+  });
   switch (tier) {
-    case "low":     return "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20";
-    case "medium":  return "bg-amber-500/10 text-amber-300 border border-amber-500/20";
-    case "high":    return "bg-orange-500/10 text-orange-300 border border-orange-500/20";
-    case "extreme": return "bg-red-500/10 text-red-300 border border-red-500/20";
-    default:        return "bg-ao-line-1/30 text-ao-fg-2 border border-ao-line-1";
+    case "low":     return make("16, 185, 129", "#6ee7b7"); // emerald-300
+    case "medium":  return make("245, 158, 11", "#fcd34d"); // amber-300
+    case "high":    return make("249, 115, 22", "#fdba74"); // orange-300
+    case "extreme": return make("239, 68, 68",  "#fca5a5"); // red-300
+    default:        return make("100, 116, 139", "var(--ao-fg-2)"); // slate-500
   }
 }
 
@@ -105,14 +129,19 @@ function SkillConflictWarning({ conflicts }: { conflicts: SkillConflict[] }) {
   );
 }
 
+// Compact token-cost pill. Colors are applied via inline style (see
+// tierPillStyle) so Tailwind extraction issues can't ghost the tier
+// signal. Layout / typography still come from Tailwind utilities.
 function SkillCostPill({ entry }: { entry: SkillManifestEntry | undefined }) {
   if (!entry) return null;
   const cost = formatTokenCost(entry.token_cost_est);
   if (!cost) return null;
   const emoji = entry.impact_emoji ?? "";
+  const s = tierPillStyle(entry.impact_tier);
   return (
     <span
-      className={`inline-flex items-center gap-[3px] text-[10.5px] font-mono rounded-full px-2 py-0.5 leading-none ${tierPillClasses(entry.impact_tier)}`}
+      className="inline-flex items-center gap-[4px] text-[10.5px] font-mono tabular-nums rounded-full px-2 py-0.5 leading-none"
+      style={s}
       title={`${entry.impact_tier ?? "impact"} · ~${entry.token_cost_est ?? 0} tokens/invocation${entry.workflow_depth ? ` · ${entry.workflow_depth}` : ""}`}
     >
       {emoji && <span>{emoji}</span>}
@@ -168,6 +197,15 @@ function SkillSuggestionRow({
   onPick: () => void;
   id: string;
 }) {
+  // Fixed column layout so every row scans on the same vertical rails,
+  // regardless of description length or whether the "added" chip is present.
+  // - Cost:     w-[44px] right-aligned  → tabular alignment across rows
+  // - Slug:     shrink-0                → primary identifier, never wraps
+  // - Category: shrink-0                → secondary label, mono-caps
+  // - Desc:     flex-1 min-w-0 truncate → absorbs remaining width
+  // - Status:   w-[52px] right-aligned  → always occupies the slot even
+  //                                        when empty, so no reflow between
+  //                                        added / not-added rows
   return (
     <button
       id={id}
@@ -175,27 +213,38 @@ function SkillSuggestionRow({
       role="option"
       aria-selected={active}
       onMouseDown={(e) => { e.preventDefault(); onPick(); }}
-      className={`flex items-center gap-[8px] w-full text-left px-[10px] py-[7px] rounded-[6px] transition-[background,color] duration-[80ms] ${
-        active ? "bg-ao-bg-3" : "hover:bg-ao-bg-3"
-      } ${selected ? "opacity-70" : ""}`}
+      className={[
+        // pl-[14px] gives the leading cost pill breathing room from the row's
+        // left edge (was pinned tight against px-[10px] which read as flush).
+        "flex items-center gap-[10px] w-full text-left pl-[14px] pr-[10px] py-[6px] rounded-[5px]",
+        "transition-[background-color] duration-[80ms]",
+        active
+          ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1px_var(--ao-accent-line)]"
+          : "hover:bg-ao-bg-3",
+        selected ? "text-ao-fg-2" : "",
+      ].join(" ")}
     >
-      <SkillCostPill entry={entry} />
-      <span className="font-mono text-[12px] text-ao-fg-0 shrink-0">
+      <span className="w-[44px] shrink-0 flex justify-end">
+        <SkillCostPill entry={entry} />
+      </span>
+      <span className={`font-mono text-[12px] shrink-0 ${selected ? "text-ao-fg-2" : "text-ao-fg-0"}`}>
         {entry.slug}
       </span>
       {entry.category ? (
-        <span className="font-mono text-[10.5px] text-ao-fg-3 uppercase tracking-[0.06em] shrink-0">
+        <span className="font-mono text-[9.5px] text-ao-fg-3 uppercase tracking-[0.08em] shrink-0">
           {entry.category}
         </span>
       ) : null}
       <span className="text-[11.5px] text-ao-fg-2 truncate flex-1 min-w-0">
-        {truncate(entry.description, 50)}
+        {truncate(entry.description, 60)}
       </span>
-      {selected ? (
-        <span className="inline-flex items-center gap-[3px] text-[10.5px] font-mono text-[var(--ao-accent)] shrink-0">
-          <Icon name="check" size={10} /> added
-        </span>
-      ) : null}
+      <span className="w-[52px] shrink-0 flex items-center justify-end">
+        {selected ? (
+          <span className="inline-flex items-center gap-[3px] text-[10px] font-mono uppercase tracking-[0.06em] text-[var(--ao-accent)]">
+            <Icon name="check" size={10} /> added
+          </span>
+        ) : null}
+      </span>
     </button>
   );
 }
@@ -760,13 +809,30 @@ function SettingsForm({
               <SkillConflictWarning conflicts={activeConflicts} />
               <div
                 data-skill-chip-container
-                className="flex flex-wrap gap-[6px] p-2 pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[42px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]"
+                className="flex flex-wrap gap-[6px] p-[6px] pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[38px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]"
               >
+                {/*
+                 * Chip anatomy: [slug] [cost] [×]
+                 * - Squircle radius (6px) instead of full round — less bubblegum,
+                 *   more control-panel. Aligns with the input container.
+                 * - Cost pill lives inline, right of the slug, using the same
+                 *   tier styling as dropdown rows for consistency.
+                 * - Remove button is a subtle icon-only affordance that
+                 *   brightens on hover — no floating pill-inside-pill look.
+                 */}
                 {skills.map((s) => (
-                  <span key={s} className="inline-flex items-center gap-[6px] py-1 pl-[10px] pr-1 bg-[var(--ao-accent-soft)] border border-[var(--ao-accent-line)] rounded-full font-mono text-[12px] text-[var(--ao-accent)]">
-                    {s}
+                  <span
+                    key={s}
+                    className="inline-flex items-center gap-[6px] h-[24px] pl-[9px] pr-[4px] bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_1px_var(--ao-accent-line)] rounded-[6px] font-mono text-[12px] text-[var(--ao-accent)]"
+                  >
+                    <span className="leading-none">{s}</span>
                     <SkillCostPill entry={skillManifestBySlug[s]} />
-                    <button type="button" className="inline-flex items-center justify-center w-4 h-4 rounded-full text-current opacity-60 hover:opacity-100 hover:bg-white/[0.06]" onClick={() => setSkills(skills.filter((x) => x !== s))} aria-label="remove">
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-[4px] text-current opacity-50 hover:opacity-100 hover:bg-white/[0.08] transition-opacity duration-100"
+                      onClick={() => setSkills(skills.filter((x) => x !== s))}
+                      aria-label={`remove ${s}`}
+                    >
                       <Icon name="x" size={10} />
                     </button>
                   </span>
@@ -788,12 +854,20 @@ function SettingsForm({
 
             <div className="flex flex-col gap-[6px] mt-[14px]">
               <label className="text-[10.5px] uppercase tracking-[0.1em] text-ao-fg-2 font-mono flex items-center gap-2"><Icon name="wrench" size={11} /> Tools allowed</label>
-              <div className="flex flex-wrap gap-[6px] p-2 pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[42px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
+              <div className="flex flex-wrap gap-[6px] p-[6px] pl-[10px] bg-ao-bg-4 border border-ao-line-1 rounded-ao-md min-h-[38px] items-center focus-within:border-[var(--ao-accent-line)] focus-within:[box-shadow:0_0_0_3px_var(--ao-accent-softer)]">
                 {tools.map((t) => (
-                  <span key={t} className="inline-flex items-center gap-[6px] py-1 pl-[10px] pr-1 bg-ao-bg-3 border border-ao-line-1 rounded-full font-mono text-[12px] text-ao-fg-0">
-                    <span className="text-ao-fg-2">{iconForTool(t)}</span>
-                    {t}
-                    <button type="button" className="w-4 h-4 grid place-items-center rounded-full text-current opacity-60 hover:opacity-100 hover:bg-white/[0.06]" onClick={() => setTools(tools.filter((x) => x !== t))} aria-label="remove">
+                  <span
+                    key={t}
+                    className="inline-flex items-center gap-[6px] h-[24px] pl-[9px] pr-[4px] bg-ao-bg-3 [box-shadow:inset_0_0_0_1px_var(--ao-line-1)] rounded-[6px] font-mono text-[12px] text-ao-fg-0"
+                  >
+                    <span className="text-ao-fg-2 leading-none">{iconForTool(t)}</span>
+                    <span className="leading-none">{t}</span>
+                    <button
+                      type="button"
+                      className="w-[18px] h-[18px] grid place-items-center rounded-[4px] text-current opacity-50 hover:opacity-100 hover:bg-white/[0.08] transition-opacity duration-100"
+                      onClick={() => setTools(tools.filter((x) => x !== t))}
+                      aria-label={`remove ${t}`}
+                    >
                       <Icon name="x" size={10} />
                     </button>
                   </span>
@@ -806,18 +880,21 @@ function SettingsForm({
                   onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); addTool(); } }}
                 />
               </div>
-              <div className="mt-2 flex flex-wrap gap-[6px]">
-                <span className="text-ao-fg-2 font-mono text-[11.5px]">suggested:</span>
+              {/* Suggested tools: dashed-outline chips that read as
+                  "empty slot, click to add" — distinguishes them from
+                  active tool chips above without inventing a new shape. */}
+              <div className="mt-2 flex flex-wrap gap-[6px] items-center">
+                <span className="text-ao-fg-3 font-mono text-[11px] uppercase tracking-[0.06em]">Suggested</span>
                 {AVAIL_TOOLS.filter((t) => !tools.includes(t)).map((t) => (
                   <button
                     key={t}
                     type="button"
-                    className="inline-flex items-center gap-[6px] py-[5px] pl-[8px] pr-[10px] rounded-full bg-ao-bg-3 border border-ao-line-1 text-ao-fg-0 text-[12.5px] font-mono cursor-pointer hover:bg-ao-bg-4 hover:border-ao-line-2 transition-[background,border-color] duration-[120ms]"
+                    className="inline-flex items-center gap-[6px] h-[24px] px-[9px] rounded-[6px] bg-transparent [box-shadow:inset_0_0_0_1px_var(--ao-line-1)] text-ao-fg-1 text-[12px] font-mono cursor-pointer hover:bg-ao-bg-3 hover:text-ao-fg-0 transition-[background-color,color] duration-[120ms]"
                     onClick={() => setTools([...tools, t])}
                   >
-                    <span className="text-ao-fg-2">{iconForTool(t)}</span>
-                    {t}
-                    <Icon name="plus" size={10} className="text-[var(--ao-fg-3)]" />
+                    <span className="text-ao-fg-3 leading-none">{iconForTool(t)}</span>
+                    <span className="leading-none">{t}</span>
+                    <Icon name="plus" size={10} className="text-ao-fg-3 opacity-70" />
                   </button>
                 ))}
               </div>

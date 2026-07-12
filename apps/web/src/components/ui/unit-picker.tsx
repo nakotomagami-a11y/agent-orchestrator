@@ -85,13 +85,13 @@ export function UnitPicker({ value, onChange, agentName: _agentName }: UnitPicke
                       title={`${FACTION_LABELS[faction]} ${UNIT_DEFS[kind].label}`}
                       onClick={() => toggle(sel)}
                       className={[
-                        "flex-1 basis-0 flex items-center justify-center p-[7px] rounded-[8px] mx-[3px] my-[3px] transition-[background,box-shadow] duration-100",
+                        "flex-1 basis-0 flex items-center justify-center p-[4px] rounded-[6px] mx-[2px] my-[2px] transition-[background,box-shadow] duration-100",
                         isActive
                           ? "bg-[var(--ao-accent-soft)] [box-shadow:inset_0_0_0_2px_var(--ao-accent)]"
                           : "hover:bg-[var(--ao-bg-3)]",
                       ].join(" ")}
                     >
-                      <AgentAvatar unit={sel} size={162} />
+                      <AgentAvatar unit={sel} size={44} />
                     </button>
                   );
                 })}

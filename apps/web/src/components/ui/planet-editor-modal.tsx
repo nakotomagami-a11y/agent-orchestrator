@@ -263,13 +263,13 @@ export function PlanetEditorModal({
             <input
               type="range"
               min={10}
-              max={300}
+              max={1000}
               step={5}
               value={pixels}
               onChange={(e) => setDraft((d) => ({ ...d, pixels: parseInt(e.target.value, 10) }))}
               className="flex-1 h-[3px] accent-[var(--acc)] cursor-pointer"
             />
-            <span className="text-[11px] font-mono text-txt-3 w-[28px] text-right">{pixels}</span>
+            <span className="text-[11px] font-mono text-txt-3 w-[36px] text-right">{pixels}</span>
           </div>
 
           {/* Rotation */}
@@ -287,7 +287,7 @@ export function PlanetEditorModal({
               }}
               className="flex-1 h-[3px] accent-[var(--acc)] cursor-pointer"
             />
-            <span className="text-[11px] font-mono text-txt-3 w-[28px] text-right">{rotationDeg}°</span>
+            <span className="text-[11px] font-mono text-txt-3 w-[36px] text-right">{rotationDeg}°</span>
           </div>
 
           {/* Dither */}
