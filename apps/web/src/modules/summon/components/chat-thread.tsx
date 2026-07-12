@@ -188,7 +188,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
     frozenStartRef.current = null;
     setFollowTail(true);
     setHasNewBelow(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   // ── New content effect ──

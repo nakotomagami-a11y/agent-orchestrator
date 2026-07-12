@@ -66,7 +66,7 @@ function ActionBarLegacy({ actions }: { actions: ActionBarAction[] }) {
     }
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => { runCheck(); });
 
   useEffect(() => {
@@ -77,7 +77,7 @@ function ActionBarLegacy({ actions }: { actions: ActionBarAction[] }) {
     const observer = new ResizeObserver(runCheck);
     observer.observe(parent);
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useEffect(() => {
@@ -191,7 +191,7 @@ function ActionBarSegmented({ items }: { items: ActionBarItem[] }) {
 
   runCheckRef.current = runCheck;
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => { runCheck(); });
 
   useEffect(() => {
@@ -202,7 +202,7 @@ function ActionBarSegmented({ items }: { items: ActionBarItem[] }) {
     const observer = new ResizeObserver(() => runCheckRef.current());
     observer.observe(parent);
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, []);
 
   useEffect(() => {

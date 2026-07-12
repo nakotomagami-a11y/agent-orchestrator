@@ -76,17 +76,17 @@ export function OfficeMapOverlay({
   const stateRef = useRef({ grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging });
   stateRef.current = { grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   const stableOnEnter = useCallback((x: number, y: number) => setHover({ x, y }), []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   const stableOnLeave = useCallback((x: number, y: number) => {
     setHover((h) => (h?.x === x && h.y === y ? null : h));
   }, []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   const stableOnClick = useCallback((x: number, y: number, shiftKey: boolean) => {
     stateRef.current.onCellClick(x, y, shiftKey);
   }, []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   const stableOnDragOver = useCallback((x: number, y: number, e: React.DragEvent<HTMLButtonElement>, isValid: boolean) => {
     if (!stateRef.current.dragging) return;
     if (Array.from(e.dataTransfer.types).includes(AGENT_DRAG_MIME)) {
@@ -95,11 +95,11 @@ export function OfficeMapOverlay({
       setHover({ x, y });
     }
   }, []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   const stableOnDragLeave = useCallback((x: number, y: number) => {
     setHover((h) => (h?.x === x && h.y === y ? null : h));
   }, []);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   const stableOnDrop = useCallback((x: number, y: number, e: React.DragEvent<HTMLButtonElement>) => {
     e.preventDefault();
     // Clear drag state immediately — don't rely on onDragEnd firing after the

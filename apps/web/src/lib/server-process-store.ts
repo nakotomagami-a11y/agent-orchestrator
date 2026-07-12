@@ -8,9 +8,9 @@ interface ProcessRecord {
 }
 
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __aoProcessStore: Map<number, ProcessRecord> | undefined;
-  // eslint-disable-next-line no-var
+   
   var __aoStdinMap: Map<number, Writable> | undefined;
 }
 

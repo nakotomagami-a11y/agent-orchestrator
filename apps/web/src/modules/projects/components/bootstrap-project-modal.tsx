@@ -58,7 +58,7 @@ export function BootstrapProjectModal({ open, onClose }: BootstrapProjectModalPr
   // Reset form state when the modal opens. Intentionally only depends on
   // `open` - including the mutation object would re-fire this on every render
   // (mutation object identity changes) and wipe what the user types.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     if (open) {
       setName("");

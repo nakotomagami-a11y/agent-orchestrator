@@ -47,6 +47,11 @@ export function UnitSprite({
   label,
   className,
 }: UnitSpriteProps) {
+  // Hooks MUST be called before any early return so React sees the same
+  // hook order on every render (rules-of-hooks). The placeholder branch
+  // below just doesn't use their values.
+  const reducedMotion = usePrefersReducedMotion();
+
   // Defensive: a missing or malformed `unit` shouldn't crash the whole page.
   // Render a placeholder square and shout in the console so the offending
   // callsite shows up in dev. Types should catch this at compile time but
@@ -54,6 +59,23 @@ export function UnitSprite({
   // invariant - and "blank avatar" beats "white page of death".
   const def =
     unit && typeof unit.kind === "string" ? UNIT_DEFS[unit.kind] : undefined;
+
+  // Compute `ticking` up-front so useUnitFrame is called unconditionally
+  // too. When there's no def, ticking is false and the returned frame is
+  // discarded — the placeholder JSX doesn't use it.
+  let frames = 1;
+  if (def) {
+    let sheetPreview = def.idle;
+    if (action === "working") sheetPreview = def.run;
+    else if (action === "axe"     && def.axe)     sheetPreview = def.axe;
+    else if (action === "hammer"  && def.hammer)  sheetPreview = def.hammer;
+    else if (action === "pickaxe" && def.pickaxe) sheetPreview = def.pickaxe;
+    else if (action === "knife"   && def.knife)   sheetPreview = def.knife;
+    frames = sheetPreview.frames;
+  }
+  const ticking = !!def && animate && !reducedMotion && frames > 1;
+  const frame = useUnitFrame(ticking) % Math.max(1, frames);
+
   if (!def) {
     if (typeof window !== "undefined") {
       console.warn(
@@ -94,9 +116,9 @@ export function UnitSprite({
   }
   const src = unitSheetSrc(unit.faction, unit.kind, state);
 
-  const reducedMotion = usePrefersReducedMotion();
-  const ticking = animate && !reducedMotion && sheet.frames > 1;
-  const frame = useUnitFrame(ticking) % sheet.frames;
+  // `reducedMotion`, `ticking`, and `frame` were already computed at the
+  // top of the function (before the placeholder early-return) so React
+  // sees the same hook order on every render.
 
   // Scale so the character bbox fits inside the avatar square (preserving
   // aspect). The remaining transparent margin is the natural padding.

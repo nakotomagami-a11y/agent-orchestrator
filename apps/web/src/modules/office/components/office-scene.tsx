@@ -199,7 +199,7 @@ export function OfficeScene({
       })
       .catch(() => { /* ignore */ })
       // projectId is stable for this instance - the key prop forces a remount on change
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+       
       .finally(() => setSceneLoaded(true));
   }, []);
 

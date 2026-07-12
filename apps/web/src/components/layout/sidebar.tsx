@@ -221,7 +221,8 @@ export function Sidebar() {
             <div className="flex items-center gap-[6px] bg-bg-1 border border-line rounded-[7px] px-[8px] focus-within:border-line-2">
               <Icon name="search" size={11} className="text-txt-4 shrink-0" />
               <input
-                // eslint-disable-next-line jsx-a11y/no-autofocus
+                // Intentional autoFocus — user opened the filter popover
+                // explicitly so we take the cursor.
                 autoFocus
                 type="text"
                 value={filter}

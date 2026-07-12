@@ -79,12 +79,12 @@ try {
       }
     }
     if (skills > 0) {
-      // eslint-disable-next-line no-console
+       
       console.log(`[starter-bootstrap] seeded ${skills} skill(s)`);
     }
   }
 } catch (err) {
-  // eslint-disable-next-line no-console
+   
   console.warn("[starter-bootstrap] skipped:", err);
 }
 
@@ -94,6 +94,6 @@ try {
 try {
   projects.reconcileAllWorktrees(settings.readSettings());
 } catch (err) {
-  // eslint-disable-next-line no-console
+   
   console.warn("[worktree-reconcile] skipped:", err);
 }

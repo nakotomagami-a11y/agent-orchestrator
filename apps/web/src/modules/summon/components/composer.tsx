@@ -118,7 +118,7 @@ export function Composer({
   // without the user having to interact with it first.
   useEffect(() => {
     autosize(textRef.current);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, []);
 
   // Load the persisted draft async on mount. draftKey is stable for the
