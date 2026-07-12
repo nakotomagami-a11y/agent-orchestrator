@@ -44,7 +44,7 @@ export function CardsOffice({
   view,
   setView,
   projectId,
-  projectName,
+  projectName: _projectName,
   rosterCount,
   workingCount,
 }: CardsOfficeProps) {

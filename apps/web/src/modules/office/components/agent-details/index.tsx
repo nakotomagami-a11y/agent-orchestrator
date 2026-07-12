@@ -322,7 +322,7 @@ export function AgentDetailsModal() {
 
   const isWorking = effectiveStatus === "working" || effectiveStatus === "thinking";
 
-  const usage = stream.usage;
+  // usage stream reserved for future use
 
   // Breadcrumb: instance index + label for the currently selected instance
   const selectedInstIdx = isMultiAgentSelected

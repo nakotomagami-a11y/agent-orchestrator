@@ -6,7 +6,6 @@ import { Icon } from "@/components/ui/icon";
 import { TILE, type AgentPositions, type VisibleRange } from "./office-map";
 import { OfficeMapOverlay } from "./office-map-overlay";
 import { OfficePixiCanvas } from "./office-pixi-canvas";
-import { WaterShaderCanvas } from "./water-shader-canvas";
 import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
 import {
   DECORATIONS,
@@ -41,7 +40,7 @@ import {
 import { useOfficePainting } from "../hooks/use-office-painting";
 import type { OfficeView } from "../hooks/use-office-store";
 import {
-  migrateKind,
+
   parseGrid,
   parseDecorations,
   parseAgentPositions,

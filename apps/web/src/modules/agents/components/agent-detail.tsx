@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";

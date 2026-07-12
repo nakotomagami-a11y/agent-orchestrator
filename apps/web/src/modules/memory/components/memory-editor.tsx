@@ -18,7 +18,7 @@ export type MemoryEditorProps = {
 export function MemoryEditor({
   value,
   onSave,
-  label,
+  label: _label,
   placeholder,
   rows = 14,
   saveLabel = "Save",

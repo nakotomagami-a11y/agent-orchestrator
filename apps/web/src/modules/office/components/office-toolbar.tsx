@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-import { Button } from "@/components/ui/button";
 import { ActionBar } from "@/components/ui/action-bar";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ProjectChip } from "@/modules/projects/components/project-chip";

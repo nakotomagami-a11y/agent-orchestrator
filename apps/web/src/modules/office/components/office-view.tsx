@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from "react";
 import { useTranslations } from "next-intl";
-import { match } from "ts-pattern";
 import { OfficeToolbar } from "./office-toolbar";
 import { OfficeHud } from "./office-hud";
 import { OfficeScene } from "./office-scene";
@@ -37,7 +36,7 @@ export function OfficeView() {
   const instanceId = useSummonStore((s) => s.instanceId);
   const closeChat = useSummonStore((s) => s.closeChat);
 
-  const { agents, workingCount, idleCount, errorCount, spendToday, isLoading } = useOfficeAgents();
+  const { agents, workingCount, errorCount, spendToday, isLoading } = useOfficeAgents();
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const projectId = summonProjectId ?? activeProjectId ?? null;
   const projectQ = useProject(activeProjectId);

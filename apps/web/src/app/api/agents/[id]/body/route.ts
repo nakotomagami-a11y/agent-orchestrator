@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync, unlinkSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { agents } from "@agent-office/shared/services";
 import { AGENTS_DIR } from "@agent-office/shared/services/paths";

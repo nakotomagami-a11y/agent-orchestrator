@@ -4,8 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@agent-office/shared/hooks/api";
 import { queryKeys } from "@agent-office/shared/hooks/query-keys";
 import { API_ROUTES } from "@agent-office/shared/config/routes";
-import { POLL } from "@/lib/polling";
-import type { InstalledSkill, RegistrySkill, SkillUpdate } from "@agent-office/shared/types";
+import type { InstalledSkill, RegistrySkill} from "@agent-office/shared/types";
 
 export interface SkillManifestEntry {
   slug: string;

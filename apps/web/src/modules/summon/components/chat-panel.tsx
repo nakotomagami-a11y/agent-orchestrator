@@ -60,7 +60,7 @@ export type ChatPanelProps = {
  * it's already finished, we fall back to the persisted run's output so
  * the user actually sees the result instead of an empty bubble.
  */
-export function ChatPanel({ agent, projectId, instanceId, onClose, onEdit, onNavigateTab, noHeader, newThreadSignal, onActiveRunChange }: ChatPanelProps) {
+export function ChatPanel({ agent, projectId, instanceId, onClose: _onClose, onEdit: _onEdit, onNavigateTab, noHeader, newThreadSignal, onActiveRunChange }: ChatPanelProps) {
   const qc = useQueryClient();
   const summon = useSummon();
   const abort = useAbortRun();

@@ -45,9 +45,6 @@ const MODELS = [
 const EFFORT_BARS: Record<string, number> = { low: 1, medium: 2, high: 3, xhigh: 4, max: 5 };
 const EFFORTS = EFFORT_OPTS.map((id) => ({ id, bars: EFFORT_BARS[id] ?? 1 }));
 
-type Model = typeof MODELS[number]["id"];
-type Effort = (typeof EFFORT_OPTS)[number];
-type Perm = "auto" | "ask" | "deny";
 
 const DESC_MAX = 240;
 

@@ -8,7 +8,6 @@
  *   - Seeding all RNG from the config's integer seed for determinism
  */
 import type { PlanetType, PlanetParams, PlanetLayer, ShaderName } from "./types";
-import type { PaletteDef } from "./palettes/index";
 import { PLANET_TYPE_DEFS } from "./palettes/index";
 import {
   mulberry32, hashProjectId, toRGBA, cosineScheme, darkened, lightened, shiftHue,

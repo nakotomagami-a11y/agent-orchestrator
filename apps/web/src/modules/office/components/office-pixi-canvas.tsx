@@ -25,7 +25,6 @@ import {
   type UnitSheetState,
 } from "@/components/ui/unit-sprite.utils";
 import { getAgentActionAndFlip, isBridgeCell } from "../utils/agent-action";
-import { GRID_COLS, GRID_ROWS } from "../hooks/use-office-camera";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import type { AgentInstance } from "@agent-office/shared/types";
 

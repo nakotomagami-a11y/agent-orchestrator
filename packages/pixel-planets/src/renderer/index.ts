@@ -389,7 +389,7 @@ export class PlanetRenderer {
     const elapsed = (performance.now() - this.startTime) / 1000;
 
     for (const reg of this.registrations.values()) {
-      const { params, destCanvas, destCtx, size } = reg;
+      const { params, destCanvas: _destCanvas, destCtx, size } = reg;
       const canvasScale = params.canvasScale;
       const renderSize  = size * canvasScale;
 

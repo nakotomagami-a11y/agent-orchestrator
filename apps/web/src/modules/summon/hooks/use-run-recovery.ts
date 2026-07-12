@@ -72,7 +72,7 @@ export function useRunRecovery({
   transcriptLoaded,
   sessionId,
   setSessionId,
-  tKey,
+  tKey: _tKey,
   qc,
 }: UseRunRecoveryParams): UseRunRecoveryResult {
   const [resumeProbed, setResumeProbed] = useState(false);
