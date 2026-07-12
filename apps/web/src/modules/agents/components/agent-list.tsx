@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { unitForAgent } from "@/components/ui/unit-sprite.utils";
 import { cn } from "@/lib/cn";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import type { ApiAgent } from "@agent-office/shared/types";
@@ -49,6 +50,9 @@ export function AgentList() {
       if (activeCats.size > 0 && !activeCats.has(categorize(a))) return false;
       if (!q) return true;
       if (a.name.toLowerCase().includes(q)) return true;
+      // Also match against the human-readable form so "CEO" finds "cs-ceo",
+      // "backend" finds "backend-builder", etc.
+      if (formatAgentDisplayName(a.name).toLowerCase().includes(q)) return true;
       if (a.description?.toLowerCase().includes(q)) return true;
       if (a.skills?.some((s) => s.toLowerCase().includes(q))) return true;
       if (a.tools?.some((tl) => tl.toLowerCase().includes(q))) return true;
@@ -272,7 +276,10 @@ function AgentCard({
           <AgentAvatar unit={unit} size={42} />
         </div>
         <div className="min-w-0">
-          <div className="font-bold text-txt flex items-center gap-[6px] whitespace-nowrap overflow-hidden text-ellipsis text-[15px]">{agent.name}</div>
+          {/* Big line: human-readable display name derived from the slug.
+              Small line: raw slug (kebab-case) so power users still see the
+              ID they'd type in the CLI or reference in configs. */}
+          <div className="font-bold text-txt flex items-center gap-[6px] whitespace-nowrap overflow-hidden text-ellipsis text-[15px]">{formatAgentDisplayName(agent.name)}</div>
           <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11px] mt-[2px]">{agent.name}</div>
         </div>
         <span

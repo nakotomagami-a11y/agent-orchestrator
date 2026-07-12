@@ -5,6 +5,7 @@ import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { RosterInstanceRow } from "./roster-instance-row";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { AgentInstance } from "@agent-office/shared/types";
@@ -122,7 +123,7 @@ export function RosterGroup({
 
         {/* Name */}
         <span className="text-[14px] font-semibold text-txt overflow-hidden text-ellipsis whitespace-nowrap">
-          {agent.name}
+          {formatAgentDisplayName(agent.name)}
         </span>
 
         {/* Right section */}

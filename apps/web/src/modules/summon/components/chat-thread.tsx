@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { ExpandedStateContext, MessageBubble, ToolGroupRow } from "./message-bubble";
 import { LiveStatus, type ChatPhase } from "./live-status";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { ThreadItem } from "../utils/thread-types";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { groupRows, isAgentRow, looksLikeQuestion } from "../utils/thread-rows";
@@ -258,7 +259,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
             {agent.short[0]?.toUpperCase() ?? "?"}
           </div>
           <div>
-            <h2 className="font-bold mt-[6px] mb-[4px] text-[22px] tracking-[-0.02em]">Hi, I&apos;m {agent.name}.</h2>
+            <h2 className="font-bold mt-[6px] mb-[4px] text-[22px] tracking-[-0.02em]">Hi, I&apos;m {formatAgentDisplayName(agent.name)}.</h2>
             <p className="text-[var(--txt-3)] m-0 text-[13px]">{agent.description || "Ready when you are - pick a starter or ask anything."}</p>
           </div>
           <div className="grid gap-2 grid-cols-2 w-full mt-3">

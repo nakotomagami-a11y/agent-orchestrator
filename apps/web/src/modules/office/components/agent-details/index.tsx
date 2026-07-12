@@ -16,6 +16,7 @@ import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject, useAddInstance, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { AgentInstance } from "@agent-office/shared/types";
 import type { OfficeAgent } from "../../hooks/use-office-agents";
 import type { AgentStatusInfo } from "../../utils/derive-status";
@@ -137,7 +138,7 @@ function InstanceOverview({
         </button>
         <span className="text-ao-fg-2 text-[13px]">
           All instances of{" "}
-          <span className="text-ao-fg-0 font-semibold">{agent.name}</span>
+          <span className="text-ao-fg-0 font-semibold">{formatAgentDisplayName(agent.name)}</span>
         </span>
       </div>
 
@@ -441,7 +442,7 @@ export function AgentDetailsModal() {
                     className="text-ao-fg-2 hover:text-ao-fg-0 transition-colors duration-[120ms] underline-offset-2 hover:underline truncate max-w-[160px]"
                     title={`View all instances of ${agent.name}`}
                   >
-                    {agent.name}
+                    {formatAgentDisplayName(agent.name)}
                   </button>
                   <span className="text-ao-fg-3 shrink-0" aria-hidden>›</span>
                   <span className="text-ao-fg-0 shrink-0">
@@ -455,7 +456,7 @@ export function AgentDetailsModal() {
                   )}
                 </div>
               ) : (
-                <div className="font-bold text-base text-ao-fg-0">{agent.name}</div>
+                <div className="font-bold text-base text-ao-fg-0">{formatAgentDisplayName(agent.name)}</div>
               )}
               <div className="flex items-center gap-2 text-ao-fg-2 font-mono text-[12px]">
                 <span>{agent.defaultModel ?? "default"}</span>

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { Icon } from "@/components/ui/icon";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 
 export type ChatHeadProps = {
@@ -21,7 +22,7 @@ export function ChatHead({ agent, onNew, actions }: ChatHeadProps) {
         <UnitSprite unit={agent.unitChoice} size={40} action="idle" animate />
       </div>
       <div>
-        <h2 className="m-0 text-[15px] font-bold tracking-[-0.01em]">{agent.name}</h2>
+        <h2 className="m-0 text-[15px] font-bold tracking-[-0.01em]">{formatAgentDisplayName(agent.name)}</h2>
         <div className="text-[11.5px] text-[var(--txt-3)] font-[var(--font-mono)]">
           {t("chat_head.sub", {
             id: agent.id,

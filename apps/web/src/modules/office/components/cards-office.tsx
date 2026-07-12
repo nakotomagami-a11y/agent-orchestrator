@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/cn";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { Button } from "@/components/ui/button";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
@@ -327,7 +328,7 @@ function OfficeCard({
         <div className="min-w-0">
           <div className="font-bold text-txt flex items-center gap-[6px] whitespace-nowrap overflow-hidden text-ellipsis text-[15px]">
             {pinned && <Icon name="pin" size={11} className="text-acc shrink-0" />}
-            {agent.name}
+            {formatAgentDisplayName(agent.name)}
           </div>
           <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11px] mt-[2px]">
             {agent.id}

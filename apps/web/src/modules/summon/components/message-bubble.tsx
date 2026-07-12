@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { match } from "ts-pattern";
 import { cn } from "@/lib/cn";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -718,7 +719,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
           <div className="flex-1 min-w-0 pt-0.5">
             {!hideAvatar && (
               <div className="text-[12px] font-semibold text-ao-fg-1 flex items-center gap-2 mb-[6px]">
-                <span>{agent.name}</span>
+                <span>{formatAgentDisplayName(agent.name)}</span>
                 {item.streaming ? (
                   <span className="text-ao-fg-3 font-mono text-[11px] font-normal text-[var(--ao-accent)]">typing…</span>
                 ) : null}
