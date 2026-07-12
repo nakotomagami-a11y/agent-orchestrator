@@ -1,0 +1,460 @@
+# Reference
+
+## Data & storage
+
+Everything Agent Office writes to disk is under `~/.claude/`. Nothing else, nowhere else.
+
+```
+~/.claude/
+├── agents/
+│   ├── <agent-id>.md                  # Agent definition (frontmatter + body)
+│   ├── <agent-id>.memory.md           # Optional per-agent memory
+│   ├── <agent-id>.body.<ISO>.md       # Body history snapshots (max 10)
+│   ├── _global.memory.md              # Global memory (applies to all agents)
+│   ├── _archive/                      # Archived agents (never loaded)
+│   │   └── <slug>.pre-<version>-backup.md   # Migration modal backups
+│   ├── _uploads/<agent-id>/           # Per-agent file attachments
+│   └── _skills/
+│       ├── <skill-name>/
+│       │   ├── SKILL.md
+│       │   └── .source.json           # Install provenance (sha, source, ref)
+│       └── _registry.json             # Registry cache (1 h TTL)
+│
+├── projects/
+│   └── <project-id>/
+│       ├── project.md                 # Roster + project memory
+│       └── _uploads/                  # Per-project file attachments
+│
+├── agent-office/
+│   ├── db.sqlite                      # All runs, messages, transcripts, pipelines
+│   ├── agent-manifest-version         # Last bundled roster version applied
+│   └── agent-manifest-skipped.json    # Per-version skip choices from the migration modal
+│
+├── .credentials.json                  # Claude auth (plan detection)
+└── agent-office-settings.json         # projectsRoot, excluded, firstRunComplete
+```
+
+### Backup
+
+```bash
+sqlite3 ~/.claude/agent-office/db.sqlite \
+  ".backup ~/.claude/agent-office/db.sqlite.bak"
+```
+
+## Save / export / import
+
+Agent Office can export a project as a self-contained JSON file. This captures everything needed to restore the project on another machine — minus the SQLite run history, which stays local.
+
+### What gets exported
+
+| Included | Details |
+|---|---|
+| Project metadata | `id`, meta (name, description, cwd, roster), memory body |
+| Agent definitions | Full `.md` file content + per-agent memory for each rostered agent (deduplicated) |
+| Office settings | Grid layout, decorations, agent positions, grass colour from `ui_settings` |
+| Conversation history | Optional — pass `?history=1` to include transcripts for all roster instances |
+
+### What is NOT exported
+
+The SQLite database (`db.sqlite`) is not included. Run records, token usage, and cost history stay on the originating machine.
+
+### Export
+
+```bash
+GET /api/save/export?projectId=<id>
+GET /api/save/export?projectId=<id>&history=1   # include transcripts
+
+# Response: JSON attachment named "<project-slug>-agent-office.json"
+```
+
+### Import / restore
+
+```bash
+POST /api/save/import
+Content-Type: application/json
+<save file body>
+
+# Response: { ok: true, agentCount: 3 }
+```
+
+### Cross-machine migration
+
+1. **Export on source machine** — `GET /api/save/export?projectId=<id>&history=1` — save the JSON file.
+2. **Copy to destination** — transfer the JSON file to the target machine (scp, USB, cloud storage).
+3. **Import on destination** — `POST /api/save/import`. Agents, project metadata, memory files, and office layout are restored. Run the first-run wizard first if it is a fresh install.
+
+## REST API reference
+
+All routes are served by the Next.js backend embedded in the Tauri shell. Base URL is `http://localhost:<port>`. All request/response bodies are JSON unless noted otherwise.
+
+### Agents
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/agents` | List all agent definitions |
+| `POST` | `/api/agents` | Create agent (body: `agentBodySchema`) |
+| `POST` | `/api/agents/bulk` | Bulk-create agents |
+| `GET` | `/api/agents/:id` | Get agent frontmatter |
+| `PUT` | `/api/agents/:id` | Update agent (backs up body first) |
+| `DELETE` | `/api/agents/:id` | Delete agent file + memory sidecar |
+| `GET` | `/api/agents/:id/body` | Raw markdown body (text/plain) |
+| `PUT` | `/api/agents/:id/body` | Replace body; backs up to `<id>.body.<ISO>.md` |
+| `GET` | `/api/agents/:id/body/history` | List body backup snapshots |
+| `GET` | `/api/agents/:id/body/history/:filename` | Read one snapshot |
+| `GET` | `/api/agents/:id/memory` | Per-agent memory file |
+| `PUT` | `/api/agents/:id/memory` | Write per-agent memory (max 256 KB) |
+| `GET` | `/api/agents/:id/prompts` | Recent prompts for agent |
+| `POST` | `/api/agents/:id/prompts` | Push a recent prompt |
+| `GET` | `/api/agents/:id/uploads` | List agent uploads |
+| `POST` | `/api/agents/:id/uploads` | Upload file (multipart/form-data) |
+| `GET` | `/api/agents/:id/uploads/:filename` | Download agent upload |
+
+### Memory
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/memory/global` | Read global memory file |
+| `PUT` | `/api/memory/global` | Write global memory (max 256 KB) |
+
+### Runs
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/summon` | Spawn `claude` subprocess for one agent |
+| `GET` | `/api/runs` | List runs (`?agent=&project=&instance=&limit=`) |
+| `DELETE` | `/api/runs` | Delete all runs for an agent (`?agent=`) |
+| `GET` | `/api/runs/:id` | Get single run |
+| `GET` | `/api/runs/:id/stream` | SSE stream — live or replay finished |
+| `POST` | `/api/runs/:id/abort` | SIGKILL the claude subprocess |
+| `POST` | `/api/runs/abort-all` | Bulk-abort every in-flight run |
+| `GET` | `/api/runs/:id/children` | Direct sub-agent runs (one level deep) |
+| `GET` | `/api/runs/:id/tree` | Full parent→child run hierarchy |
+
+### Projects
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/projects` | List project summaries |
+| `POST` | `/api/projects` | Create project |
+| `POST` | `/api/projects/bootstrap` | Bootstrap a project from a template |
+| `GET` | `/api/projects/:id` | Get project + run stats |
+| `PUT` | `/api/projects/:id` | Update project metadata |
+| `DELETE` | `/api/projects/:id` | Delete project |
+| `GET` | `/api/projects/:id/memory` | Project memory |
+| `PUT` | `/api/projects/:id/memory` | Write project memory (max 256 KB) |
+| `GET` | `/api/projects/:id/roster` | List rostered instances |
+| `POST` | `/api/projects/:id/roster` | Add agent instance |
+| `GET` | `/api/projects/:id/roster/:instanceId` | Get instance + USD spend |
+| `PATCH` | `/api/projects/:id/roster/:instanceId` | Update instance settings |
+| `DELETE` | `/api/projects/:id/roster/:instanceId` | Remove instance (cleans worktree) |
+| `POST` | `/api/projects/:id/roster/:instanceId/repair-worktree` | Regenerate a broken worktree |
+| `GET` | `/api/projects/:id/spend` | USD spend breakdown by instance |
+| `GET` | `/api/projects/:id/git-status` | Git branch/diff/ahead/behind |
+| `POST` | `/api/projects/:id/dev` | Spawn dev server in terminal |
+| `POST` | `/api/projects/:id/build` | Run build script in terminal |
+| `POST` | `/api/projects/:id/install` | Run package manager install |
+| `POST` | `/api/projects/:id/clear-cache` | Wipe `.next/`, `dist/`, `.turbo/` |
+| `POST` | `/api/projects/:id/open-folder` | `xdg-open` project directory |
+| `GET` | `/api/projects/:id/uploads` | List project uploads |
+| `POST` | `/api/projects/:id/uploads` | Upload file for project |
+
+### Pipelines & broadcast
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/pipeline` | Create & start multi-agent pipeline (202) |
+| `GET` | `/api/pipeline/:id` | Poll pipeline status |
+| `POST` | `/api/broadcast` | Fan-out prompt to all roster instances (202) |
+
+### Processes
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/processes` | List user's listening ports (Linux only) |
+| `GET` | `/api/processes/:pid` | Check process liveness |
+| `DELETE` | `/api/processes/:pid` | SIGKILL process |
+| `GET` | `/api/processes/:pid/logs` | Captured stdout/stderr |
+| `POST` | `/api/processes/:pid/stdin` | Inject stdin (`{text}`) |
+
+### Settings
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/settings` | Read app settings |
+| `PUT` | `/api/settings` | Write app settings |
+| `GET` | `/api/settings/scan` | Scan filesystem for projects (`?root=&excluded=`) |
+| `GET` | `/api/ui-settings` | All UI settings from SQLite |
+| `PATCH` | `/api/ui-settings` | Write allowed UI settings |
+
+### Skills
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/skills/installed` | List installed skills |
+| `GET` | `/api/skills/manifest` | Flat manifest of installed skills (name, description, category, cost tier) |
+| `GET` | `/api/skills/compatibility` | Skill-vs-skill conflict data (powers the warning UI) |
+| `POST` | `/api/skills/install` | Install skill from GitHub |
+| `GET` | `/api/skills/registry` | Fetch skill registry (`?refresh=1` to bypass cache) |
+| `GET` | `/api/skills/updates` | Check installed skills for updates |
+| `GET` | `/api/skills/sources` | List registry sources |
+| `POST` | `/api/skills/sources` | Add / remove registry sources |
+| `GET` | `/api/skills/:name` | Get single installed skill |
+| `DELETE` | `/api/skills/:name` | Uninstall skill |
+| `POST` | `/api/skills/:name/update` | Update skill to latest SHA |
+
+### Prompts & drafts
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/prompts` | Recent prompts across all agents |
+| `GET` | `/api/saved-prompts` | List saved prompt templates |
+| `POST` | `/api/saved-prompts` | Create a saved prompt |
+| `POST` | `/api/saved-prompts/bulk` | Bulk create / update saved prompts |
+| `GET` | `/api/saved-prompts/:id` | Get one saved prompt |
+| `PATCH` | `/api/saved-prompts/:id` | Edit a saved prompt |
+| `DELETE` | `/api/saved-prompts/:id` | Delete a saved prompt |
+| `POST` | `/api/saved-prompts/:id/use` | Record a usage (increments counter, updates lastUsed) |
+| `GET` | `/api/drafts` | Read drafts (per-agent, per-instance) |
+| `PUT` | `/api/drafts` | Write / update a draft |
+| `DELETE` | `/api/drafts` | Clear a draft |
+
+### Transcripts & analysis
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/transcripts` | Direct transcript listing (bypasses run scoping) |
+| `GET` | `/api/user-analysis` | Latest About You analysis + version history |
+| `POST` | `/api/user-analysis` | Regenerate About You analysis (dispatches `user-analyst`) |
+
+### Save / import / starter
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/save/export` | Export project save file (`?projectId=&history=1`) |
+| `POST` | `/api/save/import` | Import project save file |
+| `GET` | `/api/starter/agents` | List bundled starter agents |
+| `POST` | `/api/starter/agents` | Import selected starter agents |
+| `GET` | `/api/starter/agent-diff` | Diff bundled MANIFEST vs installed (used by migration modal) |
+| `POST` | `/api/starter/agent-diff` | Apply accept / skip choices + stamp version |
+| `GET` | `/api/templates` | List agent creation templates |
+
+### Docs
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/docs/content` | Docs tab config (from `_index.json`) |
+| `GET` | `/api/docs/content?file=<f>` | Raw markdown body of one docs file |
+| `GET` | `/api/docs/export` | Bundle all docs pages as a single export |
+
+### Flutter integration
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/flutter/devices` | Enumerate connected Flutter devices |
+| `GET` | `/api/flutter/mirror` | Live-stream a device screen (MJPEG) |
+| `POST` | `/api/flutter/run` | Spawn `flutter run` in a terminal |
+| `POST` | `/api/flutter/screenshot` | Capture the current device screen |
+
+### Account
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/account` | Read plan from `~/.claude/.credentials.json` |
+| `POST` | `/api/clipboard-image` | Read clipboard PNG via `wl-paste` (Wayland only) |
+
+### System
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/health` | Claude CLI availability check (`?force=1` to bypass cache) |
+| `POST` | `/api/dev/seed` | (dev-only) Seed dev data |
+| `POST` | `/api/dev/backfill-planets` | (dev-only) Backfill planet icons for existing projects |
+
+## SSE event reference
+
+All events are delivered over `GET /api/runs/:id/stream` using the SSE wire format:
+
+```
+event: <name>
+data: <json>
+```
+
+| Event | Payload fields | Emitted at |
+|---|---|---|
+| `attached` | `runId, output, tokensIn, tokensOut, cost, status, startTs` | Immediately on subscribe — delivers current run state |
+| `chunk` | `runId, text` | Each text delta and completed assistant block |
+| `tool` | `runId, name, input?` | Each `tool_use` content block start |
+| `usage` | `runId, tokensIn, tokensOut, cost` | Per-message usage update and final result event |
+| `done` | `runId, exitCode, sessionId?, durationMs?, tokensIn?, tokensOut?, cost?` | Process exit — run finalised in SQLite |
+| `error` | `runId, message` | Spawn error, rate limit, or `is_error` result |
+
+### Replay behaviour
+
+Events `chunk`, `tool`, and `usage` are stored in an in-memory `eventLog` and replayed to late subscribers. `done` and `error` are not stored in the eventLog — if you connect after a run finishes, `attached` delivers the final state and `done` is synthesised from the persisted record.
+
+### Keepalive
+
+The SSE route sends `: keepalive` every 25 seconds to prevent proxy timeouts.
+
+### Wire format examples
+
+```
+event: attached
+data: {"runId":"abc","output":"","tokensIn":0,"tokensOut":0,"cost":0,"status":"running","startTs":1716800000000}
+
+event: chunk
+data: {"runId":"abc","text":"Here is the analysis..."}
+
+event: tool
+data: {"runId":"abc","name":"Read","input":{"file_path":"/src/index.ts"}}
+
+event: usage
+data: {"runId":"abc","tokensIn":1240,"tokensOut":380,"cost":0.0042}
+
+event: done
+data: {"runId":"abc","exitCode":0,"sessionId":"sess-x","durationMs":8420}
+```
+
+## Database schema
+
+### Pragmas
+
+- `journal_mode=WAL` — write-ahead logging for concurrent read+write
+- `synchronous=NORMAL` — durability at fsync boundaries
+- `foreign_keys=ON`
+
+### `runs`
+
+Every summon creates one row. Never mutated except at `done` (append output, set exit_code, timestamps).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | TEXT PK | UUID |
+| `agent_id` | TEXT | Foreign key not enforced (agents are files, not rows) |
+| `agent_name` | TEXT | Display name at run time |
+| `instance_id` | TEXT | Defaults to `"default"` |
+| `instance_label` | TEXT | Optional |
+| `project_id` | TEXT | Nullable — orphan runs allowed |
+| `session_id` | TEXT | Claude CLI session for `--resume` |
+| `status` | TEXT | `running` · `done` · `error` |
+| `exit_code` | INT | Process exit code |
+| `prompt` | TEXT | Original prompt |
+| `output` | TEXT | Streamed assistant output |
+| `tokens_in`, `tokens_out` | INT | Cumulative |
+| `cost_usd` | REAL | Cumulative |
+| `dur_ms` | INT | Wall-clock duration |
+| `model`, `effort` | TEXT | At run time |
+| `cwd` | TEXT | Working directory |
+| `started_at`, `ended_at` | INT | Unix milliseconds |
+| `parent_run_id` | TEXT | Set for sub-agent runs |
+
+### `messages`
+
+Chat-format history. One row per assistant / user message. Full-text-indexed via `messages_fts`.
+
+### `pipelines` & `pipeline_steps`
+
+Pipeline definitions and per-step state.
+
+### Other tables
+
+- `tool_calls` — one row per tool_use content block
+- `transcripts` — raw stream buffers
+- `saved_prompts` — prompt templates with usage counter
+- `drafts` — chat draft persistence
+- `ui_settings` — key-value store for UI state
+- `recent_prompts` — deduplicated prompt history for autocomplete
+
+### Virtual table
+
+- `messages_fts` — FTS5 virtual table synced with `messages` via triggers
+
+### Migrations
+
+Run automatically at server start via `services/db.ts`. Idempotent — safe to run against an already-migrated DB.
+
+### Crash recovery
+
+On boot, any `runs` row with `status='running'` and no matching in-memory process is marked `status='error'` with `exit_code=143` (SIGTERM). Preserves partial output.
+
+### Direct queries
+
+```bash
+sqlite3 -header -column ~/.claude/agent-office/db.sqlite "
+  SELECT agent_id, COUNT(*) AS runs, SUM(cost_usd) AS cost
+  FROM runs GROUP BY agent_id ORDER BY cost DESC LIMIT 10;
+"
+```
+
+## Architecture — build & run
+
+### Stack
+
+- **Frontend** — Next.js 15 (App Router), React 19, Tailwind v4
+- **Backend** — Next.js API routes, embedded in Tauri via `next start`
+- **Desktop shell** — Tauri v2 (Rust + WebView)
+- **Data** — SQLite (better-sqlite3), plain Markdown files under `~/.claude/`
+- **Streaming** — Server-Sent Events for run output, WebSocket-adjacent for Flutter mirror
+
+### Run lifecycle
+
+```
+Human prompt
+  ↓
+POST /api/summon
+  ↓
+  ├─ Compose system prompt (skills + memory + context)
+  ├─ Fork `claude` subprocess with --system-prompt, --allowedTools, etc.
+  ├─ Write run row (status=running)
+  ↓
+Subprocess stdout
+  ↓
+  Parse each JSON line
+  ├─ chunk → emit SSE event + append to output
+  ├─ tool  → emit SSE event + insert tool_call
+  ├─ usage → emit SSE event + update tokens/cost
+  ↓
+Subprocess exit
+  ↓
+  Finalize run (status=done or error, ended_at, dur_ms)
+  Emit SSE `done` event
+```
+
+### Claude CLI flags
+
+Every summon call assembles flags from the agent frontmatter:
+
+| Flag | Source |
+|---|---|
+| `--model <alias>` | `default-model` |
+| `--allowedTools ...` | `tools[]` |
+| `--effort <level>` | `default-effort` |
+| `--system-prompt @/tmp/...` | Composed body written to temp file |
+| `--append-system-prompt @/tmp/...` | Skills + memory + history note |
+| `--add-dir <path>` | Each entry in `add-dirs[]` |
+| `--permission-mode <mode>` | `permission-mode` |
+| `--session-id <id>` | If continuing an existing conversation |
+| `--resume` | Set when session-id is present |
+
+### Environment variables
+
+| Var | Purpose |
+|---|---|
+| `AGENT_OFFICE_STARTER_DATA` | Override the starter-data directory path (default: `apps/web/starter-data`) |
+| `AGENT_OFFICE_DOCS_DIR` | Override the docs source directory (default: `apps/web/docs`) |
+| `AGENT_OFFICE_DB_PATH` | Override SQLite path (default: `~/.claude/agent-office/db.sqlite`) |
+| `ANTHROPIC_API_KEY` | Passed to the `claude` subprocess |
+
+### PATH augmentation
+
+The Next.js server augments its `PATH` with common install locations (`~/.nvm/versions/*/bin`, `~/.bun/bin`, `/opt/homebrew/bin`) so `claude`, `node`, and `pnpm` resolve regardless of how the app was launched.
+
+### Dev mode
+
+- `pnpm dev` runs Next dev server on `:3000`
+- `pnpm tauri:dev` starts the desktop shell wrapping the dev server
+- Hot module reload works for React, API routes, and docs `.md` files (via `no-cache` on the docs content route)
+
+### `--resume` retry behaviour
+
+If a `claude` subprocess exits with `is_error: true` on the first message of a resume, Agent Office retries once WITHOUT `--resume` to break session-corruption loops. If the second attempt also errors, the run is failed.
