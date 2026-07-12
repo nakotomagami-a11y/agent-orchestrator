@@ -31,6 +31,8 @@ export const queryKeys = {
     memory: (id: string) => [...queryKeys.agents.all, "memory", id] as const,
     prompts: (id: string) => [...queryKeys.agents.all, "prompts", id] as const,
     uploads: (id: string) => [...queryKeys.agents.all, "uploads", id] as const,
+    /** Bundled-vs-installed diff for the roster migration modal. */
+    migrationDiff: () => [...queryKeys.agents.all, "migration-diff"] as const,
   },
 
   memory: {

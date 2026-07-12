@@ -6,6 +6,7 @@ import { AgentDetailsModal } from "@/modules/office/components/agent-details";
 import { ClaudeLimitsModal } from "@/modules/limits/components/claude-limits-modal";
 import { ProcessesModal } from "@/modules/processes/components/processes-modal";
 import { FirstRunGate } from "@/modules/onboarding/components/first-run-gate";
+import { AgentMigrationTrigger } from "@/modules/agents/components/agent-migration-trigger";
 import { CommandPalette } from "@/components/command-palette/command-palette";
 import { CompareModal } from "@/modules/runs/components/compare-modal";
 import { ModalUrlSync } from "@/components/modal-url-sync";
@@ -34,6 +35,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <CommandPalette />
       <CompareModal />
       <FirstRunGate />
+      <AgentMigrationTrigger />
       <Suspense><ModalUrlSync /></Suspense>
       <MobileBottomNav />
       <FlutterModal />

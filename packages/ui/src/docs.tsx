@@ -390,7 +390,7 @@ function AgentsTab() {
         <CodeBlock lang="yaml" body={`---
 name: developer
 description: Senior full-stack engineer.
-default-model: claude-sonnet-4-5
+default-model: opus
 default-effort: high
 skills:
   - webapp-testing
@@ -411,7 +411,7 @@ unit: blue/warrior
           rows={[
             [<C>name</C>, "string", "filename", "Display name shown in the UI"],
             [<C>description</C>, "string", '""', "Short description shown on agent cards"],
-            [<C>default-model</C>, "string", "app default", "Claude model slug"],
+            [<C>default-model</C>, "alias", "app default", "One of: haiku · sonnet · opus · fable. Aliases resolve to the newest published version — see Model policy below."],
             [<C>default-effort</C>, "string", "medium", "Thinking budget: low · medium · high"],
             [<C>skills</C>, "list", "[]", "Installed skills to prepend to every summon"],
             [<C>tools</C>, "list", "[]", "Tools the agent may use (--allowedTools)"],
@@ -467,6 +467,112 @@ unit: blue/warrior
           appended prompt entirely. This keeps the planning context lean and prevents the agent
           from accidentally referencing or querying the database in read-only mode.
         </P>
+      </Card>
+
+      <Card id="model-policy" eyebrow="Models" title="Model policy — aliases only">
+        {/* src: packages/shared/src/config/agent-opts.ts */}
+        <P>
+          Every <C>default-model</C> field uses one of four aliases. Aliases resolve to the newest
+          published version at run time, so a repo pulled today runs the same model an update
+          ships next month.
+        </P>
+        <Table
+          headers={["Alias", "Resolves to", "Typical use"]}
+          rows={[
+            [<C>haiku</C>,  "claude-haiku-4-5 (or newer)",  "Fast fetches, short summaries, formatting. Not used for development."],
+            [<C>sonnet</C>, "claude-sonnet-4-6 (or newer)", "Mechanical dev work, QA, single-file bugfixes, most specialist agents"],
+            [<C>opus</C>,   "claude-opus-4-8 (or newer)",   "Feature work, strategic advisors, long-context reasoning"],
+            [<C>fable</C>,  "claude-fable-5 (or newer)",    "Maximum-quality autonomous work — human dispatch only (see below)"],
+          ]}
+        />
+        <H3>Never pin a version</H3>
+        <P>
+          Do not write <C>claude-opus-4-7</C> or any pinned version string in a <C>.md</C>{" "}
+          frontmatter. Pinned agents silently fall behind aliased peers when Anthropic releases a
+          new version. The agent-architect refuses new designs that pin.
+        </P>
+        <H3>Fable is user-only</H3>
+        <Note kind="warn">
+          The <C>fable</C> model is reserved for direct human dispatch. No agent may summon{" "}
+          <C>developer-fable</C> (or any future <C>-fable</C> variant) via the <C>Task</C>{" "}
+          tool. Auto-dispatch would let any orchestrator burn through Fable budget without founder
+          consent. If a task genuinely needs Fable-tier reasoning, the calling agent names it in
+          its plan and hands off to the human.
+        </Note>
+      </Card>
+
+      <Card id="starter-roster" eyebrow="Starter roster" title="The bundled agent army">
+        <P>
+          A fresh clone ships 32 agents grouped by role. All use aliased models. All ship with
+          matching skills, tool sets, and explicit refuse lists. Import them from the first-run
+          wizard or via <C>POST /api/starter/agents</C>.
+        </P>
+        <H3>Development tiers</H3>
+        <P>
+          Four tiers from mechanical to maximum. Choose by task scope; each tier refuses work that
+          belongs to a higher one.
+        </P>
+        <Table
+          headers={["Agent", "Model", "Use for"]}
+          rows={[
+            [<C>developer-lite</C>,  "sonnet", "Dead-code sweeps, dep bumps, single-file bugfixes, boilerplate follow-ups"],
+            [<C>developer</C>,       "opus",   "Feature work, non-trivial bugfixes, multi-file refactors, judgment calls"],
+            [<C>developer-fable</C>, "fable",  "User-dispatch only — long autonomous project work at max quality"],
+            [<C>planner</C>,         "opus",   "Plan-only — hands off to a builder tier. Splits opus reasoning cost from sonnet execution."],
+          ]}
+        />
+        <H3>Executive advisors (Boardroom room)</H3>
+        <Table
+          headers={["Agent", "Owns", "Voice"]}
+          rows={[
+            [<C>cs-ceo</C>,       "Vision, board, fundraising, kill/pivot calls",     "Ruthless, evidence-first, zero fucks"],
+            [<C>cs-cfo</C>,       "Unit economics, runway, capital allocation",       "Numerate skeptic — models the downside first"],
+            [<C>cs-cto</C>,       "Architecture, tech debt, DORA, build-vs-buy",      "Roasts overengineering and vibes-based architecture"],
+            [<C>cs-cpo</C>,       "PMF, roadmap, feature-kill, portfolio strategy",   "'What job is this feature getting hired for?'"],
+            [<C>cs-cmo</C>,       "Positioning, ICP, channel mix, brand voice",       "Roasts feature-list positioning"],
+            [<C>cs-coo</C>,       "Execution, rituals, hiring cadence, OKR discipline", "Refuses processes without an owner and metric"],
+            [<C>cs-boardroom</C>, "Multi-C-suite deliberation for cross-domain calls", "Six-phase protocol, decision log"],
+          ]}
+        />
+        <H3>Engineering specialists</H3>
+        <Table
+          headers={["Agent", "Owns"]}
+          rows={[
+            [<C>frontend-craftsman</C>, "Production UI polish — a11y, motion, states, keyboard"],
+            [<C>designer</C>,           "Concept-first pipeline (grill → brief → IA → tokens → tasks)"],
+            [<C>devops-engineer</C>,    "CI/CD, Docker, IaC, GitHub Actions, deploy pipelines"],
+            [<C>release-engineer</C>,   "Cutting releases, changelogs, semver bumps, tags"],
+            [<C>sre-oncall</C>,         "Prod-fire triage, log/trace forensics, runbook execution"],
+            [<C>security-posture</C>,   "Auth, secrets, dependencies, threat modeling — read-only"],
+            [<C>mcp-builder</C>,        "Model Context Protocol servers — tool schemas, transports"],
+          ]}
+        />
+        <H3>QA specialists</H3>
+        <Table
+          headers={["Agent", "Owns"]}
+          rows={[
+            [<C>qa-visual</C>,      "Pixel-level defects at multiple viewports"],
+            [<C>web-qa</C>,         "Functional browser QA — clicks, forms, network, console"],
+            [<C>qa-code-review</C>, "Adversarial diff review — MUST FIX / SHOULD FIX / NIT"],
+            [<C>qa-pen-testing</C>, "OWASP + prompt injection + secrets probe"],
+            [<C>qa-codebase</C>,    "Static analysis — dead code, unused imports, coverage gaps"],
+          ]}
+        />
+        <H3>Support & research</H3>
+        <Table
+          headers={["Agent", "Owns"]}
+          rows={[
+            [<C>orchestrator</C>,      "Breaks down complex tasks, dispatches specialists, synthesises"],
+            [<C>agent-architect</C>,   "Designs new agent .md files — grills before drafting"],
+            [<C>product-manager</C>,   "PRDs, story decomposition, RICE/ICE prioritization"],
+            [<C>tech-writer</C>,       "READMEs, ADRs, API references, changelog prose"],
+            [<C>data-analyst</C>,      "SQL over SQLite/Postgres — read-only, shows the query"],
+            [<C>user-analyst</C>,      "Person-portrait from local data (About You tab)"],
+            [<C>explore</C>,           "Read-only code / documentation research, returns briefing"],
+            [<C>web-researcher</C>,    "External web fetch with citations for other agents to reason on"],
+            [<C>assistant</C>,         "General-purpose escape hatch when no specialist fits"],
+          ]}
+        />
       </Card>
 
       <Card id="skills" eyebrow="Skills" title="Reusable capability packs">
@@ -1031,6 +1137,46 @@ ORDER BY m.ts DESC LIMIT 20;`} />
           visibility only. Their stdio is not captured, so log tailing returns <C>found: false</C>.
         </Note>
       </Card>
+
+      <Card id="roster-migration" eyebrow="Roster migration" title="Applying bundled agent updates">
+        {/* src: apps/web/src/app/api/starter/agent-diff/route.ts */}
+        <P>
+          Every release ships a bundled roster in <C>apps/web/starter-data/agents/</C> alongside a{" "}
+          <C>MANIFEST.json</C> that pins each agent to a content hash. When the bundled version
+          differs from the version this workspace last applied, the migration modal opens on next
+          app launch.
+        </P>
+        <H3>What you see</H3>
+        <P>Three lists, each with a per-row accept / skip toggle:</P>
+        <Table
+          headers={["Section", "What it contains", "Default"]}
+          rows={[
+            ["New in this version",       "Bundled agents you don't have installed yet.",                    "Accepted"],
+            ["Changed since last install", "Agents you have — the bundle now ships a modified version.",     "Skipped"],
+            ["Only in your local install", "Agents the bundle doesn't ship (your customs stay untouched).",  "Read-only"],
+          ]}
+        />
+        <H3>What happens on accept</H3>
+        <Flow
+          steps={[
+            { title: "Backup",       desc: <>The current file is copied to <C>{"~/.claude/agents/_archive/<slug>.pre-<version>-backup.md"}</C>.</> },
+            { title: "Override",     desc: <>The bundled <C>.md</C> is copied over the installed one.</> },
+            { title: "Persist skip", desc: <>Skipped slugs are written to <C>~/.claude/agent-office/agent-manifest-skipped.json</C> so they don't re-nag until the bundle version changes again.</> },
+            { title: "Stamp version",desc: <>The current bundle version is written to <C>~/.claude/agent-office/agent-manifest-version</C>. The modal won't fire again for this version.</> },
+          ]}
+        />
+        <Note kind="tip">
+          Custom agents (in <C>Only in your local install</C>) are never touched by the modal.
+          Your customizations survive every roster update.
+        </Note>
+        <H3>Trigger conditions</H3>
+        <P>The trigger opens the modal only when ALL of the following are true:</P>
+        <ul className="text-[13px] text-[var(--txt-2)] leading-[1.65] pl-6 my-3 list-disc">
+          <li>First-run wizard has completed (<C>firstRunComplete === true</C>).</li>
+          <li>Bundle <C>MANIFEST.json</C> version differs from the installed version marker.</li>
+          <li>At least one entry in <em>New</em> or <em>Changed</em> — otherwise the version is stamped silently.</li>
+        </ul>
+      </Card>
     </>
   );
 }
@@ -1058,7 +1204,9 @@ function ReferenceTab() {
 │       └── _uploads/             # Per-project file attachments
 │
 ├── agent-office/
-│   └── db.sqlite                 # All runs, messages, transcripts, pipelines
+│   ├── db.sqlite                          # All runs, messages, transcripts, pipelines
+│   ├── agent-manifest-version             # Last bundled roster version applied (Phase 8)
+│   └── agent-manifest-skipped.json        # Per-version skip choices from the migration modal
 │
 ├── .credentials.json             # Claude auth (plan detection)
 └── agent-office-settings.json    # projectsRoot, excluded, firstRunComplete`} />
@@ -1658,10 +1806,12 @@ const TAB_ANCHORS: Record<TabId, AnchorEntry[]> = {
     { id: "first-run-wizard", label: "First-run wizard" },
   ],
   agents: [
-    { id: "agents",        label: "Agent files" },
-    { id: "frontmatter",   label: "Frontmatter" },
-    { id: "system-prompt", label: "System prompt" },
-    { id: "skills",        label: "Skills" },
+    { id: "agents",          label: "Agent files" },
+    { id: "frontmatter",     label: "Frontmatter" },
+    { id: "system-prompt",   label: "System prompt" },
+    { id: "model-policy",    label: "Model policy" },
+    { id: "starter-roster",  label: "Starter roster" },
+    { id: "skills",          label: "Skills" },
   ],
   projects: [
     { id: "projects", label: "Projects" },
@@ -1670,13 +1820,14 @@ const TAB_ANCHORS: Record<TabId, AnchorEntry[]> = {
     { id: "memory", label: "Memory tiers" },
   ],
   usage: [
-    { id: "office",         label: "Office floor" },
-    { id: "summon",         label: "Summon & Runs" },
-    { id: "history",        label: "Run history" },
-    { id: "pipelines",      label: "Pipelines" },
-    { id: "multi-instance", label: "Multi-instance" },
-    { id: "spend-limits",   label: "Spend limits" },
-    { id: "processes",      label: "Processes" },
+    { id: "office",           label: "Office floor" },
+    { id: "summon",           label: "Summon & Runs" },
+    { id: "history",          label: "Run history" },
+    { id: "pipelines",        label: "Pipelines" },
+    { id: "multi-instance",   label: "Multi-instance" },
+    { id: "spend-limits",     label: "Spend limits" },
+    { id: "processes",        label: "Processes" },
+    { id: "roster-migration", label: "Roster migration" },
   ],
   reference: [
     { id: "storage",        label: "Storage" },

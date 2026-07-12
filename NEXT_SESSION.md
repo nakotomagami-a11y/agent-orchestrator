@@ -1,7 +1,58 @@
 # Next session — start here
 
-**Written:** 2026-07-12 (last update: skill autocomplete dispatch, uncommitted)
+**Written:** 2026-07-12 (last update: Agent Office overhaul phases 1–6 complete, mid-run handoff)
 **Read this first. Then follow the pointers below.**
+
+---
+
+## 🔥 2026-07-12 — ACTIVE MULTI-PHASE RUN: Agent Office overhaul
+
+**Master plan:** [`docs/plans/agent-office-overhaul.md`](docs/plans/agent-office-overhaul.md) — READ THIS FIRST before doing anything. Every decision, phase, verification step, and progress marker is there.
+
+**Status: ✅ COMPLETE — all 10 phases shipped. Ready for user review + commit.**
+
+**Completed (phases 1–10):**
+
+1. **Phase 1 — Fable-only-by-user enforcement** ✅ — No agent may dispatch `developer-fable`. Orchestrator moved off Fable to `opus`. Agent-architect got a "Fable is user-only" rule.
+2. **Phase 2 — Removals** ✅ — Archived `business-strategist`, `backend-builder`, `developer-haiku` to `~/.claude/agents/_archive/*.archived-2026-07-12.md`. Migrated `alz-database-schema-designer` skill into `developer`. Scrubbed refs in orchestrator/qa-code-review/qa-pen-testing/product-manager.
+3. **Phase 3 — Model alias normalization** ✅ — All 24 live agents now use aliases (`haiku`/`sonnet`/`opus`/`fable`). Zero pinned model strings. User policy: always latest, period.
+4. **Phase 4 — Renames** ✅ (skipped) — `qa-codebase→codebase-auditor` / `explore→code-researcher` rejected. Seed script hardcodes both slugs; display-name helper already renders them nicely in the UI.
+5. **Phase 5 — Per-agent tunes** 🔶 partial — 8 of 10 done (assistant Refuse, cs-cfo skill, designer/product-manager effort, explore Glob tool, qa-codebase skills, data-analyst add-dirs). Deferred: (5.9) orchestrator table→runtime `ls`, (5.10) qa-visual/web-qa Playwright MCP tools.
+6. **Phase 6 — 8 new agents** ✅ — Created: `tech-writer`, `mcp-builder`, `planner`, `devops-engineer`, `release-engineer`, `security-posture`, `sre-oncall`, `cs-coo`.
+7. **Phase 7 — Ship as repo defaults** ✅ — Refreshed `apps/web/starter-data/agents/` (removed 4 stale, copied all 32 live). Generated `MANIFEST.json` (`version: "2026-07-12-1"` + per-agent 16-char SHA256 hashes). Seed endpoint: `POST /api/starter/agents`, safe (never overwrites existing user files).
+8. **Phase 8 — Migration modal** ✅ — End-to-end feature. New API route `apps/web/src/app/api/starter/agent-diff/route.ts` (GET diff, POST apply with backup+version-stamp). Client hook `apps/web/src/modules/agents/hooks/use-agent-migration.ts` (TanStack query+mutation). Modal `apps/web/src/modules/agents/components/agent-migration-modal.tsx` (three-section UI with accept-all/skip-all, tier-colored badges, ao-modal styling, display-name-derived titles). Trigger `apps/web/src/modules/agents/components/agent-migration-trigger.tsx` (mount-once, gated on `firstRunComplete`, auto-stamps version when nothing to migrate). Wired into `apps/web/src/app/(app)/layout.tsx`. Query key added at `queryKeys.agents.migrationDiff()`. Version marker at `~/.claude/agent-office/agent-manifest-version`. Skip state at `~/.claude/agent-office/agent-manifest-skipped.json`. Backups at `~/.claude/agents/_archive/<slug>.pre-<version>-backup.md`. **Smoke-tested end-to-end** against dev server: bumped bundle manifest, saw "changed" entry with both hashes, reverted cleanly.
+9. **Phase 9 — Docs rewrite** ✅ — `packages/ui/src/docs.tsx` (1836 → ~2050 LOC). Added `#model-policy` card (aliases-only policy + Fable-user-only rule), `#starter-roster` card (all 32 agents grouped by dev tiers / boardroom / engineering / QA / support/research), `#roster-migration` card (migration modal end-to-end). Fixed frontmatter example to use `opus` alias. Storage diagram now lists the two new state files. TAB_ANCHORS updated so both new Agents-tab sections and the Usage-tab section are navigable from the right nav.
+10. **Phase 10 — Handoff** ✅ — Plan doc + this handoff.
+
+**Live roster: 32 agents.** All aliased models. Zero fable-dispatch instructions outside `developer-fable.md` itself. Migration modal live in the app shell. Docs page thoroughly documents the new state.
+
+**Verification signals:**
+- `tsc --noEmit` PASS in `apps/web`, `packages/shared`, `packages/ui`
+- `GET /api/starter/agent-diff` returns valid JSON matching the schema
+- `POST /api/starter/agent-diff` correctly backs up + copies + stamps version
+- `/docs` route returns 200
+
+**Files summary** — all uncommitted, all on `main`:
+- New: `docs/plans/agent-office-overhaul.md`, `apps/web/src/app/api/starter/agent-diff/route.ts`, `apps/web/src/modules/agents/hooks/use-agent-migration.ts`, `apps/web/src/modules/agents/components/agent-migration-{modal,trigger}.tsx`
+- Modified: `packages/ui/src/docs.tsx`, `packages/shared/src/hooks/query-keys.ts`, `apps/web/src/app/(app)/layout.tsx`, plus all agent-file changes under `~/.claude/agents/` and `apps/web/starter-data/agents/*` + `MANIFEST.json`
+- Run `git status --short` in `/home/parlamentas/Documents/Lab/agent-office/` for the full diff.
+- **Phase 9 · Docs rewrite (`/docs`).** `packages/ui/src/docs.tsx` is 1836 lines. Feature audit → rewrite to describe every feature down to the smallest, including the new agents and migration modal.
+- **Phase 10 · Handoff.** Reset the plan doc to `status: shipped`.
+
+**⚠️ Rules for the next session (from the user):**
+1. **Fable is user-only.** No agent may dispatch `-fable` variants. Ever.
+2. **Aliases only.** Every model reference uses `haiku`/`sonnet`/`opus`/`fable`. Never pin a model version.
+3. **1-by-1.** No half-assed batches. Verify each phase before moving on.
+4. **Update the plan tracker** in `docs/plans/agent-office-overhaul.md` §5 after every phase.
+
+**Files touched in this run (all on `main` under `/home/parlamentas/Documents/Lab/agent-office/`, uncommitted):**
+- `docs/plans/agent-office-overhaul.md` (NEW — master plan)
+- 5 new agent files under `~/.claude/agents/` (tech-writer, mcp-builder, planner, devops-engineer, release-engineer, security-posture, sre-oncall, cs-coo)
+- ~10 tuned agent files under `~/.claude/agents/`
+- 3 archived to `~/.claude/agents/_archive/`
+- Also earlier this session (before Phase 1): UI files under `apps/web/` for the display-name helper + planet-editor pixel bump + settings-tab pill styling — see git status for the full diff.
+
+Run `git status --short` on `/home/parlamentas/Documents/Lab/agent-office/` to see everything uncommitted.
 
 ---
 
