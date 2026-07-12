@@ -231,7 +231,7 @@ export default function DocsPage() {
 
       {/* ── Content ─────────────────────────────────────── */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
-        <div className="max-w-[1280px] mx-auto flex gap-6 px-[28px] pt-5 pb-10">
+        <div className="max-w-[1280px] mx-auto flex gap-6 px-[28px] pt-5 pb-24">
           <div className="flex-1 min-w-0">
             {!index && (
               <div className="text-[13px] text-[var(--txt-3)] font-mono py-6">Loading docs config…</div>
