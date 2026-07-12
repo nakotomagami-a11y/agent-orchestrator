@@ -63,7 +63,24 @@ export default [
       // ── Runtime hygiene ────────────────────────────────────────
       "no-console": ["error", { allow: ["warn", "error"] }],
 
-      // ── Architecture rules (CLAUDE.md — Flexbox only) ──────────
+      // ── Complexity budgets (CLAUDE.md rules) ───────────────────
+      // Warn only — the codebase has legacy files that go over these
+      // limits. The warnings surface them without blocking dev; per-file
+      // cleanup happens in the docs/plans/architectural-cleanup.md
+      // execution.
+      "max-lines": [
+        "warn",
+        { max: 200, skipBlankLines: true, skipComments: true },
+      ],
+      "max-lines-per-function": [
+        "warn",
+        { max: 50, skipBlankLines: true, skipComments: true, IIFEs: true },
+      ],
+      "max-depth": ["warn", 3],
+      "max-params": ["warn", 5],
+
+      // ── Architecture rules (CLAUDE.md — Flexbox only + no
+      //    generic utility drawer names) ─────────────────────────
       "no-restricted-syntax": [
         "warn",
         {
@@ -77,6 +94,27 @@ export default [
             "TemplateElement[value.raw=/\\b(grid-cols-|grid-rows-|grid-template|grid-flow|grid-area)\\b/]",
           message:
             "CSS Grid is forbidden by CLAUDE.md — use Flexbox (flex + flex-wrap + basis-* / w-* / flex-1).",
+        },
+      ],
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              // Banned generic drawer names — CLAUDE.md says "domain
+              // names, not utils/helpers/common/shared."
+              group: [
+                "**/utils/*",
+                "**/helpers/*",
+                "**/common/*",
+                "**/shared/*",
+                "**/*.utils",
+                "**/*.helpers",
+              ],
+              message:
+                "CLAUDE.md rule: no `utils`, `helpers`, `common`, `shared` names. Use a domain-specific module name that describes what the file does.",
+            },
+          ],
         },
       ],
     },
