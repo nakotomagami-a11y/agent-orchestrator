@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { match } from "ts-pattern";
 import { cn } from "@/lib/cn";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../utils/thread-types";
-import { Icon, type IconName } from "@/components/ui/icon";
+import { Icon } from "@/components/ui/icon";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import { useCreateSavedPrompt } from "@/modules/prompts/hooks/use-saved-prompts";
 import { splitProse, type ProseItem } from "@/lib/markdown";
@@ -20,29 +20,13 @@ import {
 } from "../utils/message-format";
 import { useClaudeLimitsStore, periodStart, periodEnd } from "@/lib/claude-limits-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
+import { ExpandedStateContext, useExpandedState } from "./expanded-state";
+import { ToolGroupRow } from "./tool-group-row";
 
-// ── Expanded-state context ────────────────────────────────────────────────────
-// A stable Map<id, open> lives in ChatThread (via useRef) so that collapsible
-// sections survive re-renders and remounts during streaming.
-export const ExpandedStateContext = createContext<{
-  get: (id: string) => boolean;
-  set: (id: string, val: boolean) => void;
-} | null>(null);
-
-function useExpandedState(id: string): [boolean, () => void] {
-  const ctx = useContext(ExpandedStateContext);
-  const ctxRef = useRef(ctx);
-  ctxRef.current = ctx;
-  const [open, setOpen] = useState(() => ctx?.get(id) ?? false);
-  const toggle = useCallback(() => {
-    setOpen((prev) => {
-      const next = !prev;
-      ctxRef.current?.set(id, next);
-      return next;
-    });
-  }, [id]);
-  return [open, toggle];
-}
+// Re-export so `chat-thread` and any other consumer keeps its existing
+// `from "./message-bubble"` imports working. Actual definitions live in
+// their own files (see expanded-state.tsx, tool-group-row.tsx).
+export { ExpandedStateContext, ToolGroupRow };
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
@@ -110,22 +94,6 @@ function copyText(text: string) {
   }
 }
 
-// ── Tool icon map ─────────────────────────────────────────────────────────────
-const TOOL_ICONS: Record<string, IconName> = {
-  Read: "folder",
-  Write: "edit",
-  Edit: "edit",
-  Bash: "terminal-ao",
-  Grep: "search",
-  WebFetch: "globe",
-  WebSearch: "search",
-  Agent: "list",
-};
-
-function ToolIcon({ name, size = 13 }: { name: string; size?: number }) {
-  const iconName = TOOL_ICONS[name] ?? "wrench";
-  return <Icon name={iconName} size={size} />;
-}
 
 // ── Code block ────────────────────────────────────────────────────────────────
 function CodeBlock({ lang, body }: { lang: string; body: string }) {
@@ -262,99 +230,6 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
 }
 
 // ── Single tool call detail panel ─────────────────────────────────────────────
-function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
-  const [showIn, setShowIn] = useState(false);
-  return (
-    <div className="px-[14px] py-[10px] border-t border-[var(--ao-line-0)] first:border-t-0">
-      <div className="flex items-center gap-2 text-[12.5px]">
-        <span className="w-[18px] h-[18px] grid place-items-center text-ao-fg-2 shrink-0"><ToolIcon name={name} /></span>
-        <span className="text-ao-fg-0 font-medium">{name}</span>
-        {arg && <span className="font-mono text-[11.5px] text-ao-fg-2 px-[6px] py-[1px] bg-ao-bg-3 border border-ao-line-1 rounded-[4px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[360px]">{arg}</span>}
-        <span className="ml-auto flex items-center gap-2 text-ao-fg-3 font-mono text-[11px]">
-          <span className="inline-flex items-center gap-[5px] py-[1px] px-[6px] rounded-full text-[9px] font-semibold tracking-[0.06em] uppercase font-mono border bg-[var(--ao-ok-soft)] text-[var(--ao-ok)] border-[rgba(78,185,111,0.25)]"><span className="text-[7px]">●</span>ok</span>
-        </span>
-      </div>
-      {arg && (
-        <div className="mt-2 grid grid-cols-1 gap-[6px]">
-          <div className={`border border-[var(--ao-line-0)] rounded-[6px] overflow-hidden bg-[var(--ao-bg-1)]${showIn ? " ao-open" : ""}`}>
-            <div
-              className="flex items-center gap-2 px-[10px] py-[5px] font-mono text-[10.5px] text-ao-fg-2 uppercase tracking-[0.08em] cursor-pointer hover:text-ao-fg-0"
-              onClick={() => setShowIn(!showIn)}
-            >
-              <Icon name="chevron" size={11} className="transition-transform duration-[180ms] [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]" />
-              input
-              <span className="ml-auto text-ao-fg-3 normal-case tracking-normal">{arg.length} chars</span>
-            </div>
-            {showIn && <div className="border-t border-[var(--ao-line-0)] p-[8px_10px] font-mono text-[11.5px] leading-[1.55] text-ao-fg-0 max-h-[200px] overflow-y-auto whitespace-pre-wrap break-words">{arg}</div>}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Tool group row (exported - used by chat-thread for grouped tool chains) ───
-export function ToolGroupRow({
-  id,
-  tools,
-  avatar,
-  running = false,
-  hideAvatar = false,
-}: {
-  id: string;
-  tools: Array<{ id: string; name: string; arg?: string }>;
-  avatar: string;
-  running?: boolean;
-  hideAvatar?: boolean;
-}) {
-  const [open, toggle] = useExpandedState(id);
-  const single = tools.length === 1;
-  const first = tools[0]!;
-  return (
-    <div className="flex items-start gap-[12px] relative group/msg">
-      {hideAvatar ? (
-        <div className="w-[30px] shrink-0" aria-hidden />
-      ) : (
-        <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
-          <span className="text-base">{avatar}</span>
-        </div>
-      )}
-      <div className="flex-1 min-w-0 w-full">
-        <div className={`border border-ao-line-1 rounded-[10px] bg-ao-bg-2 overflow-hidden${open ? " ao-open" : ""}`}>
-          <div className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer select-none transition-[background] duration-[120ms] hover:bg-ao-bg-3" onClick={toggle}>
-            <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${running ? "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)] animate-[ao-pulse_1.5s_infinite]" : "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)]"}`} />
-            <span className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-ao-bg-3 text-ao-fg-1 shrink-0 border border-ao-line-1"><Icon name="wrench" size={13} /></span>
-            <span className="text-[13px] text-ao-fg-0 font-medium flex items-center gap-2 flex-1 min-w-0">
-              {single ? (
-                <>
-                  <ToolIcon name={first.name} />
-                  {first.name}
-                  {first.arg && <span className="font-mono text-[11.5px] text-ao-fg-2 px-[6px] py-[1px] bg-ao-bg-3 border border-ao-line-1 rounded-[4px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[320px]">{first.arg}</span>}
-                </>
-              ) : (
-                <>
-                  {tools.length} tool calls
-                  <span className="text-ao-fg-2 font-mono text-[11.5px] ml-1">
-                    {[...new Set(tools.map((t) => t.name))].join(" · ")}
-                  </span>
-                </>
-              )}
-            </span>
-            <span className="text-ao-fg-3 transition-transform duration-[180ms] [.ao-open_&]:rotate-90 [.ao-open_&]:text-[var(--ao-accent)]"><Icon name="chevron" size={14} /></span>
-          </div>
-          {open && (
-            <div className="border-t border-[var(--ao-line-0)] p-0">
-              {tools.map((t) => (
-                <ToolCallRow key={t.id} name={t.name} arg={t.arg} />
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Thinking row ──────────────────────────────────────────────────────────────
 function ThinkingRow({ id, text, avatar, hideAvatar = false }: { id: string; text: string; avatar: string; hideAvatar?: boolean }) {
   const [open, toggle] = useExpandedState(id);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
 import type { WorkflowNode } from "@agent-office/shared/types";
 import { Icon } from "@/components/ui/icon";
-import { StatusBadge } from "@/modules/runs/components/sub-agent-block";
+import { StatusBadge } from "@/modules/runs/components/status-badge";
 import { formatCost, formatDuration } from "@/modules/runs/utils/format-run-meta";
 import { useWorkflowTree } from "../hooks/use-workflow-tree";
 import { countDescendants } from "../utils/workflow-tree";
