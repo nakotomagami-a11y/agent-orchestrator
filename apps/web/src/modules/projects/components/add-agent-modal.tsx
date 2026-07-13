@@ -263,7 +263,7 @@ function AgentPickerStep({
   return (
     <>
       <div className="flex items-center border-b border-line shrink-0 px-[22px] py-[18px] gap-[12px]">
-        <div className="flex items-center justify-center bg-acc-faint text-acc shrink-0 w-[34px] h-[34px] rounded-[9px] border border-[var(--acc-tint)]"><Icon name="plus" size={16} /></div>
+        <div className="flex items-center justify-center text-acc shrink-0"><Icon name="plus" size={32} /></div>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-txt text-[16px]">Add agent to office</div>
           <div className="text-txt-3 flex items-center font-[var(--font-mono)] text-[11.5px] mt-[2px] gap-[6px]">

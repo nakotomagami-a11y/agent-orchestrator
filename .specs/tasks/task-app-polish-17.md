@@ -170,7 +170,19 @@ formatter emits app-wide).
 
 ---
 
-### Task 4 — Reusable Agent Details modal + wire into Add-Agent ⏳
+### Task 4 — Reusable Agent Details modal + wire into Add-Agent ✅ 491dc28
+
+**Pragmatic resolution:** rather than extract the 600-line existing modal
+body and duplicate the surface, wire Add-Agent row's new ℹ (help-circle)
+button to `useOfficeStore.select(agentId, { tab: "settings" })` — this
+opens the SAME `AgentDetailsModal` that's already used everywhere else.
+Bumped its z-index (100 → 210) so it stacks above Add-Agent modal
+(z-200). Details modal already supports view + edit + all 4 tabs (chat,
+history, memory, settings), so no extraction was needed.
+
+The extraction of `SettingsForm` (470-line inner function) from
+settings-tab.tsx into its own file is deferred to the general structural
+sweep since Task 4 was resolved without touching that code.
 
 **Changes:**
 1. Extract the existing modal body (`AgentDetailsModal` in
