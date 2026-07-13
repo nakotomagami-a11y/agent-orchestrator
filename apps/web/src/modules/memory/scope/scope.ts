@@ -6,5 +6,6 @@ export function scopeKey(scope: MemoryScope): string {
   return match(scope)
     .with({ kind: "global" }, () => "global")
     .with({ kind: "project" }, { kind: "agent" }, (s) => `${s.kind}:${s.id}`)
+    .with({ kind: "agent-skill" }, (s) => `agent-skill:${s.agentId}:${s.skillSlug}`)
     .exhaustive();
 }

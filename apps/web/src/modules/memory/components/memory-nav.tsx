@@ -66,8 +66,18 @@ export function MemoryNav({ selected, onSelect, contentMap }: MemoryNavProps) {
       .with({ kind: "global" }, () => selected.kind === "global")
       .with({ kind: "project" }, (s) => selected.kind === "project" && selected.id === s.id)
       .with({ kind: "agent" }, (s) => selected.kind === "agent" && selected.id === s.id)
+      .with({ kind: "agent-skill" }, (s) => selected.kind === "agent-skill" && selected.agentId === s.agentId && selected.skillSlug === s.skillSlug)
       .exhaustive();
   }
+
+  // When any child of an agent is selected (agent scope or one of its
+  // skills), that agent row is considered "expanded" and its skills are
+  // rendered as nested items.
+  const expandedAgentId = selected.kind === "agent"
+    ? selected.id
+    : selected.kind === "agent-skill"
+      ? selected.agentId
+      : null;
 
   return (
     <nav
@@ -115,17 +125,40 @@ export function MemoryNav({ selected, onSelect, contentMap }: MemoryNavProps) {
         ) : (
           agentsQ.data.map((a) => {
             const scope: MemoryScope = { kind: "agent", id: a.name, name: a.name };
+            const skills = a.skills ?? [];
+            const isExpanded = expandedAgentId === a.name && skills.length > 0;
             return (
-              <NavItem
-                key={a.name}
-                scope={scope}
-                label={a.name}
-                icon="cpu"
-                selected={isSel(scope)}
-                hasContent={contentMap.get(scopeKey(scope)) ?? false}
-                onSelect={onSelect}
-                depth={1}
-              />
+              <div key={a.name} className="flex flex-col gap-[1px]">
+                <NavItem
+                  scope={scope}
+                  label={a.name}
+                  icon="cpu"
+                  selected={isSel(scope)}
+                  hasContent={contentMap.get(scopeKey(scope)) ?? false}
+                  onSelect={onSelect}
+                  depth={1}
+                />
+                {isExpanded ? skills.map((slug) => {
+                  const sk: MemoryScope = { kind: "agent-skill", agentId: a.name, skillSlug: slug };
+                  return (
+                    <button
+                      key={slug}
+                      type="button"
+                      onClick={() => onSelect(sk)}
+                      className={cn(
+                        "flex items-center gap-[6px] w-full h-[20px] pl-10 pr-2 text-[11.5px] border-none cursor-pointer text-left font-[inherit] select-none transition-colors duration-[80ms]",
+                        isSel(sk)
+                          ? "text-acc bg-acc-faint [box-shadow:inset_2px_0_0_var(--acc)]"
+                          : "bg-transparent text-txt-3 hover:bg-bg-3 hover:text-txt-2 [box-shadow:inset_2px_0_0_transparent]",
+                      )}
+                      title={`Skill: ${slug}`}
+                    >
+                      <Icon name="sparkle" size={10} className={cn("shrink-0", isSel(sk) ? "opacity-100" : "opacity-[0.5]")} />
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap flex-1 font-[var(--font-mono)]">{slug}</span>
+                    </button>
+                  );
+                }) : null}
+              </div>
             );
           })
         )}

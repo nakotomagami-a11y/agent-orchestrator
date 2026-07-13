@@ -3,9 +3,10 @@
 import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMemory, type MemoryScope } from "../hooks/use-memory";
+import { useMemory, isReadOnly, type MemoryScope } from "../hooks/use-memory";
 import { MemoryEditor } from "./memory-editor";
 import { scopeKey } from "../scope/scope";
+import { MarkdownPreview } from "@/modules/office/components/agent-details/tabs/settings-tab/markdown-preview";
 
 type ScopeEditorProps = {
   scope: MemoryScope;
@@ -36,6 +37,16 @@ export function ScopeEditor({ scope, onContentLoaded }: ScopeEditorProps) {
     return (
       <div className="px-[14px] py-3 m-[20px] border border-status-error rounded-md text-[13px] bg-[color-mix(in_oklch,var(--error)_8%,transparent)] text-status-error">
         {memory.loadError.message}
+      </div>
+    );
+  }
+
+  if (isReadOnly(scope)) {
+    // Skill preview — no save/edit path. Show the raw markdown inside a
+    // scrollable preview.
+    return (
+      <div className="flex flex-col h-full min-h-0 overflow-y-auto p-[20px] prose prose-invert max-w-none text-[13px] leading-[1.6]">
+        {memory.content ? <MarkdownPreview md={memory.content} /> : <div className="text-txt-3 italic">{t("no_content")}</div>}
       </div>
     );
   }

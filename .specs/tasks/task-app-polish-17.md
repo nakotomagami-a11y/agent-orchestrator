@@ -281,7 +281,26 @@ with `{ force: true }`; hard cap has no override.
 
 ---
 
-### Task 9 — Skills manager page + repo tracker ⏳
+### Task 9 — Skills manager page + repo tracker ✅ 79253e0
+
+Delivered core pieces:
+- Sidebar "Skills" nav item (icon: sparkle)
+- User-managed sources persisted at
+  `~/.claude/agent-office/skill-sources.json`
+- `POST/DELETE /api/skills/sources` + parser accepting github URL,
+  `user/repo`, or `user/repo@branch`
+- `<SkillSourcesCard>` on `/skills` page — paste URL, list custom vs
+  built-in, remove custom
+- `<SkillUpdatesBell>` in titlebar (next to Dev): shows update count
+  badge, dropdown lists each with per-skill Update + Update all
+- Grid → Flex on the skills page grid (CLAUDE.md rule)
+
+Deferred:
+- Local .md file drop (URL paste covers the common case)
+- Explicit boot-time update scan cron: the useQuery mount performs the
+  same call, so no cron needed for now
+- File-picker for individual .md within a repo (auto-scans SKILL.md
+  today)
 
 The biggest single task. Do carefully.
 
