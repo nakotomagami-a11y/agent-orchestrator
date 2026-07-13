@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { match, P } from "ts-pattern";
 import type { UseQueryResult } from "@tanstack/react-query";
 
 export type QueryStateProps<T> = {
@@ -45,15 +44,12 @@ export function QueryState<T>({
   isEmpty,
   empty,
 }: QueryStateProps<T>) {
-  return match(result)
-    .with({ isPending: true }, () => <>{loading ?? <DefaultLoading />}</>)
-    .with({ isError: true, error: P.any }, (r) => <>{error ? error(r.error) : <DefaultError err={r.error} />}</>)
-    .with({ isSuccess: true, data: P.any }, (r) => {
-      const isEmptyFn = isEmpty ?? defaultIsEmpty<T>;
-      if (isEmptyFn(r.data)) return <>{empty ?? null}</>;
-      return <>{children(r.data)}</>;
-    })
-    .otherwise(() => <>{loading ?? <DefaultLoading />}</>);
+  if (result.isPending) return <>{loading ?? <DefaultLoading />}</>;
+  if (result.isError) return <>{error ? error(result.error) : <DefaultError err={result.error} />}</>;
+  const data = result.data as T;
+  const isEmptyFn = isEmpty ?? defaultIsEmpty<T>;
+  if (isEmptyFn(data)) return <>{empty ?? null}</>;
+  return <>{children(data)}</>;
 }
 
 function defaultIsEmpty<T>(data: T): boolean {
