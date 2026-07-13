@@ -36,6 +36,84 @@ const REGISTRY_SOURCES = [
   { source: "numman-ali/openskills", ref: "main" },
 ];
 
+// User-added sources persist in ~/.claude/agent-office/skill-sources.json
+// so the built-in list stays fixed but the user can add their own repos
+// without editing service code.
+import { APP_STATE_DIR } from "./paths";
+const USER_SOURCES_FILE = join(APP_STATE_DIR, "skill-sources.json");
+
+export type SourceRef = { source: string; ref: string };
+
+function loadUserSources(): SourceRef[] {
+  if (!existsSync(USER_SOURCES_FILE)) return [];
+  try {
+    const raw = JSON.parse(readFileSync(USER_SOURCES_FILE, "utf8"));
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((r): r is { source: unknown; ref: unknown } => !!r && typeof r === "object")
+      .map((r) => ({ source: String(r.source ?? ""), ref: String(r.ref ?? "main") }))
+      .filter((r) => r.source && /^[\w.-]+\/[\w.-]+$/.test(r.source));
+  } catch { return []; }
+}
+
+function saveUserSources(sources: SourceRef[]): void {
+  ensureDir(APP_STATE_DIR);
+  writeFileAtomic(USER_SOURCES_FILE, JSON.stringify(sources, null, 2));
+}
+
+/** All sources: hardcoded first, then user-added. Duplicates dropped. */
+function allSources(): SourceRef[] {
+  const seen = new Set<string>();
+  const out: SourceRef[] = [];
+  for (const s of [...REGISTRY_SOURCES, ...loadUserSources()]) {
+    const key = `${s.source}@${s.ref}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Parse `https://github.com/user/repo` (with optional #branch or /tree/branch)
+ * into a normalized `{ source, ref }`. Accepts owner/repo shorthand too.
+ */
+export function parseSourceInput(input: string): SourceRef | null {
+  const s = input.trim();
+  if (!s) return null;
+  // Full URL
+  const url = /^https?:\/\/github\.com\/([\w.-]+)\/([\w.-]+?)(?:\.git)?(?:\/tree\/([\w./-]+))?(?:#([\w./-]+))?\/?$/i.exec(s);
+  if (url) {
+    const owner = url[1]!;
+    const repo = url[2]!;
+    const ref = url[4] || url[3] || "main";
+    return { source: `${owner}/${repo}`, ref };
+  }
+  // owner/repo shorthand
+  const short = /^([\w.-]+)\/([\w.-]+?)(?:@([\w./-]+))?$/.exec(s);
+  if (short) return { source: `${short[1]}/${short[2]}`, ref: short[3] || "main" };
+  return null;
+}
+
+export function addUserSource(input: string): SourceRef {
+  const parsed = parseSourceInput(input);
+  if (!parsed) throw new Error(`invalid source: ${input}`);
+  const existing = loadUserSources();
+  const key = `${parsed.source}@${parsed.ref}`;
+  if (existing.some((s) => `${s.source}@${s.ref}` === key)) return parsed;
+  const next = [...existing, parsed];
+  saveUserSources(next);
+  return parsed;
+}
+
+export function removeUserSource(source: string, ref = "main"): boolean {
+  const before = loadUserSources();
+  const next = before.filter((s) => !(s.source === source && s.ref === ref));
+  if (next.length === before.length) return false;
+  saveUserSources(next);
+  return true;
+}
+
 interface CachedRegistry {
   fetchedAt: number;
   entries: RegistrySkill[];
@@ -206,7 +284,7 @@ export async function fetchRegistry(force = false): Promise<RegistrySkill[]> {
   const out: RegistrySkill[] = [];
   const usedNames = new Set<string>();
 
-  for (const src of REGISTRY_SOURCES) {
+  for (const src of allSources()) {
     try {
       const tree = await fetchTree(src.source, src.ref);
       const skillBlobs = tree.filter((t) => t.type === "blob" && t.path.endsWith("/SKILL.md"));
@@ -437,8 +515,9 @@ export function buildSkillsPrompt(skills: string[]): string {
   return fragments.join("\n\n---\n\n");
 }
 
-export function registrySources(): Array<{ source: string; ref: string }> {
-  return REGISTRY_SOURCES.map((s) => ({ source: s.source, ref: s.ref }));
+export function registrySources(): Array<{ source: string; ref: string; builtIn: boolean }> {
+  const users = new Set(loadUserSources().map((s) => `${s.source}@${s.ref}`));
+  return allSources().map((s) => ({ source: s.source, ref: s.ref, builtIn: !users.has(`${s.source}@${s.ref}`) }));
 }
 
 // ── Static skill manifest / compatibility (curated JSON in _skills/) ──────

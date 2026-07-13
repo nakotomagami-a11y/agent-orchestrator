@@ -16,6 +16,7 @@ import {
 import { ProjectSwitcher } from "./project-switcher";
 import { RefreshButton } from "./refresh-button";
 import { DevMenu } from "@/components/dev/dev-menu";
+import { SkillUpdatesBell } from "./skill-updates-bell";
 
 /**
  * The in-app titlebar plays two roles depending on where the app runs:
@@ -94,6 +95,7 @@ export function Titlebar() {
           {t("app.name")} - {t("app.studio_subtitle")}
         </div>
         <div className="flex items-center gap-2 justify-end flex-1 min-w-0">
+          <SkillUpdatesBell />
           <DevMenu />
           <RefreshButton />
           <button

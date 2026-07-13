@@ -190,6 +190,12 @@ export function Sidebar() {
           label={t("nav.memory")}
           active={isActiveRoute(pathname, PAGE_ROUTES.memory)}
         />
+        <NavItem
+          href={PAGE_ROUTES.skills}
+          icon="sparkle"
+          label="Skills"
+          active={isActiveRoute(pathname, PAGE_ROUTES.skills)}
+        />
         <LimitsNavButton spendToday={spendToday} />
         <ProcessesNavButton />
         <CommandPaletteNavButton />

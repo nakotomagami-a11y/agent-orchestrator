@@ -259,7 +259,12 @@ roster instance to the active project AND opens its conversation.
 
 ---
 
-### Task 8 — Instance-cap modal ⏳
+### Task 8 — Instance-cap modal ✅ 74a8422
+
+New `AgentCapModal` + `useAgentCapStore` (Zustand) + `AgentCapModalMount`
+in app-layout. `useSpawnInstance` dispatches soft/hard requests into the
+store instead of `window.confirm`/`alert`. Soft-confirm forces the retry
+with `{ force: true }`; hard cap has no override.
 
 **Change in `modules/office/hooks/use-spawn-instance.ts`:**
 - Replace `window.confirm(t("sidebar.instance_cap_soft"))` and

@@ -100,3 +100,81 @@ export function useUninstallSkill() {
     },
   });
 }
+
+// ── Sources (user-added GitHub repos) ─────────────────────────────────────
+
+export type SourceRow = { source: string; ref: string; builtIn: boolean };
+
+export function useSkillSources() {
+  return useQuery({
+    queryKey: queryKeys.skills.sources(),
+    queryFn: () => apiFetch<SourceRow[]>(API_ROUTES.skillsSources),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useAddSkillSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: string) =>
+      apiFetch<{ ok: boolean; source: { source: string; ref: string } }>(
+        API_ROUTES.skillsSources,
+        { method: "POST", body: { input } },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.skills.all });
+    },
+  });
+}
+
+export function useRemoveSkillSource() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { source: string; ref: string }) =>
+      apiFetch<{ removed: boolean }>(
+        `${API_ROUTES.skillsSources}?source=${encodeURIComponent(input.source)}&ref=${encodeURIComponent(input.ref)}`,
+        { method: "DELETE" },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.skills.all });
+    },
+  });
+}
+
+// ── Updates (SHA drift check) ─────────────────────────────────────────────
+
+export type SkillUpdate = {
+  name: string;
+  currentSha: string;
+  latestSha: string;
+  source: string;
+  path: string;
+};
+
+/**
+ * Polls the updates endpoint on app boot + every hour. The updates bell
+ * in the titlebar reads this — count drives the badge, list drives the
+ * dropdown.
+ */
+export function useSkillUpdates() {
+  return useQuery({
+    queryKey: queryKeys.skills.updates(),
+    queryFn: () => apiFetch<SkillUpdate[]>(API_ROUTES.skillsUpdates),
+    staleTime: 60 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+export function useUpdateSkill() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (name: string) =>
+      apiFetch<{ filesWritten: number; sha: string }>(
+        API_ROUTES.skillUpdate(name),
+        { method: "POST" },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.skills.all });
+    },
+  });
+}

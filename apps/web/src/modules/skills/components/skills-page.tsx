@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useInstallSkill, useRegistry, useUninstallSkill } from "../hooks/use-skills";
 import { filterRegistry, type RegistryFilter } from "../registry/filter-registry";
 import type { RegistrySkill } from "@agent-office/domain/types";
+import { SkillSourcesCard } from "./skill-sources-card";
 
 export function SkillsPage() {
   const t = useTranslations();
@@ -27,6 +28,7 @@ export function SkillsPage() {
 
   return (
     <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
+      <SkillSourcesCard />
       <Card>
         <CardHeader
           title={t("skills.title")}
@@ -56,7 +58,7 @@ export function SkillsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState icon="cpu" title={t("skills.no_results_title")} description={t("common.empty")} />
       ) : (
-        <div className="grid gap-3" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+        <div className="flex flex-wrap gap-3 [&>*]:[flex:1_1_280px]">
           {filtered.map((s) => (
             <SkillCard
               key={`${s.source}-${s.name}`}
