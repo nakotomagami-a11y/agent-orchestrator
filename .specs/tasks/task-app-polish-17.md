@@ -213,7 +213,10 @@ works.
 
 ---
 
-### Task 5 — Add-agent header icon restyle ⏳
+### Task 5 — Add-agent header icon restyle ✅ 96b5b01
+
+Dropped bg/border/radius wrapper on the header `+` icon in Add-Agent
+modal. Bumped icon size 16 → 32.
 
 **Change:** In `add-agent-modal.tsx` line ~262:
 - Remove `bg-acc-faint`, `border`, `rounded-[9px]`, `w-[34px] h-[34px]`

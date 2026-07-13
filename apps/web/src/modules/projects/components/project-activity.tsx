@@ -74,13 +74,16 @@ export function ProjectActivity({ projectId, onMeta }: ProjectActivityProps) {
         />
       ))}
       {hasMore && (
-        <button
-          type="button"
-          onClick={() => setVisible((v) => v + PAGE_SIZE)}
-          className="w-full px-[18px] py-[10px] text-[12px] font-mono text-txt-3 hover:text-txt hover:bg-bg-2 transition-colors duration-100 border-none bg-transparent cursor-pointer text-left"
-        >
-          Load more ({runs.length - visible} remaining)
-        </button>
+        <div className="flex justify-center py-[14px]">
+          <button
+            type="button"
+            onClick={() => setVisible((v) => v + PAGE_SIZE)}
+            className="inline-flex items-center gap-[8px] px-[18px] py-[10px] text-[13px] font-semibold text-acc bg-acc-faint border border-[var(--acc-tint)] rounded-[10px] hover:bg-[var(--acc)] hover:text-white hover:border-[var(--acc)] transition-colors duration-150 cursor-pointer"
+          >
+            Load more
+            <span className="font-mono text-[11px] text-txt-3 group-hover:text-white">({runs.length - visible} remaining)</span>
+          </button>
+        </div>
       )}
     </div>
   );
