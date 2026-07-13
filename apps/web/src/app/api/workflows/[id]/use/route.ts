@@ -5,6 +5,6 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function POST(_request: Request, { params }: Params) {
   const { id } = await params;
-  store.recordSavedPromptUsage(id);
+  store.recordWorkflowUsage(id);
   return new NextResponse(null, { status: 204 });
 }

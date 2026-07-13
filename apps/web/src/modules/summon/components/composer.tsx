@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
 import { clearDraft, saveDraft } from "../format/draft-store";
-import { PromptPickerDialog } from "@/modules/prompts/components/prompt-picker-dialog";
+import { WorkflowPickerDialog } from "@/modules/workflows/components/workflow-picker-dialog";
 import type { ContextProfile } from "@agent-office/domain/types";
 import { SLASH_COMMANDS } from "../format/composer-config";
 import { autosizeTextarea } from "../format/textarea-autosize";
@@ -102,7 +102,7 @@ export function Composer(props: ComposerProps) {
 
   return (
     <>
-      <PromptPickerDialog
+      <WorkflowPickerDialog
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
         onSelect={(body) => { onChange(body); textRef.current?.focus(); }}

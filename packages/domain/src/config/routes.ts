@@ -100,10 +100,10 @@ export const API_ROUTES = {
   settingsScan: "/api/settings/scan",
   userAnalysis: "/api/user-analysis",
 
-  savedPrompts: "/api/saved-prompts",
-  savedPromptById: (id: string) => `/api/saved-prompts/${id}`,
-  savedPromptUse: (id: string) => `/api/saved-prompts/${id}/use`,
-  savedPromptsBulk: "/api/saved-prompts/bulk",
+  workflows: "/api/workflows",
+  workflowById: (id: string) => `/api/workflows/${id}`,
+  workflowUse: (id: string) => `/api/workflows/${id}/use`,
+  workflowsBulk: "/api/workflows/bulk",
 } as const;
 
 /**

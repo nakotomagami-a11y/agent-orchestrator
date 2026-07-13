@@ -6,8 +6,8 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function DELETE(_request: Request, { params }: Params) {
   const { id } = await params;
-  const existing = store.getSavedPrompt(id);
+  const existing = store.getWorkflow(id);
   if (!existing) return notFound();
-  store.deleteSavedPrompt(id);
+  store.deleteWorkflow(id);
   return new NextResponse(null, { status: 204 });
 }

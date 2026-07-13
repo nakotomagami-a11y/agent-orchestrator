@@ -181,14 +181,14 @@ export const broadcastRequestSchema = z.object({
   cwd: z.string().optional(),
 });
 
-export const savedPromptCreateSchema = z.object({
+export const workflowCreateSchema = z.object({
   title: z.string().min(1).max(200),
   body: z.string().min(1).max(5000),
   category: z.string().optional(),
 });
 
-export const savedPromptsBulkSchema = z.object({
-  prompts: z.array(
+export const workflowsBulkSchema = z.object({
+  workflows: z.array(
     z.object({
       title: z.string().min(1).max(200),
       body: z.string().min(1).max(5000),
@@ -197,7 +197,7 @@ export const savedPromptsBulkSchema = z.object({
   ).min(1),
 });
 
-export const savedPromptsQuerySchema = z.object({
+export const workflowsQuerySchema = z.object({
   q: z.string().optional(),
   category: z.string().optional(),
 });

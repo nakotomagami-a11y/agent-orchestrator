@@ -35,7 +35,7 @@ export function ComposerToolbar(props: ComposerToolbarProps): React.ReactElement
       <Button variant="ghost" size="sm" title={t("composer.slash_insert_title")} onClick={props.onSlashClick} aria-label={t("composer.slash_insert_aria")}>
         <Icon name="slash" />
       </Button>
-      <Button variant="ghost" size="sm" title={`${t("prompts.open_picker")} (Ctrl+P)`} aria-label={t("prompts.open_picker")} onClick={props.onPromptPickerOpen}>
+      <Button variant="ghost" size="sm" title={`${t("workflows.open_picker")} (Ctrl+P)`} aria-label={t("workflows.open_picker")} onClick={props.onPromptPickerOpen}>
         <Icon name="sparkle" />
       </Button>
       {props.cwdChip ? <ToolbarChip title="working directory" text={props.cwdChip} /> : null}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/components/ui/icon";
-import { useCreateSavedPrompt } from "@/modules/prompts/hooks/use-saved-prompts";
+import { useCreateWorkflow } from "@/modules/workflows/hooks/use-workflows";
 
 export type MsgActionsProps = {
   text: string;
@@ -11,13 +11,13 @@ export type MsgActionsProps = {
 
 /**
  * Floating action pill rendered over a message on hover: copy, rerun, save
- * as saved-prompt. Rerun and save only appear when the caller wires them
+ * as workflow. Rerun and save only appear when the caller wires them
  * up (`onRerun` present ⇒ user message with rerun capability).
  */
 export function MsgActions({ text, onRerun }: MsgActionsProps) {
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
-  const savePrompt = useCreateSavedPrompt();
+  const saveWorkflow = useCreateWorkflow();
 
   const handleCopy = () => {
     copyText(text);
@@ -27,8 +27,8 @@ export function MsgActions({ text, onRerun }: MsgActionsProps) {
 
   const handleSave = () => {
     const body = text.trim();
-    if (!body || savePrompt.isPending) return;
-    savePrompt.mutate(
+    if (!body || saveWorkflow.isPending) return;
+    saveWorkflow.mutate(
       { title: body.slice(0, 60), body, category: "general" },
       { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 1500); } },
     );
@@ -44,7 +44,7 @@ export function MsgActions({ text, onRerun }: MsgActionsProps) {
           <IconButton ariaLabel="Rerun" title="Rerun" onClick={() => onRerun(text)}>
             <Icon name="refresh" size={13} />
           </IconButton>
-          <IconButton ariaLabel="Save as prompt" title="Save as prompt" onClick={handleSave} disabled={savePrompt.isPending}>
+          <IconButton ariaLabel="Save as workflow" title="Save as workflow" onClick={handleSave} disabled={saveWorkflow.isPending}>
             {saved ? <Icon name="check" size={13} className="text-[var(--ao-ok)]" /> : <Icon name="bookmark" size={13} />}
           </IconButton>
         </>

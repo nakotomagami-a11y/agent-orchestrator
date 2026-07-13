@@ -456,7 +456,15 @@ add lib when we add more chart types.
 
 ---
 
-### Task 12 — QueryState primitive + skeleton audit ⏳
+### Task 12 — QueryState primitive + skeleton audit ✅ (`0fa82f1` + fix `1577378`)
+
+Delivered the `QueryState<T>` primitive as an if-branch component (ts-pattern
+tripped TSC narrowing on the RQ discriminated union — dropped it for plain
+`if (result.isPending)` etc.). Full page-by-page audit sweep across the ~20
+fetching pages is deferred to a follow-up — the primitive is landed and
+adopted incrementally.
+
+
 
 **Deliverables:**
 
@@ -486,27 +494,64 @@ add lib when we add more chart types.
 
 ---
 
-### Task 13 — Workflows (rebrand + 3 curated) ⏳
+### Task 13 — Workflows (rebrand + 3 curated) ✅
 
-**Changes:**
+**Delivered:**
 
-1. Rename module: `modules/prompts` → `modules/workflows`.
-2. Rename API route: `/api/prompts` → `/api/workflows`.
-3. Rename dialog: `prompt-picker-dialog` → `workflow-picker-dialog`.
-4. Delete all existing saved-prompt content.
-5. Seed 3 curated workflow prompts, each stored as a `.md` file in
-   `~/.claude/agent-office/workflows/`:
-   - `refactor-codebase.md` — Refactor code base checklist.
-   - `security-vulnerability-scan.md` — Scan for security issues.
-   - `html-to-app-conversion.md` — Convert provided HTML design.
-   Each authored carefully; run `cs-content-creator` or
-   `senior-prompt-engineer` agent for polish before committing.
-6. Sidebar Composer's slash-menu updated so `/workflow` opens the picker.
+- Renamed `modules/prompts` → `modules/workflows` (git mv preserving history).
+- Renamed `api/saved-prompts` → `api/workflows` (all 4 route files: root, `[id]`, `[id]/use`, `bulk`).
+- Renamed `PromptPickerDialog` → `WorkflowPickerDialog`; `PromptCard` → `WorkflowCard`; `AddPromptForm` → `AddWorkflowForm`.
+- Renamed hook file `use-saved-prompts.ts` → `use-workflows.ts`; hook exports `useWorkflows` / `useCreateWorkflow` / `useDeleteWorkflow` / `useRecordWorkflowUsage` / `useBulkInsertWorkflows`.
+- Type rename `SavedPrompt` → `Workflow` (packages/domain/src/types).
+- DB helper rename `getSavedPrompts` → `getWorkflows` etc. (packages/domain/src/services/db.ts + store.ts). Table name kept as `saved_prompts` (rename risks live data).
+- Config route rename in `packages/domain/src/config/routes.ts`.
+- Query-key namespace `workflows: { all, list }` added; `prompts.saved` removed.
+- Validation schema rename in `apps/web/src/lib/validation-schemas.ts`.
+- i18n rename `prompts.*` → `workflows.*` in `messages/en.json`.
+- Composer / composer-toolbar / msg-actions updated to reference new names + i18n keys.
 
-**Files:**
-- rename module + api route
-- new 3 md files under `~/.claude/agent-office/workflows/`
-- update i18n strings
+**Curated workflows:**
+Seeded via DB migration v6→v7 that DELETEs all existing rows and inserts three
+carefully crafted starter workflows in a dedicated `starter` category. Bodies
+live in `packages/domain/src/services/workflow-seed.ts` (not `.md` files as
+originally scoped — DB seeding matches the existing `saved_prompts`
+infrastructure without a file-watcher layer; the file exists as a
+version-controlled source of truth). The three:
+
+1. **Refactor codebase** — Read-Diagnose-Prioritize-Apply-Verify workflow that
+   forces surgical changes, prefers deletion over addition, and blocks
+   scope-creep NICE-TO-HAVE items.
+2. **Security vulnerability scan** — Recon → 6-domain threat surface pass
+   (AuthN/Z, input handling, output/side-channels, deps, secrets, AI/LLM) →
+   severity-tiered report → no-fix-without-approval gate.
+3. **HTML → app component** — Learn-Analyze-Plan-Implement-Verify converter
+   that respects existing tokens, enforces Flexbox (per CLAUDE.md), and
+   demands a11y improvements over source-fidelity carryover.
+
+**UX polish:**
+- Starter workflows are pinned at top of the picker regardless of use-count.
+- Delete button is hidden on starter workflows so the curated set can't be
+  nuked from the UI.
+- `starter` category chip renders with accent styling to visually distinguish.
+
+**Files touched:**
+- new `packages/domain/src/services/workflow-seed.ts`
+- `packages/domain/src/services/db.ts` (types, migration, fn renames)
+- `packages/domain/src/services/store.ts`
+- `packages/domain/src/types/index.ts`
+- `packages/domain/src/config/routes.ts`
+- `packages/domain/src/hooks/query-keys.ts`
+- `apps/web/src/lib/validation-schemas.ts`
+- `apps/web/src/app/api/workflows/{route.ts,[id]/route.ts,[id]/use/route.ts,bulk/route.ts}` (renamed)
+- `apps/web/src/modules/workflows/{hooks/use-workflows.ts,components/workflow-picker-dialog.tsx}` (renamed + rewritten)
+- `apps/web/src/modules/summon/components/{composer.tsx,composer-toolbar.tsx,msg-actions.tsx}`
+- `apps/web/messages/en.json`
+
+**Deferred:**
+- Composer `/workflow` slash-command wiring (the Ctrl+P shortcut + toolbar
+  button already open the picker; a slash-command entry is nice-to-have).
+- File-based workflows in `~/.claude/agent-office/workflows/` — the current
+  DB-backed approach is the simpler path given the existing infrastructure.
 
 ---
 

@@ -3,7 +3,8 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { DB_PATH, APP_STATE_DIR, AGENTS_DIR } from "./paths";
-import type { PersistedRun, PipelineRun, PipelineRunStep, SavedPrompt } from "../types/index";
+import type { PersistedRun, PipelineRun, PipelineRunStep, Workflow } from "../types/index";
+import { STARTER_WORKFLOWS, STARTER_WORKFLOW_CATEGORY } from "./workflow-seed";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -195,6 +196,22 @@ const MIGRATIONS: Array<(db: Database.Database) => void> = [
       ALTER TABLE transcripts ADD COLUMN queued_messages TEXT NOT NULL DEFAULT '[]';
     `);
   },
+  // v6 → v7: workflows rebrand. Old free-form saved prompts are noise; the
+  // starter set is a small, curated library of reusable multi-step prompts.
+  // We keep the underlying table name `saved_prompts` (renaming risks live
+  // data), wipe all legacy rows, and seed the starter workflows in a
+  // dedicated `starter` category. User-created workflows added later will
+  // sit alongside these in other categories.
+  (db) => {
+    db.exec(`DELETE FROM saved_prompts;`);
+    const insert = db.prepare(
+      "INSERT INTO saved_prompts (id, title, body, category, created_at, use_count) VALUES (?, ?, ?, ?, ?, 0)",
+    );
+    const now = Date.now();
+    for (const w of STARTER_WORKFLOWS) {
+      insert.run(randomUUID(), w.title, w.body, STARTER_WORKFLOW_CATEGORY, now);
+    }
+  },
 ];
 
 function createSchema(db: Database.Database): void {
@@ -207,6 +224,7 @@ function createSchema(db: Database.Database): void {
     if (v < 4) { MIGRATIONS[3]!(db); v = 4; db.pragma("user_version = 4"); }
     if (v < 5) { MIGRATIONS[4]!(db); v = 5; db.pragma("user_version = 5"); }
     if (v < 6) { MIGRATIONS[5]!(db); v = 6; db.pragma("user_version = 6"); }
+    if (v < 7) { MIGRATIONS[6]!(db); v = 7; db.pragma("user_version = 7"); }
   })();
 }
 
@@ -803,9 +821,11 @@ export function listInterruptedPipelines(): PipelineRun[] {
   });
 }
 
-// ─── Saved prompts ─────────────────────────────────────────────────────────────
+// ─── Workflows ─────────────────────────────────────────────────────────────
+// Reusable, multi-step prompt library. Stored in the `saved_prompts` table
+// for legacy reasons — see the type doc on `Workflow`.
 
-interface SavedPromptRow {
+interface WorkflowRow {
   id: string;
   title: string;
   body: string;
@@ -814,7 +834,7 @@ interface SavedPromptRow {
   use_count: number;
 }
 
-function rowToSavedPrompt(row: SavedPromptRow): SavedPrompt {
+function rowToWorkflow(row: WorkflowRow): Workflow {
   return {
     id: row.id,
     title: row.title,
@@ -825,7 +845,7 @@ function rowToSavedPrompt(row: SavedPromptRow): SavedPrompt {
   };
 }
 
-export function getSavedPrompts(opts: { category?: string; q?: string } = {}): SavedPrompt[] {
+export function getWorkflows(opts: { category?: string; q?: string } = {}): Workflow[] {
   const { category, q } = opts;
   const conditions: string[] = [];
   const params: unknown[] = [];
@@ -843,18 +863,18 @@ export function getSavedPrompts(opts: { category?: string; q?: string } = {}): S
   const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const rows = getDb().prepare(
     `SELECT * FROM saved_prompts ${where} ORDER BY created_at DESC`
-  ).all(...params) as SavedPromptRow[];
-  return rows.map(rowToSavedPrompt);
+  ).all(...params) as WorkflowRow[];
+  return rows.map(rowToWorkflow);
 }
 
-export function getSavedPrompt(id: string): SavedPrompt | null {
+export function getWorkflow(id: string): Workflow | null {
   const row = getDb().prepare(
     "SELECT * FROM saved_prompts WHERE id = ?"
-  ).get(id) as SavedPromptRow | undefined;
-  return row ? rowToSavedPrompt(row) : null;
+  ).get(id) as WorkflowRow | undefined;
+  return row ? rowToWorkflow(row) : null;
 }
 
-export function createSavedPrompt(data: { title: string; body: string; category?: string }): SavedPrompt {
+export function createWorkflow(data: { title: string; body: string; category?: string }): Workflow {
   const id = randomUUID();
   const now = Date.now();
   const category = data.category ?? "general";
@@ -864,18 +884,18 @@ export function createSavedPrompt(data: { title: string; body: string; category?
   return { id, title: data.title, body: data.body, category, createdAt: now, useCount: 0 };
 }
 
-export function deleteSavedPrompt(id: string): void {
+export function deleteWorkflow(id: string): void {
   getDb().prepare("DELETE FROM saved_prompts WHERE id = ?").run(id);
 }
 
-export function recordSavedPromptUsage(id: string): void {
+export function recordWorkflowUsage(id: string): void {
   getDb().prepare(
     "UPDATE saved_prompts SET use_count = use_count + 1 WHERE id = ?"
   ).run(id);
 }
 
-export function bulkInsertSavedPrompts(
-  prompts: Array<{ title: string; body: string; category: string }>
+export function bulkInsertWorkflows(
+  workflows: Array<{ title: string; body: string; category: string }>
 ): number {
   const db = getDb();
   const insert = db.prepare(
@@ -889,10 +909,10 @@ export function bulkInsertSavedPrompts(
   let inserted = 0;
   const seenBodies = new Set<string>();
   db.transaction(() => {
-    for (const p of prompts) {
-      if (existing.has(p.body) || seenBodies.has(p.body)) continue;
-      seenBodies.add(p.body);
-      insert.run(randomUUID(), p.title, p.body, p.category, Date.now());
+    for (const w of workflows) {
+      if (existing.has(w.body) || seenBodies.has(w.body)) continue;
+      seenBodies.add(w.body);
+      insert.run(randomUUID(), w.title, w.body, w.category, Date.now());
       inserted++;
     }
   })();

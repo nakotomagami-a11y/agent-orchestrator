@@ -7,16 +7,17 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import {
-  useSavedPrompts,
-  useCreateSavedPrompt,
-  useDeleteSavedPrompt,
-  useRecordSavedPromptUsage,
-} from "../hooks/use-saved-prompts";
-import type { SavedPrompt } from "@agent-office/domain/types";
+  useWorkflows,
+  useCreateWorkflow,
+  useDeleteWorkflow,
+  useRecordWorkflowUsage,
+} from "../hooks/use-workflows";
+import type { Workflow } from "@agent-office/domain/types";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
+  "starter",
   "debugging",
   "planning",
   "review",
@@ -36,24 +37,25 @@ function capitalize(s: string): string {
 
 // ── Props ────────────────────────────────────────────────────────────────────
 
-export interface PromptPickerDialogProps {
+export interface WorkflowPickerDialogProps {
   open: boolean;
   onClose: () => void;
   onSelect: (body: string) => void;
 }
 
-// ── Prompt card ──────────────────────────────────────────────────────────────
+// ── Workflow card ────────────────────────────────────────────────────────────
 
-function PromptCard({
-  prompt,
+function WorkflowCard({
+  workflow,
   onSelect,
   onDelete,
 }: {
-  prompt: SavedPrompt;
+  workflow: Workflow;
   onSelect: () => void;
   onDelete: () => void;
 }) {
   const t = useTranslations();
+  const isStarter = workflow.category === "starter";
   return (
     <div className="group relative rounded-[10px] border border-line bg-bg-1 hover:border-[var(--acc)] transition-[border-color] duration-[120ms]">
       <button
@@ -62,43 +64,52 @@ function PromptCard({
         onClick={onSelect}
       >
         <div className="font-semibold text-[13px] text-txt leading-snug mb-[4px]">
-          {prompt.title}
+          {workflow.title}
         </div>
         <div className="text-[12px] text-txt-2 leading-[1.45] line-clamp-2">
-          {prompt.body}
+          {workflow.body}
         </div>
         <div className="flex items-center gap-[6px] mt-[7px]">
-          <span className="inline-flex items-center px-[6px] py-[2px] rounded-full bg-bg-2 border border-line text-txt-3 text-[10.5px] font-mono">
-            {capitalize(prompt.category)}
+          <span
+            className={cn(
+              "inline-flex items-center px-[6px] py-[2px] rounded-full border text-[10.5px] font-mono",
+              isStarter
+                ? "bg-[color-mix(in_oklch,var(--acc)_10%,transparent)] border-[color-mix(in_oklch,var(--acc)_40%,transparent)] text-[var(--acc)]"
+                : "bg-bg-2 border-line text-txt-3",
+            )}
+          >
+            {capitalize(workflow.category)}
           </span>
-          {prompt.useCount > 0 && (
+          {workflow.useCount > 0 && (
             <span className="text-[10.5px] text-txt-4 font-mono">
-              {prompt.useCount}×
+              {workflow.useCount}×
             </span>
           )}
         </div>
       </button>
-      {/* Delete button - visible on hover */}
-      <button
-        type="button"
-        aria-label={t("prompts.delete_prompt_aria")}
-        className="absolute top-[8px] right-[8px] w-[22px] h-[22px] rounded-[6px] flex items-center justify-center text-txt-3 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--error)] hover:bg-bg-2 transition-[opacity,color,background] duration-[100ms] cursor-pointer"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-      >
-        <Icon name="x" size={12} />
-      </button>
+      {/* Delete button - hidden for starter workflows to prevent nuking curated set */}
+      {!isStarter && (
+        <button
+          type="button"
+          aria-label={t("workflows.delete_aria")}
+          className="absolute top-[8px] right-[8px] w-[22px] h-[22px] rounded-[6px] flex items-center justify-center text-txt-3 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 hover:text-[var(--error)] hover:bg-bg-2 transition-[opacity,color,background] duration-[100ms] cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <Icon name="x" size={12} />
+        </button>
+      )}
     </div>
   );
 }
 
 // ── Add form ─────────────────────────────────────────────────────────────────
 
-function AddPromptForm({ onAdded }: { onAdded?: () => void }) {
+function AddWorkflowForm({ onAdded }: { onAdded?: () => void }) {
   const t = useTranslations();
-  const createMut = useCreateSavedPrompt();
+  const createMut = useCreateWorkflow();
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<string>("general");
@@ -124,13 +135,13 @@ function AddPromptForm({ onAdded }: { onAdded?: () => void }) {
     <div data-add-form className="border-t border-line px-[16px] py-[14px] flex flex-col gap-[8px]">
       <input
         type="text"
-        placeholder={t("prompts.add_title_placeholder")}
+        placeholder={t("workflows.add_title_placeholder")}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         className="w-full h-[32px] px-[10px] bg-bg-2 border border-line-2 rounded-[8px] text-txt text-[12px] outline-none [font:inherit] focus:border-[var(--acc)] transition-[border-color] duration-[120ms] placeholder:text-txt-4"
       />
       <textarea
-        placeholder={t("prompts.add_body_placeholder")}
+        placeholder={t("workflows.add_body_placeholder")}
         value={body}
         onChange={(e) => setBody(e.target.value)}
         rows={3}
@@ -138,7 +149,7 @@ function AddPromptForm({ onAdded }: { onAdded?: () => void }) {
       />
       <div className="flex items-center gap-[8px]">
         <label className="text-[11.5px] text-txt-2 shrink-0">
-          {t("prompts.add_category_label")}
+          {t("workflows.add_category_label")}
         </label>
         <select
           value={category}
@@ -162,7 +173,7 @@ function AddPromptForm({ onAdded }: { onAdded?: () => void }) {
           disabled={!canSave || createMut.isPending}
           onClick={handleSave}
         >
-          {createMut.isPending ? t("common.saving") : t("prompts.add_save_button")}
+          {createMut.isPending ? t("common.saving") : t("workflows.add_save_button")}
         </Button>
       </div>
     </div>
@@ -171,14 +182,14 @@ function AddPromptForm({ onAdded }: { onAdded?: () => void }) {
 
 // ── Dialog ───────────────────────────────────────────────────────────────────
 
-export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDialogProps) {
+export function WorkflowPickerDialog({ open, onClose, onSelect }: WorkflowPickerDialogProps) {
   const t = useTranslations();
   const [rawSearch, setRawSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<Category | undefined>(undefined);
 
-  const deleteMut = useDeleteSavedPrompt();
-  const recordUsage = useRecordSavedPromptUsage();
+  const deleteMut = useDeleteWorkflow();
+  const recordUsage = useRecordWorkflowUsage();
 
   const searchRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -246,22 +257,27 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
     };
   }, [open, onClose]);
 
-  const promptsQ = useSavedPrompts({
+  const workflowsQ = useWorkflows({
     q: debouncedSearch || undefined,
     category: activeCategory,
   });
 
-  // Sort by useCount DESC then createdAt DESC
+  // Sort: starter workflows first, then by useCount DESC, then createdAt DESC.
+  // Starters lead so a fresh user sees the curated set at the top even before
+  // running one.
   const sorted = useMemo(() => {
-    const data = promptsQ.data ?? [];
-    return [...data].sort(
-      (a, b) => b.useCount - a.useCount || b.createdAt - a.createdAt,
-    );
-  }, [promptsQ.data]);
+    const data = workflowsQ.data ?? [];
+    return [...data].sort((a, b) => {
+      const aStarter = a.category === "starter" ? 1 : 0;
+      const bStarter = b.category === "starter" ? 1 : 0;
+      if (aStarter !== bStarter) return bStarter - aStarter;
+      return b.useCount - a.useCount || b.createdAt - a.createdAt;
+    });
+  }, [workflowsQ.data]);
 
-  const handleSelect = (prompt: SavedPrompt) => {
-    recordUsage.mutate(prompt.id);
-    onSelect(prompt.body);
+  const handleSelect = (workflow: Workflow) => {
+    recordUsage.mutate(workflow.id);
+    onSelect(workflow.body);
     onClose();
   };
 
@@ -284,7 +300,7 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
           ref={dialogRef}
           role="dialog"
           aria-modal="true"
-          aria-label={t("prompts.dialog_title")}
+          aria-label={t("workflows.dialog_title")}
           tabIndex={-1}
           className="relative w-full max-w-[640px] max-h-[80vh] bg-bg-1 border border-line rounded-[12px] shadow-[0_4px_24px_rgba(20,12,8,0.22),0_1px_4px_rgba(20,12,8,0.12)] flex flex-col outline-none overflow-hidden"
           onClick={(e) => e.stopPropagation()}
@@ -292,10 +308,10 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
           {/* Header */}
           <div className="flex items-center gap-[10px] px-[14px] py-[11px] border-b border-line shrink-0">
             <Icon name="sparkle" size={15} className="text-acc shrink-0" />
-            <span className="font-bold text-[13px] text-txt">{t("prompts.dialog_title")}</span>
+            <span className="font-bold text-[13px] text-txt">{t("workflows.dialog_title")}</span>
             <button
               type="button"
-              aria-label={t("prompts.close_aria")}
+              aria-label={t("workflows.close_aria")}
               className="ml-auto w-[26px] h-[26px] rounded-[7px] flex items-center justify-center text-txt-3 hover:text-txt hover:bg-bg-2 transition-[color,background] duration-[100ms] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-acc"
               onClick={onClose}
             >
@@ -314,7 +330,7 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
               <input
                 ref={searchRef}
                 type="text"
-                placeholder={t("prompts.search_placeholder")}
+                placeholder={t("workflows.search_placeholder")}
                 value={rawSearch}
                 onChange={(e) => setRawSearch(e.target.value)}
                 className="w-full h-[32px] pl-[30px] pr-[10px] bg-bg-2 border border-line-2 rounded-[8px] text-txt text-[13px] outline-none [font:inherit] focus:border-[var(--acc)] transition-[border-color] duration-[120ms] placeholder:text-txt-4"
@@ -344,7 +360,7 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
               )}
               onClick={() => setActiveCategory(undefined)}
             >
-              {t("prompts.category_all")}
+              {t("workflows.category_all")}
             </button>
             {CATEGORIES.map((cat) => (
               <button
@@ -365,36 +381,36 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
             ))}
           </div>
 
-          {/* Prompt list */}
+          {/* Workflow list */}
           <div className="flex-1 min-h-0 overflow-y-auto px-[12px] py-[10px] [scrollbar-width:thin] [scrollbar-color:var(--bg-4)_transparent]">
-            {promptsQ.isLoading ? (
+            {workflowsQ.isLoading ? (
               <div className="text-txt-3 text-[12px] py-[20px] text-center">
                 {t("common.loading")}
               </div>
             ) : sorted.length === 0 ? (
               <div className="flex flex-col items-center gap-[6px] py-[32px] text-center">
                 <Icon name="sparkle" size={24} className="text-txt-4" />
-                <div className="text-[13px] text-txt-2">{t("prompts.empty_state")}</div>
+                <div className="text-[13px] text-txt-2">{t("workflows.empty_state")}</div>
                 {!rawSearch && !activeCategory && (
-                  <div className="text-[12px] text-txt-3">{t("prompts.empty_add_hint")}</div>
+                  <div className="text-[12px] text-txt-3">{t("workflows.empty_add_hint")}</div>
                 )}
               </div>
             ) : (
               <div className="flex flex-col gap-[6px]">
-                {sorted.map((prompt) => (
-                  <PromptCard
-                    key={prompt.id}
-                    prompt={prompt}
-                    onSelect={() => handleSelect(prompt)}
-                    onDelete={() => handleDelete(prompt.id)}
+                {sorted.map((workflow) => (
+                  <WorkflowCard
+                    key={workflow.id}
+                    workflow={workflow}
+                    onSelect={() => handleSelect(workflow)}
+                    onDelete={() => handleDelete(workflow.id)}
                   />
                 ))}
               </div>
             )}
           </div>
 
-          {/* Add prompt form */}
-          <AddPromptForm />
+          {/* Add workflow form */}
+          <AddWorkflowForm />
         </div>
       </div>
     </Portal>

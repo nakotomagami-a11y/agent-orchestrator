@@ -196,10 +196,17 @@ export interface HealthInfo {
   error?: string;
 }
 
-export interface SavedPrompt {
+/**
+ * A reusable multi-step prompt in the workflow library. Under the hood the
+ * DB table is still `saved_prompts` (rename would risk live data) but every
+ * surface — API paths, types, UI — talks about workflows.
+ */
+export interface Workflow {
   id: string;
   title: string;
   body: string;
+  /** Category slug. Starter workflows use `"starter"`; user-authored can use
+   *  any string. Used for the picker's tab filter. */
   category: string;
   createdAt: number;
   useCount: number;
