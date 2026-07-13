@@ -14,6 +14,8 @@ import { useRuns } from "@/modules/runs/hooks/use-runs";
 import type { ApiAgent } from "@agent-office/domain/types";
 import { useAgents } from "../hooks/use-agents";
 import { categorize, categoryColor, tallyCategories } from "../form/categorize";
+import { useActiveProjectStore } from "@/lib/active-project-store";
+import { useSpawnInstance } from "@/modules/office/hooks/use-spawn-instance";
 
 /**
  * Agent gallery. Card grid styled after the v3 `TemplatesView`, with a
@@ -26,6 +28,27 @@ export function AgentList() {
   const { data, isLoading } = useAgents();
   const runsQ = useRuns({ limit: 500 });
   const select = useOfficeStore((s) => s.select);
+  const activeProjectId = useActiveProjectStore((s) => s.id);
+  const { spawnInstance } = useSpawnInstance({ activeProjectId });
+
+  /**
+   * Clicking an agent card from the Agents gallery ALWAYS creates a fresh
+   * roster instance in the active project, then opens the details modal
+   * on the new instance's conversation tab. If there is no active project,
+   * fall back to plain select() so the details modal still opens for
+   * browsing (previous behaviour).
+   */
+  const openAgentAsNewInstance = async (agentId: string) => {
+    if (!activeProjectId) {
+      select(agentId);
+      return;
+    }
+    // spawnInstance takes care of the roster mutation + cap-check flow;
+    // it uses useAddInstance under the hood which invalidates the project
+    // query, so the details modal picks up the new instance immediately.
+    await spawnInstance(agentId);
+    select(agentId, { tab: "conversation" });
+  };
 
   const [search, setSearch] = useState("");
   const [activeCats, setActiveCats] = useState<Set<string>>(() => new Set());
@@ -107,7 +130,7 @@ export function AgentList() {
               key={a.name}
               agent={a}
               uses={usesByAgent[a.name] ?? 0}
-              onOpen={() => select(a.name)}
+              onOpen={() => { void openAgentAsNewInstance(a.name); }}
               onEdit={() => select(a.name, { tab: "settings" })}
             />
           ))}

@@ -227,7 +227,10 @@ modal. Bumped icon size 16 → 32.
 
 ---
 
-### Task 6 — Center + emphasize "Load more" ⏳
+### Task 6 — Center + emphasize "Load more" ✅ 3151346
+
+Wrapped in `flex justify-center`, made an accent-tinted pill button with
+accent border, solid accent on hover.
 
 **Files:** `modules/projects/components/project-activity.tsx`
 
