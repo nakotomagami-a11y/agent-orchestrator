@@ -240,7 +240,11 @@ text, subtle bg).
 
 ---
 
-### Task 7 — Agents page click spawns new instance ⏳
+### Task 7 — Agents page click spawns new instance ✅ 2babbb4
+
+Card click on `/agents` now calls `useSpawnInstance().spawnInstance(id)`
+first, then `select()` with the new instance on the Conversation tab.
+Sidebar/office-canvas paths untouched.
 
 **Change in `modules/agents/components/agent-list.tsx`:**
 - Replace `onOpen={() => select(a.name)}` with a handler that:
