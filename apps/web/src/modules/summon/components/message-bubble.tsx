@@ -1,14 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { match } from "ts-pattern";
-import { cn } from "@/lib/cn";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../format/thread-types";
 import { Icon } from "@/components/ui/icon";
-import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useCreateSavedPrompt } from "@/modules/prompts/hooks/use-saved-prompts";
 import { splitProse, type ProseItem } from "@/lib/markdown";
 import {
@@ -18,10 +15,10 @@ import {
   highlightTS,
   inlineMd,
 } from "../format/message-format";
-import { useClaudeLimitsStore, periodStart, periodEnd } from "@/lib/claude-limits-store";
-import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { ExpandedStateContext, useExpandedState } from "./expanded-state";
 import { ToolGroupRow } from "./tool-group-row";
+import { SubAgentCard } from "./sub-agent-card";
+import { RateLimitCard } from "./rate-limit-card";
 
 // Re-export so `chat-thread` and any other consumer keeps its existing
 // `from "./message-bubble"` imports working. Actual definitions live in
@@ -303,93 +300,6 @@ function ClarifyInput({ onReply }: { onReply: (text: string) => void }) {
   );
 }
 
-// ── SubAgentCard ──────────────────────────────────────────────────────────────
-function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subagent" }> }) {
-  const [open, toggle] = useExpandedState(item.id);
-  const [elapsed, setElapsed] = useState(0);
-
-  useEffect(() => {
-    if (item.status !== "running") return;
-    const id = setInterval(() => setElapsed(Math.floor((Date.now() - item.startTs) / 1000)), 1000);
-    return () => clearInterval(id);
-  }, [item.status, item.startTs]);
-
-  const duration =
-    item.status === "running"
-      ? `${elapsed}s`
-      : item.durationMs !== undefined
-        ? `${(item.durationMs / 1000).toFixed(1)}s`
-        : undefined;
-
-  const badgeClass =
-    item.status === "done" ? "text-[10px] font-medium px-[7px] py-[1px] rounded-full border border-transparent ok" :
-    item.status === "error" ? "text-[10px] font-medium px-[7px] py-[1px] rounded-full border border-transparent err" :
-    "text-[10px] font-medium px-[7px] py-[1px] rounded-full border border-transparent running";
-
-  const isRunning = item.status === "running" || item.status === "queued" || item.status === "cancelling";
-  const liveHint = isRunning
-    ? (item.currentTool ? `using ${item.currentTool}` : item.lastOutputLine ?? null)
-    : null;
-
-  const totalTok =
-    item.tokensIn !== undefined || item.tokensOut !== undefined
-      ? (item.tokensIn ?? 0) + (item.tokensOut ?? 0)
-      : null;
-
-  return (
-    <div className="my-1 ml-[14px] border-l-2 border-l-[#3b7de8] px-[14px] py-[10px] bg-[linear-gradient(90deg,rgba(59,125,232,0.09)_0%,transparent_72%)] rounded-[0_10px_10px_0]">
-      <div className="flex items-center gap-[10px] cursor-pointer select-none" onClick={toggle} role="button" aria-expanded={open}>
-        <div className="w-6 h-6 rounded-full bg-[linear-gradient(135deg,#3b7de8_0%,#1e56c0_100%)] flex items-center justify-center text-white shrink-0" aria-hidden>
-          <Icon name="bot-ao" size={13} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-mono text-[10px] tracking-[0.08em] uppercase text-[#74a8f0] mb-[2px]">spawned sub-agent</div>
-          <div className="text-[13px] font-semibold text-ao-fg-0 flex items-center gap-[7px]">
-            {item.name}
-            <span className={badgeClass}>{item.status}</span>
-          </div>
-          {liveHint && (
-            <div className="font-mono text-[10.5px] text-ao-fg-3 mt-[3px] truncate max-w-[420px]">{liveHint}</div>
-          )}
-        </div>
-        <div className="ml-auto flex items-center gap-2 text-ao-fg-3 font-mono text-[11px] shrink-0">
-          {duration && <span>{duration}</span>}
-          <Icon
-            name="chevron"
-            size={13}
-            className={cn("transition-transform duration-[180ms]", open && "rotate-90")}
-          />
-        </div>
-      </div>
-      {open && (
-        <div className="mt-[10px] flex flex-col gap-[8px]">
-          <div className="px-3 py-[10px] bg-[var(--ao-bg-1)] border border-ao-line-1 rounded-[6px] font-mono text-[11.5px] text-ao-fg-1 leading-[1.55] whitespace-pre-wrap break-words">
-            {item.prompt}
-          </div>
-          {(totalTok !== null || item.cost !== undefined || item.subRunId) && (
-            <div className="flex items-center gap-[10px] font-mono text-[11px] text-ao-fg-3">
-              {totalTok !== null && <span>{totalTok.toLocaleString()} tok</span>}
-              {item.cost !== undefined && item.cost > 0 && (
-                <span>${item.cost.toFixed(4)}</span>
-              )}
-              {item.subRunId && (
-                <Link
-                  href={PAGE_ROUTES.run(item.subRunId)}
-                  className="ml-auto inline-flex items-center gap-[4px] text-[var(--ao-accent)] no-underline hover:underline text-[11px]"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  View transcript
-                  <Icon name="chevron" size={10} className="rotate-[-90deg]" />
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── MessageBubble ─────────────────────────────────────────────────────────────
 export type MessageBubbleProps = {
   item: ThreadItem;
@@ -415,96 +325,6 @@ export type MessageBubbleProps = {
 /** Heuristic: a run error caused by a missing/stale git worktree directory. */
 function isWorktreeError(message: string): boolean {
   return /cwd not a directory/i.test(message) && /\.worktrees/.test(message);
-}
-
-function RateLimitCard({
-  message,
-  resetsAt,
-  onStop,
-  onDismiss,
-}: {
-  message: string;
-  resetsAt?: number;
-  onStop?: () => void;
-  onDismiss?: () => void;
-}) {
-  const quotaUsd = useClaudeLimitsStore((s) => s.quotaUsd);
-  const period   = useClaudeLimitsStore((s) => s.period);
-  const runsQ    = useRuns({ limit: 500 });
-  const allRuns  = useMemo(() => runsQ.data ?? [], [runsQ.data]);
-
-  const usageLabel = useMemo(() => {
-    const start = periodStart(period);
-    const end   = periodEnd(period);
-    const cost  = allRuns
-      .filter((r) => r.ts >= start && r.ts < end)
-      .reduce((s, r) => s + (r.cost || 0), 0);
-    if (quotaUsd > 0) {
-      const pct = Math.round((cost / quotaUsd) * 100);
-      return `used ${pct}%`;
-    }
-    return `$${cost.toFixed(2)} spent`;
-  }, [allRuns, quotaUsd, period]);
-
-  // Countdown to reset
-  const [secsLeft, setSecsLeft] = useState<number | null>(
-    resetsAt ? Math.max(0, resetsAt - Math.floor(Date.now() / 1000)) : null,
-  );
-  useEffect(() => {
-    if (secsLeft === null) return;
-    if (secsLeft <= 0) return;
-    const id = setInterval(() => {
-      setSecsLeft((s) => (s !== null && s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => clearInterval(id);
-  }, [secsLeft]);
-
-  const fmtCountdown = (s: number) => {
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    if (h > 0) return `${h}h ${m}m`;
-    if (m > 0) return `${m}m ${sec}s`;
-    return `${sec}s`;
-  };
-
-  return (
-    <div className="border border-[rgba(234,179,8,0.30)] border-l-[3px] border-l-[#ca8a04] rounded-[8px] px-[14px] py-3 bg-[rgba(234,179,8,0.05)] flex items-start gap-[10px]">
-      <div className="w-[22px] h-[22px] flex items-center justify-center rounded-[6px] bg-[rgba(234,179,8,0.12)] text-[#ca8a04] shrink-0">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-semibold text-ao-fg-0 text-[13.5px]">Rate limited</span>
-          <span className="font-mono text-[11px] px-[6px] py-[2px] rounded-full bg-[rgba(234,179,8,0.12)] text-[#ca8a04]">{usageLabel}</span>
-        </div>
-        <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono leading-[1.5]">{message}</div>
-        {secsLeft !== null && secsLeft > 0 && (
-          <div className="mt-[4px] font-mono text-[11.5px] text-ao-fg-3">
-            Resets in <span className="text-[#ca8a04]">{fmtCountdown(secsLeft)}</span>
-          </div>
-        )}
-        <div className="mt-2 flex items-center gap-3">
-          <button
-            onClick={onStop}
-            disabled={!onStop}
-            className="text-[var(--ao-bad)] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
-          >
-            <Icon name="stop" size={11} /> Stop agent
-          </button>
-          <button
-            onClick={onDismiss}
-            disabled={!onDismiss}
-            className="text-[#ca8a04] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
-          >
-            <Icon name="refresh" size={11} /> Continue
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 function ErrorCard({
