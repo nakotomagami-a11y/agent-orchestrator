@@ -219,7 +219,14 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   <Icon name="edit" size={28} className="text-white" />
                 </span>
               </button>
-              <div className="flex-1 min-w-0 pt-[6px] flex flex-col gap-[10px]">
+              {/*
+                Lifted above the planet's absolute canvas so a bleeding
+                black-hole ring (or star glow) can't paint on top of the
+                name/counters. `text-shadow` gives an extra safety margin
+                for any bleed that reaches under the text before the
+                stacking-context override kicks in.
+              */}
+              <div className="flex-1 min-w-0 pt-[6px] flex flex-col gap-[10px] relative z-[1] [text-shadow:0_1px_6px_rgba(0,0,0,0.7),0_0_2px_rgba(0,0,0,0.9)]">
                 {/* Name row with counters pushed to the right */}
                 <div className="flex items-start gap-[16px]">
                   <div className="flex items-center gap-[10px] flex-wrap min-w-0">
