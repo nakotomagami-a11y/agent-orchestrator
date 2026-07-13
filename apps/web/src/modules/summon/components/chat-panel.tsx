@@ -1,32 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { match } from "ts-pattern";
-import { ChatHead } from "./chat-head";
-import { WorkflowPill } from "./workflow-pill";
-import { ChatThread } from "./chat-thread";
-import { Composer } from "./composer";
-import type { ChatPhase } from "./live-status";
-import { fmtElapsed, phaseHint } from "../format/phase-format";
-import { useSummon, useAbortRun } from "../hooks/use-summon";
-import { useRunStream } from "../hooks/use-run-stream";
-import { useRunRecovery } from "../hooks/use-run-recovery";
-import { useRunNotification } from "@/hooks/use-run-notification";
-import {
-  clearTranscript,
-  loadTranscript,
-  saveTranscript,
-  transcriptKey,
-} from "../format/transcript-store";
-import type { ContextProfile } from "@agent-office/domain/types";
-import { clearDraft } from "../format/draft-store";
+import { ChatPanelBody } from "./chat-panel-body";
+import { useChatPanelModel } from "../hooks/use-chat-panel-model";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
-import { useProject } from "@/modules/projects/hooks/use-projects";
-import { Button } from "@/components/ui/button";
-import type { ThreadItem } from "../format/thread-types";
-import { useBranchStore } from "@/lib/branch-store";
-import { repairWorktree } from "@/lib/api/roster";
 
 export type ChatPanelProps = {
   agent: OfficeAgent;
@@ -55,528 +31,62 @@ export type ChatPanelProps = {
  * single source of truth and the committed items never duplicate the
  * live stream view.
  *
- * Recovery: a stored `activeRunId` is probed once via /api/runs/[id] -
- * if the server still has it live, the SSE re-attach picks it up; if
- * it's already finished, we fall back to the persisted run's output so
- * the user actually sees the result instead of an empty bubble.
+ * Recovery: a stored `activeRunId` is probed once via /api/runs/[id] —
+ * if the server still has it live, the SSE re-attach picks it up; if it's
+ * already finished, we fall back to the persisted run's output so the user
+ * actually sees the result instead of an empty bubble.
+ *
+ * All the wiring lives in `useChatPanelModel`. This component just picks
+ * the pieces the presentational body needs and hands them over.
  */
-export function ChatPanel({ agent, projectId, instanceId, onClose: _onClose, onEdit: _onEdit, onNavigateTab, noHeader, newThreadSignal, onActiveRunChange }: ChatPanelProps) {
-  const qc = useQueryClient();
-  const summon = useSummon();
-  const abort = useAbortRun();
-  const projectQ = useProject(projectId ?? null);
-  const projectName = projectQ.data?.meta.name;
-
-  // Composite key: each `(agentId, instanceId)` pair gets its own
-  // transcript. Removing + re-adding an agent yields a new instanceId and
-  // therefore a fresh thread, while the old transcript stays in storage
-  // for archive viewing.
-  const tKey = transcriptKey(agent.id, instanceId);
-
-  // ── State ──
-  const [thread, setThread] = useState<ThreadItem[]>([]);
-  const [activeRunId, setActiveRunId] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [transcriptLoaded, setTranscriptLoaded] = useState(false);
-  const [pendingSeed, setPendingSeed] = useState<string | undefined>();
-  const [phaseOverride, setPhaseOverride] = useState<ChatPhase | null>(null);
-  // Local "wall clock" tick that re-renders every second while a run is in
-  // flight. Used purely to compute "Xs since last token" against
-  // stream.lastEventAt - without this, the staleness display would freeze.
-  const [, setTick] = useState(0);
-  // Messages typed while a run is in progress - fired sequentially, one per
-  // turn, as each preceding run finishes. Each queued message has a stable
-  // id so the UI can cancel a specific item without disturbing the others.
-  // Persisted into the transcript row so a page reload or app crash mid-run
-  // doesn't drop queued turns on the floor.
-  const [queuedMessages, setQueuedMessages] = useState<Array<{ id: string; text: string }>>([]);
-  const [quotaWarning, setQuotaWarning] = useState<string | null>(null);
-  const [contextProfile, setContextProfile] = useState<ContextProfile>("balanced");
-
-  // Cross-agent dedup guard. The write-through effect at the bottom of this
-  // component depends on `tKey` AND `thread/activeRunId/sessionId`. When the
-  // agent (or instance) changes, `tKey` updates *this render* while the
-  // thread state hasn't been reset yet (the switch effect below queues those
-  // resets for the next render). Without a guard, the write-through fires
-  // once with { new tKey, previous agent's thread } and overwrites the new
-  // agent's transcript row with the previous agent's messages — the user then
-  // sees agent A's history under agent B's header. `loadedTKeyRef` records
-  // which key the currently-mounted thread/queue state actually belongs to,
-  // and is only advanced after `loadTranscript` resolves successfully.
-  const loadedTKeyRef = useRef<string | null>(null);
-
-  const stream = useRunStream(activeRunId);
-
-  const {
-    resumeError,
-    setResumeError,
-    recovered,
-    setRecovered,
-    retryResume,
-    dismissResume,
-    resetRecovery,
-    runStartIndexRef,
-    fallbackAttemptedRef,
-  } = useRunRecovery({
-    activeRunId,
-    setActiveRunId,
-    thread,
-    setThread,
-    stream,
-    transcriptLoaded,
-    sessionId,
-    setSessionId,
-    tKey,
-    qc,
-  });
-
-  // ── Agent or instance switch: swap the entire thread state ──
-  useEffect(() => {
-    setTranscriptLoaded(false);
-    setThread([]);
-    setActiveRunId(null);
-    setSessionId(null);
-    setPhaseOverride(null);
-    setQueuedMessages([]);
-    // Invalidate the write-through guard immediately — any write-through that
-    // runs before the load below completes must be a no-op, because the state
-    // in this component still belongs to the *previous* tKey.
-    loadedTKeyRef.current = null;
-    resetRecovery();
-    let cancelled = false;
-    loadTranscript(tKey).then((t) => {
-      if (cancelled) return;
-      const items = t?.items ?? [];
-      setThread(items);
-      setActiveRunId(t?.activeRunId ?? null);
-      setSessionId(t?.sessionId ?? null);
-      setQueuedMessages(t?.queuedMessages ?? []);
-      // Pre-set the splice index NOW, before the first render that carries
-      // activeRunId — the EventSource opens synchronously on that render and
-      // the server sends `attached` in <1ms, always before the probe HTTP
-      // response lands. Without this, startIdx is null when attached fires
-      // and the output is silently dropped with no retry.
-      if (t?.activeRunId) {
-        runStartIndexRef.current = items.length;
-      }
-      // Commit the write-through guard *last*: from this point on, the
-      // component state genuinely represents `tKey` and write-through may
-      // save changes for this key.
-      loadedTKeyRef.current = tKey;
-      setTranscriptLoaded(true);
-    }).catch(() => {
-      if (!cancelled) {
-        // Even on load failure the state is "empty for this key" — allow
-        // future edits to be persisted under it.
-        loadedTKeyRef.current = tKey;
-        setTranscriptLoaded(true);
-      }
-    });
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tKey]);
-
-  const runStartTsRef = useRef<number>(0);
-  useEffect(() => {
-    if (activeRunId) runStartTsRef.current = Date.now();
-    onActiveRunChange?.(activeRunId);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeRunId]);
-  useRunNotification({ agentName: agent.name, phase: stream.phase, startTs: runStartTsRef.current || null });
-
-  // ── While a run is in flight, tick once per second so the
-  //    "Xs since last token" display updates without waiting for events. ──
-  useEffect(() => {
-    if (!activeRunId) return;
-    if (stream.phase === "done" || stream.phase === "error") return;
-    const id = setInterval(() => setTick((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, [activeRunId, stream.phase]);
-
-  // ── Write-through to server DB ──
-  //
-  // Only save when the currently-mounted state actually belongs to `tKey`.
-  // Without this guard, switching agents during the same commit fires this
-  // effect with a stale closure over the previous agent's `thread` /
-  // `activeRunId` / `sessionId` — SEE the ref declaration above for the full
-  // race description. The ref is advanced by the load effect above only
-  // after `loadTranscript(tKey)` resolves, so the two states can't disagree.
-  useEffect(() => {
-    if (!transcriptLoaded) return;
-    if (loadedTKeyRef.current !== tKey) return;
-    void saveTranscript(tKey, thread, activeRunId, sessionId, queuedMessages);
-  }, [tKey, thread, activeRunId, sessionId, transcriptLoaded, queuedMessages]);
-
-  // ── Branch seed: pre-fill composer when opened via "Branch from here" ──
-  const consumeBranchSeed = useBranchStore((s) => s.consumeSeed);
-  useEffect(() => {
-    if (!transcriptLoaded) return;
-    const branch = consumeBranchSeed(agent.id, instanceId);
-    if (branch) setPendingSeed(branch.prompt);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transcriptLoaded, agent.id, instanceId]);
-
-  // ── Submit ──
-  const doSubmit = (text: string) => {
-    const userItem: ThreadItem = { kind: "you", id: `y_${Date.now()}`, text };
-    setThread((prev) => {
-      runStartIndexRef.current = prev.length + 1;
-      return [...prev, userItem];
-    });
-    setPhaseOverride("sending");
-    summon.mutate(
-      { agentId: agent.id, prompt: text, projectId, instanceId, resumeSessionId: sessionId ?? undefined, contextProfile },
-      {
-        onSuccess: ({ runId, warning }) => {
-          setActiveRunId(runId);
-          setPhaseOverride(null);
-          if (warning) setQuotaWarning(warning);
-        },
-        onError: (err) => {
-          runStartIndexRef.current = null;
-          setThread((prev) => [
-            ...prev,
-            {
-              kind: "system-error",
-              id: `e_${Date.now()}`,
-              message: err instanceof Error ? err.message : String(err),
-            },
-          ]);
-          setPhaseOverride(null);
-        },
-      },
-    );
-  };
-
-  const onSubmit = (text: string) => {
-    if (isStreaming || queuedMessages.length > 0) {
-      setQueuedMessages((prev) => [...prev, { id: `q_${Date.now()}_${prev.length}`, text }]);
-      return;
-    }
-    doSubmit(text);
-  };
-
-  // ── Abort ──
-  const onAbort = () => {
-    if (activeRunId) {
-      abort.mutate(activeRunId, {
-        onSuccess: () => {
-          setPhaseOverride("aborted");
-          setQueuedMessages([]);
-        },
-      });
-    }
-  };
-
-  // ── New / Branch ──
-  const newThread = () => {
-    void clearTranscript(tKey);
-    void clearDraft(tKey);
-    setThread([]);
-    setActiveRunId(null);
-    setSessionId(null);
-    setPhaseOverride(null);
-    setQueuedMessages([]);
-    runStartIndexRef.current = null;
-    fallbackAttemptedRef.current = null;
-  };
-
-  const handleCommand = (cmd: string) => {
-    if (cmd === "/clear" || cmd === "/branch") { newThread(); return; }
-    if (cmd === "/memory") { onNavigateTab?.("memory"); return; }
-    if (cmd === "/history") { onNavigateTab?.("history"); return; }
-  };
-
-  // External new-thread / branch signals from the parent shell header buttons
-  const prevNewThreadRef = useRef(newThreadSignal ?? 0);
-  useEffect(() => {
-    const cur = newThreadSignal ?? 0;
-    if (cur !== prevNewThreadRef.current) {
-      prevNewThreadRef.current = cur;
-      newThread();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newThreadSignal]);
-
-  // ── Phase ──
-  const sliceText = useMemo(() => {
-    const startIdx = runStartIndexRef.current ?? thread.length;
-    const slice = thread.slice(startIdx);
-    let out = "";
-    for (const it of slice) {
-      if (it.kind === "agent-text") out += it.text;
-    }
-    return out;
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- runStartIndexRef.current is read imperatively; thread change is the correct trigger
-  }, [thread]);
-
-  const phase: ChatPhase = phaseOverride
-    ?? match({ pending: summon.isPending, streamPhase: stream.phase, hasText: sliceText.length > 0 })
-      .when(({ pending }) => pending, () => "sending" as ChatPhase)
-      .when(({ streamPhase }) => streamPhase === "starting", () => "connecting" as ChatPhase)
-      .when(({ streamPhase, hasText }) => streamPhase === "streaming" && hasText, () => "streaming" as ChatPhase)
-      .when(({ streamPhase }) => streamPhase === "streaming", () => "working" as ChatPhase)
-      .when(({ streamPhase }) => streamPhase === "done", () => "done" as ChatPhase)
-      .when(({ streamPhase }) => streamPhase === "error", () => "error" as ChatPhase)
-      .otherwise(() => "idle" as ChatPhase);
-
-  const isStreaming =
-    phase === "sending" || phase === "connecting" || phase === "working" || phase === "streaming";
-
-  // Fire the next queued message once the run finishes and all state (session
-  // ID, activeRunId) has settled. Watching `phase === "idle"` guarantees the
-  // done effect has already committed its state updates in a previous render.
-  // Only one message is dispatched per idle transition; the effect re-runs
-  // when `queuedMessages` shrinks, but the outer `isStreaming` guard on the
-  // next render keeps subsequent items in the queue until their turn.
-  useEffect(() => {
-    if (phase !== "idle") return;
-    if (queuedMessages.length === 0) return;
-    const next = queuedMessages[0]!;
-    setQueuedMessages((prev) => prev.slice(1));
-    doSubmit(next.text);
-    // doSubmit is defined inline - including it would re-run on every render.
-    // The closure captures the right sessionId because this effect only fires
-    // after phase becomes idle (i.e. the done effect's state updates landed).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, queuedMessages]);
-
-  const elapsedSec =
-    stream.startTs && (phase === "working" || phase === "streaming")
-      ? Math.floor((Date.now() - stream.startTs) / 1000)
-      : 0;
-  const threadHistoryTok = thread.reduce((acc, item) => {
-    if (item.kind === "system-done") {
-      return acc + (item.tokensIn ?? 0) + (item.tokensOut ?? 0);
-    }
-    return acc;
-  }, 0);
-  const totalTok = threadHistoryTok + stream.usage.tokensIn + stream.usage.tokensOut;
-  const liveStats =
-    elapsedSec > 0
-      ? `${fmtElapsed(elapsedSec)}${totalTok > 0 ? ` · ${totalTok.toLocaleString()} tok` : ""}`
-      : undefined;
-
-  const STALE_THRESHOLD_MS = 90_000;
-  const sinceLastEventMs =
-    stream.lastEventAt && isStreaming ? Date.now() - stream.lastEventAt : null;
-  const isStale =
-    sinceLastEventMs !== null && sinceLastEventMs > STALE_THRESHOLD_MS;
-
-  const continueRecovered = () => {
-    setRecovered(null);
-    setPendingSeed("Please continue where you left off. The previous run was interrupted by a server restart - your partial output is in the thread above.");
-  };
-
-  // For "missing run" (404) - the original prompt is gone with the run,
-  // but the last user message in our local thread IS the prompt. Re-summon
-  // from that, treating the orphan as if it had never been started.
-  const resummonLastUserMessage = () => {
-    const lastUser = [...thread].reverse().find((it) => it.kind === "you");
-    if (!lastUser || lastUser.kind !== "you") return;
-    setResumeError(null);
-    setActiveRunId(null);
-    setPendingSeed(lastUser.text);
-  };
-
-  const lastUserMessageText: string | null = (() => {
-    const lastUser = [...thread].reverse().find((it) => it.kind === "you");
-    return lastUser && lastUser.kind === "you" ? lastUser.text : null;
-  })();
+export function ChatPanel({
+  agent,
+  projectId,
+  instanceId,
+  onNavigateTab,
+  noHeader,
+  newThreadSignal,
+  onActiveRunChange,
+}: ChatPanelProps) {
+  const m = useChatPanelModel({ agent, projectId, instanceId, newThreadSignal, onNavigateTab, onActiveRunChange });
 
   return (
-    <div className="flex flex-col min-h-0 h-full flex-1 bg-[var(--bg-1)]" role="region" aria-label={`Chat with ${agent.name}`}>
-      {!noHeader && (
-        <ChatHead
-          agent={agent}
-          onNew={newThread}
-          actions={activeRunId ? <WorkflowPill runId={activeRunId} active={isStreaming} /> : null}
-        />
-      )}
-
-      {/* Diagnostic banners - only one shown at a time, ordered by severity.
-          Recovered > resume-missing > resume-transient > lost > retrying > stale. */}
-      {recovered ? (
-        <StreamBanner
-          kind="warn"
-          title="Recovered partial output from the previous run."
-          detail={`Run ${recovered.runId} was interrupted - ${recovered.exitCode === -1 ? "server was killed mid-run (no clean shutdown)" : `server restarted (exit ${recovered.exitCode})`}. ${recovered.partialChars.toLocaleString()} chars · ${recovered.tokensOut.toLocaleString()} tok · $${recovered.cost.toFixed(3)} streamed before the kill - appended to the thread above. Click Continue to pick up where it stopped.`}
-          primary={{ label: "Continue", onClick: continueRecovered }}
-          secondary={{ label: "Dismiss", onClick: () => setRecovered(null) }}
-        />
-      ) : resumeError?.kind === "missing" ? (
-        <StreamBanner
-          kind="warn"
-          title="This run isn't on the server anymore."
-          detail={`Run ${activeRunId} · ${resumeError.message}. Most likely the server restarted while it was in flight, so it never made it into runs.log. ${
-            lastUserMessageText
-              ? "Re-summon will re-send your last message as a fresh run; Drop run leaves the chat as-is."
-              : "Drop run clears the dead reference. (No previous user message in the thread to re-send.)"
-          }`}
-          primary={
-            lastUserMessageText
-              ? { label: "Re-summon last message", onClick: resummonLastUserMessage }
-              : { label: "Drop run", onClick: dismissResume }
-          }
-          secondary={
-            lastUserMessageText
-              ? { label: "Drop run", onClick: dismissResume }
-              : undefined
-          }
-        />
-      ) : resumeError?.kind === "transient" ? (
-        <StreamBanner
-          kind="error"
-          title={
-            resumeError.status
-              ? `Server returned ${resumeError.status} when resuming this run.`
-              : "Couldn't reach the server to resume this run."
-          }
-          detail={`Run ${activeRunId} · ${resumeError.message}`}
-          primary={{ label: "Retry", onClick: retryResume }}
-          secondary={{ label: "Drop run", onClick: dismissResume }}
-        />
-      ) : stream.connection === "lost" ? (
-        <StreamBanner
-          kind="error"
-          title="Stream connection lost."
-          detail={
-            stream.error ??
-            "The browser gave up on the EventSource. The run may still be in flight on the server."
-          }
-          primary={{ label: "Reconnect", onClick: stream.reconnect }}
-        />
-      ) : stream.connection === "retrying" ? (
-        <StreamBanner
-          kind="warn"
-          title="Stream connection interrupted - reconnecting…"
-          detail="Browser is retrying automatically. Click Reconnect if it doesn't recover."
-          primary={{ label: "Reconnect now", onClick: stream.reconnect }}
-        />
-      ) : isStale && sinceLastEventMs !== null ? (
-        <StreamBanner
-          kind="warn"
-          title={`No new output for ${Math.floor(sinceLastEventMs / 1000)}s - still waiting.`}
-          detail={
-            stream.lastEventAt
-              ? `Last event at ${new Date(stream.lastEventAt).toLocaleTimeString()}. The agent may be thinking, or the stream may be silently stuck.`
-              : "No events received yet."
-          }
-          primary={{ label: "Reconnect", onClick: stream.reconnect }}
-        />
-      ) : null}
-      {quotaWarning && (
-        <StreamBanner
-          kind="warn"
-          title="Budget notice"
-          detail={quotaWarning}
-          primary={{ label: "Dismiss", onClick: () => setQuotaWarning(null) }}
-        />
-      )}
-
-      <ChatThread
-        items={thread}
-        agent={agent}
-        onPickSuggestion={(text) => setPendingSeed(text)}
-        onSubmit={isStreaming ? undefined : onSubmit}
-        onRepairWorktree={
-          projectId && instanceId
-            ? async () => {
-                await repairWorktree(projectId, instanceId);
-              }
-            : undefined
-        }
-        onAbortRun={onAbort}
-        onDismissRateLimit={(id) => setThread((prev) => prev.filter((it) => it.id !== id))}
-        phase={phase}
-        phaseHint={phaseHint(phase, stream.usage)}
-        phaseStats={liveStats}
-        queuedMessages={queuedMessages}
-        onCancelQueuedMessage={(id) => setQueuedMessages((prev) => prev.filter((m) => m.id !== id))}
-      />
-      {/* key=tKey forces a fresh Composer mount whenever the agent or
-          instance changes, ensuring useState re-initialises from the correct
-          draft slot rather than showing the previous agent's text. */}
-      <Composer
-        key={tKey}
-        onSubmit={onSubmit}
-        abortable={isStreaming && activeRunId !== null}
-        onAbort={onAbort}
-        agentId={agent.id}
-        projectId={projectId}
-        modelChip={agent.defaultModel ?? "default"}
-        cwdChip={projectName ? `project: ${projectName}` : projectId ? `project: ${projectId}` : undefined}
-        seed={pendingSeed}
-        onCommand={handleCommand}
-        draftKey={tKey}
-        contextProfile={contextProfile}
-        onProfileChange={setContextProfile}
-      />
-    </div>
-  );
-}
-
-type BannerAction = { label: string; onClick: () => void };
-
-/**
- * Inline alert strip rendered between the chat head and thread. Verbose by
- * design - this app is for developers, so the user sees the actual error
- * string, the run id, and a primary action they can take.
- */
-function StreamBanner({
-  kind,
-  title,
-  detail,
-  primary,
-  secondary,
-}: {
-  kind: "warn" | "error";
-  title: string;
-  detail?: string;
-  primary?: BannerAction;
-  secondary?: BannerAction;
-}) {
-  const colour = kind === "error" ? "var(--error)" : "var(--queued)";
-  return (
-    <div
-      role="alert"
-      className="mx-6 mt-2 p-[10px_12px] rounded-lg flex items-start gap-3"
-      style={{
-        border: `1px solid ${colour}`,
-        background:
-          kind === "error"
-            ? "color-mix(in oklch, var(--error) 10%, transparent)"
-            : "color-mix(in oklch, var(--queued) 12%, transparent)",
-      }}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-semibold" style={{ color: colour }}>{title}</div>
-        {detail ? (
-          <div className="mt-[3px] text-[11.5px] text-txt-2 font-[var(--font-mono)] break-words">
-            {detail}
-          </div>
-        ) : null}
-      </div>
-      <div className="flex gap-1.5 shrink-0">
-        {secondary ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={secondary.onClick}
-          >
-            {secondary.label}
-          </Button>
-        ) : null}
-        {primary ? (
-          <Button
-            size="sm"
-            onClick={primary.onClick}
-            style={{ borderColor: colour, color: colour }}
-          >
-            {primary.label}
-          </Button>
-        ) : null}
-      </div>
-    </div>
+    <ChatPanelBody
+      agent={agent}
+      projectId={projectId}
+      instanceId={instanceId}
+      tKey={m.tKey}
+      noHeader={noHeader}
+      projectName={m.projectName}
+      thread={m.state.thread}
+      setThread={m.state.setThread}
+      activeRunId={m.state.activeRunId}
+      pendingSeed={m.state.pendingSeed}
+      setPendingSeed={m.state.setPendingSeed}
+      queuedMessages={m.state.queuedMessages}
+      setQueuedMessages={m.state.setQueuedMessages}
+      quotaWarning={m.state.quotaWarning}
+      setQuotaWarning={m.state.setQuotaWarning}
+      contextProfile={m.state.contextProfile}
+      setContextProfile={m.state.setContextProfile}
+      phase={m.phase}
+      isStreaming={m.isStreaming}
+      liveStats={m.liveStats}
+      isStale={m.isStale}
+      sinceLastEventMs={m.sinceLastEventMs}
+      stream={m.stream}
+      recovered={m.recovery.recovered}
+      setRecovered={m.recovery.setRecovered}
+      resumeError={m.recovery.resumeError}
+      retryResume={m.recovery.retryResume}
+      dismissResume={m.recovery.dismissResume}
+      lastUserMessageText={m.lastUserMessageText}
+      onContinueRecovered={m.onContinueRecovered}
+      onResummonLastMessage={m.onResummonLastMessage}
+      onSubmit={m.onSubmit}
+      onAbort={m.onAbort}
+      onCommand={m.onCommand}
+      onNewThread={m.onNewThread}
+    />
   );
 }
