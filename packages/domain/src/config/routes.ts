@@ -108,6 +108,8 @@ export const API_ROUTES = {
   agentDocs: "/api/agent-docs",
   agentDoc: (owner: string, slug: string) =>
     `/api/agent-docs/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}`,
+
+  cleanup: (kind: string) => `/api/cleanup/${kind}`,
 } as const;
 
 /**

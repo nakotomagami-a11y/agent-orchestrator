@@ -14,3 +14,4 @@ export * as store from "./store";
 export * as paths from "./paths";
 export * as pipeline from "./pipeline";
 export * as docs from "./docs";
+export * as cleanup from "./cleanup";

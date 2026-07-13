@@ -610,24 +610,57 @@ version-controlled source of truth). The three:
 
 ---
 
-### Task 15 — Surgical cleanup in Performance tab ⏳
+### Task 15 — Surgical cleanup in Performance tab ✅
 
-Add a "Cleanup" panel to `settings/performance-tab.tsx` with each of:
+**Delivered:**
 
-- Reset chat transcripts (all / per-project / per-agent)
-- Clear composer drafts
-- Wipe orphaned recovered runs
-- Reset agent memory files (per-agent, `~/.claude/agents/<id>.memory.md`)
-- Reset User Analysis file
-- Clear skill install cache (`~/.claude/skills/`)
-- Reset app UI settings (theme etc.)
-- ⚠ Everything (bulk nuke of the above)
+- New `packages/domain/src/services/cleanup.ts` with one function per
+  kind plus a `runCleanup(kind)` dispatch:
+  - `resetAllTranscripts` — `DELETE FROM transcripts`
+  - `clearComposerDrafts` — `DELETE FROM drafts`
+  - `wipeOrphanedRuns` — deletes runs with `status='error' AND exit_code=-1`
+    and pipelines with `interrupted=1` (crash-recovery zombies)
+  - `resetAgentMemoryFiles` — walks `~/.claude/agents/` and deletes every
+    `<agent-id>.memory.md`, preserving `_global.memory.md`
+  - `resetUserAnalysis` — deletes `~/.claude/agent-office/user_analysis.md`
+  - `clearSkillInstallCache` — wipes every subdir under
+    `~/.claude/agents/_skills/`
+  - `resetUiSettings` — clears `ui_settings` rows except `_migrated`
+    sentinel so the JSONL migration doesn't re-run
+  - `everything` — the bulk nuke; wraps the above + also deletes runs,
+    messages, tool_calls, pipeline_steps, pipelines (i.e. analytics
+    history)
+- API route `POST /api/cleanup/[kind]`. Kind is validated against
+  `CLEANUP_KINDS` before dispatch.
+- New `useCleanup()` mutation hook + surgical invalidation strategy
+  (invalidate all queries only on the `everything` path).
+- New `modules/settings/components/tabs/cleanup-panel.tsx`:
+  - One row per kind with title + description + icon + Run/Nuke button.
+  - Confirm modal describes exactly what will happen and reports the
+    numbers cleared on success (`Cleared 42 · transcripts=12 drafts=8`).
+  - The `everything` row is styled destructively and requires a
+    double-confirm checkbox before the button enables.
+- Mounted at the bottom of the existing Performance tab with a
+  horizontal separator between the rendering-budget fieldset and the
+  cleanup panel.
 
-Each has its own confirm modal. **Analytics data (runs history, cost,
-tokens) is preserved** across all buttons EXCEPT "Everything".
+**Analytics preservation contract:** runs history / cost / tokens survive
+every row EXCEPT `everything`. The UI copy makes this explicit.
 
-Backend: extend `packages/domain/src/services/db.ts` with per-category
-delete queries; expose via `/api/cleanup/<kind>` (POST).
+**Files touched:**
+- new `packages/domain/src/services/cleanup.ts`
+- edit `packages/domain/src/services/index.ts` (barrel)
+- edit `packages/domain/src/config/routes.ts` (`cleanup(kind)`)
+- new `apps/web/src/app/api/cleanup/[kind]/route.ts`
+- new `apps/web/src/modules/settings/hooks/use-cleanup.ts`
+- new `apps/web/src/modules/settings/components/tabs/cleanup-panel.tsx`
+- edit `apps/web/src/modules/settings/components/tabs/performance-tab.tsx`
+
+**Deferred:**
+- Per-project / per-agent transcript reset — the existing agents-page
+  delete already covers per-agent; scoping cleanup to a specific project
+  needs a UI it doesn't have yet (project picker inside settings would
+  be jarring).
 
 ---
 
