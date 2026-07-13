@@ -27,7 +27,11 @@ import { SkillUpdatesBell } from "./skill-updates-bell";
  *   - Tauri maximized: full-width, no rounding.
  *
  * The titlebar renders as a `fixed` overlay (NOT inside the GnomeWindow)
- * with z-[200] so it always stays above portal-rendered modals (z-[100]).
+ * at z-[50] — deliberately *below* every portal-rendered modal so the
+ * ProjectSwitcher chip + window controls get dimmed by the modal backdrop
+ * instead of punching through on top of it. The user must close the
+ * modal to reach the traffic-light controls, which matches standard
+ * modal UX.
  *
  * The component also writes the current chrome inset (0 or 18px) to a
  * CSS custom property `--chrome-inset` on the document root. Other chrome-
@@ -72,7 +76,7 @@ export function Titlebar() {
       className={cn(
         // `app-titlebar` is the hook globals.css uses to flatten this in
         // browser mode (top/left/right -> 0, no rounding, no side borders).
-        "app-titlebar fixed top-[18px] left-[18px] right-[18px] h-[38px] z-[200] border border-line-2 rounded-t-[10px]",
+        "app-titlebar fixed top-[18px] left-[18px] right-[18px] h-[38px] z-[50] border border-line-2 rounded-t-[10px]",
         maximized && "top-0 left-0 right-0 rounded-none border-l-0 border-r-0 border-t-0",
       )}
     >

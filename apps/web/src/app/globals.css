@@ -453,24 +453,40 @@ html:not(.tauri) .gnome-window {
   border: none !important;
 }
 
-/* Browser mode: titlebar fills the viewport edge (no Tauri chrome inset). */
+/* Browser mode: titlebar fills the viewport edge (no Tauri chrome inset).
+   The titlebar has two nested divs — outer `.app-titlebar` and an inner
+   flex row both carry `rounded-t-[10px]`. We flatten BOTH: without the
+   inner override, the inner's curved top corners cut through the outer's
+   flat edge and let the html background peek through as a light
+   crescent at the top of the app. */
+html:not(.tauri) .app-titlebar,
+html:not(.tauri) .app-titlebar > * {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
 html:not(.tauri) .app-titlebar {
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
   border-left: 0 !important;
   border-right: 0 !important;
   border-top: 0 !important;
 }
-
-
-/* Modal backdrop covers from the top edge of the viewport; the titlebar
-   sits above it at z-[200] so it always stays accessible. */
-.app-modal-backdrop {
-  top: 36px !important;
+/* Same trick when Tauri is maximized — outer div drops its rounding via
+   Tailwind's `rounded-none` on top of `rounded-t-[10px]`, but the inner
+   div still has `rounded-t-[10px]` and cuts a light crescent through
+   the top edge. */
+.app-titlebar.rounded-none > * {
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
 }
+
+
+/* Modal backdrop covers the FULL viewport (top: 0) so the ProjectSwitcher
+   chip in the titlebar is dimmed along with the rest of the page. The
+   titlebar itself now sits at z-[50] — below every modal — instead of the
+   earlier z-[200] override. Traffic-light controls become unclickable
+   until the modal closes, which matches standard modal UX. */
 
 /* ─── Office scene background ─── */
 /* Overrides any old cached inline style with the ocean background image. */
