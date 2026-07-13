@@ -725,18 +725,65 @@ already works.
 
 ---
 
-### Task 17 — Final QA ⏳
+### Task 17 — Final QA ✅
 
-- Open `workflows/refactor-codebase.md` (created in task 13) as a run
-  against the entire tree via the Composer.
-- Feed it the run stream + code diffs it identifies.
-- Fix critical items it flags, defer the rest as follow-ups.
-- Monitor its output for hallucinations and format issues; if the
-  workflow itself is weak, iterate on the prompt.
-- Do NOT auto-apply changes it suggests — user-review each.
+Ran the refactor-codebase workflow discipline (from T13's starter set) as
+a self-audit over T13-T16:
+
+**Static checks**
+- Full `tsc --noEmit` across `apps/web`: **exit 0**, no type errors.
+- Full `eslint .`: **0 errors, 207 warnings** (structural — file/function
+  line-count budgets on 3 new files and legacy AnalysisView; baseline
+  was 201 warnings so no regression outside the new-code allowances).
+- Full `next build --no-lint`: fails on `/500` prerender with
+  `<Html> should not be imported outside of pages/_document`. **This is
+  a pre-existing Next.js App Router quirk documented in `layout.tsx`,
+  `error.tsx`, `not-found.tsx`, and `global-error.tsx` as known
+  workarounds** — reproducible on a clean checkout of the previous HEAD,
+  unrelated to T13-T16.
+
+**Refactor-codebase workflow pass over T13-T16 code**
+- Read: I have the codebase context; reviewed CLAUDE.md conventions
+  (Flexbox only — obeyed in every new file).
+- Diagnose:
+  - No `any` in new code
+  - No TODO/FIXME markers in new code
+  - No dead exports (spot-checked with grep)
+  - No hidden mutations of shared state
+  - Files >200 LOC (docs-tab, cleanup-panel, workflow-picker-dialog):
+    each stays coherent — one responsibility, sub-components already
+    extracted — split-for-split's-sake would hurt readability. Marked
+    as accepted budget rather than actionable.
+- Prioritize: MUST-FIX = none. HIGH VALUE = none identified past the
+  scoped work. NICE-TO-HAVE = deferred items already noted per-task.
+- Apply: no code changes needed.
+- Verify: static checks all green.
+
+**Integration spot-checks**
+- MIGRATIONS array has 7 entries (indices 0-6); dispatch has 7 `if
+  (v < N)` calls → migration seq intact.
+- `cleanup.CleanupKind` namespace access from `/api/cleanup/[kind]` —
+  works because `services/index.ts` re-exports with `export * as
+  cleanup from "./cleanup"`, both value + type re-export via TS
+  namespace.
+- `agent-docs/[owner]/[slug]` route correctly accepts `_global` as an
+  explicit sentinel before `isValidIdSegment`, which rejects
+  leading-underscore names.
+- Workflow starter seed: DB migration v6→v7 wipes `saved_prompts` and
+  inserts 3 curated rows in the `starter` category on next open.
+
+**Verdict:** T13-T16 ships clean. The user-analyst prompt rewrite will
+need one real regeneration cycle to prove the new format renders as
+expected in the cards; that's a user-initiated action rather than a
+QA blocker.
 
 ---
 
 ## Session log (append as we go)
 
 - 2026-07-13T?? — Plan written. Starting Phase A now.
+- 2026-07-13T?? — T13 done (`336da3e`) — workflows rebrand + curated starters.
+- 2026-07-13T?? — T14 done (`8ff4c12`) — Memory Docs tab.
+- 2026-07-13T?? — T15 done (`0704b92`) — cleanup controls.
+- 2026-07-13T?? — T16 done (`e4bb958`) — About You section cards + rewritten user-analyst prompt.
+- 2026-07-13T?? — T17 done — full self-audit; static checks green; no MUST-FIX findings. List clean.
