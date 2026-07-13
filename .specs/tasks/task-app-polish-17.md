@@ -405,7 +405,19 @@ Deferred to follow-up commits (not blocking):
 
 ---
 
-### Task 11 — Limits → Analytics ⏳
+### Task 11 — Limits → Analytics ✅ 5a1cb5b (partial — charts follow-up)
+
+Delivered:
+- Sidebar rename Limits → Analytics (activity icon)
+- Dropped quota enforcement from summon + broadcast routes
+- Modal restructured: header renamed, Overview stat cards
+  (runs/tokens/cost), removed Plan/Quota/Behavior sections + Save
+  button. Kept ByModel + TopAgents + DailyBars.
+- Grid → Flex on the two-column layout
+
+Deferred (not blocking): chartist/recharts install + runs-over-time,
+donut, per-agent avg duration. Current SVG bars are serviceable; will
+add lib when we add more chart types.
 
 **Changes:**
 
