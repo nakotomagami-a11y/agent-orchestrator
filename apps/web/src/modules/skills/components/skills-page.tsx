@@ -58,7 +58,7 @@ export function SkillsPage() {
       ) : filtered.length === 0 ? (
         <EmptyState icon="cpu" title={t("skills.no_results_title")} description={t("common.empty")} />
       ) : (
-        <div className="flex flex-wrap gap-3 [&>*]:[flex:1_1_280px]">
+        <div className="flex flex-col gap-3 [&>*]:w-full">
           {filtered.map((s) => (
             <SkillCard
               key={`${s.source}-${s.name}`}
