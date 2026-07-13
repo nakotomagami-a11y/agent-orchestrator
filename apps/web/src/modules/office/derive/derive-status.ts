@@ -10,7 +10,7 @@
 // from SSE events in the chat panel, not from stored run records.
 
 import { match } from "ts-pattern";
-import type { AgentStatus, PersistedRun } from "@agent-office/shared/types";
+import type { AgentStatus, PersistedRun } from "@agent-office/domain/types";
 
 const STICKY_MS = 90_000;
 

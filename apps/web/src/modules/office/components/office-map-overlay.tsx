@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
-import { UNIT_DEFS } from "@/components/ui/unit-sprite.utils";
+import { UNIT_DEFS } from "@/components/ui/unit-sprite-registry";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import { decorationKey, familyOf, type DecorationsMap } from "./decorations";
 import type { BuildTool } from "./office-build-toolbar";

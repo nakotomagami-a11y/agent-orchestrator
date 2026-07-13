@@ -1,6 +1,6 @@
 // Pure helpers for the Workflow spawn tree (counts + flattening).
 
-import type { WorkflowNode } from "@agent-office/shared/types";
+import type { WorkflowNode } from "@agent-office/domain/types";
 
 export interface WorkflowCounts {
   total: number;

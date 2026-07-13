@@ -111,7 +111,7 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="border-b border-line shrink-0 px-[16px] pt-[14px] pb-[10px]">
         <div className="flex items-center gap-[10px]">
-          <div className="w-[28px] h-[28px] rounded-[7px] bg-acc-faint text-acc grid place-items-center shrink-0 bp-head-crest">
+          <div className="w-[28px] h-[28px] rounded-[7px] bg-acc-faint text-acc flex items-center justify-center shrink-0 bp-head-crest">
             <Icon name="hammer" size={14} />
           </div>
           <div>
@@ -216,12 +216,12 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
       )}
 
       {/* ── Tile grid ───────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-y-auto grid gap-[6px] p-[10px_12px_8px] [grid-template-columns:repeat(5,1fr)] [align-content:start] [scrollbar-width:thin] [scrollbar-color:var(--bg-3)_transparent]" role="tabpanel">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-wrap content-start gap-[6px] p-[10px_12px_8px] [scrollbar-width:thin] [scrollbar-color:var(--bg-3)_transparent] [&>*:not(.tile-header):not(.tile-empty)]:basis-[calc(20%-5px)]" role="tabpanel">
         {q.trim() ? (
           searchGroups && searchGroups.length > 0 ? (
             searchGroups.map(([cat, kinds]) => (
-              <div key={cat} style={{ display: "contents" }}>
-                <div className="flex items-center gap-2 uppercase text-txt-3 [grid-column:1/-1] my-[6px] -mb-[2px] font-mono text-[9.5px] tracking-[0.08em] capitalize">
+              <div key={cat} className="flex flex-wrap gap-[6px] basis-full [&>*:not(.tile-header)]:basis-[calc(20%-5px)]">
+                <div className="tile-header basis-full flex items-center gap-2 uppercase text-txt-3 my-[6px] -mb-[2px] font-mono text-[9.5px] tracking-[0.08em] capitalize">
                   {cat}<span className="flex-1 h-px bg-line" />
                 </div>
                 {kinds.map((kind) => (
@@ -235,7 +235,7 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
               </div>
             ))
           ) : (
-            <div className="text-center text-txt-3 [grid-column:1/-1] px-3 py-6 font-mono text-[11.5px]">No tiles match &ldquo;{q}&rdquo;</div>
+            <div className="tile-empty basis-full text-center text-txt-3 px-3 py-6 font-mono text-[11.5px]">No tiles match &ldquo;{q}&rdquo;</div>
           )
         ) : (
           filteredKinds.map((kind) => (
@@ -251,15 +251,15 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
 
       {/* ── Footer ──────────────────────────────────────────────────── */}
       <div className="border-t border-line bg-bg-2 shrink-0 p-[10px_14px]">
-        <div className="grid items-center gap-[10px] [grid-template-columns:38px_1fr_auto]">
-          <div className="w-[38px] h-[38px] rounded-[7px] bg-bg-3 border border-line grid place-items-center text-[20px]">
+        <div className="flex items-center gap-[10px]">
+          <div className="w-[38px] h-[38px] rounded-[7px] bg-bg-3 border border-line flex items-center justify-center text-[20px] shrink-0">
             {selectedDef ? (
               <DecoSprite def={selectedDef} size={28} />
             ) : (
               <span className="text-txt-4 text-[18px]">·</span>
             )}
           </div>
-          <div>
+          <div className="flex-1 min-w-0">
             <div className="font-semibold text-txt text-[12.5px]">{selectedDef?.label ?? "no selection"}</div>
             <div className="text-txt-3 mt-[2px] font-mono text-[10px]">
               {selectedDef ? (

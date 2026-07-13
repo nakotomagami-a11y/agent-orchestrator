@@ -14,8 +14,8 @@ export type GnomeWindowProps = {
  * it's rendered as a sibling fixed overlay (see `<Titlebar />`) so it can
  * stack above portal-rendered modals.
  *
- * The first 38px grid row is intentionally empty - it reserves visual space
- * the fixed titlebar overlays. Content fills the remaining row.
+ * The first 38px child is intentionally empty - it reserves visual space
+ * the fixed titlebar overlays. Content fills the remaining space via flex-1.
  */
 export function GnomeWindow({ children, className }: GnomeWindowProps) {
   const maximized = useIsMaximized();
@@ -23,14 +23,14 @@ export function GnomeWindow({ children, className }: GnomeWindowProps) {
   return (
     <div
       className={cn(
-        "absolute bg-bg-1 shadow-[var(--shadow-window)] overflow-hidden grid border border-line-2 [grid-template-rows:38px_1fr] inset-[18px] rounded-[10px] max-[600px]:inset-0 max-[600px]:rounded-none",
+        "absolute bg-bg-1 shadow-[var(--shadow-window)] overflow-hidden flex flex-col border border-line-2 inset-[18px] rounded-[10px] max-[600px]:inset-0 max-[600px]:rounded-none",
         maximized && "inset-0 rounded-none shadow-none border-none",
         className,
       )}
     >
-      {/* Empty row reserved for the fixed Titlebar overlay. */}
-      <div aria-hidden />
-      {children}
+      {/* Empty 38px row reserved for the fixed Titlebar overlay. */}
+      <div className="h-[38px] shrink-0" aria-hidden />
+      <div className="flex-1 min-h-0 flex flex-col">{children}</div>
     </div>
   );
 }

@@ -11,15 +11,15 @@ import { useGitStatus, useProject, useUpdateProject } from "../hooks/use-project
 import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { ProjectActivity } from "./project-activity";
 import { AddAgentModal } from "./add-agent-modal";
-import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { apiFetch, ApiError } from "@agent-office/domain/hooks/api";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { exportProject, importState } from "@/lib/api/save";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { ProjectActionsBar } from "@/modules/office/components/office-toolbar";
-import { relativeTime } from "../utils/format";
+import { relativeTime } from "../format/format";
 
 export type ProjectDetailProps = { id: string };
 
@@ -286,7 +286,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                       <span className="truncate max-w-[360px]">
                         {project.meta.cwd.replace(/^\/home\/[^/]+\//, "~/")}
                       </span>
-                      <button type="button" className="shrink-0 w-[20px] h-[20px] grid place-items-center rounded-[4px] bg-transparent border-none text-txt-3 hover:bg-bg-3 hover:text-txt cursor-pointer transition-colors" title="Copy path" onClick={handleCopyPath}>
+                      <button type="button" className="shrink-0 w-[20px] h-[20px] flex items-center justify-center rounded-[4px] bg-transparent border-none text-txt-3 hover:bg-bg-3 hover:text-txt cursor-pointer transition-colors" title="Copy path" onClick={handleCopyPath}>
                         <Icon name={copiedPath ? "check" : "copy"} size={11} />
                       </button>
                     </div>
@@ -335,7 +335,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         {/* ACTIVITY */}
         <section className="bg-bg-1 border border-line overflow-hidden rounded-lg">
           <div className="flex items-center border-b border-line gap-[12px] px-[18px] py-[12px]">
-            <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="zap" size={14} /></div>
+            <div className="flex items-center justify-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="zap" size={14} /></div>
             <div className="flex-1 min-w-0">
               <h3 className="flex items-center font-bold text-txt m-0 text-[13px] gap-[8px]">Activity</h3>
               <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">recent runs for this project</div>
@@ -347,7 +347,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         {/* MEMORY */}
         <section className="bg-bg-1 border border-line overflow-hidden rounded-lg">
           <div className="flex items-center border-b border-line gap-[12px] px-[18px] py-[12px]">
-            <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="memory" size={14} /></div>
+            <div className="flex items-center justify-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="memory" size={14} /></div>
             <div className="flex-1 min-w-0">
               <h3 className="flex items-center font-bold text-txt m-0 text-[13px] gap-[8px]">{t("project_detail.memory_card_title")}</h3>
               <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">{t("project_detail.memory_card_sub", { project: project.meta.name })}</div>
@@ -394,17 +394,17 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         {/* BACKUP */}
         <section className="bg-bg-1 border border-line overflow-hidden rounded-lg">
           <div className="flex items-center border-b border-line gap-[12px] px-[18px] py-[12px]">
-            <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="archive" size={14} /></div>
+            <div className="flex items-center justify-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[28px] h-[28px] rounded-[7px]"><Icon name="archive" size={14} /></div>
             <div className="flex-1 min-w-0">
               <h3 className="flex items-center font-bold text-txt m-0 text-[13px] gap-[8px]">Backup &amp; portability</h3>
               <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">export this project as a portable JSON file, or import another</div>
             </div>
           </div>
           <div className="px-[18px] py-[14px]">
-            <div className="grid gap-[10px] [grid-template-columns:1fr_1fr] max-[800px]:[grid-template-columns:1fr]">
+            <div className="flex flex-wrap gap-[10px] [&>*]:basis-[calc(50%-5px)] max-[800px]:[&>*]:basis-full">
               <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px] rounded-md">
                 <div className="flex items-center gap-[10px]">
-                  <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="download" size={14} /></div>
+                  <div className="flex items-center justify-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="download" size={14} /></div>
                   <div>
                     <div className="font-bold text-txt text-[13px]">{t("project_detail.save_card_title")}</div>
                     <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[1px]">→ {project.meta.name}.agent-office.json</div>
@@ -417,7 +417,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                     checked={includeHistory}
                     onChange={(e) => setIncludeHistory(e.target.checked)}
                   />
-                  <span className={cn("grid place-items-center bg-bg-0 shrink-0 w-[16px] h-[16px] border rounded-[4px]", includeHistory ? "bg-acc text-white border-acc" : "border-line-2 text-transparent")}>
+                  <span className={cn("flex items-center justify-center bg-bg-0 shrink-0 w-[16px] h-[16px] border rounded-[4px]", includeHistory ? "bg-acc text-white border-acc" : "border-line-2 text-transparent")}>
                     <Icon name="check" size={10} />
                   </span>
                   {t("project_detail.save_include_history")}
@@ -432,7 +432,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
 
               <div className="flex flex-col bg-bg-2 border border-line gap-[10px] px-[16px] py-[14px] rounded-md">
                 <div className="flex items-center gap-[10px]">
-                  <div className="grid place-items-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="upload" size={14} /></div>
+                  <div className="flex items-center justify-center bg-bg-2 border border-line text-txt-2 shrink-0 w-[32px] h-[32px] rounded-[8px]"><Icon name="upload" size={14} /></div>
                   <div>
                     <div className="font-bold text-txt text-[13px]">Import project</div>
                     <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[1px]">restore a .agent-office.json save file</div>
@@ -475,7 +475,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
         {/* DANGER ZONE */}
         <section className="overflow-hidden rounded-lg" style={{ border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.03)" }}>
           <div className="flex items-center gap-[12px] px-[18px] py-[12px] border-b border-b-[rgba(239,68,68,0.18)]">
-            <div className="grid place-items-center shrink-0 w-[28px] h-[28px] rounded-[7px] border text-status-error" style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)" }}><Icon name="shield" size={14} /></div>
+            <div className="flex items-center justify-center shrink-0 w-[28px] h-[28px] rounded-[7px] border text-status-error" style={{ background: "rgba(239,68,68,0.08)", borderColor: "rgba(239,68,68,0.25)" }}><Icon name="shield" size={14} /></div>
             <div className="flex-1 min-w-0">
               <h3 className="flex items-center font-bold m-0 text-[13px] gap-[8px] text-status-error">Danger zone</h3>
               <div className="text-txt-3 font-[var(--font-mono)] text-[10.5px] mt-[2px]">destructive actions - they cannot be undone</div>

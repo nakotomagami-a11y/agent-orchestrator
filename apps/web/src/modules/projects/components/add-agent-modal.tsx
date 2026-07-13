@@ -5,10 +5,10 @@ import { createPortal } from "react-dom";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
-import { unitForAgent } from "@/components/ui/unit-sprite.utils";
+import { unitForAgent } from "@/components/ui/unit-sprite-registry";
 import { useAgents } from "@/modules/agents/hooks/use-agents";
-import { categorize } from "@/modules/agents/utils/categorize";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { categorize } from "@/modules/agents/form/categorize";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useAddInstance, useProject, useProjects } from "../hooks/use-projects";
 import { Button } from "@/components/ui/button";
 
@@ -80,6 +80,7 @@ export function AddAgentModal({ open, projectId, onClose, onProjectChange }: Add
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleClose is stable within an open cycle
   }, [open]);
 
   if (!open) return null;
@@ -111,17 +112,17 @@ export function AddAgentModal({ open, projectId, onClose, onProjectChange }: Add
 
 function ProjectPickerStep({ onPick, onClose }: { onPick: (id: string) => void; onClose: () => void }) {
   const projectsQ = useProjects();
-  const projects = projectsQ.data ?? [];
+  const projects = useMemo(() => projectsQ.data ?? [], [projectsQ.data]);
 
   return (
     <>
       <div className="flex items-center border-b border-line shrink-0 px-[22px] py-[18px] gap-[12px]">
-        <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-[34px] h-[34px] rounded-[9px] border border-[var(--acc-tint)]"><Icon name="folder" size={15} /></div>
+        <div className="flex items-center justify-center bg-acc-faint text-acc shrink-0 w-[34px] h-[34px] rounded-[9px] border border-[var(--acc-tint)]"><Icon name="folder" size={15} /></div>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-txt text-[16px]">Choose a project</div>
           <div className="text-txt-3 flex items-center font-[var(--font-mono)] text-[11.5px] mt-[2px] gap-[6px]">Select which project to add agents to</div>
         </div>
-        <button type="button" className="grid place-items-center text-txt-3 bg-transparent border-none cursor-pointer shrink-0 w-[32px] h-[32px] rounded-[8px] hover:bg-bg-3 hover:text-txt" onClick={onClose} aria-label="Close">
+        <button type="button" className="flex items-center justify-center text-txt-3 bg-transparent border-none cursor-pointer shrink-0 w-[32px] h-[32px] rounded-[8px] hover:bg-bg-3 hover:text-txt" onClick={onClose} aria-label="Close">
           <Icon name="x" size={16} />
         </button>
       </div>
@@ -187,7 +188,7 @@ function AgentPickerStep({
   const [staged, setStaged] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const agents = agentsQ.data ?? [];
+  const agents = useMemo(() => agentsQ.data ?? [], [agentsQ.data]);
 
   const rosterCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -258,7 +259,7 @@ function AgentPickerStep({
   return (
     <>
       <div className="flex items-center border-b border-line shrink-0 px-[22px] py-[18px] gap-[12px]">
-        <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-[34px] h-[34px] rounded-[9px] border border-[var(--acc-tint)]"><Icon name="plus" size={16} /></div>
+        <div className="flex items-center justify-center bg-acc-faint text-acc shrink-0 w-[34px] h-[34px] rounded-[9px] border border-[var(--acc-tint)]"><Icon name="plus" size={16} /></div>
         <div className="flex-1 min-w-0">
           <div className="font-bold text-txt text-[16px]">Add agent to office</div>
           <div className="text-txt-3 flex items-center font-[var(--font-mono)] text-[11.5px] mt-[2px] gap-[6px]">
@@ -269,7 +270,7 @@ function AgentPickerStep({
             <span>click to stage, summon to commit</span>
           </div>
         </div>
-        <button type="button" className="grid place-items-center text-txt-3 bg-transparent border-none cursor-pointer shrink-0 w-[32px] h-[32px] rounded-[8px] hover:bg-bg-3 hover:text-txt" onClick={onClose} aria-label="Close">
+        <button type="button" className="flex items-center justify-center text-txt-3 bg-transparent border-none cursor-pointer shrink-0 w-[32px] h-[32px] rounded-[8px] hover:bg-bg-3 hover:text-txt" onClick={onClose} aria-label="Close">
           <Icon name="x" size={16} />
         </button>
       </div>
@@ -316,7 +317,7 @@ function AgentPickerStep({
           <Skeleton width="100%" height={200} />
         ) : filtered.length === 0 ? (
           <div className="text-center text-txt-3 flex flex-col items-center px-[20px] py-[50px]">
-            <div className="grid place-items-center bg-bg-3 border border-line text-txt-4 w-[50px] h-[50px] rounded-[12px] mx-auto mb-[14px]"><Icon name="search" size={20} /></div>
+            <div className="flex items-center justify-center bg-bg-3 border border-line text-txt-4 w-[50px] h-[50px] rounded-[12px] mx-auto mb-[14px]"><Icon name="search" size={20} /></div>
             <div className="text-sm text-txt-2">
               {q ? `No agents match "${q}"` : "No agents in this category"}
             </div>
@@ -395,11 +396,11 @@ function AgentPickerStep({
             <>
               <div className="flex">
                 {stagedEntries.slice(0, 5).map(({ agent }) => (
-                  <div key={agent!.name} className="grid place-items-center bg-bg-3 border border-line overflow-hidden w-[26px] h-[26px] rounded-[7px] -ml-[6px] first:ml-0 [box-shadow:0_0_0_2px_var(--bg-2)]" title={agent!.name}>
+                  <div key={agent!.name} className="flex items-center justify-center bg-bg-3 border border-line overflow-hidden w-[26px] h-[26px] rounded-[7px] -ml-[6px] first:ml-0 [box-shadow:0_0_0_2px_var(--bg-2)]" title={agent!.name}>
                     <AgentAvatar unit={unitForAgent(agent!.name, agent!.unit)} size={22} />
                   </div>
                 ))}
-                {stagedEntries.length > 5 && <div className="grid place-items-center bg-bg-1 border border-line text-txt-3 -ml-[6px] [box-shadow:0_0_0_2px_var(--bg-2)] w-[26px] h-[26px] rounded-[7px] font-[var(--font-mono)] text-[11px]">+{stagedEntries.length - 5}</div>}
+                {stagedEntries.length > 5 && <div className="flex items-center justify-center bg-bg-1 border border-line text-txt-3 -ml-[6px] [box-shadow:0_0_0_2px_var(--bg-2)] w-[26px] h-[26px] rounded-[7px] font-[var(--font-mono)] text-[11px]">+{stagedEntries.length - 5}</div>}
               </div>
               <div className="font-[var(--font-mono)] text-[12px] text-txt-2">
                 <span className="text-txt font-semibold">{totalStaged}</span> agent{totalStaged !== 1 ? "s" : ""} to summon
@@ -453,7 +454,7 @@ function AgentRow({
       className={`grid items-center border gap-[14px] px-[14px] py-[12px] rounded-[12px] mb-[6px] transition-[background,border-color] duration-[120ms] hover:bg-bg-3 hover:border-line-2${added ? " border-[rgba(34,197,94,0.30)] [background:linear-gradient(90deg,rgba(34,197,94,0.05),transparent_60%)]" : " bg-bg-2 border-line"}`}
       style={{ ...catStyle(category), gridTemplateColumns: "44px minmax(0,1fr) auto" }}
     >
-      <div className={`grid place-items-center bg-bg-3 relative overflow-hidden shrink-0 w-[44px] h-[44px] rounded-[11px] border before:content-[''] before:absolute before:inset-0 before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.08),transparent_60%)] before:pointer-events-none${added ? " border-[rgba(34,197,94,0.35)]" : " border-line"}`}>
+      <div className={`flex items-center justify-center bg-bg-3 relative overflow-hidden shrink-0 w-[44px] h-[44px] rounded-[11px] border before:content-[''] before:absolute before:inset-0 before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.08),transparent_60%)] before:pointer-events-none${added ? " border-[rgba(34,197,94,0.35)]" : " border-line"}`}>
         <AgentAvatar unit={unitSel} size={36} />
       </div>
       <div className="min-w-0">
@@ -497,7 +498,7 @@ function AgentRow({
               onClick={onAdd}
             >
               <Icon name="check" size={12} /> Added
-              <span className="rounded-full text-white inline-grid place-items-center bg-[var(--working)] px-[6px] font-[var(--font-mono)] text-[10px] min-w-[18px] h-[18px]">{inOffice ? rosterCount + stagedCount : stagedCount}</span>
+              <span className="rounded-full text-white inline-flex items-center justify-center bg-[var(--working)] px-[6px] font-[var(--font-mono)] text-[10px] min-w-[18px] h-[18px]">{inOffice ? rosterCount + stagedCount : stagedCount}</span>
             </button>
           </div>
         ) : (

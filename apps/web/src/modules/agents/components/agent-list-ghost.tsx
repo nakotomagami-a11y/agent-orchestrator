@@ -30,7 +30,7 @@ export function AgentListGhost({ count = 4 }: AgentListGhostProps) {
 
       {/* Card grid ghost */}
       <div
-        className="grid gap-3.5 content-start"
+        className="flex flex-col gap-3.5"
         style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}
         aria-hidden="true"
       >

@@ -9,12 +9,12 @@ import { TextInput } from "@/components/ui/text-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { Icon } from "@/components/ui/icon";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import { EMPTY_FORM, type AgentFormValues, type FormError, slugifyId, toBody, validateForm } from "../utils/agent-form";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
+import { EMPTY_FORM, type AgentFormValues, type FormError, slugifyId, toBody, validateForm } from "../form/agent-form";
 import { useCreateAgent, useDeleteAgent, useWriteAgent } from "../hooks/use-agents";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { Button } from "@/components/ui/button";
-import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/shared/config/agent-opts";
+import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/domain/config/agent-opts";
 
 export type AgentFormProps = {
   initial?: AgentFormValues;
@@ -84,7 +84,7 @@ export function AgentForm({ initial, mode, onSaved, onCancel, onDeleted, hideCan
     <form onSubmit={onSubmit} className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
       <Card>
         <CardHeader title={mode === "new" ? t("agent_form.title_new") : t("agent_form.title_edit", { id: values.id })} />
-        <div className="p-4 grid grid-cols-2 gap-3">
+        <div className="p-4 flex flex-wrap gap-3 [&>*]:basis-[calc(50%-6px)]">
           <Field label={t("agent_form.label_name")} error={errorFor("name")}>
             <TextInput
               value={values.name}

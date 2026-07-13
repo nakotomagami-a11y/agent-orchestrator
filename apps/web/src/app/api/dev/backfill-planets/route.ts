@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { projects } from "@agent-office/shared/services";
-import { log } from "@agent-office/shared/services/log";
-import type { PlanetConfig, PlanetType } from "@agent-office/shared/types";
+import { projects } from "@agent-office/domain/services";
+import { log } from "@agent-office/domain/services/log";
+import type { PlanetConfig, PlanetType } from "@agent-office/domain/types";
 
 /**
  * One-shot backfill for projects created before the `planet:` frontmatter key

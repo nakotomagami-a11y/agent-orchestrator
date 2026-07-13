@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import type { UseRunStreamResult } from "./use-run-stream";
-import type { ThreadItem } from "../utils/thread-types";
-import { apiFetch, ApiError } from "@agent-office/shared/hooks/api";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import type { PersistedRun } from "@agent-office/shared/types";
+import type { ThreadItem } from "../format/thread-types";
+import { apiFetch, ApiError } from "@agent-office/domain/hooks/api";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 export type ResumeError =
   | { kind: "missing"; message: string }

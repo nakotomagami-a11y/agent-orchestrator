@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { agents } from "@agent-office/shared/services";
+import { agents } from "@agent-office/domain/services";
 import { AgentForm } from "@/modules/agents/components/agent-form";
-import { fromApi } from "@/modules/agents/utils/agent-form";
+import { fromApi } from "@/modules/agents/form/agent-form";
 
 type Params = { params: Promise<{ id: string }> };
 

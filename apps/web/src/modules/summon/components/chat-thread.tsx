@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { ExpandedStateContext, MessageBubble, ToolGroupRow } from "./message-bubble";
 import { LiveStatus, type ChatPhase } from "./live-status";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
-import type { ThreadItem } from "../utils/thread-types";
+import type { ThreadItem } from "../format/thread-types";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
-import { groupRows, isAgentRow, looksLikeQuestion } from "../utils/thread-rows";
+import { groupRows, isAgentRow, looksLikeQuestion } from "../format/thread-rows";
 
 const LIVE_PHASES = new Set<ChatPhase>(["sending", "connecting", "working", "streaming"]);
 const CONVERSATIONAL_KINDS = new Set<string>(["you", "agent-text", "system-done", "system-error", "system-rate-limit", "agent-subagent"]);
@@ -253,7 +253,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
       {items.length === 0 && phase === "idle" ? (
         <div className="text-center flex flex-col gap-[20px] items-center max-w-[760px] mx-auto mt-[60px] px-[24px]">
           <div
-            className="w-[72px] h-[72px] rounded-[16px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] grid place-items-center text-[36px] font-bold text-[var(--ao-fg-1)] shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] shrink-0"
+            className="w-[72px] h-[72px] rounded-[16px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] flex items-center justify-center text-[36px] font-bold text-[var(--ao-fg-1)] shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] shrink-0"
             aria-hidden
           >
             {agent.short[0]?.toUpperCase() ?? "?"}
@@ -262,7 +262,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
             <h2 className="font-bold mt-[6px] mb-[4px] text-[22px] tracking-[-0.02em]">Hi, I&apos;m {formatAgentDisplayName(agent.name)}.</h2>
             <p className="text-[var(--txt-3)] m-0 text-[13px]">{agent.description || "Ready when you are - pick a starter or ask anything."}</p>
           </div>
-          <div className="grid gap-2 grid-cols-2 w-full mt-3">
+          <div className="flex flex-wrap gap-2 w-full mt-3 [&>*]:basis-[calc(50%-4px)]">
             {SUGGESTIONS.map((s) => (
               <button
                 key={s.lbl}
@@ -345,7 +345,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
             <div className="max-w-[760px] mx-auto px-2 mt-5 flex flex-col gap-3">
               {queuedMessages.map((q, i) => (
                 <div key={q.id} className="flex flex-row-reverse ml-auto w-fit max-w-[80%] gap-[12px] relative opacity-[0.55]">
-                  <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
+                  <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
                   <div className="flex flex-col items-end gap-[6px]">
                     <div className="bg-ao-bg-3 border border-dashed border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0">{q.text}</div>
                     <div className="flex items-center gap-[6px]">
@@ -354,7 +354,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
                       </span>
                       <button
                         type="button"
-                        className="w-4 h-4 rounded-full bg-transparent border border-ao-line-1 text-ao-fg-3 text-[12px] leading-none cursor-pointer grid place-items-center p-0 hover:bg-ao-bg-3 hover:text-ao-fg-1"
+                        className="w-4 h-4 rounded-full bg-transparent border border-ao-line-1 text-ao-fg-3 text-[12px] leading-none cursor-pointer flex items-center justify-center p-0 hover:bg-ao-bg-3 hover:text-ao-fg-1"
                         onClick={() => onCancelQueuedMessage?.(q.id)}
                         aria-label="Cancel queued message"
                       >×</button>

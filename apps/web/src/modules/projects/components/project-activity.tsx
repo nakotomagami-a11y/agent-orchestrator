@@ -5,7 +5,7 @@ import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnitSprite } from "@/components/ui/unit-sprite";
-import { unitForAgent } from "@/components/ui/unit-sprite.utils";
+import { unitForAgent } from "@/components/ui/unit-sprite-registry";
 import { StatusDot } from "@/components/ui/status-dot";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
@@ -13,8 +13,8 @@ import {
   formatCost,
   formatDuration,
   formatRelative,
-} from "@/modules/runs/utils/format-run-meta";
-import type { PersistedRun } from "@agent-office/shared/types";
+} from "@/modules/runs/format/format-run-meta";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 export type ProjectActivityProps = {
   projectId: string;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { projects, settings } from "@agent-office/shared/services";
-import { InstanceCapError } from "@agent-office/shared/services/projects";
+import { projects, settings } from "@agent-office/domain/services";
+import { InstanceCapError } from "@agent-office/domain/services/projects";
 import { validateBody } from "@/lib/validation";
 import { rosterAddSchema } from "@/lib/validation-schemas";
 import { tryService, validateIdParam } from "@/lib/api-helpers";

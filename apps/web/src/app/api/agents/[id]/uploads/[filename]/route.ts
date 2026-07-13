@@ -1,4 +1,4 @@
-import { paths } from "@agent-office/shared/services";
+import { paths } from "@agent-office/domain/services";
 import { handleDeleteUpload, handleServeUpload, validateIdParam } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string; filename: string }> };

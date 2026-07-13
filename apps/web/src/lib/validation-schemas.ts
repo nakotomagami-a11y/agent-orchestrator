@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MAX_PROMPT_BYTES } from "@agent-office/shared/services/paths";
+import { MAX_PROMPT_BYTES } from "@agent-office/domain/services/paths";
 
 export const agentBodySchema = z.object({
   name: z.string().min(1),

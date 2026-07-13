@@ -3,7 +3,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, isAbsolute } from "node:path";
 import { NextResponse } from "next/server";
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 import { registerProcess, registerStdin, deleteStdin, appendLine, setExited } from "@/lib/server-process-store";
 import { badRequest, notFound, serverError } from "@/lib/api-helpers";
 
@@ -18,6 +18,18 @@ function findFlutterBin(): string {
   }
 }
 
+function findPubspecInMonorepoParent(parentDir: string): string | null {
+  if (!existsSync(parentDir)) return null;
+  try {
+    for (const entry of readdirSync(parentDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const dir = join(parentDir, entry.name);
+      if (existsSync(join(dir, "pubspec.yaml"))) return dir;
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 function findPubspecDir(cwd: string): string | null {
   if (existsSync(join(cwd, "pubspec.yaml"))) return cwd;
   // Common single-level sub-dirs
@@ -27,69 +39,40 @@ function findPubspecDir(cwd: string): string | null {
   }
   // Monorepo: check apps/* and packages/*
   for (const parent of ["apps", "packages"]) {
-    const parentDir = join(cwd, parent);
-    if (!existsSync(parentDir)) continue;
-    try {
-      for (const entry of readdirSync(parentDir, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        const dir = join(parentDir, entry.name);
-        if (existsSync(join(dir, "pubspec.yaml"))) return dir;
-      }
-    } catch { /* ignore */ }
+    const hit = findPubspecInMonorepoParent(join(cwd, parent));
+    if (hit) return hit;
   }
   return null;
 }
 
-export async function POST(req: Request) {
-  let body: { projectId?: string; deviceId?: string; customPath?: string } = {};
-  try { body = await req.json() as typeof body; } catch { /* no body */ }
+type FlutterCwdOk = { ok: true; cwd: string };
+type FlutterCwdErr = { ok: false; response: Response };
 
-  const { projectId, deviceId, customPath } = body;
-
-  let flutterCwd: string | null = null;
-  const trackingKey = projectId ?? `custom:${customPath ?? ""}`;
-
+function resolveFlutterCwd(projectId: string | undefined, customPath: string | undefined): FlutterCwdOk | FlutterCwdErr {
   if (customPath) {
     const expanded = customPath.replace(/^~(?=\/|$)/, homedir());
-    if (!isAbsolute(expanded) || !existsSync(expanded)) return badRequest("custom path not found");
-    if (!existsSync(join(expanded, "pubspec.yaml"))) return badRequest("no pubspec.yaml in custom path");
-    flutterCwd = expanded;
-  } else {
-    if (!projectId) return badRequest("projectId or customPath required");
-    const project = projects.readProject(projectId);
-    if (!project) return notFound("project not found");
-    const cwd = project.meta.cwd;
-    if (!cwd || !isAbsolute(cwd) || !existsSync(cwd)) return badRequest("working directory not found");
-    flutterCwd = findPubspecDir(cwd);
-    if (!flutterCwd) return badRequest(`no pubspec.yaml found in ${cwd} — select a Flutter project in the office or use a custom path`);
+    if (!isAbsolute(expanded) || !existsSync(expanded)) return { ok: false, response: badRequest("custom path not found") };
+    if (!existsSync(join(expanded, "pubspec.yaml"))) return { ok: false, response: badRequest("no pubspec.yaml in custom path") };
+    return { ok: true, cwd: expanded };
   }
+  if (!projectId) return { ok: false, response: badRequest("projectId or customPath required") };
+  const project = projects.readProject(projectId);
+  if (!project) return { ok: false, response: notFound("project not found") };
+  const cwd = project.meta.cwd;
+  if (!cwd || !isAbsolute(cwd) || !existsSync(cwd)) return { ok: false, response: badRequest("working directory not found") };
+  const found = findPubspecDir(cwd);
+  if (!found) return { ok: false, response: badRequest(`no pubspec.yaml found in ${cwd} — select a Flutter project in the office or use a custom path`) };
+  return { ok: true, cwd: found };
+}
 
-  // Kill existing run for this project
+function killTrackedRun(trackingKey: string): void {
   const existingPid = flutterPids.get(trackingKey);
-  if (existingPid) {
-    try { process.kill(existingPid, "SIGTERM"); } catch { /* already gone */ }
-    flutterPids.delete(trackingKey);
-  }
+  if (!existingPid) return;
+  try { process.kill(existingPid, "SIGTERM"); } catch { /* already gone */ }
+  flutterPids.delete(trackingKey);
+}
 
-  const flutterBin = findFlutterBin();
-  const args = ["run", "--no-pub"];
-  if (deviceId) args.push("-d", deviceId);
-
-  const spawnEnv = { ...process.env, PATH: `/snap/bin:${process.env.PATH ?? ""}` };
-
-  const child = spawn(flutterBin, args, {
-    cwd: flutterCwd,
-    stdio: ["pipe", "pipe", "pipe"],
-    env: spawnEnv,
-  });
-
-  if (!child.pid) return serverError("failed to start flutter run");
-
-  const pid = child.pid;
-  flutterPids.set(trackingKey, pid);
-  registerProcess(pid);
-  if (child.stdin) registerStdin(pid, child.stdin);
-
+function attachChildProcessListeners(child: ReturnType<typeof spawn>, pid: number, trackingKey: string): void {
   child.stdout?.on("data", (data: Buffer) => {
     for (const line of data.toString().split("\n")) {
       if (line.trim()) appendLine(pid, line);
@@ -105,8 +88,38 @@ export async function POST(req: Request) {
     deleteStdin(pid);
     if (flutterPids.get(trackingKey) === pid) flutterPids.delete(trackingKey);
   });
+}
 
-  return NextResponse.json({ pid, flutterCwd });
+export async function POST(req: Request) {
+  let body: { projectId?: string; deviceId?: string; customPath?: string } = {};
+  try { body = await req.json() as typeof body; } catch { /* no body */ }
+
+  const { projectId, deviceId, customPath } = body;
+  const trackingKey = projectId ?? `custom:${customPath ?? ""}`;
+
+  const resolved = resolveFlutterCwd(projectId, customPath);
+  if (!resolved.ok) return resolved.response;
+
+  killTrackedRun(trackingKey);
+
+  const args = ["run", "--no-pub"];
+  if (deviceId) args.push("-d", deviceId);
+
+  const child = spawn(findFlutterBin(), args, {
+    cwd: resolved.cwd,
+    stdio: ["pipe", "pipe", "pipe"],
+    env: { ...process.env, PATH: `/snap/bin:${process.env.PATH ?? ""}` },
+  });
+
+  if (!child.pid) return serverError("failed to start flutter run");
+
+  const pid = child.pid;
+  flutterPids.set(trackingKey, pid);
+  registerProcess(pid);
+  if (child.stdin) registerStdin(pid, child.stdin);
+  attachChildProcessListeners(child, pid, trackingKey);
+
+  return NextResponse.json({ pid, flutterCwd: resolved.cwd });
 }
 
 export async function DELETE(req: Request) {

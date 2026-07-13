@@ -1,4 +1,4 @@
-import type { ApiAgent } from "@agent-office/shared/types";
+import type { ApiAgent } from "@agent-office/domain/types";
 
 /**
  * Derive a coarse-grained "department" tag for an agent so the gallery can

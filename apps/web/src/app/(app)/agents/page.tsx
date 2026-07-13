@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { PageHeader } from "@/components/ui/page-header";
 import { AgentList } from "@/modules/agents/components/agent-list";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 
 export default async function AgentsPage() {
   const t = await getTranslations();

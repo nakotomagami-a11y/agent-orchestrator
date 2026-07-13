@@ -1,7 +1,7 @@
 import { GRID_COLS, GRID_ROWS } from "../hooks/use-office-camera";
 import { DECORATIONS, type DecorationKind, type DecorationsMap } from "../components/decorations";
 import type { AgentPositions } from "../components/office-map";
-import type { AgentInstance } from "@agent-office/shared/types";
+import type { AgentInstance } from "@agent-office/domain/types";
 
 // Renamed/removed bridge kinds get rewritten on load. The four cap kinds
 // (bridge_h_l/r, bridge_v_t/b) are no longer placeable — caps now auto-

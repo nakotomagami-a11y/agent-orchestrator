@@ -14,7 +14,7 @@ import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
 import { useFlutterStore } from "@/lib/flutter-store";
 import { useFlutterDevices } from "@/modules/flutter/hooks/use-flutter-devices";
 import { useDevServerStore } from "@/lib/dev-server-store";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import {
   getDevConfig,
   startDevCommand,
@@ -250,7 +250,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
                           <button
                             type="button"
                             onClick={() => { void startCmd(cmd.key); }}
-                            className="w-6 h-6 grid place-items-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            className="w-6 h-6 flex items-center justify-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                           >
                             <Icon name="play" size={11} />
                           </button>
@@ -261,7 +261,7 @@ export function DevServerButton({ projectId }: { projectId: string }) {
                           <button
                             type="button"
                             onClick={() => { void stopCmd(cmd.key); }}
-                            className="w-6 h-6 grid place-items-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                            className="w-6 h-6 flex items-center justify-center rounded-[5px] text-[var(--txt-3)] hover:text-[var(--txt)] hover:bg-[var(--bg-4)] opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                           >
                             <Icon name="stop" size={11} />
                           </button>

@@ -3,10 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
-import type { AppSettings, ScannedEntry, Project, HealthInfo } from "@agent-office/shared/types";
+import { apiFetch } from "@agent-office/domain/hooks/api";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
+import type { AppSettings, ScannedEntry, Project, HealthInfo } from "@agent-office/domain/types";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
@@ -91,7 +91,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     queryKey: ["starter-agents"],
     queryFn: () => apiFetch<StarterAgent[]>("/api/starter/agents"),
   });
-  const starter = starterQ.data ?? [];
+  const starter = useMemo(() => starterQ.data ?? [], [starterQ.data]);
 
   // Pre-select every starter agent the first time the list loads -
   // most users will want the full demo set, and unticking is faster

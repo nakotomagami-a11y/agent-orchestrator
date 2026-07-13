@@ -1,5 +1,5 @@
 import { Icon } from "@/components/ui/icon";
-import type { PersistedRun } from "@agent-office/shared/types";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 /**
  * Small pill showing a run's live status. Same set of statuses as

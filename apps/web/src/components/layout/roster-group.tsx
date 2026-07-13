@@ -8,8 +8,8 @@ import { cn } from "@/lib/cn";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { RosterInstanceRow } from "./roster-instance-row";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
-import type { AgentInstance } from "@agent-office/shared/types";
-import type { AgentStatusInfo } from "@/modules/office/utils/derive-status";
+import type { AgentInstance } from "@agent-office/domain/types";
+import type { AgentStatusInfo } from "@/modules/office/derive/derive-status";
 import {
   AGENT_DRAG_MIME,
   useOfficeDragStore,
@@ -139,7 +139,7 @@ export function RosterGroup({
                 {instances.length}
               </span>
               <span className={cn(
-                "w-[18px] h-[18px] grid place-items-center transition-transform duration-[160ms]",
+                "w-[18px] h-[18px] flex items-center justify-center transition-transform duration-[160ms]",
                 expanded ? "rotate-90 text-acc" : "text-txt-4",
               )}>
                 <Icon name="chevron" size={11} />

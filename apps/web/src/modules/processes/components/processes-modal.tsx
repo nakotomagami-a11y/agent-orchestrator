@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
+import { apiFetch } from "@agent-office/domain/hooks/api";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon } from "@/components/ui/icon";
 import { useProcessesStore } from "@/lib/processes-store";
@@ -14,7 +14,7 @@ import {
   detectFramework,
   detectProto,
   groupByProject,
-} from "../utils/process-format";
+} from "../format/process-format";
 
 /* ------------------------------------------------------------------ */
 /* Server card                                                          */
@@ -192,7 +192,7 @@ export function ProcessesModal() {
   const processesQ = useProcesses(open);
   const queryClient = useQueryClient();
 
-  const processes = processesQ.data ?? [];
+  const processes = useMemo(() => processesQ.data ?? [], [processesQ.data]);
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
@@ -239,7 +239,7 @@ export function ProcessesModal() {
     >
           {/* Header */}
           <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ao-line-0)] shrink-0">
-            <div className="w-8 h-8 bg-ao-accent-soft border border-ao-accent-line rounded-[8px] grid place-items-center text-ao-accent" aria-hidden="true">
+            <div className="w-8 h-8 bg-ao-accent-soft border border-ao-accent-line rounded-[8px] flex items-center justify-center text-ao-accent" aria-hidden="true">
               <Icon name="terminal" size={16} />
             </div>
             <div className="flex-1 min-w-0">
@@ -247,14 +247,14 @@ export function ProcessesModal() {
               <div className="text-[11px] text-ao-fg-3 font-mono mt-[1px]">processes listening on a port · refreshes every 5s</div>
             </div>
             <button
-              className="w-7 h-7 rounded-[6px] grid place-items-center text-ao-fg-3 text-[16px] leading-none transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
+              className="w-7 h-7 rounded-[6px] flex items-center justify-center text-ao-fg-3 text-[16px] leading-none transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
               title="Refresh now"
               onClick={() => processesQ.refetch()}
             >
               <Icon name="refresh" size={15} />
             </button>
             <button
-              className="w-7 h-7 rounded-[6px] grid place-items-center text-ao-fg-3 text-[16px] leading-none transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
+              className="w-7 h-7 rounded-[6px] flex items-center justify-center text-ao-fg-3 text-[16px] leading-none transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
               title="Close"
               aria-label="Close"
               onClick={() => setOpen(false)}

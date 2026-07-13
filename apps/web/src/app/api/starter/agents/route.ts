@@ -50,7 +50,7 @@ interface StarterAgent {
 /**
  * Parse the YAML frontmatter just well enough to pull `name` and
  * `description`. We intentionally don't pull in the shared parseYaml
- * helper here - those services live in the @agent-office/shared
+ * helper here - those services live in the @agent-office/domain
  * package and `transpilePackages` would drag the whole shared package
  * into this route's bundle. The frontmatter shape we accept here is a
  * tiny subset (string scalars only) so a hand-rolled regex is enough

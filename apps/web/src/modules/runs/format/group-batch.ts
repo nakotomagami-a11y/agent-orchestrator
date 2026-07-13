@@ -1,6 +1,6 @@
 // Groups runs that started within a short window into parallel batches. Pure.
 
-import type { PersistedRun } from "@agent-office/shared/types";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 const PARALLEL_WINDOW_MS = 2_000;
 

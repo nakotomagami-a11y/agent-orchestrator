@@ -1,7 +1,7 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { NextResponse } from "next/server";
-import { settings } from "@agent-office/shared/services";
+import { settings } from "@agent-office/domain/services";
 import { validateQuery } from "@/lib/validation";
 import { settingsScanQuerySchema } from "@/lib/validation-schemas";
 import { badRequest } from "@/lib/api-helpers";

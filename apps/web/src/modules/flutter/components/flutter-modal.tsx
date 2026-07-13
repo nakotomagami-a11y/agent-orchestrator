@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon } from "@/components/ui/icon";
@@ -465,7 +465,7 @@ export function FlutterModal() {
   const queryClient = useQueryClient();
 
   const devicesQ = useFlutterDevices(open);
-  const devices = devicesQ.data?.devices ?? [];
+  const devices = useMemo(() => devicesQ.data?.devices ?? [], [devicesQ.data]);
   const adbAvailable = devicesQ.data?.available ?? true;
 
   // Auto-select first connected device
@@ -491,7 +491,7 @@ export function FlutterModal() {
     >
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ao-line-0)] shrink-0">
-        <div className="w-8 h-8 bg-[color-mix(in_srgb,#54C5F8_15%,transparent)] border border-[rgba(84,197,248,0.25)] rounded-[8px] grid place-items-center text-[#54C5F8]">
+        <div className="w-8 h-8 bg-[color-mix(in_srgb,#54C5F8_15%,transparent)] border border-[rgba(84,197,248,0.25)] rounded-[8px] flex items-center justify-center text-[#54C5F8]">
           <Icon name="smartphone" size={16} />
         </div>
         <div className="flex-1 min-w-0">
@@ -501,14 +501,14 @@ export function FlutterModal() {
           </div>
         </div>
         <button
-          className="w-7 h-7 rounded-[6px] grid place-items-center text-ao-fg-3 transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
+          className="w-7 h-7 rounded-[6px] flex items-center justify-center text-ao-fg-3 transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
           title="Refresh now"
           onClick={() => { void queryClient.invalidateQueries({ queryKey: ["flutter-devices"] }); }}
         >
           <Icon name="refresh" size={15} />
         </button>
         <button
-          className="w-7 h-7 rounded-[6px] grid place-items-center text-ao-fg-3 transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
+          className="w-7 h-7 rounded-[6px] flex items-center justify-center text-ao-fg-3 transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
           title="Close"
           onClick={() => setOpen(false)}
         >

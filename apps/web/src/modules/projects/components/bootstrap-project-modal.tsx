@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon } from "@/components/ui/icon";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import {
   useBootstrapProject,
   type FrontendChoice,
@@ -58,7 +58,6 @@ export function BootstrapProjectModal({ open, onClose }: BootstrapProjectModalPr
   // Reset form state when the modal opens. Intentionally only depends on
   // `open` - including the mutation object would re-fire this on every render
   // (mutation object identity changes) and wipe what the user types.
-   
   useEffect(() => {
     if (open) {
       setName("");
@@ -70,6 +69,7 @@ export function BootstrapProjectModal({ open, onClose }: BootstrapProjectModalPr
       bootstrap.reset();
       setTimeout(() => inputRef.current?.focus(), 50);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally scoped to `open` transitions
   }, [open]);
 
   const slug = slugify(name);
@@ -133,7 +133,7 @@ export function BootstrapProjectModal({ open, onClose }: BootstrapProjectModalPr
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-[10px] text-[12px]">
+          <div className="flex flex-wrap gap-[10px] text-[12px] [&>*]:basis-[calc(50%-5px)]">
             <div className="px-[12px] py-[10px] rounded-[8px] bg-bg-2 border border-line">
               <div className="text-txt-3 text-[11px] font-[var(--font-mono)] mb-[2px]">FILES</div>
               <div className="text-txt font-semibold">{result.fileCount}</div>
@@ -305,7 +305,7 @@ function ChoiceGroup<T extends string>({
   return (
     <div>
       <label className="block text-[12px] text-txt-3 font-[var(--font-mono)] mb-[6px]">{label}</label>
-      <div className={`grid gap-[8px] ${options.length <= 3 ? "grid-cols-3" : "grid-cols-4"}`}>
+      <div className={`flex flex-wrap gap-[8px] ${options.length <= 3 ? "[&>*]:basis-[calc(33.333%-6px)]" : "[&>*]:basis-[calc(25%-6px)]"}`}>
         {options.map((opt) => {
           const selected = opt.id === value;
           return (

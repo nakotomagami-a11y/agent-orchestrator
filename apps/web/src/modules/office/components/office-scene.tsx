@@ -49,7 +49,7 @@ import {
   type Snapshot,
   EMPTY_ROSTER,
   EMPTY_SPEND,
-} from "../utils/office-scene-data";
+} from "../derive/office-scene-data";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -199,8 +199,8 @@ export function OfficeScene({
       })
       .catch(() => { /* ignore */ })
       // projectId is stable for this instance - the key prop forces a remount on change
-       
       .finally(() => setSceneLoaded(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount; projectId change triggers remount via key
   }, []);
 
   const { agents } = useOfficeAgents();

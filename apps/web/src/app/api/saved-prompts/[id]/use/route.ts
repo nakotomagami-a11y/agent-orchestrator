@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { store } from "@agent-office/shared/services";
+import { store } from "@agent-office/domain/services";
 
 type Params = { params: Promise<{ id: string }> };
 

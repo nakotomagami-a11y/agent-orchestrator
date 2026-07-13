@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { NextResponse } from "next/server";
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 import { validateIdParam, notFound } from "@/lib/api-helpers";
 
 const execFileAsync = promisify(execFile);

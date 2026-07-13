@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@agent-office/shared/services";
+import { db } from "@agent-office/domain/services";
 
 const STATIC_KEYS = new Set([
   "theme",

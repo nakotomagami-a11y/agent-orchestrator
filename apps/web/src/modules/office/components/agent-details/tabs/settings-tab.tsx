@@ -5,10 +5,10 @@ import type React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgent, useAgentBody, useWriteAgent, useDeleteAgent } from "@/modules/agents/hooks/use-agents";
-import { fromApi, toBody, type AgentFormValues } from "@/modules/agents/utils/agent-form";
+import { fromApi, toBody, type AgentFormValues } from "@/modules/agents/form/agent-form";
 import { useAgentForm } from "@/modules/agents/hooks/use-agent-form";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/shared";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
+import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/domain";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { UnitPicker } from "@/components/ui/unit-picker";
 import { useSkillManifest, useSkillCompatibility, type SkillManifestEntry, type SkillCompatibility } from "@/modules/skills/hooks/use-skills";
@@ -688,7 +688,7 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="identity" size={15} /></div>
+            <div className="w-[28px] h-[28px] flex items-center justify-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="identity" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Basic info</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
@@ -728,7 +728,7 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="cpu" size={15} /></div>
+            <div className="w-[28px] h-[28px] flex items-center justify-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="cpu" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Execution</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
@@ -800,7 +800,7 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="wrench" size={15} /></div>
+            <div className="w-[28px] h-[28px] flex items-center justify-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="wrench" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Skills &amp; tools</div>
           </div>
           <div className="p-[var(--ao-pad-card)]">
@@ -864,7 +864,7 @@ function SettingsForm({
                     <span className="leading-none">{t}</span>
                     <button
                       type="button"
-                      className="w-[18px] h-[18px] grid place-items-center rounded-[4px] text-current opacity-50 hover:opacity-100 hover:bg-white/[0.08] transition-opacity duration-100"
+                      className="w-[18px] h-[18px] flex items-center justify-center rounded-[4px] text-current opacity-50 hover:opacity-100 hover:bg-white/[0.08] transition-opacity duration-100"
                       onClick={() => setTools(tools.filter((x) => x !== t))}
                       aria-label={`remove ${t}`}
                     >
@@ -912,7 +912,7 @@ function SettingsForm({
         </div>
         <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden">
           <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-            <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="identity" size={15} /></div>
+            <div className="w-[28px] h-[28px] flex items-center justify-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="identity" size={15} /></div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Avatar</div>
             <span className="ml-auto text-[11.5px] font-mono text-ao-fg-3">{v.unit ? "custom selection" : "auto from name"}</span>
           </div>

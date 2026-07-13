@@ -1,4 +1,4 @@
-import type { RegistrySkill } from "@agent-office/shared/types";
+import type { RegistrySkill } from "@agent-office/domain/types";
 
 export interface RegistryFilter {
   q: string;

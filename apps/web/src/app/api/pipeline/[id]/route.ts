@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { pipeline } from "@agent-office/shared/services";
+import { pipeline } from "@agent-office/domain/services";
 import { notFound, validateIdParam } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };

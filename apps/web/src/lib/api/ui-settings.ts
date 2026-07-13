@@ -6,7 +6,7 @@
  * auto-save, the scene loader) never touch `apiClient` or bare `fetch`.
  */
 
-import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { apiClient } from "@/lib/api-client";
 
 export type UiSettings = Record<string, string>;

@@ -1,9 +1,9 @@
 import { existsSync, readdirSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
-import { agents } from "@agent-office/shared/services";
-import { AGENTS_DIR } from "@agent-office/shared/services/paths";
-import { writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
+import { agents } from "@agent-office/domain/services";
+import { AGENTS_DIR } from "@agent-office/domain/services/paths";
+import { writeFileAtomic } from "@agent-office/domain/services/fs-atomic";
 import { validateBody } from "@/lib/validation";
 import { agentBodySchema } from "@/lib/validation-schemas";
 import { notFound, tryService, validateIdParam } from "@/lib/api-helpers";

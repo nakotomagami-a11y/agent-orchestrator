@@ -36,7 +36,7 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
   return (
     <div className="px-[14px] py-[10px] border-t border-[var(--ao-line-0)] first:border-t-0">
       <div className="flex items-center gap-2 text-[12.5px]">
-        <span className="w-[18px] h-[18px] grid place-items-center text-ao-fg-2 shrink-0"><ToolIcon name={name} /></span>
+        <span className="w-[18px] h-[18px] flex items-center justify-center text-ao-fg-2 shrink-0"><ToolIcon name={name} /></span>
         <span className="text-ao-fg-0 font-medium">{name}</span>
         {arg && <span className="font-mono text-[11.5px] text-ao-fg-2 px-[6px] py-[1px] bg-ao-bg-3 border border-ao-line-1 rounded-[4px] whitespace-nowrap overflow-hidden text-ellipsis max-w-[360px]">{arg}</span>}
         <span className="ml-auto flex items-center gap-2 text-ao-fg-3 font-mono text-[11px]">
@@ -44,7 +44,7 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
         </span>
       </div>
       {arg && (
-        <div className="mt-2 grid grid-cols-1 gap-[6px]">
+        <div className="mt-2 flex flex-col gap-[6px]">
           <div className={`border border-[var(--ao-line-0)] rounded-[6px] overflow-hidden bg-[var(--ao-bg-1)]${showIn ? " ao-open" : ""}`}>
             <div
               className="flex items-center gap-2 px-[10px] py-[5px] font-mono text-[10.5px] text-ao-fg-2 uppercase tracking-[0.08em] cursor-pointer hover:text-ao-fg-0"
@@ -83,7 +83,7 @@ export function ToolGroupRow({
       {hideAvatar ? (
         <div className="w-[30px] shrink-0" aria-hidden />
       ) : (
-        <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
+        <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
           <span className="text-base">{avatar}</span>
         </div>
       )}
@@ -91,7 +91,7 @@ export function ToolGroupRow({
         <div className={`border border-ao-line-1 rounded-[10px] bg-ao-bg-2 overflow-hidden${open ? " ao-open" : ""}`}>
           <div className="flex items-center gap-[10px] px-[14px] py-[10px] cursor-pointer select-none transition-[background] duration-[120ms] hover:bg-ao-bg-3" onClick={toggle}>
             <span className={`w-[6px] h-[6px] rounded-full shrink-0 ${running ? "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)] animate-[ao-pulse_1.5s_infinite]" : "bg-[var(--ao-ok)] shadow-[0_0_6px_rgba(78,185,111,0.5)]"}`} />
-            <span className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-ao-bg-3 text-ao-fg-1 shrink-0 border border-ao-line-1"><Icon name="wrench" size={13} /></span>
+            <span className="w-[22px] h-[22px] flex items-center justify-center rounded-[6px] bg-ao-bg-3 text-ao-fg-1 shrink-0 border border-ao-line-1"><Icon name="wrench" size={13} /></span>
             <span className="text-[13px] text-ao-fg-0 font-medium flex items-center gap-2 flex-1 min-w-0">
               {single ? (
                 <>

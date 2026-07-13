@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import type { WorkflowNode } from "@agent-office/shared/types";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
+import type { WorkflowNode } from "@agent-office/domain/types";
 import { Icon } from "@/components/ui/icon";
 import { StatusBadge } from "@/modules/runs/components/status-badge";
-import { formatCost, formatDuration } from "@/modules/runs/utils/format-run-meta";
+import { formatCost, formatDuration } from "@/modules/runs/format/format-run-meta";
 import { useWorkflowTree } from "../hooks/use-workflow-tree";
-import { countDescendants } from "../utils/workflow-tree";
+import { countDescendants } from "../format/workflow-tree";
 
 /**
  * Header affordance that surfaces the live sub-agent spawn tree for the active

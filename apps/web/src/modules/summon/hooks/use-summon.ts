@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
-import type { SummonRequest } from "@agent-office/shared/types";
+import { apiFetch } from "@agent-office/domain/hooks/api";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
+import type { SummonRequest } from "@agent-office/domain/types";
 
 export interface SummonResponse {
   runId: string;

@@ -106,112 +106,101 @@ const SQL_RULES: Rule[] = [
 
 // ── markdown ──────────────────────────────────────────────────────────────
 
+/** Attempts inline-code (`...`) at position i. Returns [html, endIdx] or null. */
+function tryInlineCode(line: string, i: number): [string, number] | null {
+  if (line[i] !== "`") return null;
+  const end = line.indexOf("`", i + 1);
+  if (end === -1) return null;
+  return [span("hl-s", line.slice(i, end + 1)), end + 1];
+}
+
+/** Attempts bold (**...**) at position i. Returns [html, endIdx] or null. */
+function tryBold(line: string, i: number): [string, number] | null {
+  if (line.slice(i, i + 2) !== "**") return null;
+  const end = line.indexOf("**", i + 2);
+  if (end === -1) return null;
+  return [`<strong>${esc(line.slice(i + 2, end))}</strong>`, end + 2];
+}
+
+/** Attempts italic (*...*) at position i. Returns [html, endIdx] or null. */
+function tryItalic(line: string, i: number): [string, number] | null {
+  if (line[i] !== "*" || line[i + 1] === "*") return null;
+  const end = line.indexOf("*", i + 1);
+  if (end === -1) return null;
+  return [`<em>${esc(line.slice(i + 1, end))}</em>`, end + 1];
+}
+
+/** Attempts markdown link ([text](url)) at position i. Returns [html, endIdx] or null. */
+function tryLink(line: string, i: number): [string, number] | null {
+  if (line[i] !== "[") return null;
+  const close = line.indexOf("]", i + 1);
+  if (close === -1 || line[close + 1] !== "(") return null;
+  const urlEnd = line.indexOf(")", close + 2);
+  if (urlEnd === -1) return null;
+  const text = line.slice(i + 1, close);
+  const url = line.slice(close + 2, urlEnd);
+  return [`[${span("hl-fn", text)}](${span("hl-s", url)})`, urlEnd + 1];
+}
+
+function highlightInlineMarkdown(line: string): string {
+  let out = "";
+  let i = 0;
+  while (i < line.length) {
+    const hit = tryInlineCode(line, i) ?? tryBold(line, i) ?? tryItalic(line, i) ?? tryLink(line, i);
+    if (hit) {
+      out += hit[0];
+      i = hit[1];
+      continue;
+    }
+    out += esc(line[i] ?? "");
+    i++;
+  }
+  return out;
+}
+
+function highlightFrontmatterLine(line: string): string {
+  const keyMatch = /^([A-Za-z_][A-Za-z0-9_-]*)(\s*:.*)$/.exec(line);
+  if (!keyMatch) return esc(line);
+  const key = keyMatch[1] ?? "";
+  const rest = keyMatch[2] ?? "";
+  return span("hl-fn", key) + esc(rest);
+}
+
+type MdState = { inFrontmatter: boolean; frontmatterDone: boolean; inFence: boolean };
+
+function highlightMarkdownLine(line: string, idx: number, state: MdState): string {
+  // frontmatter start
+  if (idx === 0 && line === "---") {
+    state.inFrontmatter = true;
+    return span("hl-k", line);
+  }
+  if (state.inFrontmatter && !state.frontmatterDone) {
+    if (line === "---") {
+      state.inFrontmatter = false;
+      state.frontmatterDone = true;
+      return span("hl-k", line);
+    }
+    return highlightFrontmatterLine(line);
+  }
+  // fenced code block delimiter
+  if (/^```/.test(line)) {
+    state.inFence = !state.inFence;
+    return span("hl-c", line);
+  }
+  if (state.inFence) return esc(line);
+  // headings
+  if (/^#{1,6}\s/.test(line)) return span("hl-k", line);
+  // normal line — inline transforms
+  return highlightInlineMarkdown(line);
+}
+
 function highlightMarkdown(src: string): string {
   const lines = src.split("\n");
-  let inFrontmatter = false;
-  let frontmatterDone = false;
-  let inFence = false;
+  const state: MdState = { inFrontmatter: false, frontmatterDone: false, inFence: false };
   const out: string[] = [];
-
   for (let idx = 0; idx < lines.length; idx++) {
-    const line = lines[idx] ?? "";
-
-    // frontmatter start
-    if (idx === 0 && line === "---") {
-      inFrontmatter = true;
-      out.push(span("hl-k", line));
-      continue;
-    }
-    if (inFrontmatter && !frontmatterDone) {
-      if (line === "---") {
-        inFrontmatter = false;
-        frontmatterDone = true;
-        out.push(span("hl-k", line));
-        continue;
-      }
-      const keyMatch = /^([A-Za-z_][A-Za-z0-9_-]*)(\s*:.*)$/.exec(line);
-      if (keyMatch !== null) {
-        const key = keyMatch[1] ?? "";
-        const rest = keyMatch[2] ?? "";
-        out.push(span("hl-fn", key) + esc(rest));
-      } else {
-        out.push(esc(line));
-      }
-      continue;
-    }
-
-    // fenced code block delimiter
-    if (/^```/.test(line)) {
-      inFence = !inFence;
-      out.push(span("hl-c", line));
-      continue;
-    }
-    if (inFence) {
-      out.push(esc(line));
-      continue;
-    }
-
-    // headings
-    if (/^#{1,6}\s/.test(line)) {
-      out.push(span("hl-k", line));
-      continue;
-    }
-
-    // normal line — inline transforms
-    let l = "";
-    let i = 0;
-    while (i < line.length) {
-      const ch = line[i] ?? "";
-      const ch2 = line.slice(i, i + 2);
-
-      // inline code
-      if (ch === "`") {
-        const end = line.indexOf("`", i + 1);
-        if (end !== -1) {
-          l += span("hl-s", line.slice(i, end + 1));
-          i = end + 1;
-          continue;
-        }
-      }
-      // bold **...**
-      if (ch2 === "**") {
-        const end = line.indexOf("**", i + 2);
-        if (end !== -1) {
-          l += `<strong>${esc(line.slice(i + 2, end))}</strong>`;
-          i = end + 2;
-          continue;
-        }
-      }
-      // italic *...*
-      const nextCh = line[i + 1];
-      if (ch === "*" && nextCh !== "*") {
-        const end = line.indexOf("*", i + 1);
-        if (end !== -1) {
-          l += `<em>${esc(line.slice(i + 1, end))}</em>`;
-          i = end + 1;
-          continue;
-        }
-      }
-      // [text](url)
-      if (ch === "[") {
-        const close = line.indexOf("]", i + 1);
-        if (close !== -1 && line[close + 1] === "(") {
-          const urlEnd = line.indexOf(")", close + 2);
-          if (urlEnd !== -1) {
-            const text = line.slice(i + 1, close);
-            const url = line.slice(close + 2, urlEnd);
-            l += `[${span("hl-fn", text)}](${span("hl-s", url)})`;
-            i = urlEnd + 1;
-            continue;
-          }
-        }
-      }
-      l += esc(ch);
-      i++;
-    }
-    out.push(l);
+    out.push(highlightMarkdownLine(lines[idx] ?? "", idx, state));
   }
-
   return out.join("\n");
 }
 

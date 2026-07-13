@@ -1,5 +1,5 @@
-import { agents } from "@agent-office/shared/services";
-import { MAX_MEMORY_BYTES } from "@agent-office/shared/services/paths";
+import { agents } from "@agent-office/domain/services";
+import { MAX_MEMORY_BYTES } from "@agent-office/domain/services/paths";
 import { readBoundedText } from "@/lib/api-helpers";
 
 export async function GET() {

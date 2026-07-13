@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
-import { applySseEvent, parseSseEvent, type SseEventName } from "../utils/parse-sse-event";
-import type { RunPhase, ThreadItem, UsageMeter } from "../utils/thread-types";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
+import { applySseEvent, parseSseEvent, type SseEventName } from "../format/parse-sse-event";
+import type { RunPhase, ThreadItem, UsageMeter } from "../format/thread-types";
 
 const EVENT_NAMES: readonly SseEventName[] = [
   "attached",

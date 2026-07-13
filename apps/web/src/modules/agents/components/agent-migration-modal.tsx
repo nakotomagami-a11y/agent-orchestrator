@@ -151,7 +151,7 @@ function DiffSection({
                     onChange={() => onToggle!(entry.id)}
                   />
                 ) : (
-                  <span className="mt-[3px] shrink-0 w-[13px] h-[13px] rounded-[3px] border border-ao-line-2 bg-ao-bg-3 grid place-items-center text-ao-fg-3">
+                  <span className="mt-[3px] shrink-0 w-[13px] h-[13px] rounded-[3px] border border-ao-line-2 bg-ao-bg-3 flex items-center justify-center text-ao-fg-3">
                     <Icon name="check" size={9} />
                   </span>
                 )}

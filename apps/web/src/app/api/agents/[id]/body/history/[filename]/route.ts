@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { AGENTS_DIR } from "@agent-office/shared/services/paths";
+import { AGENTS_DIR } from "@agent-office/domain/services/paths";
 import { notFound, validateIdParam, badRequest } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string; filename: string }> };

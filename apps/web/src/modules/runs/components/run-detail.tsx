@@ -9,7 +9,7 @@ import { StatusDot } from "@/components/ui/status-dot";
 import { CodeBlock } from "@/components/ui/code-block";
 import { ProseView } from "@/components/ui/prose-view";
 import { useRun } from "../hooks/use-runs";
-import { formatCost, formatDuration, formatRelative } from "../utils/format-run-meta";
+import { formatCost, formatDuration, formatRelative } from "../format/format-run-meta";
 import { SubAgentBlock } from "./sub-agent-block";
 
 export type RunDetailProps = { runId: string };

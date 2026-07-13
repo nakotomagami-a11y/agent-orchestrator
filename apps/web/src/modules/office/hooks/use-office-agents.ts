@@ -2,14 +2,14 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
-import type { ApiAgent, PersistedRun } from "@agent-office/shared/types";
+import { apiFetch } from "@agent-office/domain/hooks/api";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
+import type { ApiAgent, PersistedRun } from "@agent-office/domain/types";
 import { POLL } from "@/lib/polling";
-import { unitForAgent, type UnitSelection } from "@/components/ui/unit-sprite.utils";
-import { shortName } from "../utils/sprite-palette";
-import { statusFromRuns, type AgentStatusInfo } from "../utils/derive-status";
+import { unitForAgent, type UnitSelection } from "@/components/ui/unit-sprite-registry";
+import { shortName } from "../derive/sprite-palette";
+import { statusFromRuns, type AgentStatusInfo } from "../derive/derive-status";
 
 export interface OfficeAgent extends ApiAgent {
   id: string;

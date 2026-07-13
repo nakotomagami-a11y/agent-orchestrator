@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { store, runs as runsService } from "@agent-office/shared/services";
+import { store, runs as runsService } from "@agent-office/domain/services";
 import { validateQuery } from "@/lib/validation";
 import { runsQuerySchema } from "@/lib/validation-schemas";
 import { z } from "zod";

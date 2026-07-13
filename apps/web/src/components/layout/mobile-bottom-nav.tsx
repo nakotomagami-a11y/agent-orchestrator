@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 
 function isActive(pathname: string, href: string, exact = false): boolean {
   if (exact) return pathname === href;
@@ -16,7 +16,7 @@ export function MobileBottomNav() {
 
   return (
     <nav
-      className="hidden max-[600px]:grid grid-cols-5 fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-bg-0 pb-[env(safe-area-inset-bottom)]"
+      className="hidden max-[600px]:flex [&>*]:flex-1 [&>*]:basis-0 fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-bg-0 pb-[env(safe-area-inset-bottom)]"
       aria-label="Mobile navigation"
     >
       <Link

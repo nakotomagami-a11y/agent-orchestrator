@@ -10,14 +10,14 @@ export default defineConfig({
   },
   resolve: {
     alias: [
-      // Must appear before the generic @agent-office/shared alias so the
+      // Must appear before the generic @agent-office/domain alias so the
       // subpath import wins when the full path is specified.
       {
         find: /^@agent-office\/shared\/(.+)$/,
         replacement: `${sharedSrc}/$1.ts`,
       },
       {
-        find: "@agent-office/shared",
+        find: "@agent-office/domain",
         replacement: path.join(sharedSrc, "index.ts"),
       },
       {

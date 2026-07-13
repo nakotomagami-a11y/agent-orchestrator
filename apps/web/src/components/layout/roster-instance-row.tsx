@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/cn";
-import type { AgentStatusInfo } from "@/modules/office/utils/derive-status";
+import type { AgentStatusInfo } from "@/modules/office/derive/derive-status";
 
 export interface RosterInstanceRowProps {
   instanceId: string;

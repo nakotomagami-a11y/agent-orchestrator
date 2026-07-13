@@ -129,7 +129,7 @@ export function DevMenu() {
             <SectionLabel>Database</SectionLabel>
 
             {stats ? (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-3 bg-bg-2 rounded-lg px-3 py-2.5 border border-line">
+              <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 bg-bg-2 rounded-lg px-3 py-2.5 border border-line [&>*]:basis-[calc(50%-8px)]">
                 <StatRow label="Runs" value={stats.runsCount.toLocaleString()} />
                 <StatRow label="Messages" value={stats.messagesCount.toLocaleString()} />
                 <StatRow label="Agents" value={stats.agentsCount.toLocaleString()} />

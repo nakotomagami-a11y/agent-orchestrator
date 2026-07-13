@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
-import { formatCompactNumber } from "@/modules/runs/utils/format-run-meta";
+import { formatCompactNumber } from "@/modules/runs/format/format-run-meta";
 import { useAgentHistory } from "@/modules/office/hooks/use-agent-history";
 import {
   formatHistoryDuration,
   formatRelativeTime,
   runTokens,
-} from "@/modules/office/utils/history-format";
+} from "@/modules/office/derive/history-format";
 
 export function HistoryTab({ agentId }: { agentId: string }) {
   const [openId, setOpenId] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
   return (
     <div className="px-6 pt-5 pb-6 flex-1 flex flex-col">
       {/* Stats row */}
-      <div className="grid grid-cols-4 gap-[10px] mb-[16px]">
+      <div className="flex flex-wrap gap-[10px] mb-[16px] [&>*]:basis-[calc(25%-8px)]">
         <div className="p-[12px_14px] bg-ao-bg-2 border border-ao-line-1 rounded-ao-md">
           <div className="text-[10.5px] text-ao-fg-2 uppercase tracking-[0.1em] font-mono mb-[4px]">Total runs</div>
           <div className="text-[18px] font-bold text-ao-fg-0">{formatCompactNumber(allRuns.length)}</div>

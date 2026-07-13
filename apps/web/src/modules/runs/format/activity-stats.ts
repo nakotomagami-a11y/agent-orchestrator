@@ -1,4 +1,4 @@
-import type { PersistedRun } from "@agent-office/shared/types";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 function isoDay(ts: number): string {
   const d = new Date(ts);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
+import { apiFetch } from "@agent-office/domain/hooks/api";
 import type { ProcessInfo } from "@/app/api/processes/route";
 
 export type { ProcessInfo };

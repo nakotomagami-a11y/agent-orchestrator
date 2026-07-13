@@ -3,7 +3,7 @@ import type React from "react";
 import type { DecorationsMap } from "../components/decorations";
 import type { AgentPositions } from "../components/office-map";
 import type { BuildTool } from "../components/office-build-toolbar";
-import type { Snapshot } from "../utils/office-scene-data";
+import type { Snapshot } from "../derive/office-scene-data";
 
 export function useOfficeKeyboardShortcuts(params: {
   buildMode: boolean;

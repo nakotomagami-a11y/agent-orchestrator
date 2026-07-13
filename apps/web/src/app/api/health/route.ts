@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { health } from "@agent-office/shared/services";
+import { health } from "@agent-office/domain/services";
 import { validateQuery } from "@/lib/validation";
 import { healthQuerySchema } from "@/lib/validation-schemas";
 

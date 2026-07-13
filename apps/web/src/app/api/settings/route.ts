@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { settings } from "@agent-office/shared/services";
+import { settings } from "@agent-office/domain/services";
 import { validateBody } from "@/lib/validation";
 import { settingsPatchSchema } from "@/lib/validation-schemas";
-import type { AppSettings } from "@agent-office/shared/types";
+import type { AppSettings } from "@agent-office/domain/types";
 
 export async function GET() {
   return NextResponse.json(settings.readSettings());

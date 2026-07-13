@@ -75,8 +75,8 @@ export function Titlebar() {
         maximized && "top-0 left-0 right-0 rounded-none border-l-0 border-r-0 border-t-0",
       )}
     >
-      <div className="grid items-center h-full px-3 select-none [grid-template-columns:1fr_auto_1fr] bg-bg-2 border-b border-line rounded-t-[10px]">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center h-full px-3 select-none bg-bg-2 border-b border-line rounded-t-[10px]">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           {isTauri() && (
             <div className="flex gap-2">
               <span {...dotProps("close")} />
@@ -86,14 +86,14 @@ export function Titlebar() {
           )}
           <ProjectSwitcher />
         </div>
-        <div className="font-semibold text-[13px] text-txt-2 flex items-center gap-2 max-[600px]:hidden" data-tauri-drag-region>
+        <div className="font-semibold text-[13px] text-txt-2 flex items-center gap-2 shrink-0 max-[600px]:hidden" data-tauri-drag-region>
           <span
             aria-hidden
             className="inline-block w-4 h-4 rounded-[4px] bg-[linear-gradient(135deg,#5c4bb8,#7c6af5)]"
           />
           {t("app.name")} - {t("app.studio_subtitle")}
         </div>
-        <div className="flex items-center gap-2 justify-end">
+        <div className="flex items-center gap-2 justify-end flex-1 min-w-0">
           <DevMenu />
           <RefreshButton />
           <button

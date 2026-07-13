@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { GET } from "./route";
-import { buildDocsExport } from "@agent-office/shared/services/docs-export";
+import { buildDocsExport } from "@agent-office/domain/services/docs-export";
 
 describe("GET /api/docs/export", () => {
   it("returns a Response with status 200", async () => {

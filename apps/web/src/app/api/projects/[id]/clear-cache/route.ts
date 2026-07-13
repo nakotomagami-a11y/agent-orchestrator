@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { rmSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 import { validateIdParam, notFound } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };

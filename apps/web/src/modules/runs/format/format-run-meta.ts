@@ -1,4 +1,4 @@
-import type { PersistedRun } from "@agent-office/shared/types";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 export function formatRelative(ts: number): string {
   const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));

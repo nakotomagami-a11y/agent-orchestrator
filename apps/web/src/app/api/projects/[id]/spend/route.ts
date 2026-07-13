@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db as dbService } from "@agent-office/shared/services";
+import { db as dbService } from "@agent-office/domain/services";
 import { validateIdParam } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };

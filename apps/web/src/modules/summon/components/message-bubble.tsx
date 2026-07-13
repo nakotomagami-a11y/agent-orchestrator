@@ -6,9 +6,9 @@ import { match } from "ts-pattern";
 import { cn } from "@/lib/cn";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
-import type { ThreadItem } from "../utils/thread-types";
+import type { ThreadItem } from "../format/thread-types";
 import { Icon } from "@/components/ui/icon";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useCreateSavedPrompt } from "@/modules/prompts/hooks/use-saved-prompts";
 import { splitProse, type ProseItem } from "@/lib/markdown";
 import {
@@ -17,7 +17,7 @@ import {
   stripAttachmentFooter,
   highlightTS,
   inlineMd,
-} from "../utils/message-format";
+} from "../format/message-format";
 import { useClaudeLimitsStore, periodStart, periodEnd } from "@/lib/claude-limits-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { ExpandedStateContext, useExpandedState } from "./expanded-state";
@@ -191,7 +191,7 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
     <div className="absolute top-[-4px] right-0 flex gap-1 p-[2px] bg-ao-bg-2 border border-ao-line-1 rounded-[8px] opacity-0 -translate-y-[2px] transition-[opacity,transform] duration-[140ms] z-[2] group-hover/msg:opacity-100 group-hover/msg:translate-y-0">
       <button
         type="button"
-        className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
+        className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
         aria-label="Copy"
         title="Copy"
         onClick={handleCopy}
@@ -204,7 +204,7 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
         <>
           <button
             type="button"
-            className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
+            className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
             aria-label="Rerun"
             title="Rerun"
             onClick={() => onRerun(text)}
@@ -213,7 +213,7 @@ function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => 
           </button>
           <button
             type="button"
-            className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
+            className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
             aria-label="Save as prompt"
             title="Save as prompt"
             onClick={handleSave}
@@ -239,7 +239,7 @@ function ThinkingRow({ id, text, avatar, hideAvatar = false }: { id: string; tex
       {hideAvatar ? (
         <div className="w-[30px] shrink-0" aria-hidden />
       ) : (
-        <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
+        <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
           <span className="text-base">{avatar}</span>
         </div>
       )}
@@ -339,7 +339,7 @@ function SubAgentCard({ item }: { item: Extract<ThreadItem, { kind: "agent-subag
   return (
     <div className="my-1 ml-[14px] border-l-2 border-l-[#3b7de8] px-[14px] py-[10px] bg-[linear-gradient(90deg,rgba(59,125,232,0.09)_0%,transparent_72%)] rounded-[0_10px_10px_0]">
       <div className="flex items-center gap-[10px] cursor-pointer select-none" onClick={toggle} role="button" aria-expanded={open}>
-        <div className="w-6 h-6 rounded-full bg-[linear-gradient(135deg,#3b7de8_0%,#1e56c0_100%)] grid place-items-center text-white shrink-0" aria-hidden>
+        <div className="w-6 h-6 rounded-full bg-[linear-gradient(135deg,#3b7de8_0%,#1e56c0_100%)] flex items-center justify-center text-white shrink-0" aria-hidden>
           <Icon name="bot-ao" size={13} />
         </div>
         <div className="min-w-0 flex-1">
@@ -431,7 +431,7 @@ function RateLimitCard({
   const quotaUsd = useClaudeLimitsStore((s) => s.quotaUsd);
   const period   = useClaudeLimitsStore((s) => s.period);
   const runsQ    = useRuns({ limit: 500 });
-  const allRuns  = runsQ.data ?? [];
+  const allRuns  = useMemo(() => runsQ.data ?? [], [runsQ.data]);
 
   const usageLabel = useMemo(() => {
     const start = periodStart(period);
@@ -470,7 +470,7 @@ function RateLimitCard({
 
   return (
     <div className="border border-[rgba(234,179,8,0.30)] border-l-[3px] border-l-[#ca8a04] rounded-[8px] px-[14px] py-3 bg-[rgba(234,179,8,0.05)] flex items-start gap-[10px]">
-      <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[rgba(234,179,8,0.12)] text-[#ca8a04] shrink-0">
+      <div className="w-[22px] h-[22px] flex items-center justify-center rounded-[6px] bg-[rgba(234,179,8,0.12)] text-[#ca8a04] shrink-0">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
@@ -531,7 +531,7 @@ function ErrorCard({
 
   return (
     <div className="border border-[rgba(217,83,79,0.30)] border-l-[3px] border-l-[var(--ao-bad)] rounded-[8px] px-[14px] py-3 bg-[rgba(217,83,79,0.05)] flex items-start gap-[10px]">
-      <div className="w-[22px] h-[22px] grid place-items-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><Icon name="x" size={13} /></div>
+      <div className="w-[22px] h-[22px] flex items-center justify-center rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] shrink-0"><Icon name="x" size={13} /></div>
       <div className="flex-1">
         <div className="font-semibold text-ao-fg-0 text-[13.5px]">Run error</div>
         <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono">{message}</div>
@@ -567,7 +567,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       const youText = stripAttachmentFooter(item.text);
       return (
         <div className="flex flex-row-reverse self-end max-w-[80%] gap-[12px] relative group/msg min-w-0">
-          <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
+          <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
           <div className="flex flex-col items-end min-w-0 flex-1">
             <div className="bg-ao-bg-3 border border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] max-w-full">
               {youText}
@@ -587,7 +587,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
           {hideAvatar ? (
             <div className="w-[30px] shrink-0" aria-hidden />
           ) : (
-            <div className="w-[30px] h-[30px] rounded-full shrink-0 grid place-items-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
+            <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
               <span className="text-base">{avatar}</span>
             </div>
           )}

@@ -12,7 +12,7 @@ import {
   useDeleteSavedPrompt,
   useRecordSavedPromptUsage,
 } from "../hooks/use-saved-prompts";
-import type { SavedPrompt } from "@agent-office/shared/types";
+import type { SavedPrompt } from "@agent-office/domain/types";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -380,7 +380,7 @@ export function PromptPickerDialog({ open, onClose, onSelect }: PromptPickerDial
                 )}
               </div>
             ) : (
-              <div className="grid gap-[6px]">
+              <div className="flex flex-col gap-[6px]">
                 {sorted.map((prompt) => (
                   <PromptCard
                     key={prompt.id}

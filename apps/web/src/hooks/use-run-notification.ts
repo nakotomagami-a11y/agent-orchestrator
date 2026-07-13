@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { RunPhase } from "@/modules/summon/utils/thread-types";
+import type { RunPhase } from "@/modules/summon/format/thread-types";
 
 // Plays a brief 2-tone chime using the Web Audio API. No external assets.
 function playDone() {

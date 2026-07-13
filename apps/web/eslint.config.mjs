@@ -110,6 +110,9 @@ export default [
                 "**/shared/*",
                 "**/*.utils",
                 "**/*.helpers",
+                // Exempt third-party framework internals (e.g. Next.js
+                // internal paths we cannot rename).
+                "!next/**",
               ],
               message:
                 "CLAUDE.md rule: no `utils`, `helpers`, `common`, `shared` names. Use a domain-specific module name that describes what the file does.",

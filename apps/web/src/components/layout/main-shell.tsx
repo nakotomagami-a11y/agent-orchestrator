@@ -16,9 +16,11 @@ export type MainShellProps = {
  */
 export function MainShell({ children, className }: MainShellProps) {
   return (
-    <div className={cn("grid min-h-0 [grid-template-columns:248px_minmax(0,1fr)] max-[1024px]:[grid-template-columns:64px_minmax(0,1fr)] max-[600px]:[grid-template-columns:minmax(0,1fr)]", className)}>
-      <Sidebar />
-      <main className="flex flex-col min-h-0 [min-width:0]">
+    <div className={cn("flex min-h-0 flex-nowrap", className)}>
+      <div className="shrink-0 w-[248px] max-[1024px]:w-[64px] max-[600px]:hidden">
+        <Sidebar />
+      </div>
+      <main className="flex-1 min-w-0 flex flex-col min-h-0">
         <ScrollReset />
         <PageTransition>{children}</PageTransition>
       </main>

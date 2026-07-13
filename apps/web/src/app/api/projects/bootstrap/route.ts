@@ -12,7 +12,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { projectBootstrap, projects, settings as settingsSvc } from "@agent-office/shared/services";
+import { projectBootstrap, projects, settings as settingsSvc } from "@agent-office/domain/services";
 import { validateBody } from "@/lib/validation";
 import { bootstrapProjectSchema } from "@/lib/validation-schemas";
 import { tryService } from "@/lib/api-helpers";

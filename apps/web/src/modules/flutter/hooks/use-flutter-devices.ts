@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
+import { apiFetch } from "@agent-office/domain/hooks/api";
 import type { FlutterDevice } from "@/app/api/flutter/devices/route";
 
 export type { FlutterDevice };

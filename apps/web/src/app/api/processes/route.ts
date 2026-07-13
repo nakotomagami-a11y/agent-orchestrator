@@ -3,7 +3,7 @@ import { readFileSync, readlinkSync } from "node:fs";
 import * as os from "node:os";
 import { normalize } from "node:path";
 import { NextResponse } from "next/server";
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 
 export interface ProcessInfo {
   pid: number;
@@ -74,10 +74,75 @@ function readProcStartedAt(pid: number): number {
   }
 }
 
-export async function GET(): Promise<NextResponse> {
-  if (process.platform !== "linux") {
-    return NextResponse.json([]);
+type SortedProject = { id: string; name: string; cwd: string };
+
+function buildSortedProjectList(): SortedProject[] {
+  return projects
+    .listProjectSummaries()
+    .filter((p) => !!p.cwd)
+    .map((p) => ({ id: p.id, name: p.name, cwd: normalize(p.cwd!) }))
+    .sort((a, b) => b.cwd.length - a.cwd.length);
+}
+
+function matchProjectByCwd(projectList: SortedProject[], cwd: string): { projectId: string; projectName: string } | undefined {
+  if (!cwd) return undefined;
+  const norm = normalize(cwd);
+  const match = projectList.find((p) => norm === p.cwd || norm.startsWith(p.cwd + "/"));
+  return match ? { projectId: match.id, projectName: match.name } : undefined;
+}
+
+function parseSsAddressAndPort(line: string): { address: string; port: number } | null {
+  const addrMatch = /\s(\S+):(\d+)\s+\S+:\*/.exec(line);
+  if (!addrMatch) return null;
+  const address = addrMatch[1]!;
+  const port = parseInt(addrMatch[2]!, 10);
+  if (!Number.isFinite(port) || port <= 0) return null;
+  return { address, port };
+}
+
+function isSkippableForUid(pid: number, currentUid: number | null): boolean {
+  if (currentUid === null) return false;
+  const uid = readProcUid(pid);
+  return uid !== null && uid !== currentUid;
+}
+
+function makeProcessInfo(pid: number, name: string, port: number, address: string, projectList: SortedProject[]): ProcessInfo {
+  const cwd = readProcCwd(pid);
+  return {
+    pid,
+    port,
+    address,
+    name,
+    cmd: readProcCmdline(pid),
+    cwd,
+    startedAt: readProcStartedAt(pid),
+    memMb: readProcMem(pid),
+    ...matchProjectByCwd(projectList, cwd),
+  };
+}
+
+function collectPidsFromLine(
+  line: string,
+  address: string,
+  port: number,
+  currentUid: number | null,
+  projectList: SortedProject[],
+  byPid: Map<number, ProcessInfo>,
+): void {
+  const pidRe = /\("([^"]+)",pid=(\d+)/g;
+  let m: RegExpExecArray | null;
+  while ((m = pidRe.exec(line)) !== null) {
+    const name = m[1]!;
+    const pid = parseInt(m[2]!, 10);
+    if (!Number.isFinite(pid) || pid <= 0) continue;
+    if (isSkippableForUid(pid, currentUid)) continue;
+    if (byPid.has(pid)) continue;
+    byPid.set(pid, makeProcessInfo(pid, name, port, address, projectList));
   }
+}
+
+export async function GET(): Promise<NextResponse> {
+  if (process.platform !== "linux") return NextResponse.json([]);
 
   let ssOutput: string;
   try {
@@ -87,58 +152,14 @@ export async function GET(): Promise<NextResponse> {
   }
 
   const currentUid = typeof process.getuid === "function" ? process.getuid() : null;
-
-  // Build sorted project list for cwd matching (longest path first → most specific wins)
-  const projectList = projects
-    .listProjectSummaries()
-    .filter((p) => !!p.cwd)
-    .map((p) => ({ id: p.id, name: p.name, cwd: normalize(p.cwd!) }))
-    .sort((a, b) => b.cwd.length - a.cwd.length);
-
-  function matchProject(cwd: string): { projectId: string; projectName: string } | undefined {
-    if (!cwd) return undefined;
-    const norm = normalize(cwd);
-    const match = projectList.find((p) => norm === p.cwd || norm.startsWith(p.cwd + "/"));
-    return match ? { projectId: match.id, projectName: match.name } : undefined;
-  }
-
-  // Map pid → ProcessInfo (one entry per pid; port is the first port we see for that pid)
+  const projectList = buildSortedProjectList();
   const byPid = new Map<number, ProcessInfo>();
 
   for (const line of ssOutput.split("\n")) {
-    // Match lines that have a Process column with users:((...)) entries
     if (!line.includes("users:((")) continue;
-
-    // Extract local address:port
-    const addrMatch = /\s(\S+):(\d+)\s+\S+:\*/.exec(line);
-    if (!addrMatch) continue;
-    const address = addrMatch[1]!;
-    const port = parseInt(addrMatch[2]!, 10);
-    if (!Number.isFinite(port) || port <= 0) continue;
-
-    // Extract all (name, pid) pairs from the Process column
-    const pidRe = /\("([^"]+)",pid=(\d+)/g;
-    let m: RegExpExecArray | null;
-    while ((m = pidRe.exec(line)) !== null) {
-      const name = m[1]!;
-      const pid = parseInt(m[2]!, 10);
-      if (!Number.isFinite(pid) || pid <= 0) continue;
-
-      // UID check
-      if (currentUid !== null) {
-        const uid = readProcUid(pid);
-        if (uid !== null && uid !== currentUid) continue;
-      }
-
-      if (!byPid.has(pid)) {
-        const cmd = readProcCmdline(pid);
-        const cwd = readProcCwd(pid);
-        const startedAt = readProcStartedAt(pid);
-        const memMb = readProcMem(pid);
-        const proj = matchProject(cwd);
-        byPid.set(pid, { pid, port, address, name, cmd, cwd, startedAt, memMb, ...proj });
-      }
-    }
+    const parsed = parseSsAddressAndPort(line);
+    if (!parsed) continue;
+    collectPidsFromLine(line, parsed.address, parsed.port, currentUid, projectList, byPid);
   }
 
   return NextResponse.json(Array.from(byPid.values()));

@@ -13,13 +13,13 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { uploadAttachment, fetchClipboardImage } from "@/lib/api/uploads";
 import { useAgentPrompts } from "../hooks/use-agent-prompts";
-import { clearDraft, loadDraft, saveDraft } from "../utils/draft-store";
+import { clearDraft, loadDraft, saveDraft } from "../format/draft-store";
 import { isTauri } from "@/lib/tauri-window";
 import { PromptPickerDialog } from "@/modules/prompts/components/prompt-picker-dialog";
-import type { ContextProfile } from "@agent-office/shared/types";
+import type { ContextProfile } from "@agent-office/domain/types";
 
 type SlashCommand = {
   cmd: string;

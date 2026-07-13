@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
-import { AGENTS_DIR } from "@agent-office/shared/services/paths";
+import { AGENTS_DIR } from "@agent-office/domain/services/paths";
 import { validateIdParam } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };

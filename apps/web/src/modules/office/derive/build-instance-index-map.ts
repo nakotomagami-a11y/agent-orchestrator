@@ -1,4 +1,4 @@
-import type { AgentInstance } from "@agent-office/shared/types";
+import type { AgentInstance } from "@agent-office/domain/types";
 
 export function buildInstanceIndexMap(
   isMultiInstance: boolean,

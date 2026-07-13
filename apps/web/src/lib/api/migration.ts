@@ -6,7 +6,7 @@
  * no manual query-string building / encodeURIComponent.
  */
 
-import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { apiClient } from "@/lib/api-client";
 
 export { patchUiSettings, type UiSettingsPatch } from "./ui-settings";

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { paths } from "@agent-office/shared/services";
+import { paths } from "@agent-office/domain/services";
 import { handleUpload, listDirUploads, validateIdParam } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };

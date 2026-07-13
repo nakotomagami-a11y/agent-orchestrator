@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 import { useGitStatus } from "@/modules/projects/hooks/use-projects";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import type { Project } from "@agent-office/shared/types";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
+import type { Project } from "@agent-office/domain/types";
 
 export function ProjectChip({
   projectId,

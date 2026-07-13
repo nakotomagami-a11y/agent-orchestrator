@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent } from "react";
-import { validateForm, type AgentFormValues } from "../utils/agent-form";
+import { validateForm, type AgentFormValues } from "../form/agent-form";
 
 export function useAgentForm(
   initial: AgentFormValues,

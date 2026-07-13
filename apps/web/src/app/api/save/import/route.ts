@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { NextResponse } from "next/server";
-import { agents, db, projects } from "@agent-office/shared/services";
-import { AGENTS_DIR, isValidIdSegment } from "@agent-office/shared/services/paths";
-import { ensureDir, writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
+import { agents, db, projects } from "@agent-office/domain/services";
+import { AGENTS_DIR, isValidIdSegment } from "@agent-office/domain/services/paths";
+import { ensureDir, writeFileAtomic } from "@agent-office/domain/services/fs-atomic";
 import { readBoundedText } from "@/lib/api-helpers";
 
 const IMPORT_MAX_BYTES = 20 * 1024 * 1024; // 20 MB
@@ -28,6 +28,62 @@ function isSaveFile(data: unknown): data is SaveFile {
   );
 }
 
+function restoreAgents(list: SaveFile["agents"]): void {
+  ensureDir(AGENTS_DIR);
+  for (const agent of list) {
+    if (typeof agent.id !== "string" || !agent.id) continue;
+    if (!isValidIdSegment(agent.id)) continue;
+    if (typeof agent.content === "string" && agent.content) {
+      writeFileAtomic(join(AGENTS_DIR, `${agent.id}.md`), agent.content);
+    }
+    if (typeof agent.memory === "string") {
+      agents.writeAgentMemory(agent.id, agent.memory);
+    }
+  }
+}
+
+function restoreProject(p: SaveFile["project"]): void {
+  const meta = p.meta as Record<string, unknown>;
+  const existing = projects.readProject(p.id);
+  if (existing) {
+    projects.updateProject(p.id, { meta, memory: p.memory });
+    return;
+  }
+  projects.createProject({
+    id: p.id,
+    name: typeof meta.name === "string" ? meta.name : p.id,
+    description: typeof meta.description === "string" ? meta.description : "",
+  });
+  projects.updateProject(p.id, { meta, memory: p.memory });
+}
+
+function restoreOfficeSettings(office: SaveFile["office"]): void {
+  const officeKeyMap: Array<[string, string | null]> = [
+    ["office-grid", office.grid],
+    ["office-decorations", office.decorations],
+    ["office-agents", office.agents],
+    ["office-grass-color", office.grassColor],
+  ];
+  for (const [key, value] of officeKeyMap) {
+    if (value !== null && value !== undefined) db.setUiSetting(key, value);
+  }
+}
+
+function isValidHistoryEntry(entry: unknown): entry is { agentId: string; instanceId: string; transcript: string } {
+  if (!entry || typeof entry !== "object") return false;
+  const e = entry as Record<string, unknown>;
+  if (typeof e.agentId !== "string" || typeof e.instanceId !== "string" || typeof e.transcript !== "string") return false;
+  return isValidIdSegment(e.agentId) && isValidIdSegment(e.instanceId);
+}
+
+function restoreHistory(history: SaveFile["history"]): void {
+  if (!Array.isArray(history)) return;
+  for (const entry of history) {
+    if (!isValidHistoryEntry(entry)) continue;
+    db.saveTranscript(entry.agentId, entry.instanceId, entry.transcript, null, null);
+  }
+}
+
 export async function POST(request: Request) {
   const { text, error: bodyErr } = await readBoundedText(request, IMPORT_MAX_BYTES);
   if (bodyErr) return bodyErr;
@@ -42,59 +98,15 @@ export async function POST(request: Request) {
   }
 
   const data = raw;
+  if (!isValidIdSegment(data.project.id)) {
+    return NextResponse.json({ error: "invalid_save_file", detail: "Invalid project id" }, { status: 400 });
+  }
 
   try {
-    // Restore agents
-    ensureDir(AGENTS_DIR);
-    for (const agent of data.agents) {
-      if (typeof agent.id !== "string" || !agent.id) continue;
-      if (!isValidIdSegment(agent.id)) continue;
-      if (typeof agent.content === "string" && agent.content) {
-        writeFileAtomic(join(AGENTS_DIR, `${agent.id}.md`), agent.content);
-      }
-      if (typeof agent.memory === "string") {
-        agents.writeAgentMemory(agent.id, agent.memory);
-      }
-    }
-
-    // Restore project
-    const p = data.project;
-    if (!isValidIdSegment(p.id)) {
-      return NextResponse.json({ error: "invalid_save_file", detail: "Invalid project id" }, { status: 400 });
-    }
-    const meta = p.meta as Record<string, unknown>;
-    const existing = projects.readProject(p.id);
-    if (existing) {
-      projects.updateProject(p.id, { meta, memory: p.memory });
-    } else {
-      projects.createProject({
-        id: p.id,
-        name: typeof meta.name === "string" ? meta.name : p.id,
-        description: typeof meta.description === "string" ? meta.description : "",
-      });
-      projects.updateProject(p.id, { meta, memory: p.memory });
-    }
-
-    // Restore office settings
-    const officeKeyMap: Array<[string, string | null]> = [
-      ["office-grid", data.office.grid],
-      ["office-decorations", data.office.decorations],
-      ["office-agents", data.office.agents],
-      ["office-grass-color", data.office.grassColor],
-    ];
-    for (const [key, value] of officeKeyMap) {
-      if (value !== null && value !== undefined) db.setUiSetting(key, value);
-    }
-
-    // Restore history
-    if (Array.isArray(data.history)) {
-      for (const entry of data.history) {
-        if (typeof entry.agentId !== "string" || typeof entry.instanceId !== "string" || typeof entry.transcript !== "string") continue;
-        if (!isValidIdSegment(entry.agentId) || !isValidIdSegment(entry.instanceId)) continue;
-        db.saveTranscript(entry.agentId, entry.instanceId, entry.transcript, null, null);
-      }
-    }
-
+    restoreAgents(data.agents);
+    restoreProject(data.project);
+    restoreOfficeSettings(data.office);
+    restoreHistory(data.history);
     return NextResponse.json({ ok: true, agentCount: data.agents.length });
   } catch (e) {
     return NextResponse.json({ error: "import_failed", detail: String(e) }, { status: 500 });

@@ -12,7 +12,7 @@ import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { Button } from "@/components/ui/button";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import type { OfficeAgent } from "../hooks/use-office-agents";
 import type { OfficeView } from "../hooks/use-office-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
@@ -105,7 +105,7 @@ export function CardsOffice({
       <>
         {workingCount > 0 && (
           <div className="flex items-center gap-[12px] border border-[var(--acc-tint)] px-[16px] py-[14px] [background:linear-gradient(90deg,var(--acc-faint),transparent_70%)] rounded-[12px] mb-[18px]">
-            <div className="grid place-items-center bg-acc-faint text-acc shrink-0 w-8 h-8 rounded-lg border border-[var(--acc-tint)]"><Icon name="activity" size={14} /></div>
+            <div className="flex items-center justify-center bg-acc-faint text-acc shrink-0 w-8 h-8 rounded-lg border border-[var(--acc-tint)]"><Icon name="activity" size={14} /></div>
             <div className="text-txt-2 flex-1 text-[13.5px]">
               <span className="text-txt font-semibold">{workingCount} agent{workingCount === 1 ? "" : "s"} working</span>
               {" - open one to follow along, or jump to the activity feed."}
@@ -127,7 +127,7 @@ export function CardsOffice({
               <span className="flex-1 h-px bg-line" />
               <span className="text-txt-4 font-mono text-[11px]">now</span>
             </div>
-            <div className="grid [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] max-[1024px]:[grid-template-columns:repeat(2,1fr)] max-[600px]:[grid-template-columns:1fr] gap-[14px] mb-[22px]">
+            <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_300px] max-[1024px]:[&>*]:[flex:1_1_calc(50%-7px)] max-[600px]:[&>*]:[flex:1_1_100%] mb-[22px]">
               {sort(liveAgents).map(a => (
                 <OfficeCard
                   key={a.id}
@@ -151,7 +151,7 @@ export function CardsOffice({
               <span className="flex-1 h-px bg-line" />
               <span className="text-txt-4 font-mono text-[11px]">ready when you are</span>
             </div>
-            <div className="grid [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] max-[1024px]:[grid-template-columns:repeat(2,1fr)] max-[600px]:[grid-template-columns:1fr] gap-[14px] mb-[22px]">
+            <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_300px] max-[1024px]:[&>*]:[flex:1_1_calc(50%-7px)] max-[600px]:[&>*]:[flex:1_1_100%] mb-[22px]">
               {sort(idleAgents).map(a => (
                 <OfficeCard
                   key={a.id}
@@ -164,7 +164,7 @@ export function CardsOffice({
               ))}
               <button type="button" className="add-card bg-transparent flex items-center justify-center text-center border-dashed border border-line min-h-[220px] text-[var(--txt-3)] rounded-[14px] cursor-pointer" onClick={() => setAddOpen(true)}>
                 <div>
-                  <div className="bg-[var(--acc-faint)] grid place-items-center text-[var(--acc)] w-[44px] h-[44px] rounded-[12px] border border-[var(--acc-tint)] mx-auto mb-[10px]"><Icon name="plus" size={18} /></div>
+                  <div className="bg-[var(--acc-faint)] flex items-center justify-center text-[var(--acc)] w-[44px] h-[44px] rounded-[12px] border border-[var(--acc-tint)] mx-auto mb-[10px]"><Icon name="plus" size={18} /></div>
                   <div className="font-semibold text-txt text-[14px]">Add an agent</div>
                   <div className="font-mono text-[11px] text-txt-3 mt-1">
                     summon from your roster
@@ -242,12 +242,12 @@ export function CardsOffice({
 
 function CardsOfficeGhostBody() {
   return (
-    <div className="grid [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] max-[1024px]:[grid-template-columns:repeat(2,1fr)] max-[600px]:[grid-template-columns:1fr] gap-[14px]">
+    <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_300px] max-[1024px]:[&>*]:[flex:1_1_calc(50%-7px)] max-[600px]:[&>*]:[flex:1_1_100%]">
       {Array.from({ length: 6 }, (_, i) => (
         <div key={i} className="of-card bg-bg-2 border border-line flex flex-col gap-[12px] cursor-pointer relative overflow-hidden rounded-[14px] p-4 opacity-50">
-          <div className="grid items-center gap-[12px] [grid-template-columns:48px_1fr_auto]">
-            <div className="bg-bg-3 w-[48px] h-[48px] rounded-[12px]" />
-            <div className="min-w-0">
+          <div className="flex items-center gap-[12px]">
+            <div className="bg-bg-3 w-[48px] h-[48px] rounded-[12px] shrink-0" />
+            <div className="min-w-0 flex-1">
               <div className="h-[14px] w-[60%] bg-bg-3 rounded mb-[6px]" />
               <div className="h-[10px] w-[40%] bg-bg-3 rounded" />
             </div>
@@ -314,8 +314,8 @@ function OfficeCard({
       tabIndex={0}
       onKeyDown={e => e.key === "Enter" && onSelect(agent.id)}
     >
-      <div className="grid items-center gap-[12px] [grid-template-columns:48px_1fr_auto]">
-        <div className="grid place-items-center relative overflow-visible w-[48px] h-[48px] before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:[background:radial-gradient(circle_at_75%_80%,rgba(255,255,255,0.10),transparent_60%)] before:rounded-[inherit]">
+      <div className="flex items-center gap-[12px]">
+        <div className="flex items-center justify-center relative overflow-visible w-[48px] h-[48px] shrink-0 before:content-[''] before:absolute before:inset-0 before:pointer-events-none before:[background:radial-gradient(circle_at_75%_80%,rgba(255,255,255,0.10),transparent_60%)] before:rounded-[inherit]">
           <AgentAvatar unit={agent.unitChoice} size={50} />
           <span className={cn(
             "absolute rounded-full w-[14px] h-[14px] bottom-[-2px] right-[-2px] border-2 border-bg-2",
@@ -325,7 +325,7 @@ function OfficeCard({
             "bg-txt-4",
           )} />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="font-bold text-txt flex items-center gap-[6px] whitespace-nowrap overflow-hidden text-ellipsis text-[15px]">
             {pinned && <Icon name="pin" size={11} className="text-acc shrink-0" />}
             {formatAgentDisplayName(agent.name)}
@@ -395,7 +395,7 @@ function OfficeCard({
         </button>
         <button
           type="button"
-          className={cn("grid place-items-center text-txt-3 w-[26px] h-[26px] rounded-[5px] hover:bg-bg-3 hover:text-txt", pinned && "text-acc bg-acc-faint")}
+          className={cn("flex items-center justify-center text-txt-3 w-[26px] h-[26px] rounded-[5px] hover:bg-bg-3 hover:text-txt", pinned && "text-acc bg-acc-faint")}
           title={pinned ? "Unpin" : "Pin to top"}
           onClick={e => { e.stopPropagation(); onPin(agent.id); }}
         >
@@ -403,7 +403,7 @@ function OfficeCard({
         </button>
         <button
           type="button"
-          className="grid place-items-center text-txt-3 w-[26px] h-[26px] rounded-[5px] hover:bg-bg-3 hover:text-txt"
+          className="flex items-center justify-center text-txt-3 w-[26px] h-[26px] rounded-[5px] hover:bg-bg-3 hover:text-txt"
           title="Settings"
           onClick={e => { e.stopPropagation(); router.push(PAGE_ROUTES.agentEdit(agent.id)); }}
         >

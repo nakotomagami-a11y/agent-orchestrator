@@ -2,7 +2,7 @@
 // as comma-separated strings for ergonomics; the wire shape (`AgentBody`) wants
 // arrays. Pure helpers - no React imports - so they can be unit-tested.
 
-import type { AgentBody, ApiAgent } from "@agent-office/shared/types";
+import type { AgentBody, ApiAgent } from "@agent-office/domain/types";
 
 export interface AgentFormValues {
   id: string;

@@ -6,8 +6,8 @@ import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { NavItem } from "./nav-item";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import { isActiveRoute } from "./sidebar.utils";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
+import { isActiveRoute } from "./sidebar-routing";
 import { Icon } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
@@ -151,7 +151,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="bg-bg-2 border-r border-line grid grid-rows-[auto_1fr_auto] min-h-0 overflow-hidden max-[1024px]:overflow-hidden max-[600px]:hidden"
+      className="bg-bg-2 border-r border-line flex flex-col min-h-0 h-full overflow-hidden max-[1024px]:overflow-hidden max-[600px]:hidden"
       aria-label={t("app.name")}
     >
       <nav className="p-[6px] flex flex-col gap-[2px]" aria-label={t("nav.primary_label")}>
@@ -195,7 +195,7 @@ export function Sidebar() {
         <CommandPaletteNavButton />
       </nav>
 
-      <div className="flex flex-col min-h-0">
+      <div className="flex flex-col min-h-0 flex-1">
         {/* Roster header */}
         <div className="flex items-center gap-[6px] px-[10px] py-[8px] border-b border-line shrink-0">
           <span className="text-[11.5px] font-semibold text-txt tracking-[0.01em] flex-1">Roster</span>
@@ -206,7 +206,7 @@ export function Sidebar() {
             type="button"
             onClick={() => { setFilterFocused((v) => !v); if (filterFocused) setFilter(""); }}
             className={cn(
-              "w-[24px] h-[24px] grid place-items-center rounded-[5px] transition-[background,color] duration-[120ms]",
+              "w-[24px] h-[24px] flex items-center justify-center rounded-[5px] transition-[background,color] duration-[120ms]",
               filterFocused || filter ? "bg-bg-3 text-acc" : "text-txt-3 hover:bg-bg-3 hover:text-txt",
             )}
             aria-label={t("sidebar.filter_aria")}
@@ -237,7 +237,7 @@ export function Sidebar() {
                 <button
                   type="button"
                   onClick={() => setFilter("")}
-                  className="w-[16px] h-[16px] grid place-items-center text-txt-4 hover:text-txt shrink-0"
+                  className="w-[16px] h-[16px] flex items-center justify-center text-txt-4 hover:text-txt shrink-0"
                 >
                   <Icon name="x" size={10} />
                 </button>

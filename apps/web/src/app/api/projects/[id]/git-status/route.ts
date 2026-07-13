@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { isAbsolute } from "node:path";
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 import { notFound, validateIdParam } from "@/lib/api-helpers";
 
 const execAsync = promisify(exec);

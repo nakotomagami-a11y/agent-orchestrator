@@ -5,7 +5,7 @@ import type React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgentMemory, useWriteAgentMemory } from "@/modules/agents/hooks/use-agents";
 import { Icon } from "@/components/ui/icon";
-import { parseMemory, serializeMemory, type Fact, type Group } from "@/modules/office/utils/memory-format";
+import { parseMemory, serializeMemory, type Fact, type Group } from "@/modules/office/derive/memory-format";
 
 export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef?: React.MutableRefObject<(() => void) | null> }) {
   const memQ = useAgentMemory(agentId);
@@ -95,7 +95,7 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
       {/* Header card */}
       <div className="bg-ao-bg-2 border border-ao-line-1 rounded-ao-lg overflow-hidden mb-[14px]">
         <div className="flex items-center gap-[10px] px-[var(--ao-pad-card)] py-[14px] border-b border-[var(--ao-line-0)]">
-          <div className="w-[28px] h-[28px] grid place-items-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="book" size={15} /></div>
+          <div className="w-[28px] h-[28px] flex items-center justify-center rounded-[8px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-1 shrink-0"><Icon name="book" size={15} /></div>
           <div>
             <div className="text-[13px] font-semibold tracking-[0.02em] text-ao-fg-0">Memory</div>
             <div className="text-[11.5px] text-ao-fg-2 font-mono mt-[2px]">
@@ -161,7 +161,7 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
                         type="button"
                         aria-label="Delete group"
                         onClick={() => removeGroup(gi)}
-                        className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-bad"
+                        className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-bad"
                       >
                         <Icon name="trash" size={13} />
                       </button>
@@ -196,7 +196,7 @@ export function MemoryTab({ agentId, discardRef }: { agentId: string; discardRef
                             type="button"
                             aria-label="Delete"
                             onClick={() => removeFact(gi, fi)}
-                            className="w-[26px] h-[26px] grid place-items-center rounded-[6px] text-[var(--ao-fg-3)] hover:bg-ao-bg-3 hover:text-ao-bad"
+                            className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-[var(--ao-fg-3)] hover:bg-ao-bg-3 hover:text-ao-bad"
                           >
                             <Icon name="trash" size={13} />
                           </button>

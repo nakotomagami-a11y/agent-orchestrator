@@ -2,7 +2,7 @@ import { spawn, execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, basename, isAbsolute } from "node:path";
 import { NextResponse } from "next/server";
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 import { validateIdParam, notFound } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };

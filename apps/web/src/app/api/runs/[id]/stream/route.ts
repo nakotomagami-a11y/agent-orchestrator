@@ -1,4 +1,4 @@
-import { runs, store } from "@agent-office/shared/services";
+import { runs, store } from "@agent-office/domain/services";
 import { createSseStream, SSE_HEADERS } from "@/lib/sse";
 import { validateIdParam } from "@/lib/api-helpers";
 

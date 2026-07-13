@@ -3,15 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import { API_ROUTES, PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import type { PersistedRun } from "@agent-office/shared/types";
+import { apiFetch } from "@agent-office/domain/hooks/api";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
+import { API_ROUTES, PAGE_ROUTES } from "@agent-office/domain/config/routes";
+import type { PersistedRun } from "@agent-office/domain/types";
 import { abortRun } from "@/lib/api/runs-ops";
 import { Icon } from "@/components/ui/icon";
 import { POLL } from "@/lib/polling";
-import { formatCost, formatDuration } from "../utils/format-run-meta";
-import { groupByBatch } from "../utils/group-batch";
+import { formatCost, formatDuration } from "../format/format-run-meta";
+import { groupByBatch } from "../format/group-batch";
 import { StatusBadge, type SubAgentDisplayStatus } from "./status-badge";
 
 // Re-export so existing `from "./sub-agent-block"` imports keep resolving.
@@ -38,7 +38,7 @@ function CancelButton({ runId }: { runId: string }) {
   return (
     <button
       type="button"
-      className="w-[22px] h-[22px] grid place-items-center rounded-[5px] text-ao-fg-2 hover:bg-[var(--ao-bad-soft)] hover:text-[var(--ao-bad)] border border-ao-line-1 bg-ao-bg-3 transition-[color,background] duration-[120ms]"
+      className="w-[22px] h-[22px] flex items-center justify-center rounded-[5px] text-ao-fg-2 hover:bg-[var(--ao-bad-soft)] hover:text-[var(--ao-bad)] border border-ao-line-1 bg-ao-bg-3 transition-[color,background] duration-[120ms]"
       onClick={handleCancel}
       disabled={cancelling}
       title="Cancel sub-agent"
@@ -64,7 +64,7 @@ function SubAgentRow({ run }: { run: PersistedRun }) {
         role="button"
         aria-expanded={open}
       >
-        <div className="w-5 h-5 rounded-full bg-[linear-gradient(135deg,#3b7de8_0%,#1e56c0_100%)] grid place-items-center text-white shrink-0" aria-hidden>
+        <div className="w-5 h-5 rounded-full bg-[linear-gradient(135deg,#3b7de8_0%,#1e56c0_100%)] flex items-center justify-center text-white shrink-0" aria-hidden>
           <Icon name="bot-ao" size={11} />
         </div>
         <div className="flex-1 min-w-0 flex items-center gap-[8px]">

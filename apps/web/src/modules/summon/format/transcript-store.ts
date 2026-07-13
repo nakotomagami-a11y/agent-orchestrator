@@ -1,7 +1,7 @@
 // Persists per-instance chat transcripts to the server DB via /api/transcripts.
 // Keyed by `<agentId>::<instanceId>`. Async - callers must await or fire-and-forget.
 
-import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { apiClient } from "@/lib/api-client";
 import type { ThreadItem } from "./thread-types";
 

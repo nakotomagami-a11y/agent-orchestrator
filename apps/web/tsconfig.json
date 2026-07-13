@@ -11,10 +11,10 @@
       "@/*": [
         "./src/*"
       ],
-      "@agent-office/shared": [
+      "@agent-office/domain": [
         "../../packages/shared/src/index.ts"
       ],
-      "@agent-office/shared/*": [
+      "@agent-office/domain/*": [
         "../../packages/shared/src/*"
       ],
       "@agent-office/pixel-planets": [

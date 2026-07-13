@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useAddInstance } from "@/modules/projects/hooks/use-projects";
 import { useOfficeStore } from "./use-office-store";
-import type { AgentInstance } from "@agent-office/shared/types";
+import type { AgentInstance } from "@agent-office/domain/types";
 
 export function useSpawnInstance(params: {
   activeProjectId: string | null;

@@ -6,14 +6,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { AgentListGhost } from "./agent-list-ghost";
 import { Icon } from "@/components/ui/icon";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
-import { unitForAgent } from "@/components/ui/unit-sprite.utils";
+import { unitForAgent } from "@/components/ui/unit-sprite-registry";
 import { cn } from "@/lib/cn";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
-import type { ApiAgent } from "@agent-office/shared/types";
+import type { ApiAgent } from "@agent-office/domain/types";
 import { useAgents } from "../hooks/use-agents";
-import { categorize, categoryColor, tallyCategories } from "../utils/categorize";
+import { categorize, categoryColor, tallyCategories } from "../form/categorize";
 
 /**
  * Agent gallery. Card grid styled after the v3 `TemplatesView`, with a
@@ -30,7 +30,7 @@ export function AgentList() {
   const [search, setSearch] = useState("");
   const [activeCats, setActiveCats] = useState<Set<string>>(() => new Set());
 
-  const agents = data ?? [];
+  const agents = useMemo(() => data ?? [], [data]);
   const categories = useMemo(() => {
     const tally = tallyCategories(agents);
     return Object.entries(tally).sort((a, b) => b[1] - a[1]);
@@ -101,7 +101,7 @@ export function AgentList() {
           {t("agent_list.no_matches")}
         </div>
       ) : (
-        <div className="grid [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))] max-[1024px]:[grid-template-columns:repeat(2,1fr)] max-[600px]:[grid-template-columns:1fr] gap-[14px]">
+        <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_300px] max-[1024px]:[&>*]:[flex:1_1_calc(50%-7px)] max-[600px]:[&>*]:[flex:1_1_100%]">
           {visible.map((a) => (
             <AgentCard
               key={a.name}
@@ -271,11 +271,11 @@ function AgentCard({
       tabIndex={0}
       onKeyDown={e => e.key === "Enter" && onOpen()}
     >
-      <div className="grid items-center gap-[12px] [grid-template-columns:48px_1fr_auto]">
-        <div className="bg-bg-3 border border-line grid place-items-center relative overflow-visible w-[48px] h-[48px] rounded-[12px]">
+      <div className="flex items-center gap-[12px]">
+        <div className="bg-bg-3 border border-line flex items-center justify-center relative overflow-visible w-[48px] h-[48px] rounded-[12px] shrink-0">
           <AgentAvatar unit={unit} size={42} />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {/* Big line: human-readable display name derived from the slug.
               Small line: raw slug (kebab-case) so power users still see the
               ID they'd type in the CLI or reference in configs. */}
@@ -321,7 +321,7 @@ function AgentCard({
         </button>
         <button
           type="button"
-          className="grid place-items-center text-txt-3 w-[26px] h-[26px] rounded-[5px] hover:bg-bg-3 hover:text-txt"
+          className="flex items-center justify-center text-txt-3 w-[26px] h-[26px] rounded-[5px] hover:bg-bg-3 hover:text-txt"
           title={t("agent_list.edit_title")}
           aria-label={t("agent_list.edit_aria", { name: agent.name })}
           onClick={e => { e.stopPropagation(); onEdit(); }}

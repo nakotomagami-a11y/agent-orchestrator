@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { skills } from "@agent-office/shared/services";
-import { log } from "@agent-office/shared/services/log";
+import { skills } from "@agent-office/domain/services";
+import { log } from "@agent-office/domain/services/log";
 import { serverError } from "@/lib/api-helpers";
 
 export async function GET() {

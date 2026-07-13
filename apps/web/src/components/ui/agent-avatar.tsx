@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/cn";
-import { type UnitFaction, type UnitKind, type UnitSelection } from "./unit-sprite.utils";
+import { type UnitFaction, type UnitKind, type UnitSelection } from "./unit-sprite-registry";
 
 // Avatar PNG layout (25 files, 5 factions × 5 kinds):
 //   Factions: blue(1-5), red(6-10), yellow(11-15), purple(16-20), black(21-25)
@@ -44,6 +44,10 @@ export function AgentAvatar({ unit, size = 32, label, className }: AgentAvatarPr
     ? { role: "img" as const, "aria-label": label }
     : { "aria-hidden": true };
   return (
+    // Pixel-art sprites intentionally use raw <img> to preserve the
+    // `image-rendering: pixelated` fidelity — next/image would rasterize
+    // them at the wrong resolution and destroy the pixel grid.
+    // eslint-disable-next-line @next/next/no-img-element
     <img
       src={avatarSrc(slot)}
       width={size}

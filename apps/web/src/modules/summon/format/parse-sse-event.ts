@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { match } from "ts-pattern";
-import type { RunStreamEvent } from "@agent-office/shared/types";
+import type { RunStreamEvent } from "@agent-office/domain/types";
 import type { SubAgentStatus, ThreadItem, UsageMeter } from "./thread-types";
 
 export interface ApplyResult {

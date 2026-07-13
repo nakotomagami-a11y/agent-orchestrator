@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { store } from "@agent-office/shared/services";
+import { store } from "@agent-office/domain/services";
 import { validateBody } from "@/lib/validation";
 import { promptPostSchema } from "@/lib/validation-schemas";
 import { validateIdParam } from "@/lib/api-helpers";

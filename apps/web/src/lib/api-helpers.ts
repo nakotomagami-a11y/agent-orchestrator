@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { extname, join } from "node:path";
 import { Buffer } from "node:buffer";
-import { MAX_UPLOAD_BYTES, safeFilename, isValidIdSegment } from "@agent-office/shared/services/paths";
-import { writeFileAtomic } from "@agent-office/shared/services/fs-atomic";
+import { MAX_UPLOAD_BYTES, safeFilename, isValidIdSegment } from "@agent-office/domain/services/paths";
+import { writeFileAtomic } from "@agent-office/domain/services/fs-atomic";
 
 export function notFound(message = "not_found"): NextResponse {
   return NextResponse.json({ error: message }, { status: 404 });

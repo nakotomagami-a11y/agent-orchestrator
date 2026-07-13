@@ -2,8 +2,8 @@
 
 import { useMemo } from "react";
 import type { OfficeAgent } from "./use-office-agents";
-import type { AgentInstance, PersistedRun } from "@agent-office/shared/types";
-import { statusFromRunsForInstance } from "@/modules/office/utils/derive-status";
+import type { AgentInstance, PersistedRun } from "@agent-office/domain/types";
+import { statusFromRunsForInstance } from "@/modules/office/derive/derive-status";
 import type { RosterGroupData } from "@/components/layout/roster-group";
 
 export type RosterRow = {

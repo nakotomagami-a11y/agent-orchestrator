@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@agent-office/shared/services";
+import { db } from "@agent-office/domain/services";
 import { badRequest, validateIdParam, readBoundedText } from "@/lib/api-helpers";
 
 const TRANSCRIPT_MAX_BYTES = 5 * 1024 * 1024;

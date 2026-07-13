@@ -17,9 +17,9 @@ import { useProject, useAddInstance, useRemoveInstance } from "@/modules/project
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
-import type { AgentInstance } from "@agent-office/shared/types";
+import type { AgentInstance } from "@agent-office/domain/types";
 import type { OfficeAgent } from "../../hooks/use-office-agents";
-import type { AgentStatusInfo } from "../../utils/derive-status";
+import type { AgentStatusInfo } from "../../derive/derive-status";
 
 type Tab = AgentTab;
 
@@ -66,7 +66,7 @@ function InstanceCard({
       }`}
     >
       <div className="flex items-center gap-2">
-        <div className="relative w-8 h-8 rounded-[8px] bg-ao-bg-3 border border-ao-line-1 grid place-items-center shrink-0">
+        <div className="relative w-8 h-8 rounded-[8px] bg-ao-bg-3 border border-ao-line-1 flex items-center justify-center shrink-0">
           <AgentAvatar unit={agent.unitChoice} size={26} label={agent.name} />
           <span
             className={`absolute right-[-2px] bottom-[-2px] w-[9px] h-[9px] rounded-full border-[1.5px] border-[var(--ao-bg-1)] ${
@@ -144,7 +144,7 @@ function InstanceOverview({
 
       {/* Grid of instance cards */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
-        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(200px,1fr))]">
+        <div className="flex flex-wrap gap-3 [&>*]:[flex:1_1_200px]">
           {instances.map((inst, idx) => (
             <InstanceCard
               key={inst.instanceId}
@@ -251,6 +251,7 @@ export function AgentDetailsModal() {
       const pending = consumePendingTab();
       changeTab(pending ?? "conversation");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- changeTab is stable across renders
   }, [inspectorOpen, selectedId, consumePendingTab]);
 
   const memoryDiscardRef = useRef<(() => void) | null>(null);

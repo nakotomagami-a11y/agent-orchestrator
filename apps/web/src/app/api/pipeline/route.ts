@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { agents, pipeline } from "@agent-office/shared/services";
+import { agents, pipeline } from "@agent-office/domain/services";
 import { validateBody } from "@/lib/validation";
 import { createPipelineRequestSchema } from "@/lib/validation-schemas";
 import { badRequest } from "@/lib/api-helpers";
-import type { PipelineStep } from "@agent-office/shared/types";
+import type { PipelineStep } from "@agent-office/domain/types";
 
 function leafSteps(steps: ReturnType<typeof createPipelineRequestSchema.parse>["steps"]): PipelineStep[] {
   const out: PipelineStep[] = [];

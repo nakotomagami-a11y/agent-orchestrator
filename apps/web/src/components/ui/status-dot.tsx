@@ -1,6 +1,6 @@
 import type { CSSProperties, HTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
-import { getStatusMeta, type AgentStatus } from "./status-dot.utils";
+import { getStatusMeta, type AgentStatus } from "./status-dot-colors";
 
 export type StatusDotProps = Omit<HTMLAttributes<HTMLSpanElement>, "children"> & {
   status: AgentStatus;

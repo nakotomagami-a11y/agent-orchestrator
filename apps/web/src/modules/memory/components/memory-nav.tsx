@@ -8,7 +8,7 @@ import { useAgents } from "@/modules/agents/hooks/use-agents";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { cn } from "@/lib/cn";
 import { type MemoryScope } from "../hooks/use-memory";
-import { scopeKey } from "../utils/scope";
+import { scopeKey } from "../scope/scope";
 
 type NavItemProps = {
   scope: MemoryScope;

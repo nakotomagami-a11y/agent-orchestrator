@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemory, type MemoryScope } from "../hooks/use-memory";
 import { MemoryEditor } from "./memory-editor";
-import { scopeKey } from "../utils/scope";
+import { scopeKey } from "../scope/scope";
 
 type ScopeEditorProps = {
   scope: MemoryScope;

@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
-import type { PersistedRun } from "@agent-office/shared/types";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
+import type { PersistedRun } from "@agent-office/domain/types";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { deleteAgentRuns } from "@/lib/api/runs-ops";
-import { formatDayLabel, runTokens } from "../utils/history-format";
+import { formatDayLabel, runTokens } from "../derive/history-format";
 
 export type HistoryFilter = "all" | "ok" | "bad";
 

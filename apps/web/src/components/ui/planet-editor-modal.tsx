@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import type { PlanetConfig, PlanetType } from "@agent-office/shared/types";
+import type { PlanetConfig, PlanetType } from "@agent-office/domain/types";
 import { PLANET_TYPE_DEFS, FREEFORM_TYPES, CANVAS_SCALE, randomPlanet, randomPlanetOfType } from "@/lib/planet-seed";
 import { ModalShell } from "./modal-shell";
 import { PlanetCanvas } from "./planet-canvas";

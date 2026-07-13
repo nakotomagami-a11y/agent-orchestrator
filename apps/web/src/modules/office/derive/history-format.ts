@@ -1,6 +1,6 @@
 // Presentation helpers for the agent History tab. Pure, no React.
 
-import type { PersistedRun } from "@agent-office/shared/types";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 export function formatHistoryDuration(ms: number): string {
   if (!ms) return "-";

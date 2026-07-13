@@ -2,8 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { match } from "ts-pattern";
-import { apiFetch } from "@agent-office/shared/hooks/api";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
+import { apiFetch } from "@agent-office/domain/hooks/api";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
 
 // ─── Scope type ───────────────────────────────────────────────────────────────
 

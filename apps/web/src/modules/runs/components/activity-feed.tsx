@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, Fragment } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
-import type { PersistedRun } from "@agent-office/shared/types";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
+import type { PersistedRun } from "@agent-office/domain/types";
 import { useRuns } from "../hooks/use-runs";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useBranchStore } from "@/lib/branch-store";
@@ -16,20 +16,20 @@ import {
   formatRelative,
   dayLabel,
   groupRunsByDay,
-} from "../utils/format-run-meta";
+} from "../format/format-run-meta";
 import { cn } from "@/lib/cn";
 import {
   fmtTok,
   isoDay,
   elapsedSince,
   agentInitial,
-} from "../utils/activity-formatters";
+} from "../format/activity-formatters";
 import {
   buildSparkData,
   buildHeatmapGrid,
   findBusiestCell,
   classifyHeatmapLevel,
-} from "../utils/activity-stats";
+} from "../format/activity-stats";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -115,7 +115,7 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
           className="act-live-run"
           style={{ gridTemplateColumns: "30px minmax(0,1fr) auto auto auto auto" }}
         >
-          <div className="grid place-items-center shrink-0 bg-bg-3 border border-line uppercase font-bold text-txt-2 w-[28px] h-[28px] rounded-[6px] text-[14px] font-[var(--font-mono)]">{agentInitial(r.agentName)}</div>
+          <div className="flex items-center justify-center shrink-0 bg-bg-3 border border-line uppercase font-bold text-txt-2 w-[28px] h-[28px] rounded-[6px] text-[14px] font-[var(--font-mono)]">{agentInitial(r.agentName)}</div>
           <div className="min-w-0">
             <div className="flex items-center font-semibold text-txt gap-[8px] text-[13px]">
               <span className="rounded-full w-[6px] h-[6px]" style={{ background: "var(--working)", boxShadow: "0 0 6px var(--working)", animation: "pulseDot 1s infinite" }} />
@@ -238,7 +238,7 @@ function StatTiles({ runs }: { runs: PersistedRun[] }) {
   ];
 
   return (
-    <div className="grid [grid-template-columns:repeat(4,1fr)] max-[1024px]:[grid-template-columns:repeat(2,1fr)] max-[600px]:[grid-template-columns:1fr] gap-[12px]">
+    <div className="flex flex-wrap gap-[12px] [&>*]:basis-[calc(25%-9px)] max-[1024px]:[&>*]:basis-[calc(50%-6px)] max-[600px]:[&>*]:basis-full">
       {tiles.map((t) => (
         <div key={t.label} className="bg-bg-1 border border-line relative overflow-hidden flex flex-col px-[16px] py-[14px] rounded-[12px] gap-[5px] min-h-[106px] [box-shadow:var(--shadow-1)]">
           <div className="text-txt-3 uppercase font-[var(--font-mono)] text-[10px] tracking-[0.1em]">{t.label}</div>
@@ -314,29 +314,29 @@ function Heatmap({ runs }: { runs: PersistedRun[] }) {
       </div>
 
       <div className="act-heatmap-scroll overflow-x-auto">
-        <div className="act-heatmap-grid grid items-center gap-[2px]" style={{ gridTemplateColumns: "26px repeat(24, 1fr)" }}>
+        <div className="act-heatmap-grid flex flex-col gap-[2px]">
           {grid.map((row, d) => (
-            <Fragment key={d}>
-              <div className="text-txt-3 text-right font-[var(--font-mono)] text-[9.5px] pr-[4px]">{dayLabels[d]}</div>
+            <div key={d} className="flex items-center gap-[2px]">
+              <div className="text-txt-3 text-right font-[var(--font-mono)] text-[9.5px] pr-[4px] w-[26px] shrink-0">{dayLabels[d]}</div>
               {row.map((v, h) => (
                 <div
                   key={h}
                   className={cn(
-                    "hcell bg-bg-3 border border-line cursor-pointer relative h-[16px] rounded-[2px] transition-transform duration-[100ms] hover:scale-[1.2] hover:z-[2] hover:[box-shadow:var(--shadow-1)]",
+                    "hcell bg-bg-3 border border-line cursor-pointer relative h-[16px] rounded-[2px] transition-transform duration-[100ms] hover:scale-[1.2] hover:z-[2] hover:[box-shadow:var(--shadow-1)] flex-1 basis-0 min-w-0",
                     lvl(v) === "l4" ? "bg-[var(--acc)] border-[var(--acc)]" : lvl(v),
                     d === nowDay && h === nowHour && "outline outline-2 outline-[var(--txt)] outline-offset-[1px]",
                   )}
                   title={`${dayLabels[d]} ${String(h).padStart(2, "0")}:00 - ${v} run${v === 1 ? "" : "s"}`}
                 />
               ))}
-            </Fragment>
+            </div>
           ))}
         </div>
 
-        <div className="act-heatmap-foot grid gap-[2px] mt-[4px]" style={{ gridTemplateColumns: "26px repeat(24, 1fr)" }}>
-          <div />
+        <div className="act-heatmap-foot flex items-center gap-[2px] mt-[4px]">
+          <div className="w-[26px] shrink-0" />
           {Array.from({ length: 24 }, (_, h) => (
-            <div key={h} className="text-txt-4 text-center font-[var(--font-mono)] text-[9px]">
+            <div key={h} className="text-txt-4 text-center font-[var(--font-mono)] text-[9px] flex-1 basis-0 min-w-0">
               {h % 3 === 0 ? String(h).padStart(2, "0") : ""}
             </div>
           ))}
@@ -450,7 +450,7 @@ function FeedRow({
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && onToggle()}
       >
-        <div className="act-row-av grid place-items-center bg-bg-2 border border-line font-bold text-txt-2 uppercase relative shrink-0 w-[26px] h-[26px] rounded-[6px] text-[13px] font-[var(--font-mono)]">
+        <div className="act-row-av flex items-center justify-center bg-bg-2 border border-line font-bold text-txt-2 uppercase relative shrink-0 w-[26px] h-[26px] rounded-[6px] text-[13px] font-[var(--font-mono)]">
           {agentInitial(run.agentName)}
           <span className={cn("absolute rounded-full bottom-[-2px] right-[-2px] w-[8px] h-[8px] [border:2px_solid_var(--bg-1)]", dotCls === "error" ? "bg-[var(--error)]" : "bg-[var(--working)]", dotCls === "running" && "animate-[pulseDot_1.2s_infinite]")} />
         </div>
@@ -489,14 +489,14 @@ function FeedRow({
           onClick={(e) => e.stopPropagation()}
         >
           <Link href={PAGE_ROUTES.run(run.id)}>
-            <button type="button" title="Open run" className="grid place-items-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt">
+            <button type="button" title="Open run" className="flex items-center justify-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt">
               <Icon name="chevron" size={12} />
             </button>
           </Link>
-          <button type="button" title="Branch from here" className="grid place-items-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt" onClick={handleBranch}>
+          <button type="button" title="Branch from here" className="flex items-center justify-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt" onClick={handleBranch}>
             <Icon name="branch" size={12} />
           </button>
-          <button type="button" title="Copy prompt" className="grid place-items-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt" onClick={handleCopyPrompt}>
+          <button type="button" title="Copy prompt" className="flex items-center justify-center text-txt-3 w-[24px] h-[24px] rounded-[5px] hover:bg-bg-2 hover:text-txt" onClick={handleCopyPrompt}>
             <Icon name="copy" size={12} />
           </button>
         </div>

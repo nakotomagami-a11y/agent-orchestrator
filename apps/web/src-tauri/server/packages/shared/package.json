@@ -1,5 +1,5 @@
 {
-  "name": "@agent-office/shared",
+  "name": "@agent-office/domain",
   "version": "0.0.0",
   "private": true,
   "type": "module",

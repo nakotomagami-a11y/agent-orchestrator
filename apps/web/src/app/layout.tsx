@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import { db } from "@agent-office/shared/services";
+import { db } from "@agent-office/domain/services";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -22,6 +22,14 @@ export const metadata: Metadata = {
   title: "Agent Office",
   description: "Personal fleet manager for Claude Code subagents.",
 };
+
+/**
+ * Tauri packages the app as a running Node server, not as a static export.
+ * Force dynamic rendering everywhere so Next.js does NOT try to prerender
+ * pages at build time — which crashes because the pages-router fallback
+ * `/404` chunk imports `<Html>` from `next/document`.
+ */
+export const dynamic = "force-dynamic";
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();

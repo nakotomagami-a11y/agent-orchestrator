@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@agent-office/shared/hooks/api";
-import { queryKeys } from "@agent-office/shared/hooks/query-keys";
+import { apiFetch } from "@agent-office/domain/hooks/api";
+import { queryKeys } from "@agent-office/domain/hooks/query-keys";
 
 /**
  * Client for the agent-migration diff endpoint (`/api/starter/agent-diff`).

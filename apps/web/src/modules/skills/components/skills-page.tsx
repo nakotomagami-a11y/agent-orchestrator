@@ -11,8 +11,8 @@ import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useInstallSkill, useRegistry, useUninstallSkill } from "../hooks/use-skills";
-import { filterRegistry, type RegistryFilter } from "../utils/filter-registry";
-import type { RegistrySkill } from "@agent-office/shared/types";
+import { filterRegistry, type RegistryFilter } from "../registry/filter-registry";
+import type { RegistrySkill } from "@agent-office/domain/types";
 
 export function SkillsPage() {
   const t = useTranslations();

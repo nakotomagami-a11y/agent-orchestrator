@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
-import { unitForAgent } from "@/components/ui/unit-sprite.utils";
+import { unitForAgent } from "@/components/ui/unit-sprite-registry";
 import { Icon } from "@/components/ui/icon";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import {
   EMPTY_FORM,
   type AgentFormValues,
@@ -16,13 +16,13 @@ import {
   validateForm,
   parseCsv,
   toCsv,
-} from "../utils/agent-form";
+} from "../form/agent-form";
 import { useCreateAgent } from "../hooks/use-agents";
 import { useInstalledSkills } from "@/modules/skills/hooks/use-skills";
 import { Button } from "@/components/ui/button";
 import { CodeEditor } from "@/components/ui/code-editor";
-import { MODEL_FULL, EFFORT_OPTS } from "@agent-office/shared/config/agent-opts";
-import { UNIT_FACTIONS, UNIT_KINDS, formatUnit } from "@/components/ui/unit-sprite.utils";
+import { MODEL_FULL, EFFORT_OPTS } from "@agent-office/domain/config/agent-opts";
+import { UNIT_FACTIONS, UNIT_KINDS, formatUnit } from "@/components/ui/unit-sprite-registry";
 
 const TOOL_SUGGESTIONS = [
   { id: "Read",      desc: "Read files" },
@@ -56,7 +56,7 @@ function SectionCard({ n, title, sub, complete, children }: {
   return (
     <section className="bg-bg-2 border border-line overflow-hidden rounded-[14px]">
       <div className="na-section-head flex items-center border-b border-line gap-[12px] px-[18px] py-[14px]">
-        <div className="grid place-items-center bg-acc-faint border text-acc font-bold shrink-0 w-[22px] h-[22px] rounded-[6px] border-[var(--acc-tint)] font-[var(--font-mono)] text-[11px]">{n}</div>
+        <div className="flex items-center justify-center bg-acc-faint border text-acc font-bold shrink-0 w-[22px] h-[22px] rounded-[6px] border-[var(--acc-tint)] font-[var(--font-mono)] text-[11px]">{n}</div>
         <div className="flex-1 min-w-0">
           <h3 className="text-txt font-bold m-0 text-[14px]">{title}</h3>
           <div className="text-txt-3 font-[var(--font-mono)] text-[11.5px] mt-[2px]">{sub}</div>
@@ -238,7 +238,7 @@ export function NewAgentForm() {
           <SectionCard n="1" title="Identity" sub="how this agent is named and described" complete={sec1Done}>
             <div className="grid items-start gap-[18px]" style={{ gridTemplateColumns: "96px 1fr" }}>
               <div className="flex flex-col items-center gap-[6px]">
-                <div className="grid place-items-center bg-bg-3 border border-line relative overflow-hidden w-[84px] h-[84px] rounded-[16px] [box-shadow:0_10px_30px_-10px_rgba(0,0,0,0.5)] before:content-[''] before:absolute before:inset-0 before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.06),transparent_60%)] before:pointer-events-none">
+                <div className="flex items-center justify-center bg-bg-3 border border-line relative overflow-hidden w-[84px] h-[84px] rounded-[16px] [box-shadow:0_10px_30px_-10px_rgba(0,0,0,0.5)] before:content-[''] before:absolute before:inset-0 before:[background:radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.06),transparent_60%)] before:pointer-events-none">
                   <AgentAvatar unit={unit} size={56} label={values.name || "Agent avatar"} />
                 </div>
                 <button type="button" className="inline-flex items-center text-txt-3 cursor-pointer bg-transparent border-none font-[var(--font-mono)] text-[10.5px] gap-[4px] hover:text-acc" onClick={rerollUnit}>
@@ -426,7 +426,7 @@ export function NewAgentForm() {
             </div>
             <div className="flex flex-col gap-[10px]">
               <div className="flex items-center gap-[10px]">
-                <div className="grid place-items-center bg-bg-3 border border-line shrink-0 w-[38px] h-[38px] rounded-[10px]">
+                <div className="flex items-center justify-center bg-bg-3 border border-line shrink-0 w-[38px] h-[38px] rounded-[10px]">
                   <AgentAvatar unit={unit} size={32} />
                 </div>
                 <div className="min-w-0">

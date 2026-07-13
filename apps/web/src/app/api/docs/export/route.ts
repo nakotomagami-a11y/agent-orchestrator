@@ -1,4 +1,4 @@
-import { buildDocsExport } from "@agent-office/shared/services/docs-export";
+import { buildDocsExport } from "@agent-office/domain/services/docs-export";
 
 export const dynamic = "force-dynamic";
 

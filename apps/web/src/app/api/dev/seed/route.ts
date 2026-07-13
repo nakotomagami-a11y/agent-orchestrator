@@ -3,7 +3,7 @@ import { rmSync, mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { readdirSync } from "node:fs";
-import { db, agents, projects, paths } from "@agent-office/shared/services";
+import { db, agents, projects, paths } from "@agent-office/domain/services";
 
 const DECORATIONS = `{"12,12":["house1"],"15,17":["house2"],"15,22":["tower"],"20,10":["castle"],"24,18":["gold_mine_active"],"23,18":["cursed_chest"],"16,9":["tree2"],"17,8":["tree2"],"17,9":["tree"],"24,8":["tree"],"17,21":["tree3","mushroom2"],"16,21":["tree4","mushroom1"],"14,21":["shrub3"],"16,16":["shrub5"],"11,13":["sheep"],"13,15":["sheep"],"18,17":["pumpkin2"],"17,14":["pumpkin1"],"21,13":["gravestone"],"16,10":["bush3"],"10,10":["bush3"],"17,17":["bush3"],"16,24":["bush3"],"23,17":["bush3"],"22,18":["bush4"],"19,18":["bush"],"22,16":["bush"],"20,19":["rock2"],"23,21":["mushroom2"],"19,15":["mushroom2"],"23,12":["mushroom2"],"15,13":["mushroom2"],"16,14":["bridge_h"],"23,14":["duck"],"12,20":["duck"],"14,7":["duck"],"16,15":["water_rock2"],"18,16":["water_rock"],"24,9":["water_rock2"],"14,10":["water_rock4"],"25,18":["bones1","bone_sign"],"13,12":["bones1"],"17,13":["tree3"],"24,11":["tree4"],"25,20":["tree4"],"23,20":["shrub4"],"20,14":["shrub4"],"19,11":["shrub4","bush2"],"23,10":["shrub4"],"19,10":["shrub5"],"21,10":["shrub5"],"19,16":["shrub5"],"22,19":["shrub5"],"16,22":["shrub5"],"14,22":["shrub5"],"13,13":["shrub5"],"14,15":["shrub5"],"13,16":["shrub5"],"10,13":["shrub4"],"16,17":["shrub4"],"22,13":["shrub4"],"19,20":["stump3"],"25,10":["stump1"]}`;
 
@@ -24,7 +24,7 @@ const PROJECT_MEMORY = `# Project Memory
 - Frontend: Next.js 15, React 19, Tailwind v4 CSS-first, TypeScript
 - Desktop: Tauri 2 (Rust) + embedded Node.js standalone server
 - Database: SQLite via better-sqlite3 (synchronous, no ORM)
-- Packages: @agent-office/ui (shared components + design tokens), @agent-office/shared (DB, services, types)
+- Packages: @agent-office/ui (shared components + design tokens), @agent-office/domain (DB, services, types)
 
 ## Conventions
 - Token classes only — never \`style={{ color: "var(--acc)" }}\`, use \`text-acc\`
@@ -355,7 +355,7 @@ async function seedMemory() {
 
 ### Project structure
 - Monorepo: pnpm workspaces — \`apps/web\` (Next.js), \`apps/landing\`, \`packages/shared\`, \`packages/ui\`
-- \`@agent-office/shared/services\` barrel exports all service namespaces
+- \`@agent-office/domain/services\` barrel exports all service namespaces
 - Types in \`packages/shared/src/types/index.ts\` — \`PersistedRun\`, \`AgentInstance\`, \`Project\`
 
 ### Auth & middleware
@@ -399,7 +399,7 @@ async function seedMemory() {
 
 ### TypeScript setup
 - Strict mode enabled; \`noUncheckedIndexedAccess\` catches most array access bugs
-- Path aliases: \`@/*\` → \`apps/web/src/*\`; \`@agent-office/shared/*\` via workspace protocol
+- Path aliases: \`@/*\` → \`apps/web/src/*\`; \`@agent-office/domain/*\` via workspace protocol
 - Run \`pnpm tsc --noEmit\` from monorepo root — checks all packages simultaneously
 
 ### Test coverage

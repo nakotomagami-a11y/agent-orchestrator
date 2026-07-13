@@ -1,4 +1,4 @@
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 import { notFound, tryService, validateIdParam } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string; instanceId: string }> };

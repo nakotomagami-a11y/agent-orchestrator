@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRun, useRuns } from "@/modules/runs/hooks/use-runs";
 import { useCompareStore } from "@/lib/compare-store";
-import { formatCost, formatRelative } from "@/modules/runs/utils/format-run-meta";
-import type { PersistedRun } from "@agent-office/shared/types";
+import { formatCost, formatRelative } from "@/modules/runs/format/format-run-meta";
+import type { PersistedRun } from "@agent-office/domain/types";
 
 export function CompareModal() {
   const t = useTranslations("compare");
@@ -43,7 +43,7 @@ export function CompareModal() {
       }
     >
       <div
-        className="grid gap-4 min-h-[200px]"
+        className="flex flex-col gap-4 min-h-[200px]"
         style={{ gridTemplateColumns: "1fr 1fr" }}
       >
         {/* Left pane - base run */}

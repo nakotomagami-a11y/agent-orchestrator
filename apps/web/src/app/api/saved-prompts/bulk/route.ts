@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { store } from "@agent-office/shared/services";
+import { store } from "@agent-office/domain/services";
 import { validateBody } from "@/lib/validation";
 import { savedPromptsBulkSchema } from "@/lib/validation-schemas";
 

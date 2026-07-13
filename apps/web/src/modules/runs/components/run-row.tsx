@@ -5,10 +5,10 @@ import { match } from "ts-pattern";
 import { StatusDot } from "@/components/ui/status-dot";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useCompareStore } from "@/lib/compare-store";
-import type { PersistedRun } from "@agent-office/shared/types";
-import { formatCost, formatDuration, formatRelative } from "../utils/format-run-meta";
+import type { PersistedRun } from "@agent-office/domain/types";
+import { formatCost, formatDuration, formatRelative } from "../format/format-run-meta";
 
 export type RunRowProps = {
   run: PersistedRun;

@@ -19,7 +19,7 @@ import { useProcessesStore } from "@/lib/processes-store";
 import { useFlutterStore } from "@/lib/flutter-store";
 import { useThemeStore } from "@/lib/theme-store";
 import { abortAllRuns } from "@/lib/api/runs-ops";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 
 // ---------------------------------------------------------------------------
 // Command registry
@@ -131,6 +131,7 @@ export function CommandPalette() {
       // rAF so the element is visible before we focus
       requestAnimationFrame(() => inputRef.current?.focus());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally scoped to open transitions
   }, [open]);
 
   // Scroll active row into view

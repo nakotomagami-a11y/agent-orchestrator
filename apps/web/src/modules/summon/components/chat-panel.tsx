@@ -8,7 +8,7 @@ import { WorkflowPill } from "./workflow-pill";
 import { ChatThread } from "./chat-thread";
 import { Composer } from "./composer";
 import type { ChatPhase } from "./live-status";
-import { fmtElapsed, phaseHint } from "../utils/phase-format";
+import { fmtElapsed, phaseHint } from "../format/phase-format";
 import { useSummon, useAbortRun } from "../hooks/use-summon";
 import { useRunStream } from "../hooks/use-run-stream";
 import { useRunRecovery } from "../hooks/use-run-recovery";
@@ -18,13 +18,13 @@ import {
   loadTranscript,
   saveTranscript,
   transcriptKey,
-} from "../utils/transcript-store";
-import type { ContextProfile } from "@agent-office/shared/types";
-import { clearDraft } from "../utils/draft-store";
+} from "../format/transcript-store";
+import type { ContextProfile } from "@agent-office/domain/types";
+import { clearDraft } from "../format/draft-store";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { Button } from "@/components/ui/button";
-import type { ThreadItem } from "../utils/thread-types";
+import type { ThreadItem } from "../format/thread-types";
 import { useBranchStore } from "@/lib/branch-store";
 import { repairWorktree } from "@/lib/api/roster";
 
@@ -307,6 +307,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose: _onClose, onE
       if (it.kind === "agent-text") out += it.text;
     }
     return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- runStartIndexRef.current is read imperatively; thread change is the correct trigger
   }, [thread]);
 
   const phase: ChatPhase = phaseOverride
@@ -384,7 +385,7 @@ export function ChatPanel({ agent, projectId, instanceId, onClose: _onClose, onE
   })();
 
   return (
-    <div className="grid grid-rows-[auto_1fr_auto] min-h-0 h-full flex-1 bg-[var(--bg-1)]" role="region" aria-label={`Chat with ${agent.name}`}>
+    <div className="flex flex-col min-h-0 h-full flex-1 bg-[var(--bg-1)]" role="region" aria-label={`Chat with ${agent.name}`}>
       {!noHeader && (
         <ChatHead
           agent={agent}

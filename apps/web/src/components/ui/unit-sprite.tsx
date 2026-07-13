@@ -12,7 +12,7 @@ import {
   unitSheetSrc,
   type UnitSelection,
   type UnitSheetState,
-} from "./unit-sprite.utils";
+} from "./unit-sprite-registry";
 
 export type UnitSpriteProps = {
   unit: UnitSelection;

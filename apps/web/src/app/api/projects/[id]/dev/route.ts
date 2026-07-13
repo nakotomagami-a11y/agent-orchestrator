@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, basename, isAbsolute } from "node:path";
 import * as net from "node:net";
 import { NextResponse } from "next/server";
-import { projects } from "@agent-office/shared/services";
+import { projects } from "@agent-office/domain/services";
 import { validateIdParam, notFound } from "@/lib/api-helpers";
 
 type Params = { params: Promise<{ id: string }> };

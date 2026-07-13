@@ -23,10 +23,10 @@ import {
   UNIT_DEFS,
   unitSheetSrc,
   type UnitSheetState,
-} from "@/components/ui/unit-sprite.utils";
-import { getAgentActionAndFlip, isBridgeCell } from "../utils/agent-action";
+} from "@/components/ui/unit-sprite-registry";
+import { getAgentActionAndFlip, isBridgeCell } from "../derive/agent-action";
 import type { OfficeAgent } from "../hooks/use-office-agents";
-import type { AgentInstance } from "@agent-office/shared/types";
+import type { AgentInstance } from "@agent-office/domain/types";
 
 const FOAM_SHEET = "/tiles/water-foam.png";
 const FOAM_FRAME = TILE * 3; // 192px

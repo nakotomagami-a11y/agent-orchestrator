@@ -11,7 +11,7 @@ import {
   type LimitsPeriod,
 } from "@/lib/claude-limits-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
-import { fmtUSD, fmtTok, modelLabel, modelBarGradient } from "../utils/format";
+import { fmtUSD, fmtTok, modelLabel, modelBarGradient } from "../format/format";
 
 /* ------------------------------------------------------------------ */
 /* Plan config                                                          */
@@ -49,13 +49,13 @@ function SectionHead({
 function LimHeader({ onClose }: { onClose: () => void }) {
   return (
     <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ao-line-0)] shrink-0">
-      <div className="w-8 h-8 bg-ao-accent-soft border border-ao-accent-line rounded-[8px] grid place-items-center text-ao-accent text-[15px]" aria-hidden="true">⚡</div>
+      <div className="w-8 h-8 bg-ao-accent-soft border border-ao-accent-line rounded-[8px] flex items-center justify-center text-ao-accent text-[15px]" aria-hidden="true">⚡</div>
       <div className="flex-1 min-w-0">
         <div className="text-[14px] font-semibold text-ao-fg-0">Usage &amp; limits</div>
         <div className="text-[11px] text-ao-fg-3 font-mono mt-[1px]">spend caps, plan, and per-model breakdown · workspace local</div>
       </div>
       <button
-        className="w-7 h-7 rounded-[6px] grid place-items-center text-ao-fg-3 text-[16px] leading-none transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
+        className="w-7 h-7 rounded-[6px] flex items-center justify-center text-ao-fg-3 text-[16px] leading-none transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
         aria-label="Close"
         onClick={onClose}
       >×</button>
@@ -65,18 +65,18 @@ function LimHeader({ onClose }: { onClose: () => void }) {
 
 function PlanGrid({ value }: { value: ClaudePlan }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className="flex flex-wrap gap-2 [&>*]:basis-[calc(33.333%-6px)]">
       {PLAN_DEFS.map((p) => (
         <div
           key={p.id}
           className={`flex flex-col gap-1 p-3 rounded-ao-md bg-ao-bg-2 border text-left cursor-default pointer-events-none transition-[border-color,background] duration-[120ms] ${value === p.id ? "border-[var(--ao-accent-line)] bg-[var(--ao-accent-softer)]" : "border-ao-line-1"}`}
         >
           <div className="flex items-center gap-[6px] text-[13px] font-semibold text-ao-fg-0">
-            <span className="w-[22px] h-[22px] bg-ao-bg-3 border border-ao-line-1 rounded-[6px] inline-grid place-items-center text-[11px] font-mono shrink-0">
+            <span className="w-[22px] h-[22px] bg-ao-bg-3 border border-ao-line-1 rounded-[6px] inline-flex items-center justify-center text-[11px] font-mono shrink-0">
               {p.icon}
             </span>
             {p.name}
-            {value === p.id && <span className="ml-auto w-4 h-4 rounded-full border border-ao-accent grid place-items-center text-[10px] text-ao-accent" aria-hidden="true">✓</span>}
+            {value === p.id && <span className="ml-auto w-4 h-4 rounded-full border border-ao-accent flex items-center justify-center text-[10px] text-ao-accent" aria-hidden="true">✓</span>}
           </div>
           <div className="text-[11px] text-ao-accent font-mono font-semibold">{p.price}</div>
           <div className="text-[10.5px] text-ao-fg-3 leading-[1.4]">{p.feat}</div>
@@ -318,7 +318,7 @@ function TopAgents({
 
             {/* Avatar */}
             <div
-              className="w-8 h-8 rounded-[8px] grid place-items-center font-mono font-bold text-[13px] text-ao-fg-1 shrink-0"
+              className="w-8 h-8 rounded-[8px] flex items-center justify-center font-mono font-bold text-[13px] text-ao-fg-1 shrink-0"
               style={{
                 background: "var(--ao-bg-3)",
                 border: isTop ? "1px solid var(--ao-accent-line)" : "1px solid var(--ao-line-1)",
@@ -396,7 +396,7 @@ export function ClaudeLimitsModal() {
 
   // ---- Data computation ----
   const runsQ = useRuns({ limit: 500 });
-  const allRuns = runsQ.data ?? [];
+  const allRuns = useMemo(() => runsQ.data ?? [], [runsQ.data]);
 
   const start = periodStart(localPeriod);
   const end   = periodEnd(localPeriod);

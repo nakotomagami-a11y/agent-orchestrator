@@ -5,11 +5,11 @@ import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import type { PlanetConfig } from "@agent-office/shared/types";
+import type { PlanetConfig } from "@agent-office/domain/types";
 import { Icon } from "@/components/ui/icon";
 import { PlanetCanvas } from "@/components/ui/planet-canvas";
 import { cn } from "@/lib/cn";
-import { PAGE_ROUTES } from "@agent-office/shared/config/routes";
+import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { BootstrapProjectModal } from "@/modules/projects/components/bootstrap-project-modal";
@@ -228,7 +228,7 @@ export function ProjectSwitcher() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 border-t border-line bg-bg-2 gap-[2px] p-[6px]">
+          <div className="flex flex-wrap border-t border-line bg-bg-2 gap-[2px] p-[6px] [&>*]:basis-[calc(50%-1px)]">
             <button
               type="button"
               role="menuitem"
@@ -307,7 +307,7 @@ function ProjectRow({
       {projectId ? (
         <PlanetCanvas projectId={projectId} config={planetConfig} size={32} className="rounded-full shrink-0" />
       ) : (
-        <span className="grid place-items-center shrink-0 text-white font-bold w-[32px] h-[32px] rounded-[8px] text-[12px] border border-[rgba(255,255,255,0.08)] bg-bg-3">
+        <span className="flex items-center justify-center shrink-0 text-white font-bold w-[32px] h-[32px] rounded-[8px] text-[12px] border border-[rgba(255,255,255,0.08)] bg-bg-3">
           <Icon name="folder" size={13} className="text-txt-3" />
         </span>
       )}

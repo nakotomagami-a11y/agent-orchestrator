@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { type MemoryScope } from "@/modules/memory/hooks/use-memory";
 import { ScopeEditor } from "@/modules/memory/components/scope-editor";
 import { MemoryNav } from "@/modules/memory/components/memory-nav";
-import { scopeKey } from "@/modules/memory/utils/scope";
+import { scopeKey } from "@/modules/memory/scope/scope";
 
 export default function MemoryPage() {
   const t = useTranslations("memory_page");

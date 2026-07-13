@@ -22,7 +22,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { projects, settings } from "@agent-office/shared/services";
+import { projects, settings } from "@agent-office/domain/services";
 import { logEnvDiagnostics } from "./lib/env";
 
 // Env validation runs on module import (throws on malformed config).

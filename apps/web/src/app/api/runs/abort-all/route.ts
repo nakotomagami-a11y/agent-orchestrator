@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runs as runsService } from "@agent-office/shared/services";
+import { runs as runsService } from "@agent-office/domain/services";
 
 export async function POST(req: Request) {
   let body: { projectId?: string } = {};

@@ -3,8 +3,8 @@
  * per-project running counts, and wiping an agent's history.
  */
 
-import type { PersistedRun } from "@agent-office/shared/types";
-import { API_ROUTES } from "@agent-office/shared/config/routes";
+import type { PersistedRun } from "@agent-office/domain/types";
+import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { apiClient } from "@/lib/api-client";
 
 export async function abortAllRuns(projectId?: string): Promise<void> {

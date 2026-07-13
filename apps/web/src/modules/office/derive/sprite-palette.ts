@@ -2,7 +2,7 @@
 // don't ship with sprite info, so we derive skin/hair/shirt/accessory from a
 // stable hash of the agent name - same agent = same look every render.
 
-import type { SpriteAgent } from "@/components/ui/pixel-sprite.utils";
+import type { SpriteAgent } from "@/components/ui/pixel-sprite-atlas";
 
 const SKINS = ["#F5C68C", "#E3A684", "#C98C63", "#7E5238", "#F6C8A3"] as const;
 const HAIRS = ["#3B2F2A", "#48342A", "#7E3F2E", "#A3A8B8", "#2B2330", "#C28A00", "#C98A3E"] as const;

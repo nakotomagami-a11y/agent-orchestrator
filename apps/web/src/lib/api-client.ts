@@ -13,7 +13,7 @@
  */
 
 import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
-import { ApiError } from "@agent-office/shared/hooks/api";
+import { ApiError } from "@agent-office/domain/hooks/api";
 
 export { ApiError };
 

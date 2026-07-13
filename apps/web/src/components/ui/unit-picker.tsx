@@ -9,7 +9,7 @@ import {
   parseUnit,
   formatUnit,
   type UnitSelection,
-} from "./unit-sprite.utils";
+} from "./unit-sprite-registry";
 
 export type UnitPickerProps = {
   /** Current value in `"faction/kind"` format, or empty string for auto. */

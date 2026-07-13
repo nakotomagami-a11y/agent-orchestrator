@@ -18,8 +18,8 @@ import {
   store,
   summon,
   userAnalysis,
-} from "@agent-office/shared/services";
-import { log } from "@agent-office/shared/services/log";
+} from "@agent-office/domain/services";
+import { log } from "@agent-office/domain/services/log";
 import { badRequest, serverError } from "@/lib/api-helpers";
 
 const AGENT_ID = "user-analyst";
