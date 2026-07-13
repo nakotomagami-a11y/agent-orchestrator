@@ -664,30 +664,64 @@ every row EXCEPT `everything`. The UI copy makes this explicit.
 
 ---
 
-### Task 16 — About You overhaul ⏳
+### Task 16 — About You overhaul ✅
 
-**Changes:**
+**Delivered:**
 
-1. Rewrite `~/.claude/agents/user-analyst.md` prompt:
-   - Categorize output into strict markdown H2 sections:
-     - Good
-     - Bad
-     - Interesting
-     - Facts
-     - Conversational Skills
-     - What can be improved
-     - Red flags
-     - Juicy stuff
-   - Every insight is one bullet, no meta-commentary, no "based on the
-     data" wording.
-   - Ask `agent-architect` and `cs-content-creator` for prompt-writing
-     help — use both to produce a polished, mature prompt.
-2. Frontend `AboutYouTab`:
-   - Replace the current plain-text render with the existing
-     `<MarkdownPreview>` component (from `settings-tab/markdown-preview.tsx`).
-   - Render each H2 as a card with its own accent color.
-3. Regenerate button should spawn `user-analyst` as a normal chat run
-   (visible in the run stream, cost tracked).
+**Agent prompt rewrite** (`~/.claude/agents/user-analyst.md`):
+- Preserved the hard person-focused framing (verbatim quotes from prior
+  user rejections of project-status output stay in the prompt as
+  guardrails).
+- Added a `Writing rules — non-negotiable` block: second-person present
+  tense; verbatim-only quotes; one-bullet-one-insight; no hedges; no
+  meta-commentary; every bullet earns its place.
+- Locked the report to a strict 9-H2 skeleton — Bottom line + Good +
+  Bad + Interesting + Facts + Conversational skills + What can be
+  improved + Red flags + Juicy stuff. Each section has bullet-count
+  budgets and format examples.
+- The `Facts` section is bullets-with-numbers only; every bullet must
+  cite a real number from the SQL block.
+- Added a longer SQL block (200 messages, frustration triggers with
+  window-function lookup of the prior assistant reply, active-hours,
+  length distribution, session-gap statistics).
+- Expanded the verification checklist to 15 items — every H2 present,
+  every bullet-budget honored, quotes real, zero forbidden words
+  (portfolio, project state), no hedges. If any item fails the section
+  must be rewritten before shipping.
+- Explicit anti-fabrication rule for the Red flags section: if the data
+  doesn't show a red flag, write "No load-bearing red flags this
+  window." rather than invent one.
+
+**Frontend rendering** (`about-you-renderer.tsx`, new):
+- Splits the markdown at H2 boundaries into 9 canonical sections.
+- Each section renders as its own tinted card with an icon + colored
+  title using the existing token palette:
+  - Bottom line — hero card at top, accent-tinted background
+  - Good — done color
+  - Bad — error color
+  - Interesting — accent
+  - Facts — neutral txt-3
+  - Conversational skills — accent
+  - What can be improved — accent (no dedicated warning token exists)
+  - Red flags — error
+  - Juicy stuff — accent + sparkle icon
+- Non-canonical sections fall through to a neutral card so a bad regen
+  still renders. If no H2 sections are found at all, the whole markdown
+  falls back to plain ProseView so nothing breaks.
+- The H1 + timestamp preamble is dropped (already shown in the tab
+  header) unless it contains additional prose.
+- `about-you-tab.tsx` swapped from raw `<ProseView>` to
+  `<AboutYouRenderer>` so the card layout is used everywhere.
+
+**Regenerate flow:** already ran through `useRegenerateUserAnalysis`
+which spawns the user-analyst agent as a normal run (visible in the run
+stream, cost tracked). Not touched — the plan called for this and it
+already works.
+
+**Files touched:**
+- edit `~/.claude/agents/user-analyst.md` (prompt rewrite, outside repo)
+- new `apps/web/src/modules/settings/components/tabs/about-you-renderer.tsx`
+- edit `apps/web/src/modules/settings/components/tabs/about-you-tab.tsx`
 
 ---
 

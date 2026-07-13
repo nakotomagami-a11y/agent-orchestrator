@@ -20,7 +20,7 @@ import { CardHeader } from "@/components/ui/card-header";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ProseView } from "@/components/ui/prose-view";
+import { AboutYouRenderer } from "./about-you-renderer";
 import { queryKeys } from "@agent-office/domain/hooks/query-keys";
 import { formatRelative } from "@/modules/runs/format/format-run-meta";
 import { useRun } from "@/modules/runs/hooks/use-runs";
@@ -209,9 +209,7 @@ function AnalysisView({
           )}
         </div>
       </div>
-      <div className="p-4 ao-prose">
-        <ProseView body={markdown} />
-      </div>
+      <AboutYouRenderer markdown={markdown} />
     </>
   );
 }
