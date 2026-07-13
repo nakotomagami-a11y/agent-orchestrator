@@ -119,16 +119,31 @@ export const PlanetCanvas = memo(function PlanetCanvas({
     return () => renderer.unregister(key);
   }, [projectId, config, size]);
 
+  // Canvas is absolutely-centered inside the wrapper. When `canvasSize >
+  // size` (star/black-hole/gas-giant) the ring/glow paints outside the
+  // wrapper without displacing sibling elements — layout stays anchored to
+  // the disc's `size`. Callers can add `overflow-hidden` to the className
+  // when they want to clip the bleed (e.g. a circle chip that must not
+  // overflow neighbouring UI), or omit it (default) to let the effect
+  // extend beyond the disc.
+  const overhang = (canvasSize - size) / 2;
   return (
     <div
       className={className}
-      style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}
+      style={{ width: size, height: size, position: "relative", flexShrink: 0 }}
     >
       <canvas
         ref={canvasRef}
         width={canvasSize}
         height={canvasSize}
-        style={{ imageRendering: "pixelated", display: "block", flexShrink: 0 }}
+        style={{
+          imageRendering: "pixelated",
+          display: "block",
+          position: "absolute",
+          top: -overhang,
+          left: -overhang,
+          pointerEvents: "none",
+        }}
       />
     </div>
   );

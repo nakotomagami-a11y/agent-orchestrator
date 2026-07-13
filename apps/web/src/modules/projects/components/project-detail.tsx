@@ -214,7 +214,6 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   projectId={id}
                   config={project.meta.planet}
                   size={168}
-                  className="rounded-full overflow-hidden"
                 />
                 <span className="absolute inset-0 rounded-full flex items-center justify-center bg-[rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                   <Icon name="edit" size={28} className="text-white" />
