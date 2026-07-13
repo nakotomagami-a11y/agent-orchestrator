@@ -438,10 +438,15 @@ html.tauri body {
 /* ─── Browser (non-Tauri) window ─── */
 /* In browser mode there's no OS window frame, so GnomeWindow fills the
    full viewport (no 18px gap), removing the gradient peaking around it. */
+/* In browser mode the html/body must still render the theme background so
+   the transparent GnomeWindow inset doesn't leak the light html default —
+   otherwise a bright rectangle shows in the 18px frame around the app in
+   dark mode. */
+html:not(.tauri),
 html:not(.tauri) body {
-  background: transparent !important;
+  background: var(--bg-0) !important;
 }
-html:not(.tauri) .\[grid-template-rows\:38px_1fr\] {
+html:not(.tauri) .gnome-window {
   inset: 0 !important;
   border-radius: 0 !important;
   box-shadow: none !important;

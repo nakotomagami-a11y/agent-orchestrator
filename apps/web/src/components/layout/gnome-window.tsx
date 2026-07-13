@@ -23,7 +23,7 @@ export function GnomeWindow({ children, className }: GnomeWindowProps) {
   return (
     <div
       className={cn(
-        "absolute bg-bg-1 shadow-[var(--shadow-window)] overflow-hidden flex flex-col border border-line-2 inset-[18px] rounded-[10px] max-[600px]:inset-0 max-[600px]:rounded-none",
+        "gnome-window absolute bg-bg-1 shadow-[var(--shadow-window)] overflow-hidden flex flex-col border border-line-2 inset-[18px] rounded-[10px] max-[600px]:inset-0 max-[600px]:rounded-none",
         maximized && "inset-0 rounded-none shadow-none border-none",
         className,
       )}
