@@ -102,7 +102,28 @@ tree tonight during the fix.
 
 ---
 
-### Task 2 — Project view refit ⏳
+### Task 2 — Project view refit ✅ e24eb78 + description fills
+
+**UI change** (committed): planet 56 → 168 (3×), counters moved to
+top-right of the name row (next to planet), description shows a
+prominent "Add a description" pill when empty and becomes a textarea
+when editing.
+
+**Descriptions filled** in `~/.claude/projects/<id>/project.md`:
+- `agent-office` — this IDE
+- `arturasdigital` — Arturas's portfolio
+- `carhub` — car marketplace
+- `inwhite` — Payload CMS + Next.js ecommerce
+- `vitejs-vite-apad2c3c` — Vite starter scaffold
+
+**Still need user input** (no cwd data, unknown purpose):
+- ai-tools-catalog, ai-vehicles-search, bg-fe-assignment-private,
+  bg-fe-assignment, business-research, cv-scanner, demo-project,
+  flaindeetattoo, inwhite (in project store — need verify), job-board,
+  LandlordOS, mcp-catalog, nuomok, pixel-planets-generator,
+  trading-bots
+- User can fill these inline in the app now (the new "Add a
+  description" button on each project detail page).
 
 **Changes:**
 1. Planet in detail header: `size={40}` → `size={120}` (3×).
