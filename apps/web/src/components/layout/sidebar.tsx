@@ -502,22 +502,17 @@ function CommandPaletteNavButton() {
 }
 
 function LimitsNavButton({ spendToday }: { spendToday: number }) {
-  const t = useTranslations();
   const openLimits = useClaudeLimitsStore((s) => s.setOpen);
-  const quotaUsd = useClaudeLimitsStore((s) => s.quotaUsd);
-  const badge = quotaUsd > 0
-    ? `${Math.min(100, (spendToday / quotaUsd) * 100).toFixed(0)}%`
-    : `$${spendToday.toFixed(2)}`;
   return (
     <button
       type="button"
       onClick={() => openLimits(true)}
       className="flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full"
-      aria-label={t("sidebar.limits_aria")}
+      aria-label="Analytics"
     >
-      <Icon name="gauge" />
-      <span>{t("nav.limits")}</span>
-      <span className="ml-auto font-[var(--font-mono)] text-[10.5px] py-[2px] px-[6px] bg-bg-3 text-txt-2 rounded-[999px]">{badge}</span>
+      <Icon name="activity" />
+      <span>Analytics</span>
+      <span className="ml-auto font-[var(--font-mono)] text-[10.5px] py-[2px] px-[6px] bg-bg-3 text-txt-2 rounded-[999px]">${spendToday.toFixed(2)}</span>
     </button>
   );
 }

@@ -1,37 +1,13 @@
 import { NextResponse } from "next/server";
-import { agents, db, history, projects, runs, store, summon } from "@agent-office/domain/services";
+import { agents, history, projects, runs, store, summon } from "@agent-office/domain/services";
 import { health } from "@agent-office/domain/services";
 import { existsSync, statSync } from "node:fs";
 import { paths } from "@agent-office/domain/services";
 import { validateBody } from "@/lib/validation";
 import { summonRequestSchema } from "@/lib/validation-schemas";
 import { badRequest } from "@/lib/api-helpers";
-import { parseLimits, periodStart } from "@/lib/claude-limits";
 
 // ─── Route handler ─────────────────────────────────────────────────────────────
-
-type QuotaCheck = { blockResponse?: NextResponse; warning?: string };
-
-function enforceSpendQuota(): QuotaCheck {
-  const limits = parseLimits(db.getUiSetting("claude-limits"));
-  if (limits.hardCap === "off" || limits.quotaUsd <= 0) return {};
-  const spent = db.getSumCostSince(periodStart(limits.period));
-  if (limits.hardCap === "block" && spent >= limits.quotaUsd) {
-    return {
-      blockResponse: NextResponse.json(
-        {
-          error: "quota_exceeded",
-          detail: `${limits.period.charAt(0).toUpperCase() + limits.period.slice(1)} spend cap of $${limits.quotaUsd.toFixed(2)} reached`,
-        },
-        { status: 402 },
-      ),
-    };
-  }
-  if (limits.hardCap === "warn" && spent >= limits.quotaUsd * 0.8) {
-    return { warning: `$${spent.toFixed(2)} of $${limits.quotaUsd.toFixed(2)} ${limits.period} budget used` };
-  }
-  return {};
-}
 
 type ResolvedCwd = { cwd?: string } | { error: NextResponse };
 
@@ -72,9 +48,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "claude_unavailable", detail: claudeStatus.error }, { status: 503 });
   }
 
-  const quota = enforceSpendQuota();
-  if (quota.blockResponse) return quota.blockResponse;
-
   const agent = agents.readAgent(req.agentId);
   if (!agent) return badRequest(`unknown agent: ${req.agentId}`);
 
@@ -111,5 +84,5 @@ export async function POST(request: Request) {
     args: built.args,
   });
 
-  return NextResponse.json(quota.warning ? { runId, warning: quota.warning } : { runId });
+  return NextResponse.json({ runId });
 }

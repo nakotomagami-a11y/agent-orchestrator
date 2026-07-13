@@ -365,7 +365,18 @@ The biggest single task. Do carefully.
 
 ---
 
-### Task 10 — Memory page: skill preview + virtualization + audit ⏳
+### Task 10 — Memory page: skill preview + virtualization + audit ✅ d359f92 (partial)
+
+Delivered: agent skill sub-list in the memory nav. Selecting a skill
+opens a read-only markdown preview (`<MarkdownPreview>`). New
+`agent-skill` variant in `MemoryScope` + `isReadOnly()` helper.
+
+Deferred to follow-up commits (not blocking):
+- react-window virtualization — no perceptible FPS issue observed on
+  current skill sizes; will add if a very-large .md turns up
+- Agent-memory audit + agent-architect batch-fill — pair with Task 16
+  since both involve the user-analyst-style pattern of one agent
+  helping another improve its writing
 
 **Changes:**
 

@@ -7,7 +7,6 @@ import {
   useClaudeLimitsStore,
   periodStart,
   periodEnd,
-  type ClaudePlan,
   type LimitsPeriod,
 } from "@/lib/claude-limits-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
@@ -17,11 +16,6 @@ import { fmtUSD, fmtTok, modelLabel, modelBarGradient } from "../format/format";
 /* Plan config                                                          */
 /* ------------------------------------------------------------------ */
 
-const PLAN_DEFS: { id: ClaudePlan; name: string; price: string; feat: string; icon: string }[] = [
-  { id: "free",  name: "Free",  price: "$0/mo",    feat: "standard usage · web + mobile · all integrations",      icon: "F" },
-  { id: "pro",   name: "Pro",   price: "$20/mo",   feat: "more usage than free · all models · Claude Code",       icon: "P" },
-  { id: "max",   name: "Max",   price: "$100/mo+", feat: "5× or 20× Pro usage · priority access · early features", icon: "M" },
-];
 
 /* ------------------------------------------------------------------ */
 /* Sub-components                                                       */
@@ -51,37 +45,14 @@ function LimHeader({ onClose }: { onClose: () => void }) {
     <div className="flex items-center gap-3 px-5 py-4 border-b border-[var(--ao-line-0)] shrink-0">
       <div className="w-8 h-8 bg-ao-accent-soft border border-ao-accent-line rounded-[8px] flex items-center justify-center text-ao-accent text-[15px]" aria-hidden="true">⚡</div>
       <div className="flex-1 min-w-0">
-        <div className="text-[14px] font-semibold text-ao-fg-0">Usage &amp; limits</div>
-        <div className="text-[11px] text-ao-fg-3 font-mono mt-[1px]">spend caps, plan, and per-model breakdown · workspace local</div>
+        <div className="text-[14px] font-semibold text-ao-fg-0">Analytics</div>
+        <div className="text-[11px] text-ao-fg-3 font-mono mt-[1px]">runs, tokens, models, spend · workspace local, never sent anywhere</div>
       </div>
       <button
         className="w-7 h-7 rounded-[6px] flex items-center justify-center text-ao-fg-3 text-[16px] leading-none transition-[background,color] duration-[120ms] hover:bg-ao-bg-3 hover:text-ao-fg-0 border-0 bg-transparent cursor-pointer p-0"
         aria-label="Close"
         onClick={onClose}
       >×</button>
-    </div>
-  );
-}
-
-function PlanGrid({ value }: { value: ClaudePlan }) {
-  return (
-    <div className="flex flex-wrap gap-2 [&>*]:basis-[calc(33.333%-6px)]">
-      {PLAN_DEFS.map((p) => (
-        <div
-          key={p.id}
-          className={`flex flex-col gap-1 p-3 rounded-ao-md bg-ao-bg-2 border text-left cursor-default pointer-events-none transition-[border-color,background] duration-[120ms] ${value === p.id ? "border-[var(--ao-accent-line)] bg-[var(--ao-accent-softer)]" : "border-ao-line-1"}`}
-        >
-          <div className="flex items-center gap-[6px] text-[13px] font-semibold text-ao-fg-0">
-            <span className="w-[22px] h-[22px] bg-ao-bg-3 border border-ao-line-1 rounded-[6px] inline-flex items-center justify-center text-[11px] font-mono shrink-0">
-              {p.icon}
-            </span>
-            {p.name}
-            {value === p.id && <span className="ml-auto w-4 h-4 rounded-full border border-ao-accent flex items-center justify-center text-[10px] text-ao-accent" aria-hidden="true">✓</span>}
-          </div>
-          <div className="text-[11px] text-ao-accent font-mono font-semibold">{p.price}</div>
-          <div className="text-[10.5px] text-ao-fg-3 leading-[1.4]">{p.feat}</div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -108,81 +79,6 @@ function PeriodSeg({
           aria-pressed={value === o.id}
         >
           {o.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-const CAP_PRESETS = [0, 20, 50, 100, 250];
-
-function QuotaCap({
-  value,
-  onChange,
-}: {
-  value: number;
-  onChange: (v: number) => void;
-}) {
-  const isPreset = CAP_PRESETS.includes(value);
-  return (
-    <div className="flex flex-wrap gap-[6px] items-center">
-      {CAP_PRESETS.map((p) => (
-        <button
-          key={p}
-          className={`px-3 py-[6px] rounded-full font-mono text-[12.5px] transition-[border-color,background,color] duration-[120ms] border cursor-pointer ${value === p ? "border-[var(--ao-accent-line)] bg-[var(--ao-accent-softer)] text-ao-fg-0" : "bg-ao-bg-2 border-ao-line-1 text-ao-fg-1 hover:bg-ao-bg-3"}`}
-          onClick={() => onChange(p)}
-          aria-pressed={value === p}
-        >
-          {p === 0 ? (
-            <>Off <span className="text-ao-fg-3">· track only</span></>
-          ) : (
-            <><span className="text-ao-fg-3">$</span>{p}</>
-          )}
-        </button>
-      ))}
-      <span className="flex items-center gap-1 bg-ao-bg-2 border border-ao-line-1 rounded-full px-[10px] py-1 text-[12.5px] font-mono focus-within:border-ao-accent-line">
-        <span className="text-ao-fg-3" aria-hidden="true">$</span>
-        <input
-          type="number"
-          placeholder="custom"
-          aria-label="Custom cap amount in USD"
-          value={isPreset ? "" : value || ""}
-          min="0"
-          step="1"
-          className="bg-transparent border-none outline-none w-[60px] text-ao-fg-0 font-[inherit] text-[inherit] placeholder:text-ao-fg-3"
-          onChange={(e) => {
-            const v = Number(e.target.value);
-            onChange(Number.isFinite(v) && v >= 0 ? v : 0);
-          }}
-        />
-      </span>
-    </div>
-  );
-}
-
-function BehaviorButtons({
-  value,
-  onChange,
-}: {
-  value: "off" | "warn" | "block";
-  onChange: (v: "off" | "warn" | "block") => void;
-}) {
-  const opts: { id: "off" | "warn" | "block"; icon: string; title: string; desc: string }[] = [
-    { id: "off",   icon: "👁",  title: "Track only",  desc: "Record usage, never block. Good for visibility." },
-    { id: "warn",  icon: "⚠",  title: "Warn at cap",  desc: "Notify when usage crosses 80% and 100%." },
-    { id: "block", icon: "🔒", title: "Hard block",   desc: "Refuse new runs after the cap is hit." },
-  ];
-  return (
-    <div className="flex gap-2" role="group" aria-label="Behavior on cap">
-      {opts.map((o) => (
-        <button
-          key={o.id}
-          className={`flex-1 px-3 py-[10px] rounded-ao-md text-left transition-[border-color,background] duration-[120ms] cursor-pointer border ${value === o.id ? "border-[var(--ao-accent-line)] bg-[var(--ao-accent-softer)]" : "bg-ao-bg-2 border-ao-line-1 hover:bg-ao-bg-3"}`}
-          onClick={() => onChange(o.id)}
-          aria-pressed={value === o.id}
-        >
-          <div className="text-[12.5px] font-semibold text-ao-fg-0 flex items-center gap-[5px] mb-[3px]"><span aria-hidden="true">{o.icon}</span> {o.title}</div>
-          <div className="text-[11px] text-ao-fg-3 leading-[1.4]">{o.desc}</div>
         </button>
       ))}
     </div>
@@ -369,30 +265,15 @@ export function ClaudeLimitsModal() {
 
   const open      = useClaudeLimitsStore((s) => s.open);
   const setOpen   = useClaudeLimitsStore((s) => s.setOpen);
-  const plan      = useClaudeLimitsStore((s) => s.plan);
-  const quotaUsd  = useClaudeLimitsStore((s) => s.quotaUsd);
   const period    = useClaudeLimitsStore((s) => s.period);
-  const hardCap   = useClaudeLimitsStore((s) => s.hardCap);
-  const update    = useClaudeLimitsStore((s) => s.update);
 
-  // Local editable state for user-configurable fields only (plan is read-only from credentials)
-  const [localQuota,    setLocalQuota]    = useState(quotaUsd);
-  const [localPeriod,   setLocalPeriod]   = useState<LimitsPeriod>(period);
-  const [localHardCap,  setLocalHardCap]  = useState<"off" | "warn" | "block">(hardCap);
+  // Local period state for the period toggle (read-only analytics — no
+  // more quota/cap fields to persist).
+  const [localPeriod, setLocalPeriod] = useState<LimitsPeriod>(period);
 
-  // Sync local state whenever the modal opens
   useEffect(() => {
-    if (open) {
-      setLocalQuota(quotaUsd);
-      setLocalPeriod(period);
-      setLocalHardCap(hardCap);
-    }
-  }, [open, quotaUsd, period, hardCap]);
-
-  const onSave = () => {
-    update({ quotaUsd: localQuota, period: localPeriod, hardCap: localHardCap });
-    setOpen(false);
-  };
+    if (open) setLocalPeriod(period);
+  }, [open, period]);
 
   // ---- Data computation ----
   const runsQ = useRuns({ limit: 500 });
@@ -424,6 +305,12 @@ export function ClaudeLimitsModal() {
       return { label, spend };
     }),
   [allRuns]);
+
+  // Aggregate totals for the top stat cards
+  const totalTokens = useMemo(
+    () => inPeriod.reduce((s, r) => s + (r.tokensIn || 0) + (r.tokensOut || 0), 0),
+    [inPeriod],
+  );
 
   // By model (current period)
   const { modelRows, totalModelCost } = useMemo(() => {
@@ -471,8 +358,22 @@ export function ClaudeLimitsModal() {
 
           {/* Body */}
           <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-5 py-5 flex flex-col gap-6 [scrollbar-width:thin] [scrollbar-color:var(--ao-bg-4)_transparent]">
-            {/* By model + Top agents — two-column grid, stacks on narrow */}
-            <div className="grid gap-[14px]" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+            {/* Stat cards */}
+            <section className="flex flex-col gap-3">
+              <SectionHead
+                title="Overview"
+                sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                right={<PeriodSeg value={localPeriod} onChange={setLocalPeriod} />}
+              />
+              <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_180px]">
+                <StatCard label="Total runs" value={String(inPeriod.length)} tint="var(--acc)" />
+                <StatCard label="Total tokens" value={fmtTok(totalTokens)} tint="var(--done)" />
+                <StatCard label="Total cost" value={fmtUSD(totalModelCost)} tint="var(--queued)" />
+              </div>
+            </section>
+
+            {/* By model + Top agents — two-column, stacks on narrow */}
+            <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_280px]">
               <section className="flex flex-col gap-3">
                 <SectionHead
                   title="By model"
@@ -490,28 +391,6 @@ export function ClaudeLimitsModal() {
               </section>
             </div>
 
-            {/* Plan */}
-            <section className="flex flex-col gap-3">
-              <SectionHead title="Plan" sub="determines model access and rate limits" />
-              <PlanGrid value={plan} />
-            </section>
-
-            {/* Quota cap + period */}
-            <section className="flex flex-col gap-3">
-              <SectionHead
-                title="Quota cap"
-                sub="hard limit on spend for the current period"
-                right={<PeriodSeg value={localPeriod} onChange={setLocalPeriod} />}
-              />
-              <QuotaCap value={localQuota} onChange={setLocalQuota} />
-            </section>
-
-            {/* Behavior on cap */}
-            <section className="flex flex-col gap-3">
-              <SectionHead title="Behavior on cap" sub="what happens when usage hits the cap" />
-              <BehaviorButtons value={localHardCap} onChange={setLocalHardCap} />
-            </section>
-
             {/* Daily spend bars */}
             <section className="flex flex-col gap-3">
               <SectionHead title="Daily spend" sub="last 14 days" />
@@ -520,7 +399,7 @@ export function ClaudeLimitsModal() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-end gap-4 px-5 py-[14px] border-t border-[var(--ao-line-0)] shrink-0">
+          <div className="flex items-center gap-4 px-5 py-[14px] border-t border-[var(--ao-line-0)] shrink-0">
             <div className="flex-1 text-[11px] text-ao-fg-3 leading-[1.55] flex gap-[6px]">
               <span className="text-ao-fg-3 shrink-0 mt-[1px] text-[12px]" aria-hidden="true">ℹ</span>
               <span>
@@ -535,21 +414,28 @@ export function ClaudeLimitsModal() {
                 outside the dashboard isn&apos;t included.
               </span>
             </div>
-            <div className="flex gap-2 shrink-0">
-              <button
-                className="px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-medium cursor-pointer transition-[background,border-color] duration-[120ms] bg-transparent border border-ao-line-2 text-ao-fg-1 hover:bg-ao-bg-3"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-medium cursor-pointer transition-[background,border-color] duration-[120ms] bg-ao-accent border border-transparent text-white flex items-center gap-[5px] hover:opacity-90"
-                onClick={onSave}
-              >
-                <span aria-hidden="true">✓</span> Save limits
-              </button>
-            </div>
+            <button
+              className="px-[14px] py-[7px] rounded-[8px] text-[12.5px] font-medium cursor-pointer bg-transparent border border-ao-line-2 text-ao-fg-1 hover:bg-ao-bg-3"
+              onClick={() => setOpen(false)}
+            >
+              Close
+            </button>
           </div>
     </ModalShell>
+  );
+}
+
+function StatCard({ label, value, tint }: { label: string; value: string; tint: string }) {
+  return (
+    <div
+      className="flex flex-col gap-1 px-4 py-3 rounded-ao-md border"
+      style={{
+        background: `color-mix(in oklab, ${tint} 6%, var(--ao-bg-2))`,
+        borderColor: `color-mix(in oklab, ${tint} 25%, var(--ao-line-1))`,
+      }}
+    >
+      <div className="text-[10.5px] uppercase tracking-[0.08em] text-ao-fg-3 font-mono">{label}</div>
+      <div className="text-[22px] font-bold text-ao-fg-0 tabular-nums leading-none">{value}</div>
+    </div>
   );
 }
