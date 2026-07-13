@@ -152,7 +152,11 @@ when editing.
 
 ---
 
-### Task 3 — Format agent names in Add-Agent modal ⏳
+### Task 3 — Format agent names in Add-Agent modal ✅ 3b7a674
+
+Wrapped row title with `formatAgentDisplayName()`, appended the raw slug
+in muted mono type below the friendly name (same pattern used on the
+agent gallery cards). No other name-rendering sites in the modal.
 
 **Change:** Every place `agent.name` is shown as a raw slug in
 `add-agent-modal.tsx`, wrap with `formatAgentDisplayName()`. Show slug as

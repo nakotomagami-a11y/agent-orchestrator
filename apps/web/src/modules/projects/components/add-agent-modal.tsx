@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { unitForAgent } from "@/components/ui/unit-sprite-registry";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
+import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useAgents } from "@/modules/agents/hooks/use-agents";
 import { categorize } from "@/modules/agents/form/categorize";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
@@ -188,6 +189,8 @@ function AgentPickerStep({
   const [view, setView] = useState<"all" | "available">("all");
   const [staged, setStaged] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
+  const selectAgent = useOfficeStore((s) => s.select);
+  const openDetails = (agentId: string) => selectAgent(agentId, { tab: "settings" });
 
   const agents = useMemo(() => agentsQ.data ?? [], [agentsQ.data]);
 
@@ -344,6 +347,7 @@ function AgentPickerStep({
                     stagedCount={staged[a.name] ?? 0}
                     onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
                     onRemove={() => setStaged((prev) => { const n = (prev[a.name] ?? 0) - 1; if (n <= 0) { const next = { ...prev }; delete next[a.name]; return next; } return { ...prev, [a.name]: n }; })}
+                    onDetails={() => openDetails(a.name)}
                   />
                 ))}
               </>
@@ -367,6 +371,7 @@ function AgentPickerStep({
                     stagedCount={staged[a.name] ?? 0}
                     onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
                     onRemove={() => setStaged((prev) => { const n = (prev[a.name] ?? 0) - 1; if (n <= 0) { const next = { ...prev }; delete next[a.name]; return next; } return { ...prev, [a.name]: n }; })}
+                    onDetails={() => openDetails(a.name)}
                   />
                 ))}
               </>
@@ -383,6 +388,7 @@ function AgentPickerStep({
                 stagedCount={staged[a.name] ?? 0}
                 onAdd={() => setStaged((prev) => ({ ...prev, [a.name]: (prev[a.name] ?? 0) + 1 }))}
                 onRemove={() => setStaged((prev) => { const n = (prev[a.name] ?? 0) - 1; if (n <= 0) { const next = { ...prev }; delete next[a.name]; return next; } return { ...prev, [a.name]: n }; })}
+                onDetails={() => openDetails(a.name)}
               />
             ))}
           </>
@@ -434,7 +440,7 @@ function AgentPickerStep({
 
 function AgentRow({
   name, description, defaultModel, unit, category,
-  rosterCount, stagedCount, onAdd, onRemove,
+  rosterCount, stagedCount, onAdd, onRemove, onDetails,
 }: {
   name: string;
   description?: string | null;
@@ -445,6 +451,7 @@ function AgentRow({
   stagedCount: number;
   onAdd: () => void;
   onRemove: () => void;
+  onDetails: () => void;
 }) {
   const inOffice = rosterCount > 0;
   const added = stagedCount > 0 || inOffice;
@@ -482,6 +489,15 @@ function AgentRow({
         )}
       </div>
       <div className="flex items-center shrink-0 gap-[4px]">
+        <button
+          type="button"
+          className="inline-flex items-center justify-center shrink-0 w-[34px] h-[34px] rounded-[8px] border bg-transparent border-line text-txt-3 transition-[background,color] duration-[120ms] hover:bg-bg-3 hover:text-txt hover:border-line-2"
+          onClick={onDetails}
+          title="View agent details"
+          aria-label="View agent details"
+        >
+          <Icon name="help-circle" size={14} />
+        </button>
         {added ? (
           <div className="inline-flex items-center gap-[4px]">
             {stagedCount > 0 && (
