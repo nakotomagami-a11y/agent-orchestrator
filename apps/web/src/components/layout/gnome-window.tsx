@@ -10,21 +10,23 @@ export type GnomeWindowProps = {
 };
 
 /**
- * The chrome'd app shell. The titlebar is NOT a child of this component -
- * it's rendered as a sibling fixed overlay (see `<Titlebar />`) so it can
- * stack above portal-rendered modals.
+ * The app shell. Titlebar is NOT a child — it's rendered as a sibling fixed
+ * overlay (see `<Titlebar />`) so it can stack above portal-rendered modals.
  *
- * The first 38px child is intentionally empty - it reserves visual space
- * the fixed titlebar overlays. Content fills the remaining space via flex-1.
+ * Edge-to-edge in every mode: no border, no rounded corners, no shadow, no
+ * chrome inset. The old "floating GNOME window" chrome (18px transparent
+ * inset with a shadow) left a light-color ring around the app that leaked
+ * whichever background lived behind it — the user asked for it removed.
+ * `maximized` is preserved as a hook consumer contract but no longer flips
+ * any styles.
  */
 export function GnomeWindow({ children, className }: GnomeWindowProps) {
-  const maximized = useIsMaximized();
+  useIsMaximized();
 
   return (
     <div
       className={cn(
-        "gnome-window absolute bg-bg-1 shadow-[var(--shadow-window)] overflow-hidden flex flex-col border border-line-2 inset-[18px] rounded-[10px] max-[600px]:inset-0 max-[600px]:rounded-none",
-        maximized && "inset-0 rounded-none shadow-none border-none",
+        "gnome-window absolute inset-0 bg-bg-1 overflow-hidden flex flex-col",
         className,
       )}
     >

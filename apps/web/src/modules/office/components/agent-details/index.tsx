@@ -340,7 +340,7 @@ export function AgentDetailsModal() {
   return (
     <Portal>
       <div
-        className="app-modal-backdrop fixed inset-0 flex items-center justify-center p-8 z-[210] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(18,18,28,0.65),rgba(6,6,12,0.96)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(10,10,18,0.58)] after:pointer-events-none"
+        className="app-modal-backdrop fixed inset-0 flex items-center justify-center p-8 z-[210] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(18,18,28,0.94),rgba(6,6,12,0.995)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(10,10,18,0.20)] after:pointer-events-none"
         role="presentation"
         onClick={closeInspector}
       >

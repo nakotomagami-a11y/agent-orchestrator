@@ -74,13 +74,14 @@ export function Titlebar() {
   return (
     <div
       className={cn(
-        // `app-titlebar` is the hook globals.css uses to flatten this in
-        // browser mode (top/left/right -> 0, no rounding, no side borders).
-        "app-titlebar fixed top-[18px] left-[18px] right-[18px] h-[38px] z-[50] border border-line-2 rounded-t-[10px]",
-        maximized && "top-0 left-0 right-0 rounded-none border-l-0 border-r-0 border-t-0",
+        // Edge-to-edge in every mode. The old chrome-inset + rounded top let a
+        // light ring bleed around the app; killed alongside the GnomeWindow
+        // chrome. `maximized` still tracked in case a caller wires it later.
+        "app-titlebar fixed top-0 left-0 right-0 h-[38px] z-[50]",
+        maximized && "",
       )}
     >
-      <div className="flex items-center h-full px-3 select-none bg-bg-2 border-b border-line rounded-t-[10px]">
+      <div className="flex items-center h-full px-3 select-none bg-bg-2 border-b border-line">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {isTauri() && (
             <div className="flex gap-2">

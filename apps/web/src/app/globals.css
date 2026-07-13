@@ -442,44 +442,9 @@ html.tauri body {
    the transparent GnomeWindow inset doesn't leak the light html default —
    otherwise a bright rectangle shows in the 18px frame around the app in
    dark mode. */
-html:not(.tauri),
-html:not(.tauri) body {
-  background: var(--bg-0) !important;
-}
-html:not(.tauri) .gnome-window {
-  inset: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  border: none !important;
-}
-
-/* Browser mode: titlebar fills the viewport edge (no Tauri chrome inset).
-   The titlebar has two nested divs — outer `.app-titlebar` and an inner
-   flex row both carry `rounded-t-[10px]`. We flatten BOTH: without the
-   inner override, the inner's curved top corners cut through the outer's
-   flat edge and let the html background peek through as a light
-   crescent at the top of the app. */
-html:not(.tauri) .app-titlebar,
-html:not(.tauri) .app-titlebar > * {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-}
-html:not(.tauri) .app-titlebar {
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  border-left: 0 !important;
-  border-right: 0 !important;
-  border-top: 0 !important;
-}
-/* Same trick when Tauri is maximized — outer div drops its rounding via
-   Tailwind's `rounded-none` on top of `rounded-t-[10px]`, but the inner
-   div still has `rounded-t-[10px]` and cuts a light crescent through
-   the top edge. */
-.app-titlebar.rounded-none > * {
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-}
+/* Body always paints the theme background — the app shell is edge-to-edge
+   in every mode now, so nothing should ever leak the html default. */
+html, body { background: var(--bg-0); }
 
 
 /* Modal backdrop covers the FULL viewport (top: 0) so the ProjectSwitcher
