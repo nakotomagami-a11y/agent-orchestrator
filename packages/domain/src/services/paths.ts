@@ -32,6 +32,8 @@ export const RUNS_LOG = join(APP_STATE_DIR, "runs.log");
  */
 export const PROMPTS_FILE = join(APP_STATE_DIR, "recent-prompts.json");
 export const DB_PATH = join(APP_STATE_DIR, "db.sqlite");
+export const DOCS_DIR = join(APP_STATE_DIR, "docs");
+export const DOCS_GLOBAL_OWNER = "_global";
 
 // Uploads
 export const AGENT_UPLOADS_DIR = join(AGENTS_DIR, "_uploads");

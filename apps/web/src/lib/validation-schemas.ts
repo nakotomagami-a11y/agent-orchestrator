@@ -202,6 +202,20 @@ export const workflowsQuerySchema = z.object({
   category: z.string().optional(),
 });
 
+/** Body payload for creating / updating a doc. Owner + slug live in the URL. */
+export const docUpsertSchema = z.object({
+  title: z.string().min(1).max(200),
+  category: z.enum([
+    "architecture",
+    "plan",
+    "notes",
+    "postmortem",
+    "context",
+    "reference",
+  ]),
+  body: z.string().max(256 * 1024),
+});
+
 export const bootstrapProjectSchema = z.object({
   name: z.string().min(1).max(100),
   slug: z.string().regex(/^[a-z0-9][a-z0-9-]*$/).max(60).optional(),

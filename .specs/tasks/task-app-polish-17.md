@@ -555,44 +555,58 @@ version-controlled source of truth). The three:
 
 ---
 
-### Task 14 — Memory page: Docs tab ⏳
+### Task 14 — Memory page: Docs tab ✅
 
-**Convention** (locked in):
-Agent-authored context docs live at:
-`~/.claude/agent-office/docs/<agent-id>/<slug>.md`
+**Delivered:**
 
-Each doc has YAML frontmatter:
-```yaml
----
-title: "Plan for ..."
-category: architecture | plan | notes | postmortem | context | reference
-created: 2026-07-13T14:22:00Z
-updated: 2026-07-13T15:00:00Z
----
-```
+- New `packages/domain/src/services/docs.ts` with `listDocs()`, `readDoc()`,
+  `upsertDoc()`, `deleteDoc()`. Hand-rolled YAML frontmatter parser (title
+  + category + created + updated). Owner + slug validation gates every path
+  join via `isValidIdSegment`, with `_global` allowed as an explicit
+  sentinel.
+- Path constant `DOCS_DIR = ~/.claude/agent-office/docs/` and
+  `DOCS_GLOBAL_OWNER = "_global"` added to `paths.ts`.
+- API routes: `GET /api/agent-docs` (list) and
+  `GET|PUT|DELETE /api/agent-docs/[owner]/[slug]`. Used `/api/agent-docs/`
+  to avoid clashing with the existing app-help `api/docs/` namespace.
+- Type surface: `Workflow` type in domain — kept doc-only types local to
+  the hook file (`use-agent-docs.ts`) since only the docs tab reads them.
+- Frontend hooks: `useAgentDocs`, `useAgentDoc(owner, slug)`,
+  `useUpsertAgentDoc`, `useDeleteAgentDoc`.
+- New component `modules/memory/components/docs-tab.tsx`:
+  - Left nav grouped by category (architecture / plan / notes /
+    postmortem / context / reference) with per-doc rows showing title +
+    owner as a mono subtitle.
+  - Right pane: `MemoryEditor` (reused) with a header showing title +
+    category + owner and a delete button.
+  - `NewDocForm` inline creates a fresh doc with owner (defaults
+    `_global`), slug, title, category. Slug must match the same
+    `[A-Za-z0-9._-]+` regex the backend enforces.
+- Memory page top-level tab switcher — `Memory | Docs` pill switcher in
+  the `PageHeader.actions` slot. Selecting `Docs` swaps in `<DocsTab />`,
+  which owns its own left-nav/editor layout.
 
-Also colocate top-level docs at `~/.claude/agent-office/docs/_global/` for
-non-agent-specific notes.
+**Convention (locked in on disk):**
+- `~/.claude/agent-office/docs/<owner>/<slug>.md`
+- YAML frontmatter: title, category, created (ISO 8601), updated (ISO 8601)
 
-**Changes:**
-
-1. New service `packages/domain/src/services/docs.ts`:
-   `listDocs()`, `readDoc()`, `writeDoc()`, `deleteDoc()`.
-2. New API routes `/api/docs/`.
-3. Memory-page top-level tabs (added above the current global/project/agent
-   nav): `Memory` | `Docs`.
-4. Docs tab: left nav categorized (Architecture / Plans / Notes /
-   Postmortems / Context / Reference) with agent-id sub-groups. Right
-   pane: markdown editor with save/delete.
-5. Agent-authored writes go through the new API. Add a `writeDoc()`
-   helper in the agent CLI toolkit (a small script that agents can
-   invoke).
-
-**Files:**
+**Files touched:**
 - new `packages/domain/src/services/docs.ts`
-- new `app/api/docs/route.ts`
-- edit `app/(app)/memory/page.tsx`
-- new `modules/memory/components/docs-tab.tsx`
+- edit `packages/domain/src/services/paths.ts` (DOCS_DIR + sentinel)
+- edit `packages/domain/src/services/index.ts` (barrel)
+- edit `packages/domain/src/config/routes.ts` (`agentDocs`, `agentDoc(o,s)`)
+- edit `packages/domain/src/hooks/query-keys.ts` (`agentDocs.*`)
+- edit `apps/web/src/lib/validation-schemas.ts` (`docUpsertSchema`)
+- new `apps/web/src/app/api/agent-docs/route.ts`
+- new `apps/web/src/app/api/agent-docs/[owner]/[slug]/route.ts`
+- new `apps/web/src/modules/memory/hooks/use-agent-docs.ts`
+- new `apps/web/src/modules/memory/components/docs-tab.tsx`
+- edit `apps/web/src/app/(app)/memory/page.tsx`
+
+**Deferred (nice-to-have):**
+- A `writeDoc()` helper for the agent CLI toolkit — the API route is
+  self-serving enough (agents just POST/PUT JSON), so the CLI wrapper is
+  not blocking.
 
 ---
 

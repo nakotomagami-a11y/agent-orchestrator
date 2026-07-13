@@ -104,6 +104,10 @@ export const API_ROUTES = {
   workflowById: (id: string) => `/api/workflows/${id}`,
   workflowUse: (id: string) => `/api/workflows/${id}/use`,
   workflowsBulk: "/api/workflows/bulk",
+
+  agentDocs: "/api/agent-docs",
+  agentDoc: (owner: string, slug: string) =>
+    `/api/agent-docs/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}`,
 } as const;
 
 /**

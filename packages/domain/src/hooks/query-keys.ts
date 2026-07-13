@@ -78,6 +78,13 @@ export const queryKeys = {
       [...queryKeys.workflows.all, "list", opts ?? {}] as const,
   },
 
+  agentDocs: {
+    all: ["agent-docs"] as const,
+    list: () => [...queryKeys.agentDocs.all, "list"] as const,
+    detail: (owner: string, slug: string) =>
+      [...queryKeys.agentDocs.all, "detail", owner, slug] as const,
+  },
+
   settings: {
     all: ["settings"] as const,
     detail: () => [...queryKeys.settings.all, "detail"] as const,
