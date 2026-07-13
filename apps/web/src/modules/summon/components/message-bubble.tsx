@@ -6,7 +6,6 @@ import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../format/thread-types";
 import { Icon } from "@/components/ui/icon";
-import { useCreateSavedPrompt } from "@/modules/prompts/hooks/use-saved-prompts";
 import { splitProse, type ProseItem } from "@/lib/markdown";
 import {
   fmtDuration,
@@ -19,6 +18,7 @@ import { ExpandedStateContext, useExpandedState } from "./expanded-state";
 import { ToolGroupRow } from "./tool-group-row";
 import { SubAgentCard } from "./sub-agent-card";
 import { RateLimitCard } from "./rate-limit-card";
+import { MsgActions } from "./msg-actions";
 
 // Re-export so `chat-thread` and any other consumer keeps its existing
 // `from "./message-bubble"` imports working. Actual definitions live in
@@ -161,69 +161,6 @@ function ProseBlock({ items, streaming }: { items: ProseItem[]; streaming?: bool
     out.push(<p key="tail"><span className="ao-cursor" aria-hidden /></p>);
   }
   return <>{out}</>;
-}
-
-// ── Message actions ───────────────────────────────────────────────────────────
-function MsgActions({ text, onRerun }: { text: string; onRerun?: (t: string) => void }) {
-  const [copied, setCopied] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const savePrompt = useCreateSavedPrompt();
-
-  const handleCopy = () => {
-    copyText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
-  const handleSave = () => {
-    const body = text.trim();
-    if (!body || savePrompt.isPending) return;
-    savePrompt.mutate(
-      { title: body.slice(0, 60), body, category: "general" },
-      { onSuccess: () => { setSaved(true); setTimeout(() => setSaved(false), 1500); } },
-    );
-  };
-
-  return (
-    <div className="absolute top-[-4px] right-0 flex gap-1 p-[2px] bg-ao-bg-2 border border-ao-line-1 rounded-[8px] opacity-0 -translate-y-[2px] transition-[opacity,transform] duration-[140ms] z-[2] group-hover/msg:opacity-100 group-hover/msg:translate-y-0">
-      <button
-        type="button"
-        className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
-        aria-label="Copy"
-        title="Copy"
-        onClick={handleCopy}
-      >
-        {copied
-          ? <Icon name="check" size={13} className="text-[var(--ao-ok)]" />
-          : <Icon name="code" size={13} />}
-      </button>
-      {onRerun && (
-        <>
-          <button
-            type="button"
-            className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
-            aria-label="Rerun"
-            title="Rerun"
-            onClick={() => onRerun(text)}
-          >
-            <Icon name="refresh" size={13} />
-          </button>
-          <button
-            type="button"
-            className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-ao-fg-2 hover:bg-ao-bg-3 hover:text-ao-fg-0"
-            aria-label="Save as prompt"
-            title="Save as prompt"
-            onClick={handleSave}
-            disabled={savePrompt.isPending}
-          >
-            {saved
-              ? <Icon name="check" size={13} className="text-[var(--ao-ok)]" />
-              : <Icon name="bookmark" size={13} />}
-          </button>
-        </>
-      )}
-    </div>
-  );
 }
 
 // ── Single tool call detail panel ─────────────────────────────────────────────
