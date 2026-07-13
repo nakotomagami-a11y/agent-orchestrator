@@ -7,11 +7,14 @@ import { apiFetch } from "@agent-office/domain/hooks/api";
 import { queryKeys } from "@agent-office/domain/hooks/query-keys";
 import { API_ROUTES } from "@agent-office/domain/config/routes";
 import type { AppSettings, ScannedEntry, Project, HealthInfo } from "@agent-office/domain/types";
-import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { TextInput } from "@/components/ui/text-input";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { cn } from "@/lib/cn";
+import { RequirementsStep } from "./first-run-wizard-steps/requirements-step";
+import { RootStep } from "./first-run-wizard-steps/root-step";
+import { ExcludedStep } from "./first-run-wizard-steps/excluded-step";
+import { AgentsStep } from "./first-run-wizard-steps/agents-step";
+import { ProjectStep } from "./first-run-wizard-steps/project-step";
 
 /**
  * First-run wizard. A four-step modal that appears once on a fresh
@@ -263,173 +266,43 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
 
         <div className="overflow-y-auto flex-1 px-[24px] py-[18px]">
           {step === "requirements" ? (
-            <section>
-              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.requirements_title")}</h3>
-              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.requirements_hint")}</p>
-              <div className="flex flex-col gap-2.5 mt-4">
-                <ReqRow
-                  label={t("first_run.req_claude_label")}
-                  status={
-                    healthQ.isLoading
-                      ? "checking"
-                      : healthQ.data?.available
-                        ? "ok"
-                        : "error"
-                  }
-                  okText={t("first_run.req_claude_ok", { version: healthQ.data?.version ?? "" })}
-                  checkingText={t("first_run.req_claude_checking")}
-                  errorText={t("first_run.req_claude_missing")}
-                />
-                {!healthQ.isLoading && !healthQ.data?.available ? (
-                  <div className="text-txt-3 m-0 mb-[12px] text-[11.5px] leading-[1.5] mt-[6px] mb-0 pl-7">
-                    <div>{t("first_run.req_claude_install")}</div>
-                    <div className="mt-1">{t("first_run.req_claude_auth_note")}</div>
-                  </div>
-                ) : null}
-              </div>
-            </section>
+            <RequirementsStep health={healthQ.data} loading={healthQ.isLoading} />
           ) : null}
 
           {step === "root" ? (
-            <section>
-              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.root_title")}</h3>
-              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.root_hint")}</p>
-              <TextInput
-                value={root}
-                onChange={(e) => setRoot(e.target.value)}
-                placeholder={HOME_FALLBACK}
-                autoFocus
-              />
-              <p className="text-txt-3 m-0 text-[11.5px] leading-[1.5] mt-[6px]">{t("first_run.root_examples")}</p>
-            </section>
+            <RootStep root={root} onRootChange={setRoot} placeholder={HOME_FALLBACK} />
           ) : null}
 
           {step === "excluded" ? (
-            <section>
-              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.excluded_title")}</h3>
-              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.excluded_hint")}</p>
-              <div className="flex flex-wrap gap-[6px] mb-[10px]">
-                {excluded.map((name) => (
-                  <button
-                    key={name}
-                    type="button"
-                    className="inline-flex items-center bg-bg-2 border border-line rounded-full cursor-pointer text-txt-2 gap-[4px] px-[9px] py-[3px] font-[var(--font-mono)] text-[11.5px] hover:bg-bg-1 hover:text-txt"
-                    onClick={() => removeExcluded(name)}
-                    title={t("first_run.excluded_remove", { name })}
-                  >
-                    {name} <Icon name="x" size={11} />
-                  </button>
-                ))}
-              </div>
-              <div className="flex gap-1.5">
-                <TextInput
-                  value={excludedInput}
-                  onChange={(e) => setExcludedInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addExcluded();
-                    }
-                  }}
-                  placeholder={t("first_run.excluded_placeholder")}
-                />
-                <Button variant="ghost" size="sm" onClick={addExcluded}>
-                  {t("first_run.excluded_add")}
-                </Button>
-              </div>
-            </section>
+            <ExcludedStep
+              excluded={excluded}
+              input={excludedInput}
+              onInputChange={setExcludedInput}
+              onAdd={addExcluded}
+              onRemove={removeExcluded}
+            />
           ) : null}
 
           {step === "agents" ? (
-            <section>
-              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.agents_title")}</h3>
-              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.agents_hint")}</p>
-              {starterQ.isLoading ? (
-                <p>{t("common.loading")}</p>
-              ) : (
-                <>
-                  <label className="flex items-start cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] bg-acc-faint mb-[6px] border border-dashed border-[var(--acc)]">
-                    <input
-                      type="checkbox"
-                      className="mt-[3px]"
-                      checked={selectedAgents.size === starter.length && starter.length > 0}
-                      onChange={toggleAll}
-                    />
-                    <span className="font-medium text-[13px]">
-                      {t("first_run.agents_select_all", { count: starter.length })}
-                    </span>
-                  </label>
-                  <div className="flex flex-col overflow-y-auto border border-line-2 gap-[4px] max-h-[320px] rounded-[8px] p-[4px]">
-                    {starter.map((a) => (
-                      <label key={a.id} className="flex items-start cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] hover:bg-bg-2">
-                        <input
-                          type="checkbox"
-                          className="mt-[3px]"
-                          checked={selectedAgents.has(a.id)}
-                          onChange={() => toggleAgent(a.id)}
-                        />
-                        <div>
-                          <div className="font-medium text-[13px]">{a.name}</div>
-                          <div className="text-txt-3 text-[11.5px] mt-[2px] leading-[1.4]">{a.description}</div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                </>
-              )}
-            </section>
+            <AgentsStep
+              starter={starter}
+              loading={starterQ.isLoading}
+              selected={selectedAgents}
+              onToggle={toggleAgent}
+              onToggleAll={toggleAll}
+            />
           ) : null}
 
           {step === "project" ? (
-            <section>
-              <h3 className="font-semibold m-0 mb-[6px] text-[15px]">{t("first_run.project_title")}</h3>
-              <p className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]">{t("first_run.project_hint")}</p>
-              {scanQ.isLoading ? (
-                <p>{t("common.loading")}</p>
-              ) : candidates.length === 0 ? (
-                <p className="bg-bg-2 text-txt-3 px-[16px] py-[16px] rounded-[8px] text-[12.5px]">
-                  {t("first_run.project_empty", { root })}
-                </p>
-              ) : (
-                <div className="flex flex-col overflow-y-auto gap-[4px] max-h-[280px]">
-                  {candidates.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      className={cn(
-                        "flex items-center bg-bg-1 border border-line-2 text-left cursor-pointer text-txt gap-[10px] px-[10px] py-[8px] rounded-[8px] font-[inherit] text-[13px] hover:bg-bg-2",
-                        chosenFolder?.id === c.id && "bg-acc-faint [border-color:var(--acc)]",
-                      )}
-                      onClick={() => {
-                        setChosenFolder(c);
-                        setProjectName(c.name);
-                      }}
-                    >
-                      <Icon name="folder" />
-                      <div>
-                        <div className="font-medium text-[13px]">{c.name}</div>
-                        <div className="text-txt-3 text-[11.5px] mt-[2px] leading-[1.4]">{c.fullPath}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {chosenFolder ? (
-                <div className="mt-2.5">
-                  <label className="text-txt-3 m-0 mb-[12px] text-[12.5px] leading-[1.5]" htmlFor="fr-project-name">
-                    {t("first_run.project_name_label")}
-                  </label>
-                  <TextInput
-                    id="fr-project-name"
-                    value={projectName}
-                    onChange={(e) => setProjectName(e.target.value)}
-                  />
-                </div>
-              ) : null}
-              <p className="text-txt-3 m-0 text-[11.5px] leading-[1.5] mt-[6px] mt-2">
-                {t("first_run.project_skip_hint")}
-              </p>
-            </section>
+            <ProjectStep
+              candidates={candidates}
+              loading={scanQ.isLoading}
+              root={root}
+              chosen={chosenFolder}
+              onChoose={(c) => { setChosenFolder(c); setProjectName(c.name); }}
+              projectName={projectName}
+              onProjectNameChange={setProjectName}
+            />
           ) : null}
         </div>
 
@@ -466,41 +339,3 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   );
 }
 
-function ReqRow({
-  label,
-  status,
-  okText,
-  checkingText,
-  errorText,
-}: {
-  label: string;
-  status: "checking" | "ok" | "error";
-  okText: string;
-  checkingText: string;
-  errorText: string;
-}) {
-  const badge =
-    status === "ok" ? "✓" : status === "error" ? "✗" : "…";
-  const badgeColor =
-    status === "ok"
-      ? "var(--success, #22c55e)"
-      : status === "error"
-        ? "var(--error)"
-        : "var(--txt-3)";
-  const detail = status === "ok" ? okText : status === "error" ? errorText : checkingText;
-  return (
-    <div className="flex items-center gap-2 text-[13px]">
-      <span
-        aria-hidden
-        className="font-bold text-[15px] w-4 text-center shrink-0"
-        style={{ color: badgeColor }}
-      >
-        {badge}
-      </span>
-      <span className="font-semibold min-w-[90px]">{label}</span>
-      <span className="text-txt-2 font-mono text-[12px]">
-        {detail}
-      </span>
-    </div>
-  );
-}
