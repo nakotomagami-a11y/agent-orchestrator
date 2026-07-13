@@ -73,7 +73,14 @@ Status legend:
 
 ---
 
-### Task 1 — Fix white background bleed in office view ⏳
+### Task 1 — Fix white background bleed in office view ✅ dcaa28e
+
+**Resolution:** the browser-mode "reset inset:0" CSS rule targeted the old
+grid class on GnomeWindow (`.[grid-template-rows\:38px_1fr]`) which was
+removed during the earlier Grid→Flex sweep. Gave GnomeWindow a stable
+`.gnome-window` class, updated the selector, and set `html/body` to
+`var(--bg-0)` so any transparent child can't leak the browser default.
+Files: `components/layout/gnome-window.tsx`, `app/globals.css`.
 
 **Symptom (screenshot 1):** a white/light rectangle is visible between the
 sidebar and the isometric map canvas.

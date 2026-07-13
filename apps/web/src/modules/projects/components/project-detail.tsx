@@ -201,78 +201,88 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse 60% 80% at 100% 0%, rgba(90,139,111,0.18) 0%, transparent 70%)" }} />
 
           <div className="relative z-[1] p-[24px_26px]">
-            {/* Top row */}
-            <div className="flex items-start gap-[18px]">
+            {/* Top row: planet + (name & counters) */}
+            <div className="flex items-start gap-[22px]">
               <button
                 type="button"
                 onClick={() => setPlanetEditorOpen(true)}
                 title="Change planet"
                 className="relative shrink-0 group cursor-pointer border-0 bg-transparent p-0"
-                style={{ width: 56, height: 56 }}
+                style={{ width: 168, height: 168 }}
               >
                 <PlanetCanvas
                   projectId={id}
                   config={project.meta.planet}
-                  size={56}
+                  size={168}
                   className="rounded-full overflow-hidden"
                 />
                 <span className="absolute inset-0 rounded-full flex items-center justify-center bg-[rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  <Icon name="edit" size={16} className="text-white" />
+                  <Icon name="edit" size={28} className="text-white" />
                 </span>
               </button>
-              <div className="flex-1 min-w-0 pt-[2px]">
-                <div className="flex items-center gap-[10px] flex-wrap">
-                  <h2 className="font-bold m-0 text-[20px] tracking-[-0.01em] text-txt">{project.meta.name}</h2>
-                  {projectWorkingCount > 0 && (
-                    <span className="inline-flex items-center gap-[5px] px-[8px] py-[2px] rounded-full text-[10px] font-semibold font-[var(--font-mono)] tracking-[0.03em] text-status-working" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)" }}>
-                      <span className="w-[5px] h-[5px] rounded-full animate-pulse bg-status-working" />
-                      {projectWorkingCount} active
-                    </span>
-                  )}
+              <div className="flex-1 min-w-0 pt-[6px] flex flex-col gap-[10px]">
+                {/* Name row with counters pushed to the right */}
+                <div className="flex items-start gap-[16px]">
+                  <div className="flex items-center gap-[10px] flex-wrap min-w-0">
+                    <h2 className="font-bold m-0 text-[28px] tracking-[-0.01em] text-txt leading-none truncate">{project.meta.name}</h2>
+                    {projectWorkingCount > 0 && (
+                      <span className="inline-flex items-center gap-[5px] px-[8px] py-[2px] rounded-full text-[10px] font-semibold font-[var(--font-mono)] tracking-[0.03em] text-status-working" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)" }}>
+                        <span className="w-[5px] h-[5px] rounded-full animate-pulse bg-status-working" />
+                        {projectWorkingCount} active
+                      </span>
+                    )}
+                  </div>
+                  {/* Counters — top-right of the name row */}
+                  <div className="ml-auto flex items-baseline gap-0 shrink-0">
+                    <div className="flex items-baseline gap-[5px] pr-[16px]">
+                      <span className="text-[22px] font-bold text-txt tabular-nums leading-none">{rosterCount}</span>
+                      <span className="text-[11px] text-txt-3 font-[var(--font-mono)]">agents</span>
+                    </div>
+                    {(project.runCount ?? 0) > 0 && (
+                      <div className="flex items-baseline gap-[5px] pl-[16px] border-l border-[rgba(255,255,255,0.06)]">
+                        <span className="text-[22px] font-bold text-txt tabular-nums leading-none">{project.runCount}</span>
+                        <span className="text-[11px] text-txt-3 font-[var(--font-mono)]">runs</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                {/* Description */}
                 {editingDesc ? (
-                  <input
+                  <textarea
                     autoFocus
                     value={descValue}
                     onChange={(e) => setDescValue(e.target.value)}
                     onBlur={(e) => { void handleSaveDesc(e.target.value); }}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); void handleSaveDesc(descValue); }
+                      if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void handleSaveDesc(descValue); }
                       if (e.key === "Escape") { setEditingDesc(false); }
                     }}
-                    placeholder="Add a description…"
-                    className="mt-[5px] w-full bg-transparent border-0 outline-none text-[13px] text-txt leading-[1.5] placeholder:text-txt-4 focus:shadow-[0_1px_0_0_rgba(255,255,255,0.15)]"
+                    placeholder="What is this project? (Ctrl+Enter to save, Esc to cancel)"
+                    rows={3}
+                    className="w-full bg-transparent border border-line rounded-md p-2 outline-none text-[13px] text-txt leading-[1.5] placeholder:text-txt-4 focus:border-acc resize-none"
                   />
-                ) : (
+                ) : project.meta.description ? (
                   <p
-                    className="m-0 mt-[5px] text-[13px] text-txt-3 leading-[1.5] cursor-text hover:text-txt-2 transition-colors"
+                    className="m-0 text-[13px] text-txt-2 leading-[1.55] cursor-text hover:text-txt transition-colors max-w-[720px]"
                     title="Click to edit description"
                     onClick={() => { setDescValue(project.meta.description); setEditingDesc(true); }}
                   >
-                    {project.meta.description || <span className="italic opacity-50">{t("project_detail.no_description")}</span>}
+                    {project.meta.description}
                   </p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setDescValue(""); setEditingDesc(true); }}
+                    className="self-start inline-flex items-center gap-[6px] text-[12px] text-txt-3 hover:text-acc bg-transparent border border-dashed border-line rounded-md px-3 py-[6px] cursor-pointer transition-colors"
+                  >
+                    <Icon name="edit" size={11} /> Add a description
+                  </button>
                 )}
               </div>
             </div>
 
-            {/* Stats bar */}
-            <div className="flex items-center gap-0 mt-[20px] pt-[16px] border-t border-[rgba(255,255,255,0.06)]">
-              <div className="flex items-baseline gap-[5px] pr-[20px]">
-                <span className="text-[22px] font-bold text-txt tabular-nums leading-none">{rosterCount}</span>
-                <span className="text-[11px] text-txt-3 font-[var(--font-mono)]">agents</span>
-              </div>
-              {projectWorkingCount > 0 && (
-                <div className="flex items-baseline gap-[5px] px-[20px] border-l border-[rgba(255,255,255,0.06)] text-status-working">
-                  <span className="text-[22px] font-bold tabular-nums leading-none">{projectWorkingCount}</span>
-                  <span className="text-[11px] font-[var(--font-mono)] opacity-70">working</span>
-                </div>
-              )}
-              {(project.runCount ?? 0) > 0 && (
-                <div className="flex items-baseline gap-[5px] px-[20px] border-l border-[rgba(255,255,255,0.06)]">
-                  <span className="text-[22px] font-bold text-txt tabular-nums leading-none">{project.runCount}</span>
-                  <span className="text-[11px] text-txt-3 font-[var(--font-mono)]">runs</span>
-                </div>
-              )}
+            {/* Meta row — cwd, git, last run — now under the top row instead of sharing space with counters */}
+            <div className="flex items-center gap-[14px] mt-[18px] pt-[14px] border-t border-[rgba(255,255,255,0.06)]">
               <div className="flex items-end gap-[14px] ml-auto flex-col items-end">
                 <div className="flex items-center gap-[14px]">
                   {project.lastRunAt && (
