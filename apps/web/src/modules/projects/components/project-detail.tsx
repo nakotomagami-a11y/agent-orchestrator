@@ -222,15 +222,23 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               {/*
                 Lifted above the planet's absolute canvas so a bleeding
                 black-hole ring (or star glow) can't paint on top of the
-                name/counters. `text-shadow` gives an extra safety margin
-                for any bleed that reaches under the text before the
-                stacking-context override kicks in.
+                name/counters. A dark text-shadow is applied inline so it
+                actually survives Tailwind arbitrary-value parsing
+                (multi-shadow values collapse in JIT unless quoted).
               */}
-              <div className="flex-1 min-w-0 pt-[6px] flex flex-col gap-[10px] relative z-[1] [text-shadow:0_1px_6px_rgba(0,0,0,0.7),0_0_2px_rgba(0,0,0,0.9)]">
+              <div className="flex-1 min-w-0 pt-[6px] flex flex-col gap-[10px] relative z-[1]">
                 {/* Name row with counters pushed to the right */}
                 <div className="flex items-start gap-[16px]">
                   <div className="flex items-center gap-[10px] flex-wrap min-w-0">
-                    <h2 className="font-bold m-0 text-[28px] tracking-[-0.01em] text-txt leading-none truncate">{project.meta.name}</h2>
+                    <h2
+                      className="font-bold m-0 text-[28px] tracking-[-0.01em] text-txt leading-none truncate"
+                      style={{
+                        textShadow:
+                          "0 2px 4px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,1)",
+                      }}
+                    >
+                      {project.meta.name}
+                    </h2>
                     {projectWorkingCount > 0 && (
                       <span className="inline-flex items-center gap-[5px] px-[8px] py-[2px] rounded-full text-[10px] font-semibold font-[var(--font-mono)] tracking-[0.03em] text-status-working" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.25)" }}>
                         <span className="w-[5px] h-[5px] rounded-full animate-pulse bg-status-working" />
