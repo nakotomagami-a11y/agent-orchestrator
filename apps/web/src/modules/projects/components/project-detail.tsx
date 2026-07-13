@@ -222,21 +222,16 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               {/*
                 Lifted above the planet's absolute canvas so a bleeding
                 black-hole ring (or star glow) can't paint on top of the
-                name/counters. A dark text-shadow is applied inline so it
-                actually survives Tailwind arbitrary-value parsing
-                (multi-shadow values collapse in JIT unless quoted).
+                name/counters. The `.hero-title-shadow` utility (defined
+                in globals.css) gives a dark multi-shadow as a second
+                line of defense against any bleed that reaches under
+                the text.
               */}
               <div className="flex-1 min-w-0 pt-[6px] flex flex-col gap-[10px] relative z-[1]">
                 {/* Name row with counters pushed to the right */}
                 <div className="flex items-start gap-[16px]">
                   <div className="flex items-center gap-[10px] flex-wrap min-w-0">
-                    <h2
-                      className="font-bold m-0 text-[28px] tracking-[-0.01em] text-txt leading-none truncate"
-                      style={{
-                        textShadow:
-                          "0 2px 4px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.7), 0 0 2px rgba(0,0,0,1)",
-                      }}
-                    >
+                    <h2 className="font-bold m-0 text-[28px] tracking-[-0.01em] text-txt leading-none truncate hero-title-shadow">
                       {project.meta.name}
                     </h2>
                     {projectWorkingCount > 0 && (

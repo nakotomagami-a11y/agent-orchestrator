@@ -209,6 +209,17 @@ body {
 }
 
 
+/* ─── Hero title shadow — keeps the project name legible when a bleeding
+   planet ring (black-hole, star) paints under it. Multi-shadow value
+   collapses in Tailwind's arbitrary-value JIT, so it lives here as a
+   named utility instead. ─── */
+.hero-title-shadow {
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.85),
+    0 0 10px rgba(0, 0, 0, 0.7),
+    0 0 2px rgba(0, 0, 0, 1);
+}
+
 /* ─── Build panel — color-mix borders (Tailwind v3 can't express these) ─── */
 .bp-head-crest { border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent); }
 .brush-sizes button.active { border-color: color-mix(in srgb, var(--acc) 30%, transparent); }
@@ -491,6 +502,22 @@ html[data-perf="off"]  * {
   /* Backdrop blur is disproportionately expensive on Intel iGPUs. */
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+}
+/* When we kill backdrop-filter (perf-lite/off, or hardware that silently
+   drops it on Intel Arc iGPU), modals become dangerously see-through —
+   their base bg is designed at 55-65% opacity assuming blur softens the
+   underlying page. Without blur, the project detail behind punches
+   through. Force every `.app-modal-backdrop` to a near-solid dark fill
+   whenever the perf modes disable blur, and use the same fallback via
+   `@supports not` for any renderer that silently refuses the feature. */
+html[data-perf="lite"] .app-modal-backdrop,
+html[data-perf="off"]  .app-modal-backdrop {
+  background: rgba(4, 4, 8, 0.98) !important;
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .app-modal-backdrop {
+    background: rgba(4, 4, 8, 0.98) !important;
+  }
 }
 html[data-perf="lite"] *,
 html[data-perf="off"]  * {
