@@ -192,6 +192,7 @@ function listInstalledAgents(): InstalledAgent[] {
     if (!f.endsWith(".md")) continue;
     if (f.startsWith("_")) continue;
     if (f.endsWith(".memory.md")) continue;
+    if (f.endsWith(".identity.md")) continue;
     if (f.includes(".body.")) continue;
     const raw = readFileSync(join(AGENTS_DIR, f), "utf8");
     out.push({

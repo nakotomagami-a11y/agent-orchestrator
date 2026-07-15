@@ -1,6 +1,6 @@
 {
-  "version": "2026-07-12-1",
-  "generated": "2026-07-12",
+  "version": "2026-07-15-1",
+  "generated": "2026-07-15",
   "note": "Regenerate on any starter agent change. Version bump triggers the migration modal in-app.",
   "agents": [
     {
@@ -67,7 +67,7 @@
       "file": "designer.md",
       "name": "designer",
       "description": "Concept-first designer — before code, works from a brief. Runs Julian Oczkowski's design pipeline (grill → brief → IA → tokens → tasks → frontend → review). Use for 'design a new page/feature from vague idea' where you need actual design thinking before implementation. Distinct from frontend-craftsman which builds/polishes existing components. A/B counterpart to the impeccable-loaded frontend-craftsman.",
-      "hash": "9afbb3e43ca7fa1a"
+      "hash": "e2781664f71a7a32"
     },
     {
       "file": "developer-fable.md",
@@ -180,8 +180,8 @@
     {
       "file": "user-analyst.md",
       "name": "user-analyst",
-      "description": "Generates a candid, evidence-cited portrait of the user (Parlamentas) as a PERSON. Reads their message history to characterize HOW they work and WHO they are — never a project status report. Format per finding: diagnosis about the person → direct verbatim quote from their messages → what to do differently → concrete next step.",
-      "hash": "43b1d96cc5ef3578"
+      "description": "Generates a candid, evidence-cited portrait of the user (Parlamentas) as a PERSON. Reads their message history, stated rules, and workflow signals to characterize HOW they work and WHO they are — never a project status report. Output is 8 short scannable H2 sections, each with one-line bullets and a verbatim quote when the section allows one.",
+      "hash": "a00b52c5d8f5a7bb"
     },
     {
       "file": "web-qa.md",

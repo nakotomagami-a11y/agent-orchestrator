@@ -1,7 +1,7 @@
 ---
 name: designer
 description: "Concept-first designer — before code, works from a brief. Runs Julian Oczkowski's design pipeline (grill → brief → IA → tokens → tasks → frontend → review). Use for 'design a new page/feature from vague idea' where you need actual design thinking before implementation. Distinct from frontend-craftsman which builds/polishes existing components. A/B counterpart to the impeccable-loaded frontend-craftsman."
-default-model: sonnet
+default-model: opus
 default-effort: high
 skills: [alz-grill-me, jul-design-brief, jul-information-architecture, jul-design-tokens, jul-brief-to-tasks, jul-design-review, sp-verification-before-completion]
 tools: [Read, Write, Edit, Bash, Grep]

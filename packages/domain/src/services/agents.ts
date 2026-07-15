@@ -1,8 +1,15 @@
 // Agent definitions: ~/.claude/agents/<id>.md (YAML frontmatter + markdown body).
-// Sibling memory file at ~/.claude/agents/<id>.memory.md.
+// Sibling files, both optional:
+//   - <id>.identity.md — foundational knowledge that is part of who the agent
+//     is. Distributed with the app for bundled agents; users may add one to
+//     their own agents. Included in every spawn.
+//   - <id>.memory.md  — session-accumulated learnings for THIS installation.
+//     Never ships with the app; grows as the agent runs.
 //
 // `buildAppendedPrompt` composes the per-summon system prompt from skills +
-// global memory + project memory + per-agent memory.
+// identity + global memory + project memory + per-agent memory. Identity sits
+// right after skills because it's static and never edited by the user, while
+// memory (all three flavors) is treated as accumulated state.
 
 import { readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -72,7 +79,14 @@ export function readAgent(name: string): { info: ApiAgent; body: string } | null
 export function listAgents(): ApiAgent[] {
   if (!existsSync(AGENTS_DIR)) return [];
   return readdirSync(AGENTS_DIR)
-    .filter((f) => f.endsWith(".md") && !f.endsWith(".memory.md") && !f.startsWith("_") && !f.includes(".body."))
+    .filter(
+      (f) =>
+        f.endsWith(".md") &&
+        !f.endsWith(".memory.md") &&
+        !f.endsWith(".identity.md") &&
+        !f.startsWith("_") &&
+        !f.includes(".body."),
+    )
     .map((f) => readAgent(f.replace(/\.md$/, ""))?.info)
     .filter((a): a is ApiAgent => a !== undefined);
 }
@@ -104,7 +118,26 @@ export function deleteAgent(id: string): boolean {
   rmSync(mdPath);
   const memPath = memoryPathFor(id);
   if (existsSync(memPath)) rmSync(memPath);
+  const identityPath = identityPathFor(id);
+  if (existsSync(identityPath)) rmSync(identityPath);
   return true;
+}
+
+// ─── Identity files (foundational, ships with the agent) ────────────────
+
+export function identityPathFor(agent: string): string {
+  return join(AGENTS_DIR, `${agent}.identity.md`);
+}
+
+/**
+ * Read the identity file for an agent, if present. Returns empty string when
+ * the file doesn't exist — identity is optional. This is the counterpart to
+ * `.memory.md`: identity ships with the agent, memory accumulates locally.
+ */
+export function readAgentIdentity(agentId: string): string {
+  const path = identityPathFor(agentId);
+  if (!existsSync(path)) return "";
+  return readFileSync(path, "utf8");
 }
 
 // ─── Memory files ────────────────────────────────────────────────────────
@@ -140,13 +173,16 @@ export function writeAgentMemory(agentId: string, content: string): void {
 }
 
 /**
- * Composition order: skills → global → project → per-agent → history note.
- * Caller passes a pre-resolved `Project` (or null) - we don't import the
- * projects service here to avoid a cycle.
+ * Composition order: skills → identity → global → project → per-agent → history note.
+ * Identity is foundational (ships with the agent, part of who it is) so it
+ * comes right after skills and before all three memory layers. Caller passes
+ * a pre-resolved `Project` (or null) - we don't import the projects service
+ * here to avoid a cycle.
  */
 export function buildAppendedPrompt(agentName: string, project: Project | null, instanceId?: string, hasMessages?: boolean): string {
   const agent = readAgent(agentName);
   const skillFragment = agent ? buildSkillsPrompt(agent.info.skills).trim() : "";
+  const identity = readAgentIdentity(agentName).trim();
   const global = readGlobalMemory().trim();
   const projectMemory = project?.memory.trim() ?? "";
   const perAgent = readAgentMemory(agentName).trim();
@@ -154,6 +190,7 @@ export function buildAppendedPrompt(agentName: string, project: Project | null, 
 
   const parts: string[] = [];
   if (skillFragment) parts.push("## Capabilities (from selected skills)\n\n" + skillFragment);
+  if (identity) parts.push(`## Identity (${agentName} — part of who this agent is)\n` + identity);
   if (global) parts.push("## Global memory (applies to every agent)\n" + global);
   if (project) {
     const projectLines = [`**Project:** ${project.meta.name}`];
