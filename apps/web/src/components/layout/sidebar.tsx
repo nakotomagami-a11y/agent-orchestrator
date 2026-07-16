@@ -9,6 +9,8 @@ import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { isActiveRoute } from "./sidebar-routing";
 import { Icon } from "@/components/ui/icon";
+import { Button } from "@/components/ui/button";
+import { ModalShell } from "@/components/ui/modal-shell";
 import { cn } from "@/lib/cn";
 import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
@@ -60,6 +62,14 @@ export function Sidebar() {
   // Track which instance is currently being renamed
   const [renamingInstanceId, setRenamingInstanceId] = useState<string | null>(null);
 
+  // Pending removal — drives the confirm modal. `null` = no dialog open.
+  // Set by both the row-level X button (`onRemove`) and the caret-menu
+  // action (`onRemoveById`) so a single modal serves both entry points.
+  const [pendingRemove, setPendingRemove] = useState<{
+    instanceId: string;
+    displayName: string;
+  } | null>(null);
+
   // When a project is active, the roster lists *instances* (one row per
   // entry in `project.meta.roster`). Two `frontend-craftsman` instances
   // become two separate rows. When no project is active, fall back to a
@@ -108,29 +118,24 @@ export function Sidebar() {
 
   const onRemove = useCallback((row: RosterRow) => {
     if (!activeProjectId || !row.instance) return;
-    const ok = window.confirm(
-      t("sidebar.remove_confirm", {
-        name: row.displayName,
-        project: project?.meta.name ?? "",
-      }),
-    );
-    if (!ok) return;
-    removeMut.mutate({ projectId: activeProjectId, instanceId: row.instance.instanceId });
-  }, [activeProjectId, project, removeMut, t]);
+    setPendingRemove({
+      instanceId: row.instance.instanceId,
+      displayName: row.displayName,
+    });
+  }, [activeProjectId]);
 
   const onRemoveById = useCallback((instanceId: string) => {
     if (!activeProjectId || !project) return;
     const row = rosterRows.find((r) => r.instance?.instanceId === instanceId);
     if (!row) return;
-    const ok = window.confirm(
-      t("sidebar.remove_confirm", {
-        name: row.displayName,
-        project: project.meta.name,
-      }),
-    );
-    if (!ok) return;
-    removeMut.mutate({ projectId: activeProjectId, instanceId });
-  }, [activeProjectId, project, rosterRows, removeMut, t]);
+    setPendingRemove({ instanceId, displayName: row.displayName });
+  }, [activeProjectId, project, rosterRows]);
+
+  const confirmRemove = useCallback(() => {
+    if (!activeProjectId || !pendingRemove) return;
+    removeMut.mutate({ projectId: activeProjectId, instanceId: pendingRemove.instanceId });
+    setPendingRemove(null);
+  }, [activeProjectId, pendingRemove, removeMut]);
 
   const { spawnInstance: onSpawn } = useSpawnInstance({ activeProjectId });
 
@@ -324,6 +329,31 @@ export function Sidebar() {
       </div>
 
       <SidebarFoot spendToday={spendToday} />
+      <ModalShell
+        open={pendingRemove !== null}
+        onClose={() => setPendingRemove(null)}
+        title={t("sidebar.remove_from_project_title")}
+        size="sm"
+        footer={
+          <>
+            <Button size="sm" variant="ghost" onClick={() => setPendingRemove(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button size="sm" variant="primary" onClick={confirmRemove}>
+              {t("common.remove")}
+            </Button>
+          </>
+        }
+      >
+        {pendingRemove && (
+          <p className="m-0 text-[13px] text-txt-2 leading-[1.55]">
+            {t("sidebar.remove_confirm", {
+              name: pendingRemove.displayName,
+              project: project?.meta.name ?? "",
+            })}
+          </p>
+        )}
+      </ModalShell>
     </aside>
   );
 }
