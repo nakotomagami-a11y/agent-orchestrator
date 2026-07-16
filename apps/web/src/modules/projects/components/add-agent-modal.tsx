@@ -89,7 +89,7 @@ export function AddAgentModal({ open, projectId, onClose, onProjectChange }: Add
 
   const content = (
     <div className="app-modal-backdrop fixed inset-0 flex items-center justify-center p-[24px] bg-[rgba(5,5,10,0.78)] z-[200] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(10px)] after:[-webkit-backdrop-filter:blur(10px)] after:pointer-events-none" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
-      <div className="relative bg-bg-1 border border-line flex flex-col overflow-hidden [width:min(820px,100%)] max-h-[calc(100vh-48px)] rounded-[16px] [box-shadow:0_32px_64px_-12px_rgba(0,0,0,0.7)] z-[1]" role="dialog" aria-modal="true">
+      <div className="relative bg-bg-1 border border-line flex flex-col overflow-hidden [width:min(820px,100%)] rounded-[16px] [box-shadow:0_32px_64px_-12px_rgba(0,0,0,0.7)] z-[1]" style={{ maxHeight: "calc(100vh - 122px)" }} role="dialog" aria-modal="true">
         {targetId ? (
           <AgentPickerStep
             projectId={targetId}

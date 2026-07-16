@@ -346,7 +346,8 @@ export function AgentDetailsModal() {
       >
         <div
           ref={ref}
-          className="ao-modal relative w-full max-w-[1080px] h-[calc(100vh-64px)] max-h-[calc(100vh-64px)] bg-[var(--ao-bg-1)] border border-[var(--ao-line-1)] rounded-[var(--ao-radius-xl)] shadow-[var(--ao-shadow-modal)] flex flex-col overflow-hidden z-[1] text-[var(--ao-fg-0)] text-[14px] leading-[1.45] [-webkit-font-smoothing:antialiased]"
+          className="ao-modal relative w-full max-w-[1080px] bg-[var(--ao-bg-1)] border border-[var(--ao-line-1)] rounded-[var(--ao-radius-xl)] shadow-[var(--ao-shadow-modal)] flex flex-col overflow-hidden z-[1] text-[var(--ao-fg-0)] text-[14px] leading-[1.45] [-webkit-font-smoothing:antialiased]"
+          style={{ height: "calc(100vh - 138px)", maxHeight: "calc(100vh - 138px)" }}
           role="dialog"
           aria-modal="true"
           aria-label={`Agent: ${agent.name}`}

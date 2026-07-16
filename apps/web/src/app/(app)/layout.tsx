@@ -1,6 +1,9 @@
 import { Suspense, type ReactNode } from "react";
 import { GnomeWindow } from "@/components/layout/gnome-window";
 import { Titlebar } from "@/components/layout/titlebar";
+import { TabStrip } from "@/components/layout/tab-strip";
+import { TabsRouterSync } from "@/components/layout/tabs-router-sync";
+import { TabsKeyboard } from "@/components/layout/tabs-keyboard";
 import { MainShell } from "@/components/layout/main-shell";
 import { AgentDetailsModal } from "@/modules/office/components/agent-details";
 import { ClaudeLimitsModal } from "@/modules/limits/components/claude-limits-modal";
@@ -43,6 +46,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <AgentCapModalMount />
     </GnomeWindow>
     <Titlebar />
+    <TabStrip />
+    <Suspense><TabsRouterSync /></Suspense>
+    <TabsKeyboard />
     </>
   );
 }

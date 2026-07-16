@@ -4,6 +4,7 @@ import { db } from "@agent-office/domain/services";
 const STATIC_KEYS = new Set([
   "theme",
   "active-project",
+  "tabs-state",
   "claude-limits",
   "performance-mode",
   "office-grid",

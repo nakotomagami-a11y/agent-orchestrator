@@ -13,7 +13,6 @@ import {
   minimizeWindow,
   toggleMaximizeWindow,
 } from "@/lib/tauri-window";
-import { ProjectSwitcher } from "./project-switcher";
 import { RefreshButton } from "./refresh-button";
 import { DevMenu } from "@/components/dev/dev-menu";
 import { SkillUpdatesBell } from "./skill-updates-bell";
@@ -27,11 +26,15 @@ import { SkillUpdatesBell } from "./skill-updates-bell";
  *   - Tauri maximized: full-width, no rounding.
  *
  * The titlebar renders as a `fixed` overlay (NOT inside the GnomeWindow)
- * at z-[50] — deliberately *below* every portal-rendered modal so the
- * ProjectSwitcher chip + window controls get dimmed by the modal backdrop
- * instead of punching through on top of it. The user must close the
- * modal to reach the traffic-light controls, which matches standard
- * modal UX.
+ * at z-[300] — deliberately *above* every portal-rendered modal so it stays
+ * visible + clickable while a modal is open. This mirrors Chrome/VS Code:
+ * chrome (titlebar + tabs) is always accessible so users can switch tabs
+ * without dismissing a modal first. The traffic-light controls also stay
+ * live for the same reason.
+ *
+ * The project switcher used to live here as a chip; it moved to the
+ * dedicated `<TabStrip />` immediately below (see `tab-strip.tsx`) so
+ * users can hold multiple projects open at once.
  *
  * The component also writes the current chrome inset (0 or 18px) to a
  * CSS custom property `--chrome-inset` on the document root. Other chrome-
@@ -77,12 +80,12 @@ export function Titlebar() {
         // Edge-to-edge in every mode. The old chrome-inset + rounded top let a
         // light ring bleed around the app; killed alongside the GnomeWindow
         // chrome. `maximized` still tracked in case a caller wires it later.
-        "app-titlebar fixed top-0 left-0 right-0 h-[38px] z-[50]",
+        "app-titlebar fixed top-0 left-0 right-0 h-[38px] z-[300]",
         maximized && "",
       )}
     >
       <div className="flex items-center h-full px-3 select-none bg-bg-2 border-b border-line">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-1 min-w-0" data-tauri-drag-region>
           {isTauri() && (
             <div className="flex gap-2">
               <span {...dotProps("close")} />
@@ -90,7 +93,6 @@ export function Titlebar() {
               <span {...dotProps("max")} />
             </div>
           )}
-          <ProjectSwitcher />
         </div>
         <div className="font-semibold text-[13px] text-txt-2 flex items-center gap-2 shrink-0 max-[600px]:hidden" data-tauri-drag-region>
           <span

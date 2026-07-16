@@ -163,6 +163,17 @@
     "new_project_cancel": "Cancel",
     "new_project_creating": "Creating…"
   },
+  "tabs": {
+    "empty_hint": "Click + to open a project",
+    "open_project_title": "Open project",
+    "close_tab_label": "Close tab",
+    "close_active_shortcut": "Ctrl+W",
+    "picker_open_tag": "open",
+    "ctx_close": "Close",
+    "ctx_close_others": "Close others",
+    "ctx_close_right": "Close tabs to the right",
+    "ctx_restore_closed": "Reopen closed tab"
+  },
   "agent": {
     "title_view": "Agent",
     "title_new": "New agent",

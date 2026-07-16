@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import { useCallback, useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import type { UseRunStreamResult } from "./use-run-stream";
 import type { ThreadItem } from "../format/thread-types";
@@ -8,6 +8,7 @@ import { apiFetch, ApiError } from "@agent-office/domain/hooks/api";
 import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { queryKeys } from "@agent-office/domain/hooks/query-keys";
 import type { PersistedRun } from "@agent-office/domain/types";
+import { readChatEntry, useChatStateRegistry } from "../state/chat-state-registry";
 
 export type ResumeError =
   | { kind: "missing"; message: string }
@@ -47,6 +48,9 @@ export interface UseRunRecoveryResult {
   // Exposes the refs so callers (doSubmit, newThread) can reset them directly.
   runStartIndexRef: MutableRefObject<number | null>;
   fallbackAttemptedRef: MutableRefObject<string | null>;
+  /** Setter that mirrors writes to the per-tKey chat state registry so a
+   *  ChatPanel remount for the same tKey can restore the splice index. */
+  setRunStartIndex: (v: number | null) => void;
 }
 
 /**
@@ -72,7 +76,7 @@ export function useRunRecovery({
   transcriptLoaded,
   sessionId,
   setSessionId,
-  tKey: _tKey,
+  tKey,
   qc,
 }: UseRunRecoveryParams): UseRunRecoveryResult {
   const [resumeProbed, setResumeProbed] = useState(false);
@@ -82,6 +86,24 @@ export function useRunRecovery({
 
   const runStartIndexRef = useRef<number | null>(null);
   const fallbackAttemptedRef = useRef<string | null>(null);
+  const patchEntry = useChatStateRegistry((s) => s.patchEntry);
+
+  // Hydrate the ref from the per-tKey registry on every mount / tKey change.
+  // This is what lets a ChatPanel remount (e.g. after a project-tab switch)
+  // recover the current run's splice index without needing to re-derive it
+  // from a full transcript reload.
+  useEffect(() => {
+    const cached = readChatEntry(tKey);
+    runStartIndexRef.current = cached.runStartIndex;
+  }, [tKey]);
+
+  const setRunStartIndex = useCallback(
+    (v: number | null) => {
+      runStartIndexRef.current = v;
+      patchEntry(tKey, { runStartIndex: v });
+    },
+    [tKey, patchEntry],
+  );
 
   // ── Probe a stored runId once - drop it if the server has no record ──
   useEffect(() => {
@@ -114,9 +136,11 @@ export function useRunRecovery({
           setActiveRunId(null);
         } else {
           // Still running - mark where this run's output goes in the thread.
-          // Only set if the parent hasn't already written the authoritative value.
+          // Only set if the parent hasn't already written the authoritative
+          // value (which lives in the registry — a remount for the same tKey
+          // hydrates the ref from there before this effect runs).
           if (runStartIndexRef.current === null) {
-            runStartIndexRef.current = thread.length;
+            setRunStartIndex(thread.length);
           }
         }
         setResumeProbed(true);
@@ -164,7 +188,7 @@ export function useRunRecovery({
     const shouldFallback =
       stream.phase === "done" && !hasStreamedFeedback && fallbackAttemptedRef.current !== runId;
 
-    runStartIndexRef.current = null;
+    setRunStartIndex(null);
     fallbackAttemptedRef.current = runId;
     setActiveRunId(null);
     qc.invalidateQueries({ queryKey: queryKeys.runs.all });
@@ -235,7 +259,7 @@ export function useRunRecovery({
     setResumeError(null);
     setRecovered(null);
     setResumeAttempt(0);
-    runStartIndexRef.current = null;
+    setRunStartIndex(null);
     fallbackAttemptedRef.current = null;
   };
 
@@ -248,6 +272,7 @@ export function useRunRecovery({
     retryResume,
     dismissResume,
     resetRecovery,
+    setRunStartIndex,
     runStartIndexRef,
     fallbackAttemptedRef,
   };

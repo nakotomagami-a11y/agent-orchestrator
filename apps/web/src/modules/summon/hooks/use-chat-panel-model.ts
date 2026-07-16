@@ -67,7 +67,7 @@ export function useChatPanelModel(input: UseChatPanelModelInput): ChatPanelModel
   const projectName = projectQ.data?.meta.name;
   const tKey = transcriptKey(input.agent.id, input.instanceId);
 
-  const state = useChatState();
+  const state = useChatState(tKey);
   const stream = useRunStream(state.activeRunId);
 
   const recovery = useRunRecovery({
@@ -139,6 +139,7 @@ export function useChatPanelModel(input: UseChatPanelModelInput): ChatPanelModel
     queuedMessages: state.queuedMessages,
     setQueuedMessages: state.setQueuedMessages,
     runStartIndexRef: recovery.runStartIndexRef,
+    setRunStartIndex: recovery.setRunStartIndex,
     fallbackAttemptedRef: recovery.fallbackAttemptedRef,
     newThreadSignal: input.newThreadSignal,
   });

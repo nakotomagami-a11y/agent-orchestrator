@@ -458,11 +458,17 @@ html.tauri body {
 html, body { background: var(--bg-0); }
 
 
-/* Modal backdrop covers the FULL viewport (top: 0) so the ProjectSwitcher
-   chip in the titlebar is dimmed along with the rest of the page. The
-   titlebar itself now sits at z-[50] — below every modal — instead of the
-   earlier z-[200] override. Traffic-light controls become unclickable
-   until the modal closes, which matches standard modal UX. */
+/* Modal backdrop starts BELOW the titlebar + tab strip (74 px total) so the
+   chrome stays fully visible + interactive while a modal is open. This is
+   the Chrome / VS Code convention: users can switch tabs without dismissing
+   the modal first. Titlebar sits at z-[300] and TabStrip at z-[300] — above
+   every modal (z-100..z-210) — so they render on top of the backdrop even
+   though the backdrop's `inset-0` layout box still reaches the viewport top;
+   this override shifts the visible fill down. Modals whose max-height uses
+   `calc(100vh - Npx)` should also budget for this offset. */
+.app-modal-backdrop {
+  top: 74px !important;
+}
 
 /* ─── Office scene background ─── */
 /* Overrides any old cached inline style with the ocean background image. */

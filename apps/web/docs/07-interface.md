@@ -6,13 +6,24 @@ Every screen, modal, panel, and shortcut in the app. Read this if you want to kn
 
 The whole app runs inside a GNOME-styled Tauri window:
 
-- **Titlebar** (top, 38 px) — window controls, workspace name, global search.
-- **Sidebar** (left, resizable) — pinned agents grouped by room, project switcher, memory + skills + settings entry points.
+- **Titlebar** (top, 38 px) — window controls (traffic lights on Tauri), workspace name, dev menu, refresh, theme toggle. Always visible; sits above every modal so it stays clickable.
+- **Tab strip** (below titlebar, 36 px) — Chrome-style project tabs. See "Project tabs" below.
+- **Sidebar** (left, resizable) — pinned agents grouped by room, memory + skills + settings entry points.
 - **Main pane** — current route (Office / Projects / History / Docs / Settings / etc.).
 - **Mobile bottom nav** — appears on narrow viewports; replaces the sidebar.
 - **Resize handles** — grab any window edge to resize (Tauri desktop only).
 
-The layout persists via `ui_settings` — sidebar width, active route, last-opened project.
+The layout persists via `ui_settings` — sidebar width, active route, last-opened project, open tabs, closed-tab LRU stack.
+
+## Project tabs
+
+The strip below the titlebar lets you hold multiple projects open at once and switch instantly, Chrome-style.
+
+- **`+` button** (far left) — opens the project picker dropdown. Click any project to open it as a new tab, or focus the existing tab if that project is already open. "New project…" at the bottom creates one from scratch.
+- **Tabs** — each tab shows the project's planet icon + name. Click to activate. Middle-click or the hover-X to close. Right-click for **Close / Close others / Close tabs to the right / Reopen closed tab**. Drag to reorder.
+- **State preservation** — switching tabs doesn't unmount your conversation. The chat thread, active stream, composer draft, message queue, and every per-`tKey` piece of chat state is preserved by a global registry keyed on `<agentId>::<instanceId>`. Live SSE streams keep flowing in the background of tabs you left; return and pick up mid-token.
+- **Persistence** — the tab list + closed-tab stack are stored in `ui_settings.tabs-state`. Reopening the app restores every open tab; deep-linking `/projects/<id>` in the URL opens a fresh tab automatically.
+- **Keyboard** — see the "Keyboard shortcuts summary" section at the bottom.
 
 ## The sidebar (roster group)
 
@@ -328,6 +339,12 @@ Endpoints: `/api/flutter/{devices,mirror,run,screenshot}`.
 | `Cmd/Ctrl+Enter` in composer | Send + queue |
 | `Ctrl+B` | Toggle sidebar |
 | `Ctrl+D` | Toggle Docs modal |
+| `Cmd/Ctrl+W` | Close active project tab |
+| `Cmd/Ctrl+Tab` | Next project tab (wraps) |
+| `Cmd/Ctrl+Shift+Tab` | Previous project tab (wraps) |
+| `Cmd/Ctrl+1..8` | Jump to tab N (1-indexed) |
+| `Cmd/Ctrl+9` | Jump to the LAST tab (Chrome convention) |
+| `Cmd/Ctrl+Shift+T` | Reopen the most recently closed tab (LRU depth 10) |
 
 ## Themes
 

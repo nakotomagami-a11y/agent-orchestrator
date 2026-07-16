@@ -31,6 +31,10 @@ export type UseChatActionsInput = {
   queuedMessages: Array<{ id: string; text: string }>;
   setQueuedMessages: Dispatch<SetStateAction<Array<{ id: string; text: string }>>>;
   runStartIndexRef: MutableRefObject<number | null>;
+  /** Registry-backed setter that mirrors ref writes to the per-tKey chat
+   *  state entry so a ChatPanel remount can restore the splice index
+   *  without a full transcript reload. */
+  setRunStartIndex: (v: number | null) => void;
   fallbackAttemptedRef: MutableRefObject<string | null>;
   newThreadSignal: number | undefined;
 };
@@ -52,7 +56,7 @@ type SummonInput = {
   setActiveRunId: Dispatch<SetStateAction<string | null>>;
   setPhaseOverride: Dispatch<SetStateAction<ChatPhase | null>>;
   setQuotaWarning: Dispatch<SetStateAction<string | null>>;
-  runStartIndexRef: MutableRefObject<number | null>;
+  setRunStartIndex: (v: number | null) => void;
 };
 
 /** Bare send closure. Wraps the summon mutation with thread-updating side effects. */
@@ -60,7 +64,7 @@ function makeDoSubmit(cfg: SummonInput): (text: string) => void {
   return (text: string) => {
     const userItem: ThreadItem = { kind: "you", id: `y_${Date.now()}`, text };
     cfg.setThread((prev) => {
-      cfg.runStartIndexRef.current = prev.length + 1;
+      cfg.setRunStartIndex(prev.length + 1);
       return [...prev, userItem];
     });
     cfg.setPhaseOverride("sending");
@@ -80,7 +84,7 @@ function makeDoSubmit(cfg: SummonInput): (text: string) => void {
           if (warning) cfg.setQuotaWarning(warning);
         },
         onError: (err) => {
-          cfg.runStartIndexRef.current = null;
+          cfg.setRunStartIndex(null);
           cfg.setThread((prev) => [
             ...prev,
             { kind: "system-error", id: `e_${Date.now()}`, message: err instanceof Error ? err.message : String(err) },
@@ -109,7 +113,7 @@ export function useChatActions(input: UseChatActionsInput): UseChatActionsResult
     setActiveRunId: input.setActiveRunId,
     setPhaseOverride: input.setPhaseOverride,
     setQuotaWarning: input.setQuotaWarning,
-    runStartIndexRef: input.runStartIndexRef,
+    setRunStartIndex: input.setRunStartIndex,
   });
 
   const onSubmit = (text: string) => {
@@ -138,7 +142,7 @@ export function useChatActions(input: UseChatActionsInput): UseChatActionsResult
     input.setSessionId(null);
     input.setPhaseOverride(null);
     input.setQueuedMessages([]);
-    input.runStartIndexRef.current = null;
+    input.setRunStartIndex(null);
     input.fallbackAttemptedRef.current = null;
   };
 

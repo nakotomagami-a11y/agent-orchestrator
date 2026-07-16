@@ -323,3 +323,28 @@ export interface PipelineRun {
   /** True when the server restarted while this pipeline was running. */
   interrupted?: boolean;
 }
+
+/**
+ * A project tab in the Chrome-style tab strip. One tab per project (MVP);
+ * opening an already-tabbed project focuses the existing tab. Each tab
+ * remembers its last-known route so switching tabs restores where the user
+ * was inside that project (agent details modal, memory view, docs sub-route,
+ * etc.). Persisted server-side under `ui_settings.tabs-state` as a JSON blob
+ * of the full `TabsState`.
+ */
+export interface Tab {
+  /** Stable id (uuid). Distinct from `projectId` because a project can be
+   * closed and re-opened as a different tab instance in future iterations. */
+  id: string;
+  projectId: string;
+  /** Last-known route within this tab, e.g. `/projects/inwhite`. Updated
+   * whenever the user navigates inside the active tab. */
+  currentPath: string;
+  createdAt: number;
+  lastActiveAt: number;
+}
+
+export interface TabsState {
+  tabs: Tab[];
+  activeTabId: string | null;
+}

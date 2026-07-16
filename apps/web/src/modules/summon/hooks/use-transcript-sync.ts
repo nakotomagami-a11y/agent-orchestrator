@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { loadTranscript, saveTranscript } from "../format/transcript-store";
+import { readChatEntry } from "../state/chat-state-registry";
 import type { ThreadItem } from "../format/thread-types";
 
 export type TranscriptSyncInput = {
@@ -59,6 +60,24 @@ function useLoadEffect(input: TranscriptSyncInput, loadedTKeyRef: MutableRefObje
   } = input;
 
   useEffect(() => {
+    // Fast-path: the tabs rework means ChatPanel remounts on every project-tab
+    // switch even when the *conversation* (tKey) is unchanged. If the per-tKey
+    // registry already has `transcriptLoaded: true`, the DB row and the
+    // in-memory state agree — skip the reload, just re-arm the write-through
+    // guard so future edits still persist.
+    //
+    // Active-run case: the registry ALSO tracks `runStartIndex` per tKey and
+    // `useRunRecovery` hydrates its ref from there on mount, so the splice
+    // math survives unmount+remount without needing a fresh DB probe. The
+    // run-stream-registry keeps the EventSource alive across unmount, so
+    // tokens accumulate into the shared stream state and re-render the
+    // returning tab exactly where it left off.
+    const cached = readChatEntry(tKey);
+    if (cached.transcriptLoaded) {
+      loadedTKeyRef.current = tKey;
+      return;
+    }
+
     setTranscriptLoaded(false);
     setThread([]);
     setActiveRunId(null);

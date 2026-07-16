@@ -359,10 +359,10 @@ Pipeline definitions and per-step state.
 ### Other tables
 
 - `tool_calls` — one row per tool_use content block
-- `transcripts` — raw stream buffers
+- `transcripts` — per-`tKey` (`<agentId>::<instanceId>`) chat state row: full thread items, `active_run_id`, `session_id`, `queued_messages` (JSON array of pending sends, DEFAULT `'[]'` per migration v6), `updated_at`. Written through by every chat state change so a hard refresh or app restart restores the conversation exactly.
 - `saved_prompts` — prompt templates with usage counter
 - `drafts` — chat draft persistence
-- `ui_settings` — key-value store for UI state
+- `ui_settings` — key-value store for UI state (see the allow-list below)
 - `recent_prompts` — deduplicated prompt history for autocomplete
 
 ### Virtual table
@@ -463,6 +463,7 @@ The Next.js server augments its `PATH` with common install locations (`~/.nvm/ve
 |---|---|
 | `theme` | `"light"` \| `"dark"` — active color scheme. |
 | `active-project` | Slug of the currently-selected project. |
+| `tabs-state` | JSON blob: `{ tabs: Tab[], activeTabId: string \| null, closedStack: Tab[] }` — open project tabs, active tab, and LRU stack of the 10 most-recently closed tabs (for `Ctrl+Shift+T` restore). Persists Chrome-style tab UX across app restarts. |
 | `claude-limits` | JSON blob for spend-cap configuration. |
 | `performance-mode` | `"full"` \| `"lite"` \| `"off"` — rendering / animation budget. |
 | `office-grid` | Global office grid dimensions fallback. |
@@ -501,7 +502,10 @@ Client-only state stores (persisted where noted):
 |---|---|---|
 | `use-office-store` | `zustand/persist` → localStorage | View mode (`iso` \| `cards`), selected agent/instance, inspector-open state, pending-tab, group expansion state |
 | `use-summon-store` | in-memory | Per-instance chat state — message queue, streaming buffers |
-| `active-project-store` | localStorage | Currently-active project slug |
+| `active-project-store` | server via `ui_settings.active-project` | Currently-active project slug — mirrored from the active tab by `tabs-router-sync` |
+| `tabs-store` | server via `ui_settings.tabs-state` | Open project tabs, active tab, closed-tab LRU stack (Chrome-style shell) |
+| `chat-state-registry` | in-memory (per-`tKey`) | Preserves thread, active run id, session id, queued messages, composer seed, phase override, context profile, transcript-loaded flag, run splice index — so switching project tabs doesn't wipe the conversation. Cold-loaded from the `transcripts` table on first mount. |
+| `run-stream-registry` | in-memory (per run id) | Keeps SSE `EventSource` connections alive across component unmount so runs streaming in a tab you left don't drop tokens. |
 | `theme-store` | server via `ui_settings.theme` | `light` \| `dark` |
 | `performance-store` | server via `ui_settings.performance-mode` | `full` \| `lite` \| `off` |
 | `claude-limits-store` | server via `ui_settings.claude-limits` | Spend-cap config |
