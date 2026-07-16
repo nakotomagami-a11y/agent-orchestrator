@@ -193,9 +193,16 @@ function spawnInTerminal(title: string, cwd: string, argv: string[], port: numbe
   // Terminals start bash with a minimal PATH that often lacks nvm/pnpm/bun.
   // Explicitly prepend the canonical install locations so package managers are
   // found even when the terminal's login/rc files haven't been sourced.
+  //
+  // Sourcing nvm.sh alone isn't enough: nvm only puts a node version on PATH
+  // if the user has a default alias pointing at an installed version. When the
+  // default is stale (e.g. `lts/*` with no LTS installed) `nvm.sh` loads but
+  // node/npm/pnpm stay missing. Try to `nvm use` a real version as a safety
+  // net so a broken alias never wedges the launch.
   const pathSetup = [
     '[ -d "$HOME/.local/share/pnpm" ] && export PATH="$HOME/.local/share/pnpm:$PATH"',
     'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"',
+    'command -v nvm >/dev/null && { nvm use default >/dev/null 2>&1 || nvm use node >/dev/null 2>&1 || nvm use --lts >/dev/null 2>&1 || true; }',
     '[ -d "$HOME/.bun/bin" ] && export PATH="$HOME/.bun/bin:$PATH"',
   ].join("; ") + "; ";
 

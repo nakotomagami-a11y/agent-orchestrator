@@ -39,7 +39,17 @@ function cleanEnv(): NodeJS.ProcessEnv {
 
 function spawnInTerminal(title: string, cwd: string, argv: string[]) {
   const cmdStr = argv.map((a) => /[\s"'\\$`!]/.test(a) ? shellQuote(a) : a).join(" ");
-  const shell = `cd ${shellQuote(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
+  // Same nvm-safe path setup as `dev/route.ts` — see the comment there for
+  // why sourcing nvm.sh alone isn't enough. A stale default alias (`lts/*`
+  // with no LTS installed) leaves node/npm/pnpm off PATH; the `nvm use`
+  // chain is a defensive fallback.
+  const pathSetup = [
+    '[ -d "$HOME/.local/share/pnpm" ] && export PATH="$HOME/.local/share/pnpm:$PATH"',
+    'export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"; [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"',
+    'command -v nvm >/dev/null && { nvm use default >/dev/null 2>&1 || nvm use node >/dev/null 2>&1 || nvm use --lts >/dev/null 2>&1 || true; }',
+    '[ -d "$HOME/.bun/bin" ] && export PATH="$HOME/.bun/bin:$PATH"',
+  ].join("; ") + "; ";
+  const shell = `${pathSetup}cd ${shellQuote(cwd)} && ${cmdStr}; echo; read -rp $'\\nProcess ended (exit $?). Press Enter to close...'`;
 
   const env = cleanEnv();
   const termBin = detectTerminal();
