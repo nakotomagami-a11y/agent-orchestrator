@@ -86,7 +86,8 @@ export function ModalShell({
       <div
         role="presentation"
         onClick={onClose}
-        className="app-modal-backdrop fixed inset-0 bg-[rgba(10,10,18,0.55)] backdrop-blur-sm flex items-center justify-center p-5 z-[100]"
+        className="app-modal-backdrop fixed inset-0 bg-[rgba(10,10,18,0.55)] backdrop-blur-sm flex items-center justify-center z-[100]"
+        style={{ top: 74, padding: 8 }}
       >
         <div
           ref={ref}
@@ -98,7 +99,7 @@ export function ModalShell({
           className={cn("bg-bg-1 border border-line rounded-[var(--r-lg)] shadow-1 w-full flex flex-col outline-none", className)}
           style={{
             maxWidth: maxWidth ?? SIZE_PX[size],
-            maxHeight: "calc(100vh - 114px)",
+            maxHeight: "calc(100vh - 90px)",
           }}
         >
           {title ? (

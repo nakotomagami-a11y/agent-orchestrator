@@ -193,6 +193,7 @@ export function CommandPalette() {
       role="presentation"
       onClick={close}
       className="app-modal-backdrop fixed inset-0 bg-black/40 z-[100] flex items-start justify-center pt-[15vh]"
+      style={{ top: 74 }}
     >
       {/* Panel */}
       <div

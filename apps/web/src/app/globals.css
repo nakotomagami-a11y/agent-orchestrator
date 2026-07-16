@@ -458,17 +458,13 @@ html.tauri body {
 html, body { background: var(--bg-0); }
 
 
-/* Modal backdrop starts BELOW the titlebar + tab strip (74 px total) so the
-   chrome stays fully visible + interactive while a modal is open. This is
-   the Chrome / VS Code convention: users can switch tabs without dismissing
-   the modal first. Titlebar sits at z-[300] and TabStrip at z-[300] — above
-   every modal (z-100..z-210) — so they render on top of the backdrop even
-   though the backdrop's `inset-0` layout box still reaches the viewport top;
-   this override shifts the visible fill down. Modals whose max-height uses
-   `calc(100vh - Npx)` should also budget for this offset. */
-.app-modal-backdrop {
-  top: 74px !important;
-}
+/* Modal backdrops start BELOW the titlebar + tab strip (74 px total) so the
+   chrome stays fully visible + interactive while a modal is open. Enforced
+   per-instance via inline `style={{ top: 74 }}` on every `.app-modal-backdrop`
+   mount (see modal-shell.tsx, agent-details/index.tsx, add-agent-modal.tsx,
+   command-palette.tsx, workflow-picker-dialog.tsx). Kept out of CSS because
+   Turbopack's HMR was inconsistent about picking up new class rules for a
+   pre-existing class name; inline styles bypass the CSS pipeline entirely. */
 
 /* ─── Office scene background ─── */
 /* Overrides any old cached inline style with the ocean background image. */

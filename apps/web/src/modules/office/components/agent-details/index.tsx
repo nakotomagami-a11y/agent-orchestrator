@@ -340,14 +340,15 @@ export function AgentDetailsModal() {
   return (
     <Portal>
       <div
-        className="app-modal-backdrop fixed inset-0 flex items-center justify-center p-8 z-[210] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(18,18,28,0.94),rgba(6,6,12,0.995)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(10,10,18,0.20)] after:pointer-events-none"
+        className="app-modal-backdrop fixed inset-0 flex items-center justify-center z-[210] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(18,18,28,0.94),rgba(6,6,12,0.995)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(10,10,18,0.20)] after:pointer-events-none"
+        style={{ top: 74, padding: 8 }}
         role="presentation"
         onClick={closeInspector}
       >
         <div
           ref={ref}
           className="ao-modal relative w-full max-w-[1080px] bg-[var(--ao-bg-1)] border border-[var(--ao-line-1)] rounded-[var(--ao-radius-xl)] shadow-[var(--ao-shadow-modal)] flex flex-col overflow-hidden z-[1] text-[var(--ao-fg-0)] text-[14px] leading-[1.45] [-webkit-font-smoothing:antialiased]"
-          style={{ height: "calc(100vh - 138px)", maxHeight: "calc(100vh - 138px)" }}
+          style={{ height: "calc(100vh - 90px)", maxHeight: "calc(100vh - 90px)" }}
           role="dialog"
           aria-modal="true"
           aria-label={`Agent: ${agent.name}`}
