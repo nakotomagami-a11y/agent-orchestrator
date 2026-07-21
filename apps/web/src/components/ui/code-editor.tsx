@@ -8,7 +8,7 @@ import { escapeHtml as esc } from "@/lib/markdown";
 
 /** Highlight inline markdown on an already-HTML-escaped string. */
 function hlInline(s: string): string {
-  s = s.replace(/`([^`]+)`/g, '<span style="color:#e6c07b">`$1`</span>');
+  s = s.replace(/`([^`]+)`/g, '<span style="color:var(--md-code)">`$1`</span>');
   s = s.replace(
     /\*\*([^*]+)\*\*/g,
     '<span style="opacity:.25">**</span><span style="font-weight:700">$1</span><span style="opacity:.25">**</span>',
@@ -19,7 +19,7 @@ function hlInline(s: string): string {
   );
   s = s.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
-    '[<span style="color:#79b8ff">$1</span>](<span style="color:var(--txt-3)">$2</span>)',
+    '[<span style="color:var(--md-link)">$1</span>](<span style="color:var(--txt-3)">$2</span>)',
   );
   return s;
 }
@@ -36,10 +36,10 @@ export function highlightMd(text: string, accColor = "var(--acc)"): string {
   for (const raw of lines) {
     if (/^```/.test(raw)) {
       inFence = !inFence;
-      out.push(`<span style="color:${inFence ? "#98c379" : "rgba(255,255,255,.35)"}">${esc(raw)}</span>`);
+      out.push(`<span style="color:${inFence ? "var(--md-fence)" : "var(--txt-3)"}">${esc(raw)}</span>`);
       continue;
     }
-    if (inFence) { out.push(`<span style="color:#e6c07b">${esc(raw)}</span>`); continue; }
+    if (inFence) { out.push(`<span style="color:var(--md-code)">${esc(raw)}</span>`); continue; }
 
     const e = esc(raw);
     let m: RegExpMatchArray | null;
@@ -55,7 +55,7 @@ export function highlightMd(text: string, accColor = "var(--acc)"): string {
     if ((m = e.match(/^(> ?)(.*)/))) {
       out.push(
         `<span style="color:${accColor}">${m[1]}</span>` +
-        `<span style="color:rgba(255,255,255,.55);font-style:italic">${hlInline(m[2]!)}</span>`,
+        `<span style="color:var(--txt-2);font-style:italic">${hlInline(m[2]!)}</span>`,
       );
       continue;
     }
@@ -64,7 +64,7 @@ export function highlightMd(text: string, accColor = "var(--acc)"): string {
       continue;
     }
     if (/^-{3,}$/.test(raw.trim())) {
-      out.push(`<span style="color:rgba(255,255,255,.15)">${e}</span>`);
+      out.push(`<span style="color:var(--line-strong)">${e}</span>`);
       continue;
     }
 
@@ -81,14 +81,14 @@ function inlinePrev(s: string): string {
   r = r.replace(
     /`([^`]+)`/g,
     (_, m: string) =>
-      `<code style="font-family:var(--font-mono);font-size:.875em;background:rgba(255,255,255,.07);padding:2px 5px;border-radius:4px;color:var(--acc)">${m}</code>`,
+      `<code style="font-family:var(--font-mono);font-size:.875em;background:var(--md-inline-bg);padding:2px 5px;border-radius:4px;color:var(--acc)">${m}</code>`,
   );
   r = r.replace(/\*\*([^*]+)\*\*/g, (_, m: string) => `<strong>${m}</strong>`);
   r = r.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, (_, m: string) => `<em>${m}</em>`);
   r = r.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     (_, text: string, href: string) =>
-      `<a href="${esc(href)}" style="color:#79b8ff;text-decoration:underline">${text}</a>`,
+      `<a href="${esc(href)}" style="color:var(--md-link);text-decoration:underline">${text}</a>`,
   );
   return r;
 }
@@ -115,7 +115,7 @@ function renderMd(md: string): string {
   };
   const flushFence = () => {
     const code = fenceLines.map(esc).join("\n");
-    out.push(`<pre style="margin:0 0 16px;padding:14px 16px;background:rgba(0,0,0,.32);border:1px solid var(--line);border-radius:8px;overflow-x:auto"><code style="font-family:var(--font-mono);font-size:12px;color:#e6c07b;line-height:1.6;display:block">${code}</code></pre>`);
+    out.push(`<pre style="margin:0 0 16px;padding:14px 16px;background:var(--md-pre-bg);border:1px solid var(--line);border-radius:8px;overflow-x:auto"><code style="font-family:var(--font-mono);font-size:12px;color:var(--md-code);line-height:1.6;display:block">${code}</code></pre>`);
     fenceLines = [];
   };
 
@@ -228,7 +228,11 @@ export function CodeEditor({
           {/* ── Gutter ── */}
           <div
             aria-hidden
-            className="w-[44px] shrink-0 bg-[rgba(0,0,0,0.15)] border-r border-r-[var(--line)] pt-[12px] pb-[12px] pl-[8px] pr-[10px] font-[var(--font-mono)] text-[11.5px] leading-[1.6] text-right text-[var(--txt-4)] select-none"
+            /* Gutter fill is a token, not a flat 15% black: on the dark
+               theme that wash is a subtle inset, but over a light editor it
+               renders as a mid-grey band that drags the line numbers down to
+               2.6:1. --ao-gutter carries a per-theme value. */
+            className="w-[44px] shrink-0 bg-[var(--ao-gutter)] border-r border-r-[var(--line)] pt-[12px] pb-[12px] pl-[8px] pr-[10px] font-[var(--font-mono)] text-[11.5px] leading-[1.6] text-right text-[var(--txt-3)] select-none"
           >
             {lines.map((_, i) => <div key={i}>{i + 1}</div>)}
           </div>

@@ -110,6 +110,13 @@ export const API_ROUTES = {
     `/api/agent-docs/${encodeURIComponent(owner)}/${encodeURIComponent(slug)}`,
 
   cleanup: (kind: string) => `/api/cleanup/${kind}`,
+
+  accounts: "/api/accounts",
+  accountById: (id: string) => `/api/accounts/${encodeURIComponent(id)}`,
+  accountStatus: (id: string) => `/api/accounts/${encodeURIComponent(id)}/status`,
+
+  analyticsPerAccount: "/api/analytics/per-account",
+  analyticsSummary: "/api/analytics/summary",
 } as const;
 
 /**

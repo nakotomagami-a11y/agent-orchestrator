@@ -92,4 +92,18 @@ export const queryKeys = {
       [...queryKeys.settings.all, "scan", root, excluded] as const,
     userAnalysis: () => [...queryKeys.settings.all, "user-analysis"] as const,
   },
+
+  accounts: {
+    all: ["accounts"] as const,
+    list: () => [...queryKeys.accounts.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.accounts.all, "detail", id] as const,
+    status: (id: string) => [...queryKeys.accounts.all, "status", id] as const,
+  },
+
+  analytics: {
+    all: ["analytics"] as const,
+    perAccount: () => [...queryKeys.analytics.all, "per-account"] as const,
+    summary: (opts: { start: number; end: number; days?: number; projectId?: string }) =>
+      [...queryKeys.analytics.all, "summary", opts] as const,
+  },
 } as const;

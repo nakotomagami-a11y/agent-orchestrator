@@ -15,3 +15,6 @@ export * as paths from "./paths";
 export * as pipeline from "./pipeline";
 export * as docs from "./docs";
 export * as cleanup from "./cleanup";
+export * as accounts from "./accounts";
+export * as analytics from "./analytics";
+export * as analyticsSummary from "./analytics-summary";

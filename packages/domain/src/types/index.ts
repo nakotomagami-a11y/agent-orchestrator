@@ -154,6 +154,35 @@ export interface ProjectMeta {
   cwd?: string;
   roster: AgentInstance[];
   planet?: PlanetConfig;
+  /**
+   * Multi-account: which Claude account (from the `accounts` service) runs
+   * `claude` for this project. `undefined` (or `"default"`) → use the shared
+   * `~/.claude`. Set via the project detail account picker (slice 4).
+   */
+  accountId?: string;
+}
+
+/**
+ * A Claude Code account registered with agent-office. Every account has its
+ * own `CLAUDE_CONFIG_DIR` (see `accountConfigDir(id)` in paths.ts). The
+ * `default` account is auto-inserted on boot and points at `~/.claude`; all
+ * others live under `~/.claude/agent-office/accounts/<id>/` with a real
+ * `.credentials.json` plus symlinks to `~/.claude/agents`, `skills`, etc.
+ */
+export interface Account {
+  id: string;
+  label: string;
+  configDir: string;
+  createdAt: number;
+}
+
+export type ClaudePlan = "free" | "pro" | "max" | "api" | "custom";
+
+export interface AccountWithStatus extends Account {
+  plan: ClaudePlan;
+  email?: string;
+  /** True when `<configDir>/.credentials.json` exists and parses. */
+  ready: boolean;
 }
 
 export interface AppSettings {

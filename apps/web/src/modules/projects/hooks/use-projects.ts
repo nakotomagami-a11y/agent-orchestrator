@@ -24,10 +24,17 @@ export function useProject(id: string | null) {
   });
 }
 
+/**
+ * `accountId: null` clears the field back to the default account. `undefined`
+ * (or omitted) means "leave unchanged" — this matches how JSON.stringify
+ * strips undefined values, so callers pass explicit `null` to wipe.
+ */
+type ProjectMetaPatch = Omit<Partial<ProjectMeta>, "accountId"> & { accountId?: string | null };
+
 export function useUpdateProject() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, patch }: { id: string; patch: { meta?: Partial<ProjectMeta>; memory?: string } }) =>
+    mutationFn: ({ id, patch }: { id: string; patch: { meta?: ProjectMetaPatch; memory?: string } }) =>
       apiFetch<Project>(API_ROUTES.project(id), { method: "PUT", body: patch }),
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: queryKeys.projects.all });

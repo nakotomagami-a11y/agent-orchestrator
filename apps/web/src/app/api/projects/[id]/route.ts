@@ -35,7 +35,13 @@ export async function PUT(request: Request, { params }: Params) {
   const raw: unknown = await request.json();
   const { data, error } = validateBody(projectMetaPatchSchema, raw);
   if (error) return error;
-  return tryService(() => projects.updateProject(id, data));
+  // The schema allows `accountId: null` (client's way to clear the field);
+  // the domain type is `string | undefined`. Coerce null → undefined.
+  const meta = data.meta
+    ? { ...data.meta, accountId: data.meta.accountId ?? undefined }
+    : undefined;
+  const normalized = { memory: data.memory, meta };
+  return tryService(() => projects.updateProject(id, normalized));
 }
 
 export async function DELETE(_request: Request, { params }: Params) {

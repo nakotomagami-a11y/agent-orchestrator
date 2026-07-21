@@ -9,7 +9,7 @@ import {
   periodEnd,
   type LimitsPeriod,
 } from "@/lib/claude-limits-store";
-import { useRuns } from "@/modules/runs/hooks/use-runs";
+import { useAnalyticsSummary } from "../hooks/use-analytics-summary";
 import { fmtUSD, fmtTok, modelLabel, modelBarGradient } from "../format/format";
 
 /* ------------------------------------------------------------------ */
@@ -284,74 +284,49 @@ export function ClaudeLimitsModal() {
     if (open) setLocalPeriod(period);
   }, [open, period]);
 
-  // ---- Data computation ----
-  const runsQ = useRuns({ limit: 500 });
-  const allRuns = useMemo(() => runsQ.data ?? [], [runsQ.data]);
-
+  // ---- Data ----
+  // Aggregated server-side. The previous approach fetched `/api/runs?limit=500`
+  // and summed in the browser, which silently truncated every window at 500
+  // runs — a 2,280-run history reported "500 runs" for both Monthly AND All
+  // time, with correspondingly wrong token and cost totals.
   const start = periodStart(localPeriod);
   const end   = periodEnd(localPeriod);
 
-  const inPeriod = useMemo(
-    () => allRuns.filter((r) => r.ts >= start && r.ts < end),
-    [allRuns, start, end],
+  const summaryQ = useAnalyticsSummary({ start, end, days: 14, enabled: open });
+  const summary = summaryQ.data;
+
+  // Adapt the API's row objects to the `[key, value]` tuple shape the
+  // existing ByModel / TopAgents presenters expect.
+  const modelRows = useMemo<[string, { runs: number; tokens: number; cost: number }][]>(
+    () => (summary?.byModel ?? []).map((m) => [m.model, { runs: m.runs, tokens: m.tokens, cost: m.cost }]),
+    [summary],
+  );
+  const agentRows = useMemo<[string, { runs: number; cost: number; name: string }][]>(
+    () => (summary?.byAgent ?? []).map((a) => [a.agentId, { runs: a.runs, cost: a.cost, name: a.agentName }]),
+    [summary],
   );
 
-  // Last 14 days bars
-  const last14 = useMemo<{ label: string; spend: number }[]>(() =>
-    Array.from({ length: 14 }, (_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (13 - i));
-      d.setHours(0, 0, 0, 0);
-      const next = new Date(d);
-      next.setDate(d.getDate() + 1);
-      const spend = allRuns
-        .filter((r) => r.ts >= d.getTime() && r.ts < next.getTime())
-        .reduce((s, r) => s + (r.cost || 0), 0);
+  const totalRuns   = summary?.totalRuns   ?? 0;
+  const totalTokens = summary?.totalTokens ?? 0;
+  const totalCost   = summary?.totalCost   ?? 0;
+  const totalAgentCost = useMemo(
+    () => agentRows.reduce((s, [, v]) => s + v.cost, 0),
+    [agentRows],
+  );
+
+  // Daily bars — server returns ISO day keys oldest-first; label them for display.
+  const last14 = useMemo<{ label: string; spend: number }[]>(() => {
+    const rows = summary?.dailySpend ?? [];
+    return rows.map((r, i) => {
+      const [y, m, d] = r.day.split("-").map(Number);
+      const date = new Date(y!, (m ?? 1) - 1, d ?? 1);
       const label =
-        i === 13
+        i === rows.length - 1
           ? "Today"
-          : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      return { label, spend };
-    }),
-  [allRuns]);
-
-  // Aggregate totals for the top stat cards
-  const totalTokens = useMemo(
-    () => inPeriod.reduce((s, r) => s + (r.tokensIn || 0) + (r.tokensOut || 0), 0),
-    [inPeriod],
-  );
-
-  // By model (current period)
-  const { modelRows, totalModelCost } = useMemo(() => {
-    const byModel = new Map<string, { runs: number; tokens: number; cost: number }>();
-    for (const r of inPeriod) {
-      const k = r.model || "unknown";
-      const cur = byModel.get(k) ?? { runs: 0, tokens: 0, cost: 0 };
-      byModel.set(k, {
-        runs:   cur.runs + 1,
-        tokens: cur.tokens + (r.tokensIn || 0) + (r.tokensOut || 0),
-        cost:   cur.cost + (r.cost || 0),
-      });
-    }
-    const rows = [...byModel.entries()].sort((a, b) => b[1].cost - a[1].cost);
-    const total = rows.reduce((s, [, v]) => s + v.cost, 0);
-    return { modelRows: rows, totalModelCost: total };
-  }, [inPeriod]);
-
-  // By agent (current period, top 6)
-  const { agentRows, totalAgentCost } = useMemo(() => {
-    const byAgent = new Map<string, { runs: number; cost: number; name: string }>();
-    for (const r of inPeriod) {
-      const k = r.agentId;
-      const cur = byAgent.get(k) ?? { runs: 0, cost: 0, name: r.agentName || k };
-      byAgent.set(k, { runs: cur.runs + 1, cost: cur.cost + (r.cost || 0), name: cur.name });
-    }
-    const rows = [...byAgent.entries()]
-      .sort((a, b) => b[1].cost - a[1].cost)
-      .slice(0, 6);
-    const total = rows.reduce((s, [, v]) => s + v.cost, 0);
-    return { agentRows: rows, totalAgentCost: total };
-  }, [inPeriod]);
+          : date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      return { label, spend: r.spend };
+    });
+  }, [summary]);
 
   return (
     <ModalShell
@@ -375,9 +350,9 @@ export function ClaudeLimitsModal() {
                 right={<PeriodSeg value={localPeriod} onChange={setLocalPeriod} />}
               />
               <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_180px]">
-                <StatCard label="Total runs" value={String(inPeriod.length)} tint="var(--acc)" />
+                <StatCard label="Total runs" value={String(totalRuns)} tint="var(--acc)" />
                 <StatCard label="Total tokens" value={fmtTok(totalTokens)} tint="var(--done)" />
-                <StatCard label="Total cost" value={fmtUSD(totalModelCost)} tint="var(--queued)" />
+                <StatCard label="Total cost" value={fmtUSD(totalCost)} tint="var(--queued)" />
               </div>
             </section>
 
@@ -388,7 +363,7 @@ export function ClaudeLimitsModal() {
                   title="By model"
                   sub={periodLabel(localPeriod)}
                 />
-                <ByModel modelRows={modelRows} totalCost={totalModelCost} />
+                <ByModel modelRows={modelRows} totalCost={totalCost} />
               </section>
 
               <section className="flex flex-col gap-3">

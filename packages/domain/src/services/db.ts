@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { DB_PATH, APP_STATE_DIR, AGENTS_DIR } from "./paths";
+import { DB_PATH, APP_STATE_DIR, AGENTS_DIR, CLAUDE_DIR, DEFAULT_ACCOUNT_ID } from "./paths";
 import type { PersistedRun, PipelineRun, PipelineRunStep, Workflow } from "../types/index";
 import { STARTER_WORKFLOWS, STARTER_WORKFLOW_CATEGORY } from "./workflow-seed";
 
@@ -20,15 +20,71 @@ export function getDb(): Database.Database {
   db.pragma("synchronous = NORMAL");
   createSchema(db);
   migrateFromJsonl(db);
-  // Any run still "running" at open time is orphaned from a previous crash/kill.
-  const now = Date.now();
-  db.prepare(
-    "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=MAX(0, @now-started_at) WHERE status='running'"
-  ).run({ now });
-  // Any pipeline still running was interrupted by the restart - mark it so the UI can surface a recovery banner.
-  db.prepare("UPDATE pipelines SET status='error', ended_at=@now, interrupted=1 WHERE status='running'").run({ now });
+  reapOrphanedRuns(db);
   globalThis.__agentOfficeDb = db;
   return db;
+}
+
+/**
+ * A run row is only orphaned if the process that spawned it is gone.
+ *
+ * This used to be a blanket `status='running' -> error` sweep, which killed
+ * runs still being driven by a *live* sibling process. `next dev` restarting
+ * mid-run is exactly that case: the new worker opens the DB and marks the old
+ * worker's healthy, mid-task agents as failed, while the old worker keeps
+ * streaming into the same DB file. The UI then attaches to the new worker,
+ * finds no live run, and shows nothing at all.
+ */
+function reapOrphanedRuns(db: Database.Database): void {
+  const now = Date.now();
+  const running = db
+    .prepare("SELECT id, owner_pid FROM runs WHERE status='running'")
+    .all() as Array<{ id: string; owner_pid: number | null }>;
+  const orphans = running.filter((r) => !isPidAlive(r.owner_pid)).map((r) => r.id);
+  if (orphans.length > 0) {
+    const mark = db.prepare(
+      "UPDATE runs SET status='error', exit_code=-1, ended_at=@now, dur_ms=MAX(0, @now-started_at) WHERE id=@id AND status='running'"
+    );
+    db.transaction(() => { for (const id of orphans) mark.run({ now, id }); })();
+  }
+  // Same rule for pipelines: only the ones whose owning run is gone were
+  // actually interrupted. A pipeline with any still-live run keeps going.
+  db.prepare(`
+    UPDATE pipelines SET status='error', ended_at=@now, interrupted=1
+    WHERE status='running'
+      AND NOT EXISTS (
+        SELECT 1 FROM pipeline_steps s JOIN runs r ON r.id = s.run_id
+        WHERE s.pipeline_id = pipelines.id AND r.status = 'running'
+      )
+  `).run({ now });
+}
+
+/**
+ * `kill(pid, 0)` sends no signal - it only probes existence. ESRCH means gone,
+ * EPERM means alive but owned by another user.
+ *
+ * ponytail: PIDs can be recycled, so a dead run whose PID got reused stays
+ * "running" until the 4h wall-clock cap in runs.ts sweeps it. Swap for a
+ * pid+boot-time pair if that ever bites.
+ */
+export function isPidAlive(pid: number | null | undefined): boolean {
+  // NULL = row predates the owner_pid column; treat as orphaned (old behaviour).
+  if (pid == null || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
+/** True when the row says "running" but the process that owned it is gone. */
+export function isRunOrphaned(id: string): boolean {
+  const row = getDb()
+    .prepare("SELECT status, owner_pid FROM runs WHERE id=@id")
+    .get({ id }) as { status: string; owner_pid: number | null } | undefined;
+  if (!row || row.status !== "running") return false;
+  return !isPidAlive(row.owner_pid);
 }
 
 const MIGRATIONS: Array<(db: Database.Database) => void> = [
@@ -212,6 +268,40 @@ const MIGRATIONS: Array<(db: Database.Database) => void> = [
       insert.run(randomUUID(), w.title, w.body, STARTER_WORKFLOW_CATEGORY, now);
     }
   },
+  // v7 → v8: multi-account support. Adds the `accounts` table and auto-inserts
+  // the `default` row pointing at ~/.claude when its .credentials.json exists.
+  // The per-project accountId lives in project.md frontmatter, not in SQLite —
+  // projects are scanned from disk, not persisted here.
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS accounts (
+        id TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        config_dir TEXT NOT NULL UNIQUE,
+        created_at INTEGER NOT NULL
+      );
+    `);
+    if (existsSync(join(CLAUDE_DIR, ".credentials.json"))) {
+      db.prepare(
+        "INSERT OR IGNORE INTO accounts (id, label, config_dir, created_at) VALUES (?, ?, ?, ?)",
+      ).run(DEFAULT_ACCOUNT_ID, "Default", CLAUDE_DIR, Date.now());
+    }
+  },
+  // v8 → v9: tag each run with the account that spawned it, for per-account
+  // analytics (slice 5). NULL = default account (backward compat with runs
+  // logged before this migration).
+  (db) => {
+    db.exec(`
+      ALTER TABLE runs ADD COLUMN account_id TEXT;
+      CREATE INDEX IF NOT EXISTS idx_runs_account ON runs (account_id, started_at DESC);
+    `);
+  },
+  // v9 → v10: record which OS process spawned each run so orphan detection can
+  // ask "is that process still alive?" instead of assuming every 'running' row
+  // belongs to a crash. NULL = pre-migration row, treated as orphaned.
+  (db) => {
+    db.exec("ALTER TABLE runs ADD COLUMN owner_pid INTEGER;");
+  },
 ];
 
 function createSchema(db: Database.Database): void {
@@ -225,6 +315,9 @@ function createSchema(db: Database.Database): void {
     if (v < 5) { MIGRATIONS[4]!(db); v = 5; db.pragma("user_version = 5"); }
     if (v < 6) { MIGRATIONS[5]!(db); v = 6; db.pragma("user_version = 6"); }
     if (v < 7) { MIGRATIONS[6]!(db); v = 7; db.pragma("user_version = 7"); }
+    if (v < 8) { MIGRATIONS[7]!(db); v = 8; db.pragma("user_version = 8"); }
+    if (v < 9) { MIGRATIONS[8]!(db); v = 9; db.pragma("user_version = 9"); }
+    if (v < 10) { MIGRATIONS[9]!(db); v = 10; db.pragma("user_version = 10"); }
   })();
 }
 
@@ -342,13 +435,14 @@ export interface RunInsert {
   sessionId?: string; status: string; prompt: string;
   model: string; effort: string; cwd?: string; startedAt: number;
   parentRunId?: string;
+  accountId?: string;
 }
 
 export function insertRun(r: RunInsert): void {
   getDb().prepare(`
-    INSERT OR IGNORE INTO runs (id, agent_id, agent_name, instance_id, instance_label, project_id, session_id, status, prompt, output, model, effort, cwd, started_at, parent_run_id)
-    VALUES (@id, @agentId, @agentName, @instanceId, @instanceLabel, @projectId, @sessionId, @status, @prompt, '', @model, @effort, @cwd, @startedAt, @parentRunId)
-  `).run({ ...r, instanceId: r.instanceId ?? "default", instanceLabel: r.instanceLabel ?? null, projectId: r.projectId ?? null, sessionId: r.sessionId ?? null, cwd: r.cwd ?? null, parentRunId: r.parentRunId ?? null });
+    INSERT OR IGNORE INTO runs (id, agent_id, agent_name, instance_id, instance_label, project_id, session_id, status, prompt, output, model, effort, cwd, started_at, parent_run_id, account_id, owner_pid)
+    VALUES (@id, @agentId, @agentName, @instanceId, @instanceLabel, @projectId, @sessionId, @status, @prompt, '', @model, @effort, @cwd, @startedAt, @parentRunId, @accountId, @ownerPid)
+  `).run({ ...r, instanceId: r.instanceId ?? "default", instanceLabel: r.instanceLabel ?? null, projectId: r.projectId ?? null, sessionId: r.sessionId ?? null, cwd: r.cwd ?? null, parentRunId: r.parentRunId ?? null, accountId: r.accountId ?? null, ownerPid: process.pid });
 }
 
 export interface RunUpdate {

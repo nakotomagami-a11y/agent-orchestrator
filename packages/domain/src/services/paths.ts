@@ -35,6 +35,19 @@ export const DB_PATH = join(APP_STATE_DIR, "db.sqlite");
 export const DOCS_DIR = join(APP_STATE_DIR, "docs");
 export const DOCS_GLOBAL_OWNER = "_global";
 
+// Multi-account: per-account CLAUDE_CONFIG_DIR roots. The `default` account
+// id has no dir under here — it maps to CLAUDE_DIR directly.
+export const ACCOUNTS_DIR = join(APP_STATE_DIR, "accounts");
+export const DEFAULT_ACCOUNT_ID = "default";
+
+/**
+ * Config dir Claude CLI reads for a given account id. `default` returns the
+ * shared `~/.claude`; every other id returns its own dir under ACCOUNTS_DIR.
+ */
+export function accountConfigDir(id: string): string {
+  return id === DEFAULT_ACCOUNT_ID ? CLAUDE_DIR : join(ACCOUNTS_DIR, id);
+}
+
 // Uploads
 export const AGENT_UPLOADS_DIR = join(AGENTS_DIR, "_uploads");
 export const PROJECT_UPLOADS_ROOT = PROJECTS_DIR; // per-project: <root>/<id>/_uploads

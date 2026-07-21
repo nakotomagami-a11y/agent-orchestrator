@@ -5,7 +5,8 @@ import { existsSync, statSync } from "node:fs";
 import { paths } from "@agent-office/domain/services";
 import { validateBody } from "@/lib/validation";
 import { summonRequestSchema } from "@/lib/validation-schemas";
-import { badRequest } from "@/lib/api-helpers";
+import { badRequest, serverError } from "@/lib/api-helpers";
+import { log } from "@agent-office/domain/services/log";
 
 // ─── Route handler ─────────────────────────────────────────────────────────────
 
@@ -39,6 +40,19 @@ function buildPriorContext(req: { agentId: string; instanceId?: string; projectI
 }
 
 export async function POST(request: Request) {
+  try {
+    return await summonRun(request);
+  } catch (e) {
+    // Without this the throw becomes Next's bodyless 500, which the client
+    // renders as the useless "Internal Server Error" and leaves no trace on
+    // disk. Surface the real message and record it.
+    const err = e instanceof Error ? e : new Error(String(e));
+    log.error("summon.failed", { message: err.message, stack: err.stack });
+    return serverError(err.message);
+  }
+}
+
+async function summonRun(request: Request) {
   const raw: unknown = await request.json();
   const { data: req, error } = validateBody(summonRequestSchema, raw);
   if (error) return error;

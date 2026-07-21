@@ -305,13 +305,18 @@ function AgentCard({
           <div className="font-bold text-txt flex items-center gap-[6px] whitespace-nowrap overflow-hidden text-ellipsis text-[15px]">{formatAgentDisplayName(agent.name)}</div>
           <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11px] mt-[2px]">{agent.name}</div>
         </div>
+        {/* `color` is resolved by the .cat-tag rule in globals.css, not here:
+            these palette entries are mid-tone saturated hues picked for a dark
+            card, and as text on the light theme's 12% wash they land at
+            2.2-3.5:1. The rule darkens them for light mode only, so an inline
+            colour would defeat it. */}
         <span
-          className="inline-flex items-center gap-[6px] rounded-full bg-bg-3 border border-line text-txt-3 lowercase shrink-0 px-[9px] py-[4px] font-[var(--font-mono)] text-[10.5px] tracking-[0.04em]"
+          className="cat-tag inline-flex items-center gap-[6px] rounded-full bg-bg-3 border border-line lowercase shrink-0 px-[9px] py-[4px] font-[var(--font-mono)] text-[10.5px] tracking-[0.04em]"
           style={{
+            "--cat-color": catColor,
             background: `color-mix(in srgb, ${catColor} 12%, var(--bg-2))`,
             border: `1px solid color-mix(in srgb, ${catColor} 30%, transparent)`,
-            color: catColor,
-          }}
+          } as React.CSSProperties}
         >
           {category}
         </span>

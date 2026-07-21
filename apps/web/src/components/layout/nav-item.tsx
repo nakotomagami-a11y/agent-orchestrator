@@ -27,10 +27,13 @@ export function NavItem({ href, icon, label, badge, active = false }: NavItemPro
     >
       <Icon name={icon} />
       <span className="max-[1024px]:hidden">{label}</span>
+      {/* Active badge sits on --acc. A 20% *white* wash lightened the pill to
+          ~#9688f7, leaving its white label at 2.94:1; darkening the wash
+          instead keeps the same pill shape and reads 6:1 in both themes. */}
       {badge !== undefined && badge !== null ? (
         <span className={cn(
           "ml-auto font-[var(--font-mono)] text-[10.5px] py-[2px] px-[6px] bg-bg-3 text-txt-2 rounded-[999px]",
-          active && "bg-[rgba(255,255,255,0.20)] text-white"
+          active && "bg-[rgba(0,0,0,0.22)] text-white"
         )}>
           {badge}
         </span>

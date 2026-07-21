@@ -13,6 +13,7 @@ import { categorize } from "@/modules/agents/form/categorize";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useAddInstance, useProject, useProjects } from "../hooks/use-projects";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/cn";
 
 export type AddAgentModalProps = {
   open: boolean;
@@ -23,18 +24,25 @@ export type AddAgentModalProps = {
 
 /* ── Category metadata ─────────────────────────────────────────── */
 
-const CAT_META: Record<string, { color: string; bg: string; border: string; fg: string }> = {
-  Engineering: { color: "#2A6FDB", bg: "rgba(42,111,219,0.10)",   border: "rgba(42,111,219,0.30)",   fg: "#74a8f0" },
-  QA:          { color: "#4eb96f", bg: "rgba(78,185,111,0.10)",   border: "rgba(78,185,111,0.30)",   fg: "#80d29c" },
-  Design:      { color: "#ec4899", bg: "rgba(236,72,153,0.10)",   border: "rgba(236,72,153,0.30)",   fg: "#f09ec4" },
-  "AI & Data": { color: "#8b5cf6", bg: "rgba(139,92,246,0.10)",   border: "rgba(139,92,246,0.30)",   fg: "#b39dfa" },
-  Security:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",    border: "rgba(239,68,68,0.30)",    fg: "#f48080" },
-  Docs:        { color: "#f59e0b", bg: "rgba(245,158,11,0.10)",   border: "rgba(245,158,11,0.30)",   fg: "#fbbf55" },
-  Marketing:   { color: "#f97316", bg: "rgba(249,115,22,0.10)",   border: "rgba(249,115,22,0.30)",   fg: "#fb9a55" },
-  Research:    { color: "#06b6d4", bg: "rgba(6,182,212,0.10)",    border: "rgba(6,182,212,0.30)",    fg: "#4fd9ea" },
-  Strategy:    { color: "#8b5cf6", bg: "rgba(139,92,246,0.10)",   border: "rgba(139,92,246,0.30)",   fg: "#b39dfa" },
-  Build:       { color: "#e95420", bg: "rgba(233,84,32,0.10)",    border: "rgba(233,84,32,0.30)",    fg: "#f07a52" },
-  Other:       { color: "#9b9089", bg: "rgba(155,144,137,0.08)",  border: "rgba(155,144,137,0.30)",  fg: "#cdc4bd" },
+/**
+ * `fg` is the chip's label colour on a *dark* surface — each one is a
+ * lightened tint of `color`. On the light theme those same values sit on a
+ * 10%-alpha wash of themselves over white and measure 1.4-1.9:1, i.e. all but
+ * invisible. `fgLight` is the mirror-image darkened tint for that case; the
+ * `.cat-chip` rule in globals.css picks whichever matches the active theme.
+ */
+const CAT_META: Record<string, { color: string; bg: string; border: string; fg: string; fgLight: string }> = {
+  Engineering: { color: "#2A6FDB", bg: "rgba(42,111,219,0.10)",   border: "rgba(42,111,219,0.30)",   fg: "#74a8f0", fgLight: "#1a54ad" },
+  QA:          { color: "#4eb96f", bg: "rgba(78,185,111,0.10)",   border: "rgba(78,185,111,0.30)",   fg: "#80d29c", fgLight: "#27703f" },
+  Design:      { color: "#ec4899", bg: "rgba(236,72,153,0.10)",   border: "rgba(236,72,153,0.30)",   fg: "#f09ec4", fgLight: "#a81f5f" },
+  "AI & Data": { color: "#8b5cf6", bg: "rgba(139,92,246,0.10)",   border: "rgba(139,92,246,0.30)",   fg: "#b39dfa", fgLight: "#6532cc" },
+  Security:    { color: "#ef4444", bg: "rgba(239,68,68,0.10)",    border: "rgba(239,68,68,0.30)",    fg: "#f48080", fgLight: "#b91c1c" },
+  Docs:        { color: "#f59e0b", bg: "rgba(245,158,11,0.10)",   border: "rgba(245,158,11,0.30)",   fg: "#fbbf55", fgLight: "#875106" },
+  Marketing:   { color: "#f97316", bg: "rgba(249,115,22,0.10)",   border: "rgba(249,115,22,0.30)",   fg: "#fb9a55", fgLight: "#a8460c" },
+  Research:    { color: "#06b6d4", bg: "rgba(6,182,212,0.10)",    border: "rgba(6,182,212,0.30)",    fg: "#4fd9ea", fgLight: "#0b6b82" },
+  Strategy:    { color: "#8b5cf6", bg: "rgba(139,92,246,0.10)",   border: "rgba(139,92,246,0.30)",   fg: "#b39dfa", fgLight: "#6532cc" },
+  Build:       { color: "#e95420", bg: "rgba(233,84,32,0.10)",    border: "rgba(233,84,32,0.30)",    fg: "#f07a52", fgLight: "#9c3410" },
+  Other:       { color: "#9b9089", bg: "rgba(155,144,137,0.08)",  border: "rgba(155,144,137,0.30)",  fg: "#cdc4bd", fgLight: "#5a534e" },
 };
 
 function catStyle(cat: string): React.CSSProperties {
@@ -44,6 +52,7 @@ function catStyle(cat: string): React.CSSProperties {
     "--cat-bg": c.bg,
     "--cat-border": c.border,
     "--cat-fg": c.fg,
+    "--cat-fg-light": c.fgLight,
   } as React.CSSProperties;
 }
 
@@ -422,7 +431,16 @@ function AgentPickerStep({
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <button
             type="button"
-            className={`aa-btn-done inline-flex items-center bg-acc text-white font-semibold border-none cursor-pointer gap-[6px] px-[16px] py-[8px] rounded-[8px] text-[13px] font-[inherit]${totalStaged === 0 ? " bg-bg-3 text-txt-3 cursor-default" : ""}`}
+            /* cn()/twMerge, not string concat: the idle branch adds
+               `text-txt-3` while `text-white` is still in the base list, and
+               raw concatenation leaves both in the class attribute. Which one
+               wins is then down to stylesheet order — in practice `text-white`
+               did, giving white-on-#e3e5e8 (1.26:1) for the idle "Done" label
+               and its ⌘↵ hint. twMerge drops the loser outright. */
+            className={cn(
+              "aa-btn-done inline-flex items-center bg-acc text-white font-semibold border-none cursor-pointer gap-[6px] px-[16px] py-[8px] rounded-[8px] text-[13px] font-[inherit]",
+              totalStaged === 0 && "bg-bg-3 text-txt-2 cursor-default",
+            )}
             onClick={handleSummon}
             disabled={addMut.isPending}
           >
@@ -475,7 +493,9 @@ function AgentRow({
               {defaultModel.replace("claude-", "").replace(/-\d+(-\d+)?$/, "")}
             </span>
           )}
-          <span className="inline-flex items-center border font-semibold gap-[4px] px-[8px] py-[2px] rounded-[5px] font-[var(--font-mono)] text-[10.5px] tracking-[0.03em]" style={{ background: "var(--cat-bg,var(--bg-3))", borderColor: "var(--cat-border,var(--line))", color: "var(--cat-fg,var(--txt-2))" }}>
+          {/* `color` deliberately lives in the .cat-chip CSS rule, not here:
+              an inline style would outrank the light-theme override. */}
+          <span className="cat-chip inline-flex items-center border font-semibold gap-[4px] px-[8px] py-[2px] rounded-[5px] font-[var(--font-mono)] text-[10.5px] tracking-[0.03em]" style={{ background: "var(--cat-bg,var(--bg-3))", borderColor: "var(--cat-border,var(--line))" }}>
             <span className="rounded-full shrink-0 w-[5px] h-[5px]" style={{ background: "var(--cat-color)" }} />
             {category.toLowerCase()}
           </span>

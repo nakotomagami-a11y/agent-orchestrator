@@ -9,10 +9,12 @@ import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
 import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseRateLimitEvent, SseSubAgentEvent, SseSubAgentUpdateEvent, SseToolEvent, SseUsageEvent, SubAgentStatus, WorkflowNode } from "../types/index";
 import { log } from "./log";
-import { buildAugmentedPath } from "./paths";
+import { buildAugmentedPath, DEFAULT_ACCOUNT_ID } from "./paths";
 import { pushRun } from "./store";
 import { appendRun as appendHistory } from "./history";
 import * as db from "./db";
+import * as accounts from "./accounts";
+import { readProject } from "./projects";
 import { acquireInhibit, releaseInhibit, forceReleaseInhibit } from "./sleep-inhibit";
 
 export type SseEvent =
@@ -248,14 +250,49 @@ export interface StartRunOpts {
   instanceLabel?: string;
   args: string[];
   parentRunId?: string;
+  /**
+   * Multi-account: explicit account override. When set, the child claude
+   * process gets `CLAUDE_CONFIG_DIR=<that account's dir>`. When unset,
+   * we resolve it from the project's frontmatter (`projectId` →
+   * `project.meta.accountId`). Undefined for both → no CLAUDE_CONFIG_DIR
+   * set → identical to pre-multi-account behavior (uses `~/.claude`).
+   */
+  accountId?: string;
+}
+
+/**
+ * Resolve the effective account for a run and return the spawn env. Explicit
+ * `opts.accountId` beats the project's accountId. `default` (or missing) →
+ * no CLAUDE_CONFIG_DIR is set, and the child inherits the shared ~/.claude.
+ *
+ * Exported for unit testing (env plumbing is the entire multi-account
+ * spawn contract). `startRun` is the sole production caller.
+ */
+export function resolveSpawnEnv(opts: StartRunOpts): { env: NodeJS.ProcessEnv; accountId: string | undefined } {
+  const explicit = opts.accountId;
+  const fromProject = !explicit && opts.projectId
+    ? readProject(opts.projectId)?.meta.accountId
+    : undefined;
+  const resolvedId = explicit ?? fromProject;
+  const env: NodeJS.ProcessEnv = { ...process.env, PATH: buildAugmentedPath() };
+  if (resolvedId && resolvedId !== DEFAULT_ACCOUNT_ID) {
+    const account = accounts.get(resolvedId);
+    if (account) {
+      env.CLAUDE_CONFIG_DIR = account.configDir;
+    } else {
+      log.warn("run.account_missing", { runId: opts.projectId, accountId: resolvedId });
+    }
+  }
+  return { env, accountId: resolvedId };
 }
 
 export function startRun(opts: StartRunOpts): { runId: string } {
   const runId = randomUUID();
+  const { env, accountId } = resolveSpawnEnv(opts);
   const proc = spawn("claude", opts.args, {
     stdio: ["ignore", "pipe", "pipe"],
     cwd: opts.cwd,
-    env: { ...process.env, PATH: buildAugmentedPath() },
+    env,
   });
   const run: LiveRun = {
     id: runId,
@@ -304,9 +341,10 @@ export function startRun(opts: StartRunOpts): { runId: string } {
     cwd: opts.cwd,
     startedAt: run.startTs,
     parentRunId: opts.parentRunId,
+    accountId,
   });
 
-  log.info("run.start", { runId, agent: opts.agentId, cwd: opts.cwd });
+  log.info("run.start", { runId, agent: opts.agentId, cwd: opts.cwd, accountId });
 
   pumpStdout(run);
   pumpStderr(run);
@@ -331,7 +369,7 @@ export function startRun(opts: StartRunOpts): { runId: string } {
       const retryProc = spawn("claude", retryArgs, {
         stdio: ["ignore", "pipe", "pipe"],
         cwd: run.cwd,
-        env: { ...process.env, PATH: buildAugmentedPath() },
+        env,
       });
       run.proc = retryProc;
       run.stderrBuf = "";

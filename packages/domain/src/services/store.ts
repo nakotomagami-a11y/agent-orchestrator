@@ -13,6 +13,15 @@ export function markRunAborted(id: string): void {
   db.markRunAborted(id);
 }
 
+/**
+ * A row that says "running" but is absent from this process's live registry is
+ * only dead if the process that spawned it is also gone - another worker (or
+ * the pre-restart one) may still be driving it.
+ */
+export function isRunOrphaned(id: string): boolean {
+  return db.isRunOrphaned(id);
+}
+
 export function pushRun(run: PersistedRun): void {
   // upsert - run may already exist (inserted at startRun time)
   db.updateRun(run.id, {
