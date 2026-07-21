@@ -1,4 +1,9 @@
-export type LimitsPeriod = "daily" | "week" | "month";
+/**
+ * `all` is an analytics-only window covering the entire run history. It is
+ * NOT a valid quota-reset period — `parseLimits` never produces it, so a
+ * persisted limits config can't accidentally disable the reset cycle.
+ */
+export type LimitsPeriod = "daily" | "week" | "month" | "all";
 export type HardCap = "off" | "warn" | "block";
 
 export interface ClaudeLimits {
@@ -30,6 +35,7 @@ export function parseLimits(raw: string | null): ClaudeLimits {
 }
 
 export function periodStart(period: LimitsPeriod, now = Date.now()): number {
+  if (period === "all") return 0;
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);
   if (period === "month") return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
@@ -43,6 +49,7 @@ export function periodStart(period: LimitsPeriod, now = Date.now()): number {
 
 /** End-of-period timestamp - exclusive upper bound for the current window. */
 export function periodEnd(period: LimitsPeriod, now = Date.now()): number {
+  if (period === "all") return Number.POSITIVE_INFINITY;
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);
   if (period === "month") return new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();

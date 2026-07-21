@@ -65,12 +65,13 @@ function PeriodSeg({
   onChange: (p: LimitsPeriod) => void;
 }) {
   const opts: { id: LimitsPeriod; label: string }[] = [
-    { id: "daily",  label: "Daily"   },
-    { id: "week",   label: "Weekly"  },
-    { id: "month",  label: "Monthly" },
+    { id: "daily",  label: "Daily"    },
+    { id: "week",   label: "Weekly"   },
+    { id: "month",  label: "Monthly"  },
+    { id: "all",    label: "All time" },
   ];
   return (
-    <div className="flex gap-0.5 bg-ao-bg-3 border border-ao-line-1 rounded-[8px] p-[3px]" role="group" aria-label="Reset period">
+    <div className="flex gap-0.5 bg-ao-bg-3 border border-ao-line-1 rounded-[8px] p-[3px]" role="group" aria-label="Analytics window">
       {opts.map((o) => (
         <button
           key={o.id}
@@ -83,6 +84,14 @@ function PeriodSeg({
       ))}
     </div>
   );
+}
+
+/** Muted sub-label under each section heading, matching the active window. */
+function periodLabel(p: LimitsPeriod): string {
+  if (p === "daily") return "today";
+  if (p === "month") return "this month";
+  if (p === "all") return "all time";
+  return "this week";
 }
 
 const CHART_H = 60; // fixed pixel height for the bar area
@@ -362,7 +371,7 @@ export function ClaudeLimitsModal() {
             <section className="flex flex-col gap-3">
               <SectionHead
                 title="Overview"
-                sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                sub={periodLabel(localPeriod)}
                 right={<PeriodSeg value={localPeriod} onChange={setLocalPeriod} />}
               />
               <div className="flex flex-wrap gap-[14px] [&>*]:[flex:1_1_180px]">
@@ -377,7 +386,7 @@ export function ClaudeLimitsModal() {
               <section className="flex flex-col gap-3">
                 <SectionHead
                   title="By model"
-                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                  sub={periodLabel(localPeriod)}
                 />
                 <ByModel modelRows={modelRows} totalCost={totalModelCost} />
               </section>
@@ -385,7 +394,7 @@ export function ClaudeLimitsModal() {
               <section className="flex flex-col gap-3">
                 <SectionHead
                   title="Top agents"
-                  sub={localPeriod === "daily" ? "today" : localPeriod === "month" ? "this month" : "this week"}
+                  sub={periodLabel(localPeriod)}
                 />
                 <TopAgents agentRows={agentRows} totalCost={totalAgentCost} />
               </section>
