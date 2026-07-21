@@ -10,6 +10,7 @@ picks it up).
 | --------------------------- | ---------------------------------------------------------- |
 | `_index.json`               | Tab order, labels, and file mapping. Edit to add/reorder.  |
 | `README.md`                 | This file. Not rendered in-app.                            |
+| `00-features.md`            | Feature overview + positioning vs. the raw Claude Code CLI |
 | `01-getting-started.md`     | Onboarding, quick start, first-run wizard                  |
 | `02-concepts.md`            | Non-technical concepts + glossary                          |
 | `03-agents.md`              | Agent file format, model policy, starter roster, skills    |

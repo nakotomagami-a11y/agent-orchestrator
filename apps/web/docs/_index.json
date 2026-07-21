@@ -2,6 +2,7 @@
   "version": 1,
   "note": "Ordered list of docs tabs. The app renders each tab from the .md file at `docs/<file>`. Add/reorder here; the /docs page picks it up automatically.",
   "tabs": [
+    { "id": "features",        "label": "Features",        "file": "00-features.md" },
     { "id": "getting-started", "label": "Getting Started", "file": "01-getting-started.md" },
     { "id": "concepts",        "label": "Concepts",        "file": "02-concepts.md" },
     { "id": "agents",          "label": "Agents",          "file": "03-agents.md" },

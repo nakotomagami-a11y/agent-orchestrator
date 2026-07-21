@@ -2,6 +2,17 @@
 
 Every screen, modal, panel, and shortcut in the app. Read this if you want to know "where does X live?" — you'll find it here.
 
+## Jump map
+
+This page is long. Here's the lay of the land — every section below, grouped:
+
+- **Shell & navigation** — [Layout](#/interface) · [Project tabs](#/interface) · [Sidebar](#/interface) · [Command palette](#/interface)
+- **Agent details** — [the modal](#/interface) and its four tabs: [Conversation](#/interface) · [History](#/interface) · [Memory](#/interface) · [Settings](#/interface)
+- **Chat** — [Message queue](#/interface) · [Drafts](#/interface) · [Attachments](#/interface) · [Slash commands](#/interface) · [Saved prompts](#/interface)
+- **Standalone pages** — [Settings](#/interface) · [Memory](#/interface) · [Skills](#/interface) · [Spend](#/interface) · [Search](#/interface) · [Activity](#/interface)
+- **Modals & panels** — [Compare runs](#/interface) · [Claude limits](#/interface) · [Migration](#/interface) · [Processes](#/interface) · [Flutter](#/interface) · [Bootstrap project](#/interface)
+- **System** — [Keyboard shortcuts](#/interface) · [Themes](#/interface) · [Reduced motion](#/interface) · [Performance mode](#/interface) · [Notifications](#/interface)
+
 ## Layout — the GNOME window shell
 
 The whole app runs inside a GNOME-styled Tauri window:

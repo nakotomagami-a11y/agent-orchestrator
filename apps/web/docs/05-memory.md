@@ -1,5 +1,7 @@
 # Memory
 
+The three tiers of persistent context — global, per-project, and per-agent — that get injected into every run, where each lives on disk, and how to edit them.
+
 ## Persistent context across runs
 
 Three tiers of persistent context are injected into every run. Each tier is a plain Markdown file you can edit from the UI or your text editor.

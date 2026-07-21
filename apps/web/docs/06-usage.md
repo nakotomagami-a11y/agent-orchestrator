@@ -1,5 +1,7 @@
 # Usage
 
+Day-to-day workflows: the isometric office floor, sending agents to work and streaming their output, run history, multi-step pipelines, multi-instance worktrees, spend limits, the processes panel, and roster updates.
+
 ## Office floor — the isometric workspace
 
 The Office page renders a top-down isometric floor with rooms, walls, decorations, and one desk per agent instance in the currently-active project. Drag desks to reposition; drag agents from the sidebar onto empty tiles to add them to the roster.
