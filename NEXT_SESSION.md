@@ -456,3 +456,473 @@ recurs on a normal restart, that's worth its own investigation.
 - Dark-mode muted-text ramp (pre-existing, deliberate, out of scope).
 - `code-block.tsx` keeps a hardcoded `#1c1714` surface with white-alpha text
   — intentional terminal look in both themes, left alone.
+
+---
+
+# Analytics: modal → page, rebuilt (2026-07-21, `designer`)
+
+**Status:** built, verified on a clean build, **uncommitted**.
+
+## Why
+
+User: *"currently it stinks of AI design"*. Correct, and it wasn't only cosmetic
+— the old modal reported sums but hid the actual story.
+
+### The tells (all in the old `claude-limits-modal.tsx`)
+- Three equal-weight stat boxes, each tinted an arbitrary colour (`--acc`
+  runs / `--done` tokens / `--queued` cost) that carried no meaning.
+- A decorative 3×14px accent tick before every heading.
+- `"this week"` printed three times while a segmented control already said
+  *Weekly*.
+- Bars that encoded nothing: a permanently-100% bar for the top model; a
+  bar **and** a % **and** a cost in the agents list, degenerating into a
+  column of `0%` at the tail.
+- Letter avatars (D/O/D/A) where every other surface uses the real sprite.
+- ~250px of dead space under "By model" — a 2-row panel locked into a 50/50
+  split with a 6-row list.
+- `1 runs`; "All time" wrapping onto two lines; two `display:grid` layouts
+  against the Flexbox-only house rule.
+
+### The real failure
+`runs.model` mixes short aliases (`opus`) with full ids (`claude-opus-4-7`),
+so Opus rendered as **four separate rows** that each looked small.
+Consolidated it's **1,136 runs / $3,167 — half the runs, 80% of spend, ~4.2×
+Sonnet's cost per run.** The old page made that invisible.
+
+## What was mined from the DB
+
+`runs` had a lot the old view ignored. Confirmed against the live DB
+(2,285 runs / 59 active days):
+
+| signal | value | was shown? |
+|---|---|---|
+| agent runtime (`dur_ms`) | 298 h | no |
+| success rate (`status`) | 86.3% | no |
+| token in/out split | 10.1M in / 20.2M out | no (total only) |
+| per-project spend (`project_id`) | 18 projects | no |
+| tool usage (`tool_calls`) | 71,915 calls / 22 tools | no |
+| hour × weekday rhythm (`started_at`) | strong nocturnal peak | no |
+| error rate per agent | 2%–22% | no |
+
+## Shipped
+
+**Route:** `/analytics` (page). Sidebar item now navigates instead of opening
+a modal; the modal is unmounted.
+
+**New files**
+- `packages/domain/src/services/analytics-page.ts` — one SQL aggregation pass:
+  totals, previous-window totals (deltas), model families, agents, projects,
+  tools, 7×24 activity, gap-filled time series (day buckets ≤70d, week beyond).
+- `apps/web/src/app/api/analytics/page/route.ts` — single round trip; the page
+  shows all panels at once so fanning out would only add waterfalls.
+- `apps/web/src/modules/analytics/` — `hooks/`, `format/`, and components:
+  `analytics-page`, `hero-band`, `spend-trend`, `model-split`, `agent-table`,
+  `rank-bars`, `activity-heatmap`, `panel`.
+- `apps/web/src/app/(app)/analytics/page.tsx`.
+
+**Modified** — `globals.css` (analytics palette + `--an-muted`), `sidebar.tsx`
+(nav item, `LimitsNavButton` deleted), `(app)/layout.tsx` (modal unmounted),
+`command-palette.tsx` (the "Spending Limits" entry called `setOpen` on an
+unmounted modal — a palette action that silently did nothing; now navigates),
+`modal-url-sync.tsx` (dead `?modal=limits` branch removed), plus `routes.ts` /
+`query-keys.ts` / `services/index.ts`.
+
+### Design decisions worth keeping
+- **Answer-first hero.** One large number (cost) + period-over-period delta,
+  with runs / runtime / success / $-per-run on a supporting rail. Replaces
+  three co-equal tinted boxes that implied "tokens" matters as much as spend.
+- **Model families consolidated**, sorted by spend, `$/run` promoted to a
+  first-class figure. The "priciest per run" callout requires ≥10 runs so a
+  3-run model can't win on noise.
+- **Semantic model hues** — warm = expensive, so the stacked share bar reads
+  before you reach the numbers.
+- **Activity heatmap** scales intensity to the 92nd percentile, not the max,
+  or one runaway hour flattens everything else.
+- **Agent bars use a sqrt scale** — linear collapsed everyone below the
+  runner-up into an indistinguishable stub.
+- **No chart library.** Bespoke SVG (~120 lines). Chartist/Recharts ship
+  default tooltips, fonts and axis chrome that fight this app's dense mono
+  look — generic chart styling is itself a "template" tell. Zero bundle cost.
+- **Every panel is content-height.** Models is full-width precisely so it is
+  never forced to match a taller neighbour.
+- **`--an-muted`**, a page-scoped micro-label tier. The global `--txt-3`/`-4`
+  are tuned for light mode; in dark they are 2.3:1 and 1.4:1, unusable for
+  the 9.5px labels this page is built from.
+
+## Verified
+
+- Contrast audit (same harness as the light-mode pass), on the analytics page:
+  **light 0 failures / 250 text nodes**, **dark 1**. The one dark failure is
+  the shared `PageHeader` subtitle using the app-wide dark `--txt-3` —
+  pre-existing, affects every page, deliberately left alone.
+- Screenshots both themes, plus the 7-day window (short series, live deltas,
+  2 model cards) to confirm the layout adapts.
+- API smoke-tested all-time and bounded: model folding correct, `hasPrevious`
+  false for all-time / true for bounded, granularity flips day→week at 70d.
+- `tsc --noEmit` 0 errors. ESLint 0 errors (14 pre-existing `max-lines` warnings).
+- Live app still 200 on `/`, `/analytics`, `/projects/[id]`, `/agents`.
+
+## ⚠️ Same dev-server CSS staleness
+
+The running `next dev` again served a byte-identical `layout.css` after the
+`--an-*` tokens were added, so the charts rendered colourless until verified
+on a clean build (separate `distDir`, own port — that compiled correctly).
+**`rm -rf apps/web/.next && pnpm dev` to see it properly.** This is now the
+second occurrence; worth its own investigation.
+
+## Not done / next
+
+- `--acc` contrast decision from the previous pass is still open (white-on-acc
+  4.01; `--acc: #6a58e6` in `:root` clears it).
+- Old `modules/limits/` is now only reachable via `claude-limits-store`, which
+  **is still live** (rate-limit-card, office quota ring, `/api/account`).
+  `claude-limits-modal.tsx` + `use-analytics-summary.ts` +
+  `/api/analytics/summary` are dead and can be deleted once you're happy with
+  the new page.
+- Possible follow-ups: project filter on the page, per-account breakdown
+  (`/api/analytics/per-account` exists and `AccountsStatsPanel` is still the
+  placeholder the multi-account spec deferred), click-through from a heatmap
+  cell or agent row into filtered `/activity`.
+
+---
+
+## 2026-07-21 — agent strip status is now project-scoped
+
+**File:** `apps/web/src/modules/office/components/agent-details/index.tsx`
+
+- `useOfficeAgents()` derives `agent.status` from **all** runs regardless of
+  project, so an agent busy on lumafriend showed a green pulsing dot in the
+  agent-office modal strip.
+- Added `projectRunsQ = useRuns({ projectId: activeProjectId, limit: 100 })`
+  + `projectStatus(agentId)` helper (`statusFromRuns` over project-scoped runs).
+  Left strip dots and the header status dot both use it now.
+- Global `useOfficeAgents` status left untouched — the isometric office view
+  is intentionally cross-project.
+- Still global: `InstanceOverview` passes `agent.status` for every instance
+  card (should be per-instance `statusFromRunsForInstance`). Not touched.
+
+Verified: `tsc --noEmit` exit 0; `/api/runs?project=agent-office` returns only
+`developer` running vs `developer,orchestrator` globally.
+
+---
+
+## Correction + root cause: the "half the styles are missing" report
+
+User reported `/analytics` looking unstyled. It was, and the cause was **not**
+the page — it was this workspace's recurring stale-Tailwind state.
+
+### What was actually wrong
+The live server was serving `layout.css` at **186,596 bytes**, written 14:00,
+while `globals.css` had been edited at 14:39. Measured against that stylesheet:
+
+- **29 of the 96 arbitrary utility classes** the page uses were **absent** —
+  every class *unique to the new page* (`text-[38px]`, `basis-[104px]`,
+  `h-[190px]`, `min-w-[380px]`, `tracking-[0.09em]`, `text-[var(--an-muted)]`…).
+  Classes that already existed elsewhere in the app (`gap-[16px]`, `px-[18px]`)
+  were present, which is exactly why it looked *half* styled.
+- The whole `--an-*` palette was missing, so charts and bars had no colour.
+
+### Root cause — confirmed by experiment
+Not "new directories aren't watched". A novel class added to an **existing,
+already-watched file** (`nav-item.tsx`) also produced **zero** CSS rebuild —
+byte-identical output. The Tailwind/PostCSS step in a long-running `next dev`
+here simply **stops emitting CSS entirely** while TSX continues to compile
+fine. Tailwind `^4.3.0` via `@tailwindcss/postcss`.
+
+**Only a dev-server restart clears it.** `rm -rf apps/web/.next && pnpm dev`.
+
+### ⚠️ Retracted finding
+An earlier note in this file claimed Tailwind arbitrary values like
+`flex-[3_1_440px]` / `basis-[calc(...)]` are "silently dropped in this project"
+and must be replaced with inline styles. **That was wrong** — it was this same
+staleness, diagnosed on a stale server. Verified on a clean build: they all
+compile correctly, including `[&>*]:basis-[calc(33.333%-7px)]` (Tailwind
+normalises it to `calc(33.333% - 7px)` in the output, which is why a naive
+grep for the escaped selector misses it). **Do not add inline styles to work
+around this.**
+
+### Inline styles removed (house rule)
+The analytics module now inlines **no colour or token values at all**. Added to
+`globals.css`: `.an-fill-*` (model/agent fills), `.an-rank-acc|tool` with
+`.an-rank-rule` / `.an-rank-wash`, and `.an-heat-0..5`. `modelColor()` became
+`modelFillClass()`. `RankBars`' `tint` prop is now `"acc" | "tool"`, not a
+colour string.
+
+Bonus: the heatmap is now **quantised to the six steps its legend advertises**
+instead of a continuous `color-mix` per cell — the legend was previously
+claiming discrete buckets that didn't exist.
+
+The only remaining `style={{}}` uses are four per-datum geometry values (three
+bar widths and the trend tooltip's `left`), which cannot be expressed as
+classes.
+
+### Verified on a clean build (port 3009, own distDir)
+All previously-missing classes present; `--an-*` and `.an-*` rules present;
+light + dark screenshots identical to the pre-refactor version; no console
+errors; `tsc` 0 errors; ESLint 0 errors.
+
+**Not restarted** — `orchestrator` and `developer` were mid-run on `lumafriend`
+and the `:3000` server is also this session's parent process. User will restart
+once those finish.
+
+---
+
+# Project-account-picker: custom dropdown (2026-07-22, `developer-lite`)
+
+**Status:** built, verified, **uncommitted**.
+
+## Why
+
+User pointed at the account picker chip on the project detail page (the
+"Default · max" / "LumaFriend · free" control) — it was a native `<select>`,
+so its open dropdown list rendered with unstyled browser chrome instead of
+the app's dark theme.
+
+## What changed
+
+- Found an existing, already-built-but-unused `DropdownMenu` component at
+  `apps/web/src/components/ui/dropdown-menu.tsx` — themed, keyboard-nav
+  (arrow keys/Enter/Escape), click-outside close. No new component created.
+- `project-account-picker.tsx`: swapped the `<Select>` (native) for
+  `<DropdownMenu>`. Each `DropdownItem.label` renders the account label +
+  its `PlanBadge` inline. `align="start"` keeps it left-aligned like the old
+  select.
+- `dropdown-menu.tsx`: added one new optional prop, `triggerClassName`, so
+  callers can override the default 24px/12.5px button sizing (via `cn()`,
+  passthrough already used elsewhere in the codebase). Account picker uses
+  it to keep the compact 22px/11px chip sizing the row already had. Only
+  this file + the picker were touched — `DropdownMenu` has no other
+  consumers yet, so this is additive, not a behavior change for anyone else.
+
+## Verified
+
+- `pnpm --filter web exec tsc --noEmit` → 0 output (clean).
+- `pnpm exec eslint src/modules/projects/components/project-account-picker.tsx
+  src/components/ui/dropdown-menu.tsx` → 0 errors, 2 warnings (both
+  pre-existing `max-lines-per-function` style warnings, not introduced by
+  this change — `ProjectAccountPicker` was already close to the 50-line cap).
+- Did NOT visually screenshot the open dropdown in a running browser — no
+  dev server verification was done this session. Next session (or the user)
+  should open a project with 2+ accounts configured and confirm the open
+  menu looks right and click-through/keyboard nav works.
+
+## Next steps
+
+1. Visual check: run `next dev`, open a project that has 2+ Claude accounts
+   configured (Settings → Accounts), confirm the dropdown opens styled
+   (dark bg, themed border) instead of native chrome, and that selecting an
+   item PATCHes the project and updates the chip.
+2. If it looks right, this + the other uncommitted work in this file is
+   ready for the user to review/commit together (nothing was committed by
+   this session, per policy).
+3. No other pattern in the codebase called `<Select>` for a stylable list of
+   options — if more native selects turn out to need this same treatment,
+   `DropdownMenu`'s `triggerClassName` prop is now available to reuse.
+
+## Gotchas
+
+- `DropdownMenu` still has zero other consumers as of this session — it was
+  dead code before this change. Confirm eslint/tsc pass again after any
+  future edits to it since there's no existing usage to catch regressions
+  by example.
+- Dropdown items are plain buttons inside a `role="menu"` div, not a native
+  `<select>` — no `<option>` semantics, so anything depending on native
+  select behavior (form submission via native select value, screen-reader
+  select semantics) would need a different approach. This is a menu-style
+  picker, matching how the codebase already builds other dropdowns... except
+  there were no other consumers, so this is actually the first real one.
+
+## Follow-up in the same session: fix clipping
+
+User reported (with screenshot) that the newly-open menu was **clipped** —
+cut off partway down, second item barely visible. Root cause: the account
+picker sits inside the project-detail hero card
+(`project-detail.tsx` line ~200,
+`className="relative overflow-hidden border ... rounded-lg"` — needed for
+the ambient gradient bleed). `DropdownMenu`'s panel was `position: absolute`
+inside that ancestor, so `overflow-hidden` clipped it — this is exactly why
+native `<select>` popups don't have this problem (they render as a
+browser-level overlay, immune to ancestor overflow).
+
+**Fix:** mirrored the existing `Tooltip` component's pattern (same file
+family, `components/ui/tooltip.tsx`) — portal the menu to `document.body`
+(reused the existing `components/ui/portal.tsx` `<Portal>`, not a new one)
+and position it with `position: fixed` computed from
+`triggerRef.getBoundingClientRect()` on open. Closes on scroll/resize (same
+as `Tooltip`) since a fixed-position portal doesn't auto-track its trigger
+moving. Click-outside detection needed no change — `menuRef.contains()`
+checks the real DOM tree, which portals don't affect.
+
+**Verified:** `tsc --noEmit` clean; `eslint` on `dropdown-menu.tsx` → 0
+errors, 1 pre-existing-class `max-lines-per-function` warning (function
+grew from 86→106 lines because of the added positioning effect — no other
+warnings introduced). **Not re-screenshotted** — same caveat as above, next
+session/user should visually confirm the menu now renders unclipped, below
+the trigger, right-edge- or left-edge-aligned per `align`, and still closes
+on outside click / Escape / scroll.
+
+## Third follow-up: docs callout ("NOTE" boxes) rounded corners removed
+
+User attached a screenshot of the `[!NOTE]` callout on the `/docs` page —
+the box's rounded corners on the left border made the 3px accent border
+look like a curved bracket/parenthesis instead of a straight edge.
+
+Found the renderer: `packages/ui/src/docs-render.tsx`, `Callout()` — one
+shared component used for all 5 kinds (`note`/`tip`/`important`/`warning`/
+`caution`), all going through the same `rounded-[8px]` class. Removed that
+one class; border/background colors per-kind untouched.
+
+**Verified:** `packages/ui` has no lint script; ran `npx tsc --noEmit`
+directly inside `packages/ui` → clean (0 output). Also re-ran
+`pnpm --filter web exec tsc --noEmit` (web consumes this package via
+`@agent-office/ui/docs`) → clean.
+**Not re-screenshotted** — next session/user should open `/docs`, land on
+any file with a `[!NOTE]`/`[!TIP]`/etc. block, and confirm the left border
+is now a straight edge with no curved corners top/bottom.
+
+## Fourth follow-up: pin agents in the roster
+
+User first asked for a **drag-to-resize divider** between the sidebar nav
+list and the Roster list (plus a scrollbar on the nav block). **Refused** —
+no resizable-pane pattern exists anywhere in this codebase to mirror (no
+`react-resizable`-style dep, no `cursor-ns-resize` usage, nothing), and it
+needed real judgment calls (persistence location, min/max clamp, drag
+lifecycle) that are out of `developer-lite` scope. Handed back for a senior
+`developer` dispatch — not built.
+
+User's fallback ask: **"at least do ability to pin agents."** This one had
+an existing pattern to mirror, so it was in scope:
+
+- Found a `pinned`/`togglePin` pattern already built in
+  `modules/office/components/cards-office.tsx` (Office grid view) — but it's
+  ephemeral local `useState<Set<string>>`, resets on remount.
+- Instead mirrored the **better-fit, already-persisted** pattern in the same
+  `Sidebar` component: `useOfficeStore`'s existing `expandedGroups: Record<
+  projectId, agentId[]>` (zustand `persist` middleware, localStorage-backed).
+  Added a parallel `pinnedGroups` field + `togglePin(projectId, agentId)`
+  action, added to `partialize` so it survives reloads — same shape, same
+  store, zero new abstractions.
+- `roster-group.tsx`: new optional `pinned`/`onTogglePin` props. Pin icon
+  next to the agent name when pinned (same `Icon name="pin"` used in
+  cards-office); a hover-reveal pin/unpin button in the row's right section,
+  same visual language as the existing spawn/remove icon buttons in that
+  row (`Tooltip`, 20px round button, `opacity-0 group-hover:opacity-100`).
+- `sidebar.tsx`: reads `pinnedGroups`/`togglePin` from the store,
+  `visibleGroups` now stable-sorts pinned groups to the top (identical
+  partition-sort idiom `cards-office.tsx` already uses), passes
+  `pinned`/`onTogglePin` down to each `RosterGroup`.
+
+**Scope cut (said out loud, not silently):** only wired pinning into the
+*grouped* roster (the mode shown in the screenshot, active when a project is
+selected — `RosterGroup`). The flat fallback list (`RosterEntry`, used when
+no project is active) was left untouched — no screenshot or ask covered
+that mode, and `pinnedGroups` is keyed by `projectId` which doesn't exist
+there anyway.
+
+**Verified:**
+- `pnpm --filter web exec tsc --noEmit` → clean.
+- `eslint` on the three touched files → 0 errors. 7 warnings, all
+  pre-existing `max-lines-per-function`/`max-lines` style warnings on
+  functions/files that were already over the soft limit (grew a few lines
+  from the added code, no new warning categories). One warning I did
+  introduce (`react-hooks/exhaustive-deps` on a new `pinnedIds` derivation)
+  was fixed immediately by wrapping it in its own `useMemo` — confirmed gone
+  on re-run.
+- **Not visually screenshotted** — next session/user should open a project
+  with 2+ agents in the roster, hover a row to see the pin button appear,
+  click it, confirm the row jumps to the top of the group list and the pin
+  icon shows next to the name, and confirm it survives a page reload
+  (localStorage `office-view` key).
+
+## Gotchas (new)
+
+- `.ag-row` (the roster group row, in `globals.css`) uses **CSS Grid**
+  (`grid-template-columns: 30px 1fr auto`) — this violates the house
+  Flexbox-only rule in `/home/parlamentas/CLAUDE.md`. Pre-existing, not
+  introduced by this session, left alone as out-of-scope for a pin-feature
+  diff. Worth a dedicated cleanup pass if a `developer` session picks up
+  the sidebar again.
+- Pin state lives in the *same* zustand-persisted store as roster-group
+  expand/collapse state (`office-view` in localStorage) — if that store's
+  schema ever needs a migration/version bump, `pinnedGroups` needs to move
+  with it.
+
+## Fifth follow-up: single-instance row hover buttons squeezed the name
+
+User: single-instance roster rows (pin/spawn/remove) were reserving grid
+space at all times (even invisible via `opacity-0`, which still occupies
+layout space), so longer agent names got ellipsis-truncated —
+worse once hovered, since the pin button I'd just added made it worse.
+Screenshot showed "Agent Archi..." truncated with 3 hover icons squeezed in.
+
+Found the exact fix pattern already in the codebase, one file over:
+`roster-instance-row.tsx`'s `.ses-actions` (in `globals.css`) — the nested
+session rows already solve this by making their hover action buttons
+`position: absolute`, overlaying on top of the row instead of reserving
+grid-column space.
+
+**Fix in `roster-group.tsx`:**
+- `.ag-row` div gets `relative` (Tailwind utility, not a CSS file edit —
+  `.ag-row` had no `position` set, same role as `.ses`'s `position: relative`).
+- Single-instance mode's action cluster (pin + spawn + remove) moved out of
+  the grid-flow "Right section" div into a new sibling
+  `absolute right-[6px] top-1/2 -translate-y-1/2` div — same coordinates
+  `.ses-actions` uses (`right: 6px`, vertically centered). Multi-instance
+  mode's count badge + expand chevron are **left untouched, in-flow** —
+  those are permanent controls, not hover-only, same distinction
+  `.ses-actions` draws (it doesn't touch the cost text's grid column either,
+  cost is always visible; only rename/delete overlay on hover).
+- Extracted a small in-file `PinButton` component since the pin button now
+  appears in two branches (multi vs. single) with identical markup —
+  avoids duplicating the pinned/unpinned class logic twice.
+
+**Verified:**
+- `tsc --noEmit` → clean.
+- `eslint roster-group.tsx` → 0 errors. 2 warnings, both pre-existing
+  `max-lines`/`max-lines-per-function` categories (157/50 and 235/200 —
+  actually *fewer* lines than right after the pin-button duplication,
+  before the `PinButton` extraction knocked it back down).
+- **Not visually re-screenshotted.** Next session/user: open a project with
+  a long agent name in a single-instance roster row, confirm the name no
+  longer truncates at rest, and confirm hovering shows pin/spawn/remove
+  floating on top-right without shifting the name.
+
+---
+
+## 2026-07-22 — in-app Claude sign-in (kills the terminal `/login` step)
+
+**Problem:** runs failed with `Failed to authenticate: OAuth session expired…`,
+shown as raw red error text; only fix was `claude auth login` in a terminal.
+
+**Solution (feature B):** in-app re-auth. Server spawns `claude auth login
+--claudeai` under the account's `CLAUDE_CONFIG_DIR`, captures the OAuth URL,
+accepts a pasted code, detects success (exit 0 or "Login successful").
+
+New/changed files:
+- `packages/domain/src/services/account-login.ts` — login process registry
+  (start/submitCode/getState/cancel), HMR-safe global map, 5-min timeout.
+- `services/index.ts` — export `accountLogin`.
+- `apps/web/src/app/api/accounts/[id]/login/route.ts` (POST/GET/DELETE)
+  + `.../login/code/route.ts` (POST {code}).
+- `config/routes.ts` accountLogin/accountLoginCode; `query-keys.ts` accounts.login.
+- `types/index.ts` PersistedRun.accountId; `db.ts` rowToRun maps account_id.
+- `modules/accounts/hooks/use-account-login.ts` — start/submit/poll(1.5s)/cancel.
+- `modules/accounts/components/sign-in-panel.tsx` — reusable login body
+  (auto-opens OAuth page, paste field, success/err states).
+- `modules/accounts/components/sign-in-modal.tsx` — ModalShell wrapper.
+- `modules/summon/components/message-bubble.tsx` — `isAuthError()` +
+  `AuthErrorCard` (yellow "Sign-in required" card, Sign in → SignInModal for the
+  active project's account, on success auto-retries the failed message).
+- `add-account-modal.tsx` — waiting step now uses SignInPanel (no more
+  "run this command in a terminal"). Removed copy-command UI.
+
+Verified: web + domain `tsc --noEmit` exit 0. Live server: POST login →
+`awaiting-code` + real OAuth URL; DELETE cancels (no lingering proc); code
+endpoint 400 (no code) / 500 (no session); default creds untouched.
+
+Note: the CLI on this machine can self-complete login via the OS keychain
+(exit 0 with no code) — the success path handles both keychain and paste.
+
+Gotcha: the previous task's project-scoped status edit in
+`office/components/agent-details/index.tsx` appears to have been reverted by a
+linter/user between sessions — re-check if that behavior is wanted.
