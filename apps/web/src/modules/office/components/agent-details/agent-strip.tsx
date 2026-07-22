@@ -109,12 +109,12 @@ function StripBubble({
     >
       <AgentAvatar unit={agent.unitChoice} size={30} label={agent.name} />
       {pinned && (
-        <span className="absolute -top-[3px] -left-[3px] w-[13px] h-[13px] rounded-full bg-[var(--ao-bg-1)] border border-[var(--ao-line-1)] flex items-center justify-center text-[var(--ao-accent)]">
+        <span className="absolute top-0 left-0 w-[13px] h-[13px] rounded-full bg-[var(--ao-bg-1)] border border-[var(--ao-line-1)] flex items-center justify-center text-[var(--ao-accent)]">
           <Icon name="pin" size={8} />
         </span>
       )}
       {multi && (
-        <span className="absolute -top-[3px] -right-[3px] min-w-[14px] h-[14px] px-[3px] rounded-full bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] text-[var(--ao-fg-1)] text-[9px] font-bold leading-none flex items-center justify-center">
+        <span className="absolute top-0 right-0 min-w-[14px] h-[14px] px-[3px] rounded-full bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] text-[var(--ao-fg-1)] text-[9px] font-bold leading-none flex items-center justify-center">
           {instances.length}
         </span>
       )}
@@ -157,7 +157,7 @@ function StripBubble({
                     onSelect(agent.id, inst.instanceId);
                     setFlyout(null);
                   }}
-                  className={`flex items-center gap-2 px-2 py-[6px] rounded-[5px] text-left transition-colors cursor-pointer ${isSel ? "bg-[var(--ao-accent)]/15" : "hover:bg-white/[0.07]"}`}
+                  className={`flex items-center gap-2 px-2 py-[6px] rounded-[5px] text-left transition-colors cursor-pointer ${isSel ? "bg-[var(--ao-accent-soft)]" : "hover:bg-white/[0.07]"}`}
                 >
                   <span className={`w-2 h-2 rounded-full shrink-0 ${statusDotClass(status)}`} />
                   <span className="font-mono text-[11.5px] text-white/90 shrink-0">#{i + 1}</span>
