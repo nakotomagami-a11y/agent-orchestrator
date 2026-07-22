@@ -9,11 +9,12 @@ import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
 import type { PersistedRun, SseAttachedEvent, SseChunkEvent, SseDoneEvent, SseErrorEvent, SseRateLimitEvent, SseSubAgentEvent, SseSubAgentUpdateEvent, SseToolEvent, SseUsageEvent, SubAgentStatus, WorkflowNode } from "../types/index";
 import { log } from "./log";
-import { buildAugmentedPath, DEFAULT_ACCOUNT_ID } from "./paths";
+import { buildAugmentedPath, DEFAULT_ACCOUNT_ID, DEFAULT_GITHUB_ACCOUNT_ID } from "./paths";
 import { pushRun } from "./store";
 import { appendRun as appendHistory } from "./history";
 import * as db from "./db";
 import * as accounts from "./accounts";
+import * as githubAccounts from "./github-accounts";
 import { readProject } from "./projects";
 import { acquireInhibit, releaseInhibit, forceReleaseInhibit } from "./sleep-inhibit";
 
@@ -270,9 +271,9 @@ export interface StartRunOpts {
  */
 export function resolveSpawnEnv(opts: StartRunOpts): { env: NodeJS.ProcessEnv; accountId: string | undefined } {
   const explicit = opts.accountId;
-  const fromProject = !explicit && opts.projectId
-    ? readProject(opts.projectId)?.meta.accountId
-    : undefined;
+  // Read the project once — both accountId and githubAccountId come off it.
+  const project = opts.projectId ? readProject(opts.projectId) : undefined;
+  const fromProject = !explicit ? project?.meta.accountId : undefined;
   const resolvedId = explicit ?? fromProject;
   const env: NodeJS.ProcessEnv = { ...process.env, PATH: buildAugmentedPath() };
   if (resolvedId && resolvedId !== DEFAULT_ACCOUNT_ID) {
@@ -283,6 +284,20 @@ export function resolveSpawnEnv(opts: StartRunOpts): { env: NodeJS.ProcessEnv; a
       log.warn("run.account_missing", { runId: opts.projectId, accountId: resolvedId });
     }
   }
+
+  // Per-project GitHub account: inject GH_CONFIG_DIR so every git/gh command the
+  // agent runs uses that identity. Only ever sourced from the project (no
+  // explicit opts override). `default`/unset → no injection → inherit system gh.
+  const githubAccountId = project?.meta.githubAccountId;
+  if (githubAccountId && githubAccountId !== DEFAULT_GITHUB_ACCOUNT_ID) {
+    const githubAccount = githubAccounts.get(githubAccountId);
+    if (githubAccount) {
+      env.GH_CONFIG_DIR = githubAccount.configDir;
+    } else {
+      log.warn("run.github_account_missing", { projectId: opts.projectId, githubAccountId });
+    }
+  }
+
   return { env, accountId: resolvedId };
 }
 

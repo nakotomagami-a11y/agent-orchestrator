@@ -12,6 +12,7 @@ import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { ProjectActivity } from "./project-activity";
 import { AddAgentModal } from "./add-agent-modal";
 import { ProjectAccountPicker } from "./project-account-picker";
+import { ProjectGithubAccountPicker } from "./project-github-account-picker";
 import { apiFetch, ApiError } from "@agent-office/domain/hooks/api";
 import { API_ROUTES } from "@agent-office/domain/config/routes";
 import { exportProject, importState } from "@/lib/api/save";
@@ -296,6 +297,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
               <div className="flex items-end gap-[14px] ml-auto flex-col items-end">
                 <div className="flex items-center gap-[14px]">
                   <ProjectAccountPicker projectId={id} currentAccountId={project.meta.accountId} />
+                  <ProjectGithubAccountPicker projectId={id} currentGithubAccountId={project.meta.githubAccountId} />
                   {project.lastRunAt && (
                     <span className="font-[var(--font-mono)] text-[10.5px] text-txt-3">
                       last run {relativeTime(project.lastRunAt)}

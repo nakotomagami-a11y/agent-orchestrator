@@ -14,7 +14,6 @@ import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.
 import { Icon, type IconName } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
 import { usePaletteStore } from "@/lib/palette-store";
-import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
 import { useFlutterStore } from "@/lib/flutter-store";
 import { useThemeStore } from "@/lib/theme-store";
@@ -66,11 +65,14 @@ const COMMANDS: Command[] = [
   },
   // ── Tools ─────────────────────────────────────────────────────────────────
   {
-    id: "open-limits",
-    label: "Spending Limits",
+    // Analytics moved from a modal to a page — this used to call
+    // setOpen(true) on a modal that is no longer mounted, i.e. a palette
+    // entry that silently did nothing.
+    id: "nav-analytics",
+    label: "Go to Analytics",
     icon: "gauge",
-    section: "Tools",
-    action: () => useClaudeLimitsStore.getState().setOpen(true),
+    section: "Navigate",
+    action: (r) => r.push(PAGE_ROUTES.analytics),
   },
   {
     id: "open-servers",

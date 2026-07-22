@@ -19,6 +19,9 @@ import { ToolGroupRow } from "./tool-group-row";
 import { SubAgentCard } from "./sub-agent-card";
 import { RateLimitCard } from "./rate-limit-card";
 import { MsgActions } from "./msg-actions";
+import { SignInModal } from "@/modules/accounts/components/sign-in-modal";
+import { useActiveProjectStore } from "@/lib/active-project-store";
+import { useProject } from "@/modules/projects/hooks/use-projects";
 
 // Re-export so `chat-thread` and any other consumer keeps its existing
 // `from "./message-bubble"` imports working. Actual definitions live in
@@ -264,6 +267,13 @@ function isWorktreeError(message: string): boolean {
   return /cwd not a directory/i.test(message) && /\.worktrees/.test(message);
 }
 
+/** Heuristic: a run error caused by an expired/invalid Claude OAuth session. */
+function isAuthError(message: string): boolean {
+  return /failed to authenticate|oauth session|not (?:logged in|authenticated)|invalid api key|credentials?.*(?:expired|invalid|missing)|please run.*login/i.test(
+    message,
+  );
+}
+
 function ErrorCard({
   message,
   onRetry,
@@ -275,6 +285,7 @@ function ErrorCard({
 }) {
   const [repairing, setRepairing] = useState(false);
   const showRepair = onRepair && isWorktreeError(message);
+  const showAuth = isAuthError(message);
 
   const handleRepair = async () => {
     if (!onRepair || repairing) return;
@@ -285,6 +296,8 @@ function ErrorCard({
       setRepairing(false);
     }
   };
+
+  if (showAuth) return <AuthErrorCard message={message} onRetry={onRetry} />;
 
   return (
     <div className="border border-[rgba(217,83,79,0.30)] border-l-[3px] border-l-[var(--ao-bad)] rounded-[8px] px-[14px] py-3 bg-[rgba(217,83,79,0.05)] flex items-start gap-[10px]">
@@ -311,6 +324,55 @@ function ErrorCard({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Auth-specific error card: instead of raw red text + a Retry that just fails
+ * again, offer an in-app "Sign in" that re-authenticates the account this
+ * project runs under, then retries the failed message automatically.
+ */
+function AuthErrorCard({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const [open, setOpen] = useState(false);
+  const activeProjectId = useActiveProjectStore((s) => s.id);
+  const projectQ = useProject(activeProjectId);
+  const accountId = projectQ.data?.meta.accountId ?? "default";
+
+  return (
+    <div className="border border-[rgba(234,179,8,0.30)] border-l-[3px] border-l-[#ca8a04] rounded-[8px] px-[14px] py-3 bg-[rgba(234,179,8,0.05)] flex items-start gap-[10px]">
+      <div className="w-[22px] h-[22px] flex items-center justify-center rounded-[6px] bg-[rgba(234,179,8,0.12)] text-[#ca8a04] shrink-0">
+        <Icon name="lock" size={13} />
+      </div>
+      <div className="flex-1">
+        <div className="font-semibold text-ao-fg-0 text-[13.5px]">Sign-in required</div>
+        <div className="text-ao-fg-1 text-[12.5px] mt-0.5 leading-[1.5]">
+          This agent&apos;s Claude session expired. Sign in again to keep going —
+          no terminal needed.
+        </div>
+        <div className="text-ao-fg-3 text-[11px] mt-1 font-mono break-words">{message}</div>
+        <div className="mt-2 flex items-center gap-3">
+          <button
+            onClick={() => setOpen(true)}
+            className="text-[#ca8a04] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0"
+          >
+            <Icon name="external-link" size={11} /> Sign in
+          </button>
+          <button
+            onClick={onRetry}
+            disabled={!onRetry}
+            className="text-ao-fg-2 text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
+          >
+            <Icon name="refresh" size={11} /> Retry
+          </button>
+        </div>
+      </div>
+      <SignInModal
+        open={open}
+        accountId={accountId}
+        onClose={() => setOpen(false)}
+        onSuccess={() => onRetry?.()}
+      />
     </div>
   );
 }

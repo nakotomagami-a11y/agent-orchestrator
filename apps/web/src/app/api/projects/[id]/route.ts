@@ -35,10 +35,14 @@ export async function PUT(request: Request, { params }: Params) {
   const raw: unknown = await request.json();
   const { data, error } = validateBody(projectMetaPatchSchema, raw);
   if (error) return error;
-  // The schema allows `accountId: null` (client's way to clear the field);
-  // the domain type is `string | undefined`. Coerce null → undefined.
+  // The schema allows `accountId`/`githubAccountId: null` (client's way to clear
+  // the field); the domain type is `string | undefined`. Coerce null → undefined.
   const meta = data.meta
-    ? { ...data.meta, accountId: data.meta.accountId ?? undefined }
+    ? {
+        ...data.meta,
+        accountId: data.meta.accountId ?? undefined,
+        githubAccountId: data.meta.githubAccountId ?? undefined,
+      }
     : undefined;
   const normalized = { memory: data.memory, meta };
   return tryService(() => projects.updateProject(id, normalized));

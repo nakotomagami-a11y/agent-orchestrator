@@ -16,5 +16,8 @@ export * as pipeline from "./pipeline";
 export * as docs from "./docs";
 export * as cleanup from "./cleanup";
 export * as accounts from "./accounts";
+export * as accountLogin from "./account-login";
+export * as githubAccounts from "./github-accounts";
 export * as analytics from "./analytics";
 export * as analyticsSummary from "./analytics-summary";
+export * as analyticsPage from "./analytics-page";

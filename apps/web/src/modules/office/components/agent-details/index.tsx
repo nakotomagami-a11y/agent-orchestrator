@@ -15,11 +15,12 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject, useAddInstance, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { AgentStrip } from "./agent-strip";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { AgentInstance } from "@agent-office/domain/types";
 import type { OfficeAgent } from "../../hooks/use-office-agents";
-import type { AgentStatusInfo } from "../../derive/derive-status";
+import { statusFromRuns, type AgentStatusInfo } from "../../derive/derive-status";
 
 type Tab = AgentTab;
 
@@ -185,10 +186,14 @@ export function AgentDetailsModal() {
     ? Array.from(new Set(projectQ.data.meta.roster.map((inst) => inst.agentId)))
     : null;
   const rosterInstances = projectQ.data?.meta.roster ?? [];
+  const pinnedGroups = useOfficeStore((s) => s.pinnedGroups);
+  const pinnedIds = activeProjectId ? pinnedGroups[activeProjectId] ?? [] : [];
   const rosterAgents = rosterAgentIds
     ? rosterAgentIds
         .map((id) => agents.find((a) => a.id === id))
         .filter((a): a is NonNullable<typeof a> => !!a)
+        // Pinned agents float to the top, mirroring the sidebar roster order.
+        .sort((a, b) => (pinnedIds.includes(b.id) ? 1 : 0) - (pinnedIds.includes(a.id) ? 1 : 0))
     : [];
 
   // Instances for the currently selected agent
@@ -241,6 +246,14 @@ export function AgentDetailsModal() {
     instanceId: selectedInstanceId ?? undefined,
     limit: 50,
   });
+
+  // Runs scoped to this project only — an agent busy on another project must
+  // not read as active here.
+  const projectRunsQ = useRuns({ projectId: activeProjectId ?? undefined, limit: 100 });
+  const projectStatus = (agentId: string) =>
+    activeProjectId
+      ? statusFromRuns(agentId, projectRunsQ.data ?? []).status
+      : "idle";
 
   // Track active run id to show live usage in header
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
@@ -319,7 +332,7 @@ export function AgentDetailsModal() {
   const isStreamActive =
     stream.phase === "starting" ||
     stream.phase === "streaming";
-  const effectiveStatus = isStreamActive ? "working" : agent.status;
+  const effectiveStatus = isStreamActive ? "working" : projectStatus(agent.id);
 
   const isWorking = effectiveStatus === "working" || effectiveStatus === "thinking";
 
@@ -391,26 +404,17 @@ export function AgentDetailsModal() {
           <div className="flex flex-row flex-1 min-h-0 overflow-hidden">
           {/* Agent switcher strip - only shown when inside a project with multiple agents in multi-instance mode */}
           {isMultiInstance && rosterAgents.length > 1 && (
-            <div className="ao-agent-strip flex flex-col items-center gap-1 py-[10px] w-[52px] shrink-0 border-r border-[var(--ao-line-0)] overflow-y-auto [scrollbar-width:none]">
-              {rosterAgents.map((a) => {
-                const inst = rosterInstances.find((r) => r.agentId === a.id);
-                const isActive = a.id === selectedId;
-                return (
-                  <Tooltip key={a.id} content={a.name} side="right" delayMs={300}>
-                    <button
-                      type="button"
-                      className={`relative w-[38px] h-[38px] rounded-[10px] border-2 cursor-pointer flex items-center justify-center transition-[background,border-color] duration-[120ms] shrink-0 hover:bg-[var(--ao-bg-2)] ${isActive ? "border-[var(--ao-accent)] bg-[var(--ao-bg-2)]" : "border-transparent bg-transparent"}`}
-                      onClick={() => selectAgent(a.id, { tab, instanceId: inst?.instanceId ?? null })}
-                    >
-                      <AgentAvatar unit={a.unitChoice} size={30} label={a.name} />
-                      {a.status === "working" || a.status === "thinking" ? (
-                        <span className="absolute bottom-[1px] right-[1px] w-2 h-2 rounded-full border-[1.5px] border-[var(--ao-bg-1)] bg-[var(--ao-ok)] animate-[ao-pulse_1.4s_ease-in-out_infinite]" />
-                      ) : null}
-                    </button>
-                  </Tooltip>
-                );
-              })}
-            </div>
+            <AgentStrip
+              agents={rosterAgents}
+              instances={rosterInstances}
+              runs={projectRunsQ.data ?? []}
+              pinnedIds={pinnedIds}
+              selectedId={selectedId}
+              selectedInstanceId={selectedInstanceId}
+              isStreamActive={isStreamActive}
+              agentStatus={projectStatus}
+              onSelect={(agentId, instanceId) => selectAgent(agentId, { tab, instanceId })}
+            />
           )}
 
           <div className="flex flex-col flex-1 min-w-0 overflow-hidden">

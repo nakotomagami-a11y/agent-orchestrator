@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { Select } from "@/components/ui/select";
+import { DropdownMenu, type DropdownItem } from "@/components/ui/dropdown-menu";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useAccounts } from "@/modules/accounts/hooks/use-accounts";
 import { PlanBadge } from "@/modules/accounts/components/plan-badge";
@@ -58,21 +58,32 @@ export function ProjectAccountPicker({
     );
   }
 
+  const items: DropdownItem[] = accountsQ.data.map((a) => ({
+    key: a.id,
+    label: (
+      <span className="flex items-center gap-[8px]">
+        <span>{a.label}</span>
+        <PlanBadge plan={a.plan} className="h-[14px] text-[9px] px-[4px]" />
+      </span>
+    ),
+    onSelect: () => handleChange(a.id),
+  }));
+
   return (
     <div className="flex items-center gap-[6px] font-[var(--font-mono)] text-[11px] text-txt-3">
       <Icon name="users" size={11} className="shrink-0" />
-      <Select
-        value={activeId}
-        onChange={(e) => handleChange(e.target.value)}
-        className="!h-[22px] !text-[11px] !pl-[8px] !pr-[22px] !py-0 !bg-transparent !border-line !text-txt-3 hover:!text-txt"
-        disabled={update.isPending}
-      >
-        {accountsQ.data.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.label} · {a.plan}
-          </option>
-        ))}
-      </Select>
+      <DropdownMenu
+        align="start"
+        ariaLabel="Select account"
+        triggerClassName="!h-[22px] !px-[8px] !text-[11px] !text-txt-3 hover:!text-txt"
+        trigger={
+          <span className="flex items-center gap-[6px]">
+            <span>{activeAccount?.label ?? "Default"}</span>
+            <Icon name="chevron-down" size={10} className="shrink-0" />
+          </span>
+        }
+        items={items}
+      />
       {activeAccount ? <PlanBadge plan={activeAccount.plan} className="h-[14px] text-[9px] px-[4px]" /> : null}
     </div>
   );

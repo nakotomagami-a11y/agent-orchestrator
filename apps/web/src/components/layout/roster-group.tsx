@@ -32,6 +32,26 @@ const STATUS_PRIORITY: AgentStatusInfo["status"][] = [
   "idle", "done", "queued", "thinking", "working", "error",
 ];
 
+function PinButton({ pinned, onToggle }: { pinned: boolean; onToggle: (e: React.MouseEvent) => void }) {
+  return (
+    <Tooltip content={pinned ? "Unpin" : "Pin to top"} side="top">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={pinned ? "Unpin agent" : "Pin agent to top"}
+        className={cn(
+          "w-[20px] h-[20px] rounded-full inline-flex items-center justify-center transition-colors cursor-pointer",
+          pinned
+            ? "text-acc bg-acc-faint opacity-100"
+            : "bg-bg-1 border border-line text-txt-3 opacity-0 group-hover:opacity-100 hover:text-acc hover:border-acc",
+        )}
+      >
+        <Icon name="pin" size={10} />
+      </button>
+    </Tooltip>
+  );
+}
+
 function aggregateStatus(statuses: AgentStatusInfo["status"][]): AgentStatusInfo["status"] {
   let best: AgentStatusInfo["status"] = "idle";
   for (const s of statuses) {
@@ -61,6 +81,8 @@ export interface RosterGroupProps {
   onRenameCommit: (instanceId: string, label: string) => void;
   onRenameCancel: () => void;
   spendByInstance?: Record<string, number>;
+  pinned?: boolean;
+  onTogglePin?: () => void;
 }
 
 export function RosterGroup({
@@ -76,6 +98,8 @@ export function RosterGroup({
   onRenameCommit,
   onRenameCancel,
   spendByInstance = {},
+  pinned = false,
+  onTogglePin,
 }: RosterGroupProps) {
   const t = useTranslations();
   const { agent, instances, instanceStatuses, expanded } = group;
@@ -97,7 +121,7 @@ export function RosterGroup({
     <div>
       {/* Agent row */}
       <div
-        className={cn("ag-row group", isSelected && "bg-acc-faint")}
+        className={cn("ag-row group relative", isSelected && "bg-acc-faint")}
         draggable
         onDragStart={(e) => {
           e.dataTransfer.setData(AGENT_DRAG_MIME, JSON.stringify(dragRef));
@@ -122,14 +146,19 @@ export function RosterGroup({
         </div>
 
         {/* Name */}
-        <span className="text-[14px] font-semibold text-txt overflow-hidden text-ellipsis whitespace-nowrap">
-          {formatAgentDisplayName(agent.name)}
+        <span className="flex-1 min-w-0 flex items-center gap-[6px] text-[14px] font-semibold text-txt overflow-hidden text-ellipsis whitespace-nowrap">
+          {pinned && <Icon name="pin" size={11} className="text-acc shrink-0" />}
+          <span className="overflow-hidden text-ellipsis whitespace-nowrap">{formatAgentDisplayName(agent.name)}</span>
         </span>
 
-        {/* Right section */}
+        {/* Right section — multi mode only; count/chevron are permanent
+            controls (not hover-only) so they stay in grid flow. */}
         <div className="flex items-center gap-[6px] text-txt-4">
-          {isMulti ? (
+          {isMulti && (
             <>
+              {onTogglePin && (
+                <PinButton pinned={pinned} onToggle={(e) => { e.stopPropagation(); onTogglePin(); }} />
+              )}
               <span className={cn(
                 "px-[7px] py-[1px] rounded-full font-[var(--font-mono)] text-[10.5px] font-bold tracking-[0.02em]",
                 hasLive
@@ -145,7 +174,18 @@ export function RosterGroup({
                 <Icon name="chevron" size={11} />
               </span>
             </>
-          ) : (
+          )}
+        </div>
+
+        {/* Hover actions (single-instance mode) — absolutely positioned so
+            they overlay the row instead of reserving grid space and
+            squeezing the name column (mirrors `.ses-actions` on session
+            rows below). */}
+        {!isMulti && (
+          <div className="absolute right-[6px] top-1/2 -translate-y-1/2 flex items-center gap-[3px] z-[2]">
+            {onTogglePin && (
+              <PinButton pinned={pinned} onToggle={(e) => { e.stopPropagation(); onTogglePin(); }} />
+            )}
             <span className="flex gap-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-[120ms]">
               <Tooltip content={t("sidebar.spawn_instance_title")} side="top">
                 <button
@@ -170,8 +210,8 @@ export function RosterGroup({
                 </Tooltip>
               )}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Expanded sessions tree */}

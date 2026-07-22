@@ -74,7 +74,7 @@ const CALLOUT_STYLES: Record<string, { border: string; bg: string; label: string
 function Callout({ kind, body }: { kind: string; body: string }) {
   const style = CALLOUT_STYLES[kind] ?? CALLOUT_STYLES.note!;
   return (
-    <div className={`my-4 px-4 py-3 rounded-[8px] ${style.border} ${style.bg}`}>
+    <div className={`my-4 px-4 py-3 ${style.border} ${style.bg}`}>
       <div className={`flex items-center gap-2 text-[11px] uppercase tracking-[0.08em] font-semibold ${style.tint} mb-2`}>
         <span aria-hidden>{style.icon}</span>
         <span>{style.label}</span>

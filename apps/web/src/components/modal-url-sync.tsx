@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { match } from "ts-pattern";
-import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
 import { useCompareStore } from "@/lib/compare-store";
 import { useOfficeStore, type AgentTab } from "@/modules/office/hooks/use-office-store";
@@ -22,7 +21,6 @@ function clearPayload(sp: URLSearchParams, keep: readonly string[] = []) {
 // The single source of truth for "which modal is open", resolved by priority
 // from the independent modal stores.
 type ModalState =
-  | { kind: "limits" }
   | { kind: "processes" }
   | { kind: "compare"; runId: string }
   | { kind: "agent"; agentId: string; instanceId: string | null; tab: AgentTab | null }
@@ -35,8 +33,6 @@ export function ModalUrlSync() {
   const router = useRouter();
   const params = useSearchParams();
 
-  const limitsOpen    = useClaudeLimitsStore((s) => s.open);
-  const setLimitsOpen = useClaudeLimitsStore((s) => s.setOpen);
 
   const processesOpen    = useProcessesStore((s) => s.open);
   const setProcessesOpen = useProcessesStore((s) => s.setOpen);
@@ -60,7 +56,6 @@ export function ModalUrlSync() {
     if (!modal) return;
     applyingUrl.current = true;
     match(modal)
-      .with("limits", () => setLimitsOpen(true))
       .with("processes", () => setProcessesOpen(true))
       .with("compare", () => {
         const runId = params.get("run");
@@ -86,8 +81,7 @@ export function ModalUrlSync() {
     if (applyingUrl.current) return;
 
     const state: ModalState =
-      limitsOpen ? { kind: "limits" }
-      : processesOpen ? { kind: "processes" }
+      processesOpen ? { kind: "processes" }
       : compareOpen && compareRunId ? { kind: "compare", runId: compareRunId }
       : inspectorOpen && selectedId
         ? {
@@ -103,10 +97,6 @@ export function ModalUrlSync() {
     const prev = sp.get("modal");
 
     match(state)
-      .with({ kind: "limits" }, () => {
-        sp.set("modal", "limits");
-        clearPayload(sp);
-      })
       .with({ kind: "processes" }, () => {
         sp.set("modal", "processes");
         clearPayload(sp);
@@ -140,7 +130,7 @@ export function ModalUrlSync() {
       if (opening) router.push(next, { scroll: false });
       else router.replace(next, { scroll: false });
     }
-  }, [limitsOpen, processesOpen, compareOpen, compareRunId, inspectorOpen, selectedId, selectedInstanceId, activeTab, router]);
+  }, [processesOpen, compareOpen, compareRunId, inspectorOpen, selectedId, selectedInstanceId, activeTab, router]);
 
   return null;
 }

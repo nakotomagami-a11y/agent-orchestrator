@@ -12,6 +12,7 @@ import {
   type Account,
 } from "../hooks/use-accounts";
 import { PlanBadge } from "./plan-badge";
+import { SignInPanel } from "./sign-in-panel";
 
 type Step = "name" | "waiting" | "confirm";
 
@@ -24,7 +25,6 @@ export function AddAccountModal({ open, onClose }: AddAccountModalProps) {
   const [step, setStep] = useState<Step>("name");
   const [label, setLabel] = useState("");
   const [created, setCreated] = useState<Account | null>(null);
-  const [copied, setCopied] = useState(false);
 
   // Reset every time the modal reopens.
   useEffect(() => {
@@ -32,7 +32,6 @@ export function AddAccountModal({ open, onClose }: AddAccountModalProps) {
       setStep("name");
       setLabel("");
       setCreated(null);
-      setCopied(false);
     }
   }, [open]);
 
@@ -56,19 +55,6 @@ export function AddAccountModal({ open, onClose }: AddAccountModalProps) {
       setStep("waiting");
     } catch {
       // Error surfaces via createMut.error rendering.
-    }
-  };
-
-  const command = created ? `CLAUDE_CONFIG_DIR=${created.configDir} claude` : "";
-
-  const handleCopy = async () => {
-    if (!command) return;
-    try {
-      await navigator.clipboard.writeText(command);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      // Non-secure contexts / permission-denied — user can still select+copy.
     }
   };
 
@@ -155,36 +141,7 @@ export function AddAccountModal({ open, onClose }: AddAccountModalProps) {
       )}
 
       {step === "waiting" && created && (
-        <div className="flex flex-col gap-[12px]">
-          <p className="m-0 text-[13px] text-txt-2 leading-[1.55]">
-            Open a terminal and run the command below. Complete the browser
-            login flow — this modal will advance automatically when Claude
-            writes credentials to the new account&apos;s config dir.
-          </p>
-          <div className="flex items-stretch gap-[6px]">
-            <code className="flex-1 min-w-0 px-[10px] py-[8px] rounded-[8px] border border-line bg-bg-2 font-mono text-[11.5px] text-txt overflow-x-auto whitespace-nowrap">
-              {command}
-            </code>
-            <Button size="sm" variant="ghost" onClick={handleCopy}>
-              <Icon name={copied ? "check" : "copy"} size={14} />
-              <span className="ml-[6px]">{copied ? "Copied" : "Copy"}</span>
-            </Button>
-          </div>
-          <div className="flex items-center gap-[8px] text-[12px] text-txt-3">
-            <div className="w-[10px] h-[10px] rounded-full border-2 border-acc border-t-transparent animate-spin" />
-            <span>Waiting for {" "}
-              <code className="font-mono text-[11.5px] text-txt-2">.credentials.json</code>
-              {" "}to appear…
-            </span>
-          </div>
-          {statusQ.error ? (
-            <div className="text-[12px] text-txt-4">
-              {statusQ.error instanceof Error
-                ? statusQ.error.message
-                : String(statusQ.error)}
-            </div>
-          ) : null}
-        </div>
+        <SignInPanel accountId={created.id} onSuccess={() => setStep("confirm")} />
       )}
 
       {step === "confirm" && created && statusQ.data && (
