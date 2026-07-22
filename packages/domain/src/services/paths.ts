@@ -48,6 +48,24 @@ export function accountConfigDir(id: string): string {
   return id === DEFAULT_ACCOUNT_ID ? CLAUDE_DIR : join(ACCOUNTS_DIR, id);
 }
 
+// Per-project GitHub account: each non-default account owns a GH_CONFIG_DIR
+// (the dir `gh` reads its hosts.yml/token from) under GITHUB_ACCOUNTS_DIR. The
+// `default` id maps to the system's own gh config (`~/.config/gh`) and is NEVER
+// injected — a run with the default github account inherits whatever gh auth the
+// machine has active, identical to pre-feature behavior.
+export const GITHUB_ACCOUNTS_DIR = join(APP_STATE_DIR, "github-accounts");
+export const DEFAULT_GITHUB_ACCOUNT_ID = "default";
+export const SYSTEM_GH_CONFIG_DIR = join(HOME, ".config", "gh");
+
+/**
+ * GH_CONFIG_DIR for a given github account id, or `null` for `default`/unset —
+ * `null` signals "don't inject; inherit the system gh auth". Every non-default
+ * id returns its own dir under GITHUB_ACCOUNTS_DIR.
+ */
+export function githubAccountConfigDir(id: string): string | null {
+  return id === DEFAULT_GITHUB_ACCOUNT_ID ? null : join(GITHUB_ACCOUNTS_DIR, id);
+}
+
 // Uploads
 export const AGENT_UPLOADS_DIR = join(AGENTS_DIR, "_uploads");
 export const PROJECT_UPLOADS_ROOT = PROJECTS_DIR; // per-project: <root>/<id>/_uploads

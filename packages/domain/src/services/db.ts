@@ -2,7 +2,7 @@ import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { DB_PATH, APP_STATE_DIR, AGENTS_DIR, CLAUDE_DIR, DEFAULT_ACCOUNT_ID } from "./paths";
+import { DB_PATH, APP_STATE_DIR, AGENTS_DIR, CLAUDE_DIR, DEFAULT_ACCOUNT_ID, DEFAULT_GITHUB_ACCOUNT_ID, SYSTEM_GH_CONFIG_DIR } from "./paths";
 import type { PersistedRun, PipelineRun, PipelineRunStep, Workflow } from "../types/index";
 import { STARTER_WORKFLOWS, STARTER_WORKFLOW_CATEGORY } from "./workflow-seed";
 
@@ -302,6 +302,26 @@ const MIGRATIONS: Array<(db: Database.Database) => void> = [
   (db) => {
     db.exec("ALTER TABLE runs ADD COLUMN owner_pid INTEGER;");
   },
+  // v10 → v11: per-project GitHub account support. Adds the `github_accounts`
+  // table and seeds the `default` row pointing at the system gh config so the
+  // picker/list have a stable "Default (system)" option. The default row maps
+  // to NO GH_CONFIG_DIR injection (see paths.githubAccountConfigDir), so a
+  // project on the default github account behaves exactly as before this
+  // migration. The per-project githubAccountId lives in project.md frontmatter,
+  // not in SQLite — projects are scanned from disk, not persisted here.
+  (db) => {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS github_accounts (
+        id TEXT PRIMARY KEY,
+        label TEXT NOT NULL,
+        config_dir TEXT NOT NULL UNIQUE,
+        created_at INTEGER NOT NULL
+      );
+    `);
+    db.prepare(
+      "INSERT OR IGNORE INTO github_accounts (id, label, config_dir, created_at) VALUES (?, ?, ?, ?)",
+    ).run(DEFAULT_GITHUB_ACCOUNT_ID, "Default", SYSTEM_GH_CONFIG_DIR, Date.now());
+  },
 ];
 
 function createSchema(db: Database.Database): void {
@@ -318,6 +338,7 @@ function createSchema(db: Database.Database): void {
     if (v < 8) { MIGRATIONS[7]!(db); v = 8; db.pragma("user_version = 8"); }
     if (v < 9) { MIGRATIONS[8]!(db); v = 9; db.pragma("user_version = 9"); }
     if (v < 10) { MIGRATIONS[9]!(db); v = 10; db.pragma("user_version = 10"); }
+    if (v < 11) { MIGRATIONS[10]!(db); v = 11; db.pragma("user_version = 11"); }
   })();
 }
 

@@ -29,7 +29,10 @@ export function useProject(id: string | null) {
  * (or omitted) means "leave unchanged" — this matches how JSON.stringify
  * strips undefined values, so callers pass explicit `null` to wipe.
  */
-type ProjectMetaPatch = Omit<Partial<ProjectMeta>, "accountId"> & { accountId?: string | null };
+type ProjectMetaPatch = Omit<Partial<ProjectMeta>, "accountId" | "githubAccountId"> & {
+  accountId?: string | null;
+  githubAccountId?: string | null;
+};
 
 export function useUpdateProject() {
   const qc = useQueryClient();

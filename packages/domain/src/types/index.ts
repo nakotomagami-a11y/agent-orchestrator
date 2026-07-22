@@ -160,6 +160,13 @@ export interface ProjectMeta {
    * `~/.claude`. Set via the project detail account picker (slice 4).
    */
   accountId?: string;
+  /**
+   * Per-project GitHub account: which registered github account's `GH_CONFIG_DIR`
+   * is injected for every git/gh command the agent runs in this project.
+   * `undefined` (or `"default"`) → no injection; inherit the system gh auth.
+   * Set via the project detail github account picker.
+   */
+  githubAccountId?: string;
 }
 
 /**
@@ -182,6 +189,27 @@ export interface AccountWithStatus extends Account {
   plan: ClaudePlan;
   email?: string;
   /** True when `<configDir>/.credentials.json` exists and parses. */
+  ready: boolean;
+}
+
+/**
+ * A GitHub account registered with agent-office. Every non-default account has
+ * its own `GH_CONFIG_DIR` (see `githubAccountConfigDir(id)` in paths.ts) that
+ * `gh` and git-over-HTTPS read auth from. The `default` account maps to the
+ * system gh config (`~/.config/gh`) and is never injected — projects on it
+ * inherit whatever gh auth the machine has active.
+ */
+export interface GithubAccount {
+  id: string;
+  label: string;
+  configDir: string;
+  createdAt: number;
+}
+
+export interface GithubAccountWithStatus extends GithubAccount {
+  /** Logged-in GitHub username reported by `gh api user`, when available. */
+  username?: string;
+  /** True when `gh` reports an authenticated user for this config dir. */
   ready: boolean;
 }
 

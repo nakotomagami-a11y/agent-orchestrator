@@ -100,6 +100,13 @@ export const queryKeys = {
     status: (id: string) => [...queryKeys.accounts.all, "status", id] as const,
   },
 
+  githubAccounts: {
+    all: ["github-accounts"] as const,
+    list: () => [...queryKeys.githubAccounts.all, "list"] as const,
+    detail: (id: string) => [...queryKeys.githubAccounts.all, "detail", id] as const,
+    status: (id: string) => [...queryKeys.githubAccounts.all, "status", id] as const,
+  },
+
   analytics: {
     all: ["analytics"] as const,
     perAccount: () => [...queryKeys.analytics.all, "per-account"] as const,

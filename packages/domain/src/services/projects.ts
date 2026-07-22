@@ -77,6 +77,7 @@ function yamlToProjectMeta(m: YamlMapping): Partial<ProjectMeta> {
   const planet = parsePlanetConfig(m.planet);
   if (planet) out.planet = planet;
   if (typeof m.accountId === "string" && m.accountId.trim()) out.accountId = m.accountId.trim();
+  if (typeof m.githubAccountId === "string" && m.githubAccountId.trim()) out.githubAccountId = m.githubAccountId.trim();
   return out;
 }
 
@@ -157,6 +158,7 @@ function writeMetadata(id: string, meta: Partial<ProjectMeta>, memory: string): 
     fmObj.roster = rosterToYaml(meta.roster);
   }
   if (meta.accountId) fmObj.accountId = meta.accountId;
+  if (meta.githubAccountId) fmObj.githubAccountId = meta.githubAccountId;
   if (meta.planet) {
     const p = meta.planet;
     const pObj: Record<string, unknown> = { type: p.type, seed: p.seed, paletteIdx: p.paletteIdx };
@@ -183,6 +185,7 @@ function projectFromScan(entry: ScannedEntry): Project {
   };
   if (md?.meta.planet) meta.planet = md.meta.planet;
   if (md?.meta.accountId) meta.accountId = md.meta.accountId;
+  if (md?.meta.githubAccountId) meta.githubAccountId = md.meta.githubAccountId;
   return { id: entry.id, meta, memory: md?.memory ?? "" };
 }
 

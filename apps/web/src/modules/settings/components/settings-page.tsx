@@ -16,8 +16,9 @@ import { AboutYouTab } from "./tabs/about-you-tab";
 import { PerformanceTab } from "./tabs/performance-tab";
 import { BundledAgentsTab } from "./tabs/bundled-agents-tab";
 import { AccountsTab } from "@/modules/accounts/components/accounts-tab";
+import { GithubAccountsTab } from "@/modules/github-accounts/components/github-accounts-tab";
 
-type TabValue = "projects" | "accounts" | "about-you" | "bundled-agents" | "performance";
+type TabValue = "projects" | "accounts" | "github-accounts" | "about-you" | "bundled-agents" | "performance";
 
 export function SettingsPage() {
   const t = useTranslations();
@@ -27,9 +28,10 @@ export function SettingsPage() {
     <>
       <Tabs<TabValue>
         items={[
-          { value: "projects",       label: t("settings.tab_projects") },
-          { value: "accounts",       label: "Accounts" },
-          { value: "about-you",      label: t("settings.tab_about_you") },
+          { value: "projects",        label: t("settings.tab_projects") },
+          { value: "accounts",        label: "Accounts" },
+          { value: "github-accounts", label: "GitHub accounts" },
+          { value: "about-you",       label: t("settings.tab_about_you") },
           // Not translated — new tabs. Add translation keys later if the
           // Projects / About You tabs move to a full i18n pass. For now,
           // the fallback matches the codebase pattern (Settings row uses
@@ -44,9 +46,10 @@ export function SettingsPage() {
       />
       <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
         {match(tab)
-          .with("projects",       () => <ProjectsPane />)
-          .with("accounts",       () => <AccountsTab />)
-          .with("about-you",      () => <AboutYouTab />)
+          .with("projects",        () => <ProjectsPane />)
+          .with("accounts",        () => <AccountsTab />)
+          .with("github-accounts", () => <GithubAccountsTab />)
+          .with("about-you",       () => <AboutYouTab />)
           .with("bundled-agents", () => <BundledAgentsTab />)
           .with("performance",    () => <PerformanceTab />)
           .exhaustive()}

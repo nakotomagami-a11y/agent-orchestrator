@@ -115,6 +115,10 @@ export const API_ROUTES = {
   accountById: (id: string) => `/api/accounts/${encodeURIComponent(id)}`,
   accountStatus: (id: string) => `/api/accounts/${encodeURIComponent(id)}/status`,
 
+  githubAccounts: "/api/github-accounts",
+  githubAccountById: (id: string) => `/api/github-accounts/${encodeURIComponent(id)}`,
+  githubAccountStatus: (id: string) => `/api/github-accounts/${encodeURIComponent(id)}/status`,
+
   analyticsPerAccount: "/api/analytics/per-account",
   analyticsSummary: "/api/analytics/summary",
 } as const;

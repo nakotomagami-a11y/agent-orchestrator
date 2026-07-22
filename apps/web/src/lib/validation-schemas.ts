@@ -61,6 +61,8 @@ export const projectMetaPatchSchema = z.object({
         .optional(),
       // Multi-account: null clears back to the default account.
       accountId: z.string().min(1).nullable().optional(),
+      // Per-project github account: null clears back to the default (system gh).
+      githubAccountId: z.string().min(1).nullable().optional(),
     })
     .optional(),
   memory: z.string().optional(),
@@ -71,6 +73,14 @@ export const accountCreateSchema = z.object({
 });
 
 export const accountPatchSchema = z.object({
+  label: z.string().min(1).max(80),
+});
+
+export const githubAccountCreateSchema = z.object({
+  label: z.string().min(1).max(80),
+});
+
+export const githubAccountPatchSchema = z.object({
   label: z.string().min(1).max(80),
 });
 
