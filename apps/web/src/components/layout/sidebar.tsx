@@ -15,7 +15,6 @@ import { cn } from "@/lib/cn";
 import { useOfficeAgents } from "@/modules/office/hooks/use-office-agents";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
-import { useClaudeLimitsStore } from "@/lib/claude-limits-store";
 import { useProcessesStore } from "@/lib/processes-store";
 import { usePaletteStore } from "@/lib/palette-store";
 import {
@@ -45,6 +44,8 @@ export function Sidebar() {
   const expandedGroups = useOfficeStore((s) => s.expandedGroups);
   const toggleGroup = useOfficeStore((s) => s.toggleGroup);
   const setGroupExpanded = useOfficeStore((s) => s.setGroupExpanded);
+  const pinnedGroups = useOfficeStore((s) => s.pinnedGroups);
+  const togglePin = useOfficeStore((s) => s.togglePin);
 
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const projectQ = useProject(activeProjectId);
@@ -106,14 +107,22 @@ export function Sidebar() {
     },
   );
 
+  const pinnedIds = useMemo(
+    () => pinnedGroups[activeProjectId ?? ""] ?? [],
+    [pinnedGroups, activeProjectId],
+  );
+
   const visibleGroups = useMemo(
     () =>
-      filter
+      (filter
         ? rosterGroups.filter((g) =>
             g.agent.name.toLowerCase().includes(filter.toLowerCase())
           )
-        : rosterGroups,
-    [rosterGroups, filter],
+        : rosterGroups
+      )
+        .slice()
+        .sort((a, b) => (pinnedIds.includes(b.agentId) ? 1 : 0) - (pinnedIds.includes(a.agentId) ? 1 : 0)),
+    [rosterGroups, filter, pinnedIds],
   );
 
   const onRemove = useCallback((row: RosterRow) => {
@@ -201,7 +210,13 @@ export function Sidebar() {
           label="Skills"
           active={isActiveRoute(pathname, PAGE_ROUTES.skills)}
         />
-        <LimitsNavButton spendToday={spendToday} />
+        <NavItem
+          href={PAGE_ROUTES.analytics}
+          icon="activity"
+          label="Analytics"
+          badge={`$${spendToday.toFixed(2)}`}
+          active={isActiveRoute(pathname, PAGE_ROUTES.analytics)}
+        />
         <ProcessesNavButton />
         <CommandPaletteNavButton />
       </nav>
@@ -288,6 +303,8 @@ export function Sidebar() {
                   onRenameCommit={onRenameCommit}
                   onRenameCancel={onRenameCancel}
                   spendByInstance={spendByInstance}
+                  pinned={pinnedIds.includes(group.agentId)}
+                  onTogglePin={() => activeProjectId && togglePin(activeProjectId, group.agentId)}
                 />
               ))}
               {visibleGroups.length === 0 && (
@@ -531,21 +548,6 @@ function CommandPaletteNavButton() {
   );
 }
 
-function LimitsNavButton({ spendToday }: { spendToday: number }) {
-  const openLimits = useClaudeLimitsStore((s) => s.setOpen);
-  return (
-    <button
-      type="button"
-      onClick={() => openLimits(true)}
-      className="flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full"
-      aria-label="Analytics"
-    >
-      <Icon name="activity" />
-      <span>Analytics</span>
-      <span className="ml-auto font-[var(--font-mono)] text-[10.5px] py-[2px] px-[6px] bg-bg-3 text-txt-2 rounded-[999px]">${spendToday.toFixed(2)}</span>
-    </button>
-  );
-}
 
 function ProcessesNavButton() {
   const t = useTranslations();

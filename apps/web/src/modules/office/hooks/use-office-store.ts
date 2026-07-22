@@ -29,6 +29,11 @@ type OfficeState = {
    * Keyed by projectId. Only populated when features.multiInstance is on.
    */
   expandedGroups: Record<string, string[]>;
+  /**
+   * Per-project set of agentIds pinned to the top of the roster.
+   * Keyed by projectId, same shape as `expandedGroups`.
+   */
+  pinnedGroups: Record<string, string[]>;
   setView: (next: OfficeView) => void;
   select: (id: string | null, opts?: SelectOptions) => void;
   consumePendingTab: () => AgentTab | null;
@@ -36,6 +41,7 @@ type OfficeState = {
   setActiveTab: (tab: AgentTab) => void;
   toggleGroup: (projectId: string, agentId: string) => void;
   setGroupExpanded: (projectId: string, agentId: string, expanded: boolean) => void;
+  togglePin: (projectId: string, agentId: string) => void;
 };
 
 export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
@@ -46,6 +52,7 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   pendingTab: null,
   activeTab: "conversation",
   expandedGroups: {},
+  pinnedGroups: {},
   setView: (next) => set({ view: next }),
   select: (id, opts) =>
     set({
@@ -84,7 +91,18 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
       },
     });
   },
+  togglePin: (projectId, agentId) => {
+    const current = get().pinnedGroups;
+    const ids = current[projectId] ?? [];
+    const isPinned = ids.includes(agentId);
+    set({
+      pinnedGroups: {
+        ...current,
+        [projectId]: isPinned ? ids.filter((id) => id !== agentId) : [...ids, agentId],
+      },
+    });
+  },
 }), {
   name: "office-view",
-  partialize: (s) => ({ view: s.view, expandedGroups: s.expandedGroups }),
+  partialize: (s) => ({ view: s.view, expandedGroups: s.expandedGroups, pinnedGroups: s.pinnedGroups }),
 }));
