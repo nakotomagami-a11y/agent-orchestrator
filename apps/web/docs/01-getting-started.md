@@ -1,10 +1,9 @@
 # Getting Started
 
-## What is Agent Office?
+You already run Claude Code. Agent Office keeps everything it forgets — every run, every dollar, every agent — and lets you run ten at once. It's a local desktop app that wraps the Claude Code CLI in a visual, persistent workspace. This page gets you from a fresh install to your first run.
 
-Agent Office is a desktop app that gives your Claude Code agents a visual home. Define agents as plain `.md` files, roster them to projects, summon them with a prompt, and watch output stream back in real time — all stored locally in SQLite.
-
-This documentation covers everything from installation to internals: agent file format, the skills system, project and memory management, the isometric office floor, how runs are spawned and streamed, and what lives where on disk.
+> [!TIP]
+> Want the value pitch first? See [Features](#/features) for what Agent Office adds on top of the raw CLI, or [Concepts](#/concepts) for the plain-English mental model.
 
 > [!NOTE]
 > Agent Office wraps the Claude Code CLI — you need that installed and an Anthropic API key configured before anything will run.

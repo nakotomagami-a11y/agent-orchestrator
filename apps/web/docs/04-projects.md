@@ -1,5 +1,7 @@
 # Projects
 
+How a project pairs a directory on disk with a roster of agents: the metadata file, worktree isolation, project memory, uploads, and the actions you can run against the codebase.
+
 ## Scoping agents to a codebase
 
 A project pairs a directory on disk with agent instances. Instances share the project directory as their `cwd`, but each gets its own `.worktrees/<agent>-<random>` scratch dir so agents don't collide.

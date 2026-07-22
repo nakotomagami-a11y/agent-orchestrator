@@ -1,5 +1,7 @@
 # Agents
 
+Everything about the agents themselves: how they're defined as `.md` files, the frontmatter options, how their system prompt is assembled, the model policy, the bundled starter roster, and the skills system.
+
 ## How agents are defined
 
 Each agent is a Markdown file at `~/.claude/agents/<id>.md`. The file has YAML frontmatter (identity, model, tools, skills) followed by a body that becomes the system prompt.
