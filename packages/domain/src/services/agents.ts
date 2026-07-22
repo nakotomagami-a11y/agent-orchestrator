@@ -25,6 +25,10 @@ interface ParsedFile {
   body: string;
 }
 
+export function hasFrontmatter(content: string): boolean {
+  return /^---\n[\s\S]*?\n---\n?/.test(content);
+}
+
 function parseFrontmatter(content: string): ParsedFile {
   const m = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!m) return { fm: {}, body: content };
@@ -82,10 +86,12 @@ export function listAgents(): ApiAgent[] {
     .filter(
       (f) =>
         f.endsWith(".md") &&
+        f.toLowerCase() !== "readme.md" &&
         !f.endsWith(".memory.md") &&
         !f.endsWith(".identity.md") &&
         !f.startsWith("_") &&
-        !f.includes(".body."),
+        !f.includes(".body.") &&
+        hasFrontmatter(readFileSync(join(AGENTS_DIR, f), "utf8")),
     )
     .map((f) => readAgent(f.replace(/\.md$/, ""))?.info)
     .filter((a): a is ApiAgent => a !== undefined);

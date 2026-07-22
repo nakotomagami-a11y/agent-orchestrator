@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { CardHeader } from "@/components/ui/card-header";
 import { TextInput } from "@/components/ui/text-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tag } from "@/components/ui/tag";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
@@ -42,14 +43,11 @@ export function SkillsPage() {
               placeholder={t("skills.filter_placeholder")}
             />
           </div>
-          <label className="inline-flex gap-[6px] items-center text-[12.5px]">
-            <input
-              type="checkbox"
-              checked={filter.showInstalledOnly}
-              onChange={(e) => setFilter((f) => ({ ...f, showInstalledOnly: e.target.checked }))}
-            />
-            {t("skills.installed_only_label")}
-          </label>
+          <Checkbox
+            checked={filter.showInstalledOnly}
+            onChange={(e) => setFilter((f) => ({ ...f, showInstalledOnly: e.target.checked }))}
+            label={t("skills.installed_only_label")}
+          />
         </div>
       </Card>
 
