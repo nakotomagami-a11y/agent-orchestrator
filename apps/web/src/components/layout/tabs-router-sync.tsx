@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import {
   useActiveProjectHydration,
@@ -30,6 +30,7 @@ export function TabsRouterSync() {
   useTabsHydration();
   useActiveProjectHydration();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const openTab = useTabsStore((s) => s.openTab);
   const updateActiveTabPath = useTabsStore((s) => s.updateActiveTabPath);
   const setActiveProjectId = useActiveProjectStore((s) => s.setId);
@@ -42,6 +43,10 @@ export function TabsRouterSync() {
       // /settings, /docs, /agents etc render without stealing tab focus.
       return;
     }
+    // Preserve query string (e.g. ?modal=agent&agent=…) so switching tabs
+    // restores the exact deep-link/modal state, not just the base route.
+    const query = searchParams?.toString();
+    const fullPath = query ? `${pathname}?${query}` : pathname;
     // Keep the legacy active-project store aligned with the URL so existing
     // readers (sidebar, agent-details, cards-office, office-toolbar, etc.)
     // don't need a rewire during the phased tabs migration.
@@ -58,7 +63,7 @@ export function TabsRouterSync() {
     if (activeTab && activeTab.projectId === projectId) {
       // Same project as active tab → just persist the deeper sub-route so we
       // land back on it if the user switches tabs and comes back.
-      updateActiveTabPath(pathname);
+      updateActiveTabPath(fullPath);
       return;
     }
 
@@ -67,13 +72,13 @@ export function TabsRouterSync() {
       // Project already tabbed but the URL says it's now active (e.g. user
       // used browser back/forward). Focus that tab AND update its path.
       state.setActiveTab(existing.id);
-      updateActiveTabPath(pathname);
+      updateActiveTabPath(fullPath);
       return;
     }
 
     // Fresh project — open a new tab pointed at this URL.
-    openTab(projectId, pathname);
-  }, [pathname, openTab, updateActiveTabPath]);
+    openTab(projectId, fullPath);
+  }, [pathname, searchParams, openTab, updateActiveTabPath]);
 
   return null;
 }

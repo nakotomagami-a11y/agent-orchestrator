@@ -19,6 +19,7 @@ export const PAGE_ROUTES = {
   run: (id: string) => `/runs/${encodeURIComponent(id)}`,
   settings: "/settings",
   activity: "/activity",
+  analytics: "/analytics",
   docs: "/docs",
 } as const;
 
@@ -114,6 +115,8 @@ export const API_ROUTES = {
   accounts: "/api/accounts",
   accountById: (id: string) => `/api/accounts/${encodeURIComponent(id)}`,
   accountStatus: (id: string) => `/api/accounts/${encodeURIComponent(id)}/status`,
+  accountLogin: (id: string) => `/api/accounts/${encodeURIComponent(id)}/login`,
+  accountLoginCode: (id: string) => `/api/accounts/${encodeURIComponent(id)}/login/code`,
 
   githubAccounts: "/api/github-accounts",
   githubAccountById: (id: string) => `/api/github-accounts/${encodeURIComponent(id)}`,
@@ -121,6 +124,7 @@ export const API_ROUTES = {
 
   analyticsPerAccount: "/api/analytics/per-account",
   analyticsSummary: "/api/analytics/summary",
+  analyticsPage: "/api/analytics/page",
 } as const;
 
 /**

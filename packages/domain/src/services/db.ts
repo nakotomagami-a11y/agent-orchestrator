@@ -494,7 +494,7 @@ interface RunRow {
   status: string; exit_code: number | null; prompt: string; output: string;
   tokens_in: number; tokens_out: number; cost_usd: number; dur_ms: number | null;
   model: string; effort: string; cwd: string | null; started_at: number; ended_at: number | null;
-  parent_run_id: string | null;
+  parent_run_id: string | null; account_id: string | null;
 }
 
 function rowToRun(row: RunRow): PersistedRun {
@@ -509,6 +509,7 @@ function rowToRun(row: RunRow): PersistedRun {
     durMs: row.dur_ms ?? (row.ended_at != null ? row.ended_at - row.started_at : 0), model: row.model, effort: row.effort,
     cwd: row.cwd ?? undefined, ts: row.started_at,
     parentRunId: row.parent_run_id ?? undefined,
+    accountId: row.account_id ?? undefined,
   };
 }
 

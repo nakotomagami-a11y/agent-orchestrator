@@ -6,7 +6,6 @@ import { TabsRouterSync } from "@/components/layout/tabs-router-sync";
 import { TabsKeyboard } from "@/components/layout/tabs-keyboard";
 import { MainShell } from "@/components/layout/main-shell";
 import { AgentDetailsModal } from "@/modules/office/components/agent-details";
-import { ClaudeLimitsModal } from "@/modules/limits/components/claude-limits-modal";
 import { ProcessesModal } from "@/modules/processes/components/processes-modal";
 import { FirstRunGate } from "@/modules/onboarding/components/first-run-gate";
 import { AgentMigrationTrigger } from "@/modules/agents/components/agent-migration-trigger";
@@ -34,7 +33,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <GnomeWindow>
       <MainShell>{children}</MainShell>
       <AgentDetailsModal />
-      <ClaudeLimitsModal />
       <ProcessesModal />
       <CommandPalette />
       <CompareModal />

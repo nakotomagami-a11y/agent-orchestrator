@@ -92,6 +92,8 @@ export interface PersistedRun {
   sessionId?: string;
   /** Set for sub-agent runs spawned by a Task tool call. */
   parentRunId?: string;
+  /** Account whose CLAUDE_CONFIG_DIR the run spawned under (undefined → default). */
+  accountId?: string;
 }
 
 /**

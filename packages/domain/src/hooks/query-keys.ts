@@ -98,6 +98,7 @@ export const queryKeys = {
     list: () => [...queryKeys.accounts.all, "list"] as const,
     detail: (id: string) => [...queryKeys.accounts.all, "detail", id] as const,
     status: (id: string) => [...queryKeys.accounts.all, "status", id] as const,
+    login: (id: string) => [...queryKeys.accounts.all, "login", id] as const,
   },
 
   githubAccounts: {
@@ -112,5 +113,7 @@ export const queryKeys = {
     perAccount: () => [...queryKeys.analytics.all, "per-account"] as const,
     summary: (opts: { start: number; end: number; days?: number; projectId?: string }) =>
       [...queryKeys.analytics.all, "summary", opts] as const,
+    page: (opts: { start: number; end: number; projectId?: string }) =>
+      [...queryKeys.analytics.all, "page", opts] as const,
   },
 } as const;

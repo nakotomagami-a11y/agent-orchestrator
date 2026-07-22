@@ -171,6 +171,25 @@
   --md-fence:     #3f7a3f;
   --md-pre-bg:    rgba(0, 0, 0, 0.05);
   --md-inline-bg: rgba(0, 0, 0, 0.05);
+
+  /* Analytics page. Model hues are semantic, not decorative: the warm end
+     of the ramp is the expensive model, so the stacked spend bar reads
+     correctly before you get to the numbers. */
+  --an-line:       #6d5ae8;
+  --an-opus:       #c2410c;
+  --an-sonnet:     #2563eb;
+  --an-haiku:      #15803d;
+  --an-fable:      #a21caf;
+  --an-other:      #78808c;
+  --an-tool:       #0e7490;
+  --an-cell:       #5b49d4;
+  --an-cell-empty: rgba(0, 0, 0, 0.05);
+  /* Micro-label tier. The global --txt-3/--txt-4 steps are tuned for light
+     mode; in dark they land at 2.3:1 and 1.4:1, which is unusable for the
+     9.5px labels this page is built from. --an-muted clears AA on both. */
+  --an-muted:      #646c78;
+  --status-up:     #b45309;
+  --status-down:   #15803d;
 }
 
 [data-theme="dark"] {
@@ -232,6 +251,20 @@
   --md-fence:     #98c379;
   --md-pre-bg:    rgba(0, 0, 0, 0.32);
   --md-inline-bg: rgba(255, 255, 255, 0.07);
+
+  /* Analytics page — same semantics, lifted for a dark ground. */
+  --an-line:       #9b8bff;
+  --an-opus:       #fb923c;
+  --an-sonnet:     #60a5fa;
+  --an-haiku:      #4ade80;
+  --an-fable:      #e879f9;
+  --an-other:      #71717a;
+  --an-tool:       #22d3ee;
+  --an-cell:       #8b7bf0;
+  --an-cell-empty: rgba(255, 255, 255, 0.045);
+  --an-muted:      #8c8c8c;
+  --status-up:     #fbbf24;
+  --status-down:   #4ade80;
 }
 
 * { box-sizing: border-box; }
@@ -509,6 +542,33 @@ html, body { background: var(--bg-0); }
    command-palette.tsx, workflow-picker-dialog.tsx). Kept out of CSS because
    Turbopack's HMR was inconsistent about picking up new class rules for a
    pre-existing class name; inline styles bypass the CSS pipeline entirely. */
+
+/* ─── Analytics fills ─── */
+/* Keyed classes so no analytics component ever inlines a colour. The model
+   ramp is semantic — warm = expensive — so the stacked spend bar reads
+   before you reach a number. */
+.an-fill-opus   { background: var(--an-opus); }
+.an-fill-sonnet { background: var(--an-sonnet); }
+.an-fill-haiku  { background: var(--an-haiku); }
+.an-fill-fable  { background: var(--an-fable); }
+.an-fill-other  { background: var(--an-other); }
+.an-fill-cell   { background: var(--an-cell); }
+
+/* Rank-bar tints: a 2px leading rule plus a wash behind the label. */
+.an-rank-acc  .an-rank-rule { background: var(--acc); }
+.an-rank-acc  .an-rank-wash { background: color-mix(in oklab, var(--acc) 14%, transparent); }
+.an-rank-tool .an-rank-rule { background: var(--an-tool); }
+.an-rank-tool .an-rank-wash { background: color-mix(in oklab, var(--an-tool) 14%, transparent); }
+
+/* Heatmap intensity, quantised to the same five steps the legend shows.
+   A continuous scale would have to be written as an inline style per cell,
+   and the legend would be lying about the buckets. */
+.an-heat-0 { background: var(--an-cell-empty); }
+.an-heat-1 { background: color-mix(in oklab, var(--an-cell) 22%, var(--an-cell-empty)); }
+.an-heat-2 { background: color-mix(in oklab, var(--an-cell) 42%, var(--an-cell-empty)); }
+.an-heat-3 { background: color-mix(in oklab, var(--an-cell) 62%, var(--an-cell-empty)); }
+.an-heat-4 { background: color-mix(in oklab, var(--an-cell) 82%, var(--an-cell-empty)); }
+.an-heat-5 { background: var(--an-cell); }
 
 /* ─── Category chips (add-agent modal) ─── */
 /* Per-chip colours arrive as inline custom properties from catStyle(); the
