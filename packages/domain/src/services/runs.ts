@@ -271,9 +271,9 @@ export interface StartRunOpts {
  */
 export function resolveSpawnEnv(opts: StartRunOpts): { env: NodeJS.ProcessEnv; accountId: string | undefined } {
   const explicit = opts.accountId;
-  const fromProject = !explicit && opts.projectId
-    ? readProject(opts.projectId)?.meta.accountId
-    : undefined;
+  // Read the project once — both accountId and githubAccountId come off it.
+  const project = opts.projectId ? readProject(opts.projectId) : undefined;
+  const fromProject = !explicit ? project?.meta.accountId : undefined;
   const resolvedId = explicit ?? fromProject;
   const env: NodeJS.ProcessEnv = { ...process.env, PATH: buildAugmentedPath() };
   if (resolvedId && resolvedId !== DEFAULT_ACCOUNT_ID) {
@@ -288,15 +288,13 @@ export function resolveSpawnEnv(opts: StartRunOpts): { env: NodeJS.ProcessEnv; a
   // Per-project GitHub account: inject GH_CONFIG_DIR so every git/gh command the
   // agent runs uses that identity. Only ever sourced from the project (no
   // explicit opts override). `default`/unset → no injection → inherit system gh.
-  const githubAccountId = opts.projectId
-    ? readProject(opts.projectId)?.meta.githubAccountId
-    : undefined;
+  const githubAccountId = project?.meta.githubAccountId;
   if (githubAccountId && githubAccountId !== DEFAULT_GITHUB_ACCOUNT_ID) {
     const githubAccount = githubAccounts.get(githubAccountId);
     if (githubAccount) {
       env.GH_CONFIG_DIR = githubAccount.configDir;
     } else {
-      log.warn("run.github_account_missing", { runId: opts.projectId, githubAccountId });
+      log.warn("run.github_account_missing", { projectId: opts.projectId, githubAccountId });
     }
   }
 

@@ -10,22 +10,23 @@
  * Mirrors `accounts.ts`: pure CRUD + dir provisioning + status detection. We do
  * NOT store tokens ourselves — the USER logs in with
  * `GH_CONFIG_DIR=<dir> gh auth login`, and `getStatus` reports the resulting
- * identity by shelling out to `gh`.
+ * identity by reading `gh`'s own `hosts.yml` off disk (no subprocess, no
+ * network — see readHostsUser).
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import { spawnSync } from "node:child_process";
 import type { GithubAccount, GithubAccountWithStatus } from "../types/index";
 import {
   GITHUB_ACCOUNTS_DIR,
   DEFAULT_GITHUB_ACCOUNT_ID,
   PROJECTS_DIR,
-  buildAugmentedPath,
+  SYSTEM_GH_CONFIG_DIR,
   githubAccountConfigDir,
   isValidIdSegment,
 } from "./paths";
+import { isYamlMapping, parseYaml } from "./yaml";
 import { getDb } from "./db";
 import { log } from "./log";
 
@@ -123,39 +124,43 @@ export function ensureGithubAccountDir(id: string): string {
 // ─── Status detection ────────────────────────────────────────────────────────
 
 /**
- * Report the logged-in GitHub username + ready flag for an account by running
- * `gh api user` with the account's `GH_CONFIG_DIR` in env (unset for the
- * default account, so it reads the system gh config). Handles `gh` missing /
- * not logged in gracefully → `{ ready: false }`.
+ * Report the logged-in GitHub identity for a gh config dir straight off disk.
+ * `gh` persists the active login to `<configDir>/hosts.yml`:
+ *
+ *   github.com:
+ *     user: <login>
+ *     oauth_token: <...>
+ *
+ * We read that file (never spawn `gh`, never hit the network — mirrors how
+ * accounts.ts reads `.credentials.json`), so getStatus stays cheap enough to
+ * call inside the GET `.map()` without ever blocking the event loop. Missing or
+ * malformed hosts.yml → `{ ready: false }`.
  */
-function readGithubLogin(configDir: string | null): string | null {
-  const env: NodeJS.ProcessEnv = { ...process.env, PATH: buildAugmentedPath() };
-  if (configDir) env.GH_CONFIG_DIR = configDir;
-  else delete env.GH_CONFIG_DIR;
+function readHostsUser(configDir: string): { username?: string; ready: boolean } {
+  const path = join(configDir, "hosts.yml");
   try {
-    const res = spawnSync("gh", ["api", "user", "-q", ".login"], {
-      env,
-      encoding: "utf-8",
-      timeout: 10_000,
-    });
-    if (res.error || res.status !== 0) return null;
-    const login = (res.stdout ?? "").trim();
-    return login || null;
+    const parsed = parseYaml(readFileSync(path, "utf-8"));
+    if (!isYamlMapping(parsed)) return { ready: false };
+    const host = parsed["github.com"];
+    if (!isYamlMapping(host)) return { ready: false };
+    const user = typeof host.user === "string" ? host.user.trim() : "";
+    const token = typeof host.oauth_token === "string" ? host.oauth_token.trim() : "";
+    const ready = Boolean(user || token);
+    return user ? { username: user, ready } : { ready };
   } catch {
-    return null;
+    return { ready: false };
   }
 }
 
 export function getStatus(id: string): GithubAccountWithStatus | null {
   const account = get(id);
   if (!account) return null;
-  const configDir = githubAccountConfigDir(id);
-  const login = readGithubLogin(configDir);
-  const status: GithubAccountWithStatus = {
-    ...account,
-    ready: login !== null,
-  };
-  if (login) status.username = login;
+  // `default` maps to the system gh config; every other id owns a dir under
+  // GITHUB_ACCOUNTS_DIR.
+  const configDir = githubAccountConfigDir(id) ?? SYSTEM_GH_CONFIG_DIR;
+  const { username, ready } = readHostsUser(configDir);
+  const status: GithubAccountWithStatus = { ...account, ready };
+  if (username) status.username = username;
   return status;
 }
 
@@ -167,6 +172,10 @@ export function getStatus(id: string): GithubAccountWithStatus | null {
  * deletion when referenced. Cheap regex parse — fail-safe: a miss lets the
  * delete through, and resolveSpawnEnv treats a stale id as "no injection".
  */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function findProjectsUsingAccount(githubAccountId: string): string[] {
   if (!existsSync(PROJECTS_DIR)) return [];
   const out: string[] = [];
@@ -183,7 +192,7 @@ function findProjectsUsingAccount(githubAccountId: string): string[] {
       const raw = readFileSync(projectMd, "utf-8");
       const fm = raw.match(/^---\n([\s\S]*?)\n---/);
       if (!fm) continue;
-      const pattern = new RegExp(`^githubAccountId:\\s*["']?${githubAccountId}["']?\\s*$`, "m");
+      const pattern = new RegExp(`^githubAccountId:\\s*["']?${escapeRegExp(githubAccountId)}["']?\\s*$`, "m");
       if (pattern.test(fm[1]!)) out.push(entry);
     } catch {
       // Unreadable — skip. Better to allow delete than block on garbled data.
