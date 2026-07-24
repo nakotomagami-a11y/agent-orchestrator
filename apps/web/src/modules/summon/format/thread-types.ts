@@ -11,7 +11,7 @@ export type ThreadItem =
   | { kind: "agent-thinking"; id: string; text: string }
   | { kind: "agent-subagent"; id: string; name: string; prompt: string; status: SubAgentStatus; startTs: number; durationMs?: number; subRunId?: string; currentTool?: string; tokensIn?: number; tokensOut?: number; cost?: number; lastOutputLine?: string }
   | { kind: "system-error"; id: string; message: string }
-  | { kind: "system-rate-limit"; id: string; message: string; resetsAt?: number }
+  | { kind: "system-rate-limit"; id: string; message: string; resetsAt?: number; severity: "warning" | "limit" }
   | { kind: "system-done"; id: string; exitCode: number; durationMs?: number; tokensIn?: number; tokensOut?: number; cost?: number };
 
 export interface UsageMeter {

@@ -40,7 +40,7 @@ const doneSchema = z.object({
   cost: z.number().optional(),
 });
 const errorSchema = z.object({ runId: z.string(), message: z.string() });
-const rateLimitSchema = z.object({ runId: z.string(), message: z.string(), resetsAt: z.number().optional() });
+const rateLimitSchema = z.object({ runId: z.string(), message: z.string(), resetsAt: z.number().optional(), severity: z.enum(["warning", "limit"]) });
 
 const subAgentStatusSchema = z.enum(["queued", "running", "cancelling", "done", "error", "cancelled", "timeout"]);
 
@@ -242,7 +242,7 @@ export function applySseEvent(
       };
     })
     .with({ name: "rate-limit" }, ({ data }) => ({
-      thread: closeStreaming([...prev.thread, { kind: "system-rate-limit" as const, id: newId(), message: data.message, resetsAt: data.resetsAt }]),
+      thread: closeStreaming([...prev.thread, { kind: "system-rate-limit" as const, id: newId(), message: data.message, resetsAt: data.resetsAt, severity: data.severity }]),
       usage: prev.usage,
       done: false,
       error: null,

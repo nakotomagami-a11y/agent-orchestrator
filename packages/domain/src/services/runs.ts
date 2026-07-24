@@ -564,6 +564,34 @@ interface StreamEvent {
   rate_limit_info?: { status?: string; resetsAt?: number; rateLimitType?: string };
 }
 
+// Claude CLI stream-json `rate_limit_event.status` values, per Anthropic's
+// unified rate-limit signal: "allowed" (benign — no card), "allowed_warning"
+// (approaching — early WARNING, run keeps going) and "rejected" (hard LIMIT).
+// Only "rejected" is terminal; any other non-"allowed" status is treated as a
+// warning so an unknown value never mislabels a still-running agent as stopped.
+const TERMINAL_RATE_LIMIT_STATUSES = new Set(["rejected"]);
+
+export function buildRateLimitEvent(
+  info: StreamEvent["rate_limit_info"],
+  runId: string,
+): SseRateLimitEvent | null {
+  const status = info?.status;
+  if (!status || status === "allowed") return null;
+  const severity: SseRateLimitEvent["severity"] = TERMINAL_RATE_LIMIT_STATUSES.has(status)
+    ? "limit"
+    : "warning";
+  const resetsAt = info?.resetsAt;
+  const resetMsg = resetsAt
+    ? ` Resets at ${new Date(resetsAt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}.`
+    : "";
+  const limitType = info?.rateLimitType ? ` (${info.rateLimitType} limit)` : "";
+  const message =
+    severity === "limit"
+      ? `Rate limited by Anthropic API${limitType}.${resetMsg}`
+      : `Approaching Anthropic API rate limit${limitType}.${resetMsg} The run will keep going.`;
+  return { runId, message, resetsAt, severity };
+}
+
 function handleStreamLine(run: LiveRun, line: string): void {
   let evt: StreamEvent;
   try {
@@ -652,20 +680,13 @@ function handleStreamLine(run: LiveRun, line: string): void {
   }
 
   if (evt.type === "rate_limit_event") {
-    const info = evt.rate_limit_info;
-    if (info?.status && info.status !== "allowed") {
-      const resetsAt = info.resetsAt;
-      run.rateLimitResetsAt = resetsAt;
-      const resetMsg = resetsAt
-        ? ` Resets at ${new Date(resetsAt * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })}.`
-        : "";
-      const limitType = info.rateLimitType ? ` (${info.rateLimitType} limit)` : "";
-      // Broadcast a warning — do NOT kill the run. The user decides to stop or
-      // continue; the CLI will exit on its own if Anthropic hard-blocks it.
-      broadcast(run, {
-        name: "rate-limit",
-        data: { runId: run.id, message: `Rate limited by Anthropic API${limitType}.${resetMsg}`, resetsAt },
-      });
+    const event = buildRateLimitEvent(evt.rate_limit_info, run.id);
+    if (event) {
+      run.rateLimitResetsAt = event.resetsAt;
+      // Never kill the run here. On an early WARNING the CLI keeps going; on a
+      // hard LIMIT the CLI exits on its own if Anthropic blocks it. Either way
+      // the card lets the user decide to stop or continue.
+      broadcast(run, { name: "rate-limit", data: event });
     }
     return;
   }

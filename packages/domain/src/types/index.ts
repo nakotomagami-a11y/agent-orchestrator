@@ -295,7 +295,7 @@ export interface SseToolEvent { runId: string; name: string; input?: unknown }
 export interface SseUsageEvent { runId: string; tokensIn: number; tokensOut: number; cost: number }
 export interface SseDoneEvent { runId: string; exitCode: number; sessionId?: string; durationMs?: number; tokensIn?: number; tokensOut?: number; cost?: number }
 export interface SseErrorEvent { runId: string; message: string }
-export interface SseRateLimitEvent { runId: string; message: string; resetsAt?: number }
+export interface SseRateLimitEvent { runId: string; message: string; resetsAt?: number; severity: "warning" | "limit" }
 export interface SseAttachedEvent {
   runId: string;
   output: string;

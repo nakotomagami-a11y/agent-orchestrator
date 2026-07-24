@@ -9,31 +9,43 @@ import { formatCountdown } from "../format/format-countdown";
 export type RateLimitCardProps = {
   message: string;
   resetsAt?: number;
+  /**
+   * "warning" = approaching the limit (run keeps going, dismiss & continue).
+   * "limit" = hard-limited (run stopped). Defaults to "limit" for safety.
+   */
+  severity?: "warning" | "limit";
   onStop?: () => void;
   onDismiss?: () => void;
 };
 
 /**
- * Warning card shown in the chat thread when Claude returns a rate-limit
- * error. Displays current budget usage, a live countdown to reset, and
- * gives the user two actions: stop the run or continue (dismiss and let
- * the retry happen automatically).
+ * Card shown in the chat thread on a Claude rate-limit signal. An early
+ * WARNING (amber, "approaching") keeps the run going — the user can dismiss
+ * and continue. A hard LIMIT (red, "hit") means the run stopped. Displays
+ * current budget usage and a live countdown to reset.
  */
-export function RateLimitCard({ message, resetsAt, onStop, onDismiss }: RateLimitCardProps) {
+export function RateLimitCard({ message, resetsAt, severity = "limit", onStop, onDismiss }: RateLimitCardProps) {
   const usageLabel = useRateLimitUsageLabel();
   const secsLeft = useRateLimitCountdown(resetsAt);
+  const isLimit = severity === "limit";
   return (
-    <div className="border border-[rgba(234,179,8,0.30)] border-l-[3px] border-l-[#ca8a04] rounded-[8px] px-[14px] py-3 bg-[rgba(234,179,8,0.05)] flex items-start gap-[10px]">
-      <RateLimitIcon />
+    <div
+      className={
+        isLimit
+          ? "border border-[rgba(239,68,68,0.30)] border-l-[3px] border-l-[#dc2626] rounded-[8px] px-[14px] py-3 bg-[rgba(239,68,68,0.05)] flex items-start gap-[10px]"
+          : "border border-[rgba(234,179,8,0.30)] border-l-[3px] border-l-[#ca8a04] rounded-[8px] px-[14px] py-3 bg-[rgba(234,179,8,0.05)] flex items-start gap-[10px]"
+      }
+    >
+      <RateLimitIcon isLimit={isLimit} />
       <div className="flex-1 min-w-0">
-        <RateLimitHeader usageLabel={usageLabel} />
+        <RateLimitHeader usageLabel={usageLabel} isLimit={isLimit} />
         <div className="text-ao-fg-1 text-[12.5px] mt-0.5 font-mono leading-[1.5]">{message}</div>
         {secsLeft !== null && secsLeft > 0 ? (
           <div className="mt-[4px] font-mono text-[11.5px] text-ao-fg-3">
-            Resets in <span className="text-[#ca8a04]">{formatCountdown(secsLeft)}</span>
+            Resets in <span className={isLimit ? "text-[#dc2626]" : "text-[#ca8a04]"}>{formatCountdown(secsLeft)}</span>
           </div>
         ) : null}
-        <RateLimitActions onStop={onStop} onDismiss={onDismiss} />
+        <RateLimitActions onStop={onStop} onDismiss={onDismiss} isLimit={isLimit} />
       </div>
     </div>
   );
@@ -73,9 +85,9 @@ function useRateLimitCountdown(resetsAt: number | undefined): number | null {
   return secsLeft;
 }
 
-function RateLimitIcon() {
+function RateLimitIcon({ isLimit }: { isLimit: boolean }) {
   return (
-    <div className="w-[22px] h-[22px] flex items-center justify-center rounded-[6px] bg-[rgba(234,179,8,0.12)] text-[#ca8a04] shrink-0">
+    <div className={`w-[22px] h-[22px] flex items-center justify-center rounded-[6px] shrink-0 ${isLimit ? "bg-[rgba(239,68,68,0.12)] text-[#dc2626]" : "bg-[rgba(234,179,8,0.12)] text-[#ca8a04]"}`}>
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
@@ -83,16 +95,16 @@ function RateLimitIcon() {
   );
 }
 
-function RateLimitHeader({ usageLabel }: { usageLabel: string }) {
+function RateLimitHeader({ usageLabel, isLimit }: { usageLabel: string; isLimit: boolean }) {
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <span className="font-semibold text-ao-fg-0 text-[13.5px]">Rate limited</span>
-      <span className="font-mono text-[11px] px-[6px] py-[2px] rounded-full bg-[rgba(234,179,8,0.12)] text-[#ca8a04]">{usageLabel}</span>
+      <span className="font-semibold text-ao-fg-0 text-[13.5px]">{isLimit ? "Rate limited" : "Approaching rate limit"}</span>
+      <span className={`font-mono text-[11px] px-[6px] py-[2px] rounded-full ${isLimit ? "bg-[rgba(239,68,68,0.12)] text-[#dc2626]" : "bg-[rgba(234,179,8,0.12)] text-[#ca8a04]"}`}>{usageLabel}</span>
     </div>
   );
 }
 
-function RateLimitActions({ onStop, onDismiss }: { onStop: (() => void) | undefined; onDismiss: (() => void) | undefined }) {
+function RateLimitActions({ onStop, onDismiss, isLimit }: { onStop: (() => void) | undefined; onDismiss: (() => void) | undefined; isLimit: boolean }) {
   return (
     <div className="mt-2 flex items-center gap-3">
       <button
@@ -105,9 +117,9 @@ function RateLimitActions({ onStop, onDismiss }: { onStop: (() => void) | undefi
       <button
         onClick={onDismiss}
         disabled={!onDismiss}
-        className="text-[#ca8a04] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default"
+        className={`text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-40 disabled:cursor-default ${isLimit ? "text-[#dc2626]" : "text-[#ca8a04]"}`}
       >
-        <Icon name="refresh" size={11} /> Continue
+        <Icon name="refresh" size={11} /> {isLimit ? "Retry" : "Continue"}
       </button>
     </div>
   );

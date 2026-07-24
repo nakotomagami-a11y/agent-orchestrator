@@ -449,7 +449,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       <ThinkingRow id={item.id} text={item.text} avatar={avatar} hideAvatar={hideAvatar} />
     ))
     .with({ kind: "system-rate-limit" }, (item) => (
-      <RateLimitCard message={item.message} resetsAt={item.resetsAt} onStop={onStopRun} onDismiss={onDismissRateLimit} />
+      <RateLimitCard message={item.message} resetsAt={item.resetsAt} severity={item.severity} onStop={onStopRun} onDismiss={onDismissRateLimit} />
     ))
     .with({ kind: "system-error" }, (item) => (
       <ErrorCard message={item.message} onRetry={onRetry} onRepair={onRepair} />
