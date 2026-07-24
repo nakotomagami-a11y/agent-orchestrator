@@ -1,1 +1,1 @@
-export { default } from "@agent-office/ui/docs";
+export { default } from "@/modules/docs/docs";

@@ -24,7 +24,7 @@ const PROJECT_MEMORY = `# Project Memory
 - Frontend: Next.js 15, React 19, Tailwind v4 CSS-first, TypeScript
 - Desktop: Tauri 2 (Rust) + embedded Node.js standalone server
 - Database: SQLite via better-sqlite3 (synchronous, no ORM)
-- Packages: @agent-office/ui (shared components + design tokens), @agent-office/domain (DB, services, types)
+- Packages: @agent-office/domain (DB, services, types)
 
 ## Conventions
 - Token classes only — never \`style={{ color: "var(--acc)" }}\`, use \`text-acc\`

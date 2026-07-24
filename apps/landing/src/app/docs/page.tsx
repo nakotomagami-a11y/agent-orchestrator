@@ -1,5 +1,5 @@
 import Nav from '../../components/Nav';
-import DocsPage from "@agent-office/ui/docs";
+import DocsPage from "@/modules/docs/docs";
 
 export default function Docs() {
   return (
