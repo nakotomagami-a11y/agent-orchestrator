@@ -237,7 +237,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
       aria-labelledby="fr-title"
     >
       <div
-        className="flex flex-col overflow-hidden border border-line-2 rounded-[12px] w-[min(720px,100%)] max-h-[90vh] bg-[var(--bg-elev)] shadow-[0_24px_60px_rgba(0,0,0,0.45),_0_4px_12px_rgba(0,0,0,0.25)]"
+        className="flex flex-col overflow-hidden border border-line-2 rounded-[8px] w-[min(720px,100%)] max-h-[90vh] bg-[var(--bg-elev)] shadow-[0_24px_60px_rgba(0,0,0,0.45),_0_4px_12px_rgba(0,0,0,0.25)]"
       >
         <header className="border-b border-line-2 px-[24px] pt-[20px] pb-[12px]">
           <h2 id="fr-title" className="font-semibold m-0 mb-[4px] text-[18px]">{t("first_run.title")}</h2>

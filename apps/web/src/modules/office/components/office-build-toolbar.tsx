@@ -111,7 +111,7 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
       {/* ── Header ──────────────────────────────────────────────────── */}
       <div className="border-b border-line shrink-0 px-[16px] pt-[14px] pb-[10px]">
         <div className="flex items-center gap-[10px]">
-          <div className="w-[28px] h-[28px] rounded-[7px] bg-acc-faint text-acc flex items-center justify-center shrink-0 bp-head-crest">
+          <div className="w-[28px] h-[28px] rounded-[7px] bg-acc-faint text-acc flex items-center justify-center shrink-0 border border-[color-mix(in_srgb,var(--acc)_30%,transparent)]">
             <Icon name="hammer" size={14} />
           </div>
           <div>
@@ -173,7 +173,7 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
 
       {/* ── Search ──────────────────────────────────────────────────── */}
       <div className="border-b border-line shrink-0 px-[14px] py-[8px]">
-        <div className="bp-search flex items-center gap-[8px] bg-bg-2 border border-line text-txt-3 px-[10px] py-[6px] rounded-[7px] text-[12.5px]">
+        <div className="flex items-center gap-[8px] bg-bg-2 border border-line text-txt-3 px-[10px] py-[6px] rounded-[7px] text-[12.5px] focus-within:border-[color-mix(in_srgb,var(--acc)_30%,transparent)]">
           <Icon name="search" size={13} />
           <input
             className="flex-1 bg-transparent border-0 outline-none text-txt text-[12px] placeholder:text-[var(--txt-3)]"

@@ -194,7 +194,7 @@ export function CommandPalette() {
         aria-modal="true"
         aria-label="Command palette"
         onClick={(e) => e.stopPropagation()}
-        className="w-[min(580px,92vw)] max-h-[480px] bg-[var(--bg-1)] border border-[var(--line)] rounded-[var(--r-lg)] shadow-[var(--shadow-window)] overflow-hidden flex flex-col"
+        className="w-[min(580px,92vw)] max-h-[480px] bg-[var(--bg-1)] border border-[var(--line)] rounded-[8px] shadow-[var(--shadow-window)] overflow-hidden flex flex-col"
       >
         {/* Search input */}
         <input

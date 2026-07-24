@@ -180,9 +180,9 @@ function ThinkingRow({ id, text, agent, hideAvatar = false }: { id: string; text
   return (
     <div className="flex items-start gap-[12px] relative group/msg">
       {hideAvatar ? (
-        <div className="w-[30px] shrink-0" aria-hidden />
+        <div className="w-[60px] shrink-0" aria-hidden />
       ) : (
-        <AgentAvatar unit={agent.unitChoice} size={30} label={agent.name} className="shrink-0 rounded-full border border-ao-line-1 bg-ao-bg-3" />
+        <AgentAvatar unit={agent.unitChoice} size={60} label={agent.name} className="shrink-0" />
       )}
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-dashed border-ao-line-1 rounded-[10px] bg-white/[0.015]${open ? " ao-open" : ""}`}>
@@ -414,9 +414,9 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       return (
         <div className="flex items-start gap-[12px] relative group/msg">
           {hideAvatar ? (
-            <div className="w-[30px] shrink-0" aria-hidden />
+            <div className="w-[60px] shrink-0" aria-hidden />
           ) : (
-            <AgentAvatar unit={agent.unitChoice} size={30} label={agent.name} className="shrink-0 rounded-full border border-ao-line-1 bg-ao-bg-3" />
+            <AgentAvatar unit={agent.unitChoice} size={60} label={agent.name} className="shrink-0" />
           )}
           <div className="flex-1 min-w-0 pt-0.5">
             {!hideAvatar && (

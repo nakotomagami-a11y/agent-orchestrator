@@ -8,8 +8,12 @@ import { Button } from "@/components/ui/button";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import type { PersistedRun } from "@agent-office/domain/types";
 import { useRuns } from "../hooks/use-runs";
+import { useAgents } from "@/modules/agents/hooks/use-agents";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useBranchStore } from "@/lib/branch-store";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { unitForAgent, type UnitSelection } from "@/components/ui/unit-sprite-registry";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import {
   formatCost,
   formatDuration,
@@ -22,7 +26,6 @@ import {
   fmtTok,
   isoDay,
   elapsedSince,
-  agentInitial,
 } from "../format/activity-formatters";
 import {
   buildSparkData,
@@ -94,9 +97,24 @@ function Spark({
   );
 }
 
+// ── Agent avatars ────────────────────────────────────────────────────────────
+
+/** Maps agentId → the Tiny Swords avatar the agent is actually configured
+ *  with, so run rows show the same face as everywhere else instead of a
+ *  generic two-letter initial. Falls back to the same name-hash used
+ *  elsewhere when the agent record isn't loaded yet (or was deleted). */
+function useAgentUnits(): Map<string, UnitSelection> {
+  const { data: agents } = useAgents();
+  return useMemo(() => {
+    const m = new Map<string, UnitSelection>();
+    for (const a of agents ?? []) m.set(a.name, unitForAgent(a.name, a.unit));
+    return m;
+  }, [agents]);
+}
+
 // ── LiveStrip ─────────────────────────────────────────────────────────────────
 
-function LiveStrip({ runs }: { runs: PersistedRun[] }) {
+function LiveStrip({ runs, unitByAgent }: { runs: PersistedRun[]; unitByAgent: Map<string, UnitSelection> }) {
   const selectAgent = useOfficeStore((s) => s.select);
   const [, tick] = useState(0);
   useEffect(() => {
@@ -122,11 +140,16 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
           className="act-live-run"
           style={{ gridTemplateColumns: "30px minmax(0,1fr) auto auto auto auto auto" }}
         >
-          <div className="flex items-center justify-center shrink-0 bg-bg-3 border border-line uppercase font-bold text-txt-2 w-[28px] h-[28px] rounded-[6px] text-[14px] font-[var(--font-mono)]">{agentInitial(r.agentName)}</div>
+          <AgentAvatar
+            unit={unitByAgent.get(r.agentId) ?? unitForAgent(r.agentName)}
+            size={28}
+            label={r.agentName}
+            className="shrink-0 rounded-[6px] border border-line bg-bg-3"
+          />
           <div className="min-w-0">
             <div className="flex items-center font-semibold text-txt gap-[8px] text-[13px]">
               <span className="rounded-full w-[6px] h-[6px]" style={{ background: "var(--working)", boxShadow: "0 0 6px var(--working)", animation: "pulseDot 1s infinite" }} />
-              {r.agentName}
+              {formatAgentDisplayName(r.agentName)}
             </div>
             <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11.5px] mt-[2px]">{r.prompt}</div>
           </div>
@@ -433,11 +456,13 @@ function FeedRow({
   isOpen,
   onToggle,
   maxCost,
+  unitByAgent,
 }: {
   run: PersistedRun;
   isOpen: boolean;
   onToggle: () => void;
   maxCost: number;
+  unitByAgent: Map<string, UnitSelection>;
 }) {
   const selectAgent = useOfficeStore((s) => s.select);
   const setBranchSeed = useBranchStore((s) => s.setSeed);
@@ -465,14 +490,19 @@ function FeedRow({
         tabIndex={0}
         onKeyDown={(e) => e.key === "Enter" && onToggle()}
       >
-        <div className="act-row-av flex items-center justify-center bg-bg-2 border border-line font-bold text-txt-2 uppercase relative shrink-0 w-[26px] h-[26px] rounded-[6px] text-[13px] font-[var(--font-mono)]">
-          {agentInitial(run.agentName)}
+        <div className="act-row-av relative shrink-0 w-[26px] h-[26px]">
+          <AgentAvatar
+            unit={unitByAgent.get(run.agentId) ?? unitForAgent(run.agentName)}
+            size={26}
+            label={run.agentName}
+            className="rounded-[6px] border border-line bg-bg-2"
+          />
           <span className={cn("absolute rounded-full bottom-[-2px] right-[-2px] w-[8px] h-[8px] [border:2px_solid_var(--bg-1)]", dotCls === "error" ? "bg-[var(--error)]" : "bg-[var(--working)]", dotCls === "running" && "animate-[pulseDot_1.2s_infinite]")} />
         </div>
 
         <div className="min-w-0">
           <div className="flex items-center font-semibold text-txt gap-[7px] text-[13px]">
-            <span>{run.agentName}</span>
+            <span>{formatAgentDisplayName(run.agentName)}</span>
             <span className="text-txt-3 bg-bg-2 border border-line font-normal font-[var(--font-mono)] text-[10px] rounded-[4px] px-[5px] py-[1px]">{run.model || "default"}</span>
           </div>
           <div className="text-txt-3 whitespace-nowrap overflow-hidden text-ellipsis font-[var(--font-mono)] text-[11.5px] mt-[2px]">{run.prompt}</div>
@@ -586,6 +616,7 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
   });
   const [openId, setOpenId] = useState<string | null>(null);
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const unitByAgent = useAgentUnits();
 
   const { data: allRuns = [], isLoading } = useRuns({
     agentId,
@@ -671,7 +702,7 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
       />
 
       <div className="flex flex-col overflow-y-auto flex-1 min-h-0 px-[24px] pt-[20px] pb-[32px] gap-[20px]">
-        <LiveStrip runs={liveRuns} />
+        <LiveStrip runs={liveRuns} unitByAgent={unitByAgent} />
         <StatTiles runs={allRuns} />
         <Heatmap runs={allRuns} />
         <FilterBar filters={filters} setFilters={setFilters} />
@@ -717,6 +748,7 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
                         setOpenId(openId === r.id ? null : r.id)
                       }
                       maxCost={maxCost}
+                      unitByAgent={unitByAgent}
                     />
                   ))}
                   {g.runs.length > 10 && (

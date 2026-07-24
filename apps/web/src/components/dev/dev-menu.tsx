@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon, type IconName } from "@/components/ui/icon";
@@ -8,6 +8,52 @@ import { cn } from "@/lib/cn";
 import { getDbStats, runSeed, type DbStats, type SeedAction } from "@/lib/api/dev-seed";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { usePerformanceStore, type PerformanceMode } from "@/lib/performance-store";
+import { dumpStores, appStateSnapshot } from "./dev-instruments";
+
+const GIT_SHA = process.env.NEXT_PUBLIC_GIT_SHA || "";
+/** App boot time (module eval ≈ first client load). Used for the uptime readout. */
+const BOOT_TS = Date.now();
+
+function fmtUptime(ms: number): string {
+  const s = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m ${sec}s`;
+  if (m > 0) return `${m}m ${sec}s`;
+  return `${sec}s`;
+}
+
+/** Live frame-rate readout pinned to the corner. Persists while enabled even
+ *  after the dev modal closes, so you can watch FPS during interaction. */
+function FpsMeter() {
+  const [fps, setFps] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    let frames = 0;
+    let last = performance.now();
+    const loop = () => {
+      frames++;
+      const now = performance.now();
+      if (now - last >= 500) {
+        setFps(Math.round((frames * 1000) / (now - last)));
+        frames = 0;
+        last = now;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <div className="fixed bottom-3 right-3 z-[300] pointer-events-none select-none font-[var(--font-mono)] text-[11px] px-2 py-1 rounded-md bg-bg-2 border border-line-2 text-txt-2 shadow-[var(--shadow-2)]">
+      <span className={cn(fps < 30 ? "text-[var(--error)]" : fps < 50 ? "text-[var(--queued)]" : "text-[var(--working)]")}>
+        {fps}
+      </span>{" "}
+      fps
+    </div>
+  );
+}
 
 /**
  * Dev console — an internal instrument panel for seeding data, inspecting the
@@ -264,8 +310,12 @@ export function DevMenu() {
   const perfMode = usePerformanceStore((s) => s.mode);
   const setPerfMode = usePerformanceStore((s) => s.setMode);
 
-  // UI-only toggles (not wired yet).
-  const [planned, setPlanned] = useState({ motion: false, grid: false, fps: false, outlines: false });
+  // Wired interface instruments (ephemeral — reset on reload, which is fine for dev).
+  const [instruments, setInstruments] = useState({ reduceMotion: false, outlines: false, fps: false });
+  // Transient state for one-shot client actions (dump / snapshot / etc.).
+  const [clientState, setClientState] = useState<Record<string, BtnState>>({});
+  const [uptimeNow, setUptimeNow] = useState(() => Date.now());
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const loadStats = useCallback(async () => {
     try { setStats(await getDbStats()); } catch { /* ignore */ }
@@ -274,6 +324,61 @@ export function DevMenu() {
   useEffect(() => {
     if (open) void loadStats();
   }, [open, loadStats]);
+
+  // Reflect instrument toggles onto <html> so CSS in globals.css can gate.
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-reduce-motion", instruments.reduceMotion);
+  }, [instruments.reduceMotion]);
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-dev-outlines", instruments.outlines);
+  }, [instruments.outlines]);
+
+  // Tick the uptime readout while the Environment panel is on screen.
+  useEffect(() => {
+    if (!open || cat !== "environment") return;
+    const id = setInterval(() => setUptimeNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [open, cat]);
+
+  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+
+  const runClient = useCallback((key: string, fn: () => void | Promise<void>) => {
+    setClientState((s) => ({ ...s, [key]: "loading" }));
+    void (async () => {
+      try {
+        await fn();
+        setClientState((s) => ({ ...s, [key]: "done" }));
+        timers.current.push(setTimeout(() => setClientState((s) => ({ ...s, [key]: "idle" })), 1500));
+      } catch {
+        setClientState((s) => ({ ...s, [key]: "error" }));
+        timers.current.push(setTimeout(() => setClientState((s) => ({ ...s, [key]: "idle" })), 2000));
+      }
+    })();
+  }, []);
+
+  async function clearCachesAndReload() {
+    if (!window.confirm("Clear local storage, caches and query data, then reload?")) return;
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+      queryClient.clear();
+      if (typeof caches !== "undefined") {
+        for (const k of await caches.keys()) await caches.delete(k);
+      }
+    } finally {
+      window.location.reload();
+    }
+  }
+
+  async function resetOnboarding() {
+    if (!window.confirm("Re-arm the first-run wizard? The app will reload.")) return;
+    await fetch("/api/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ firstRunComplete: false }),
+    });
+    window.location.reload();
+  }
 
   async function handleAction(action: SeedAction) {
     setStates((s) => ({ ...s, [action]: "loading" }));
@@ -303,6 +408,8 @@ export function DevMenu() {
         <Icon name="terminal" size={12} />
         Dev
       </button>
+
+      {instruments.fps ? <FpsMeter /> : null}
 
       <ModalShell open={open} onClose={() => setOpen(false)} maxWidth={660} bareContent>
         {/* Header */}
@@ -386,10 +493,10 @@ export function DevMenu() {
                       />
                     </div>
                   </div>
-                  <ToggleRow icon="zap" label="Reduce motion" desc="Collapse animations and transitions." planned checked={planned.motion} onChange={(v) => setPlanned((p) => ({ ...p, motion: v }))} />
-                  <ToggleRow icon="grid" label="Debug grid overlay" desc="Overlay the isometric tile grid + coordinates." planned checked={planned.grid} onChange={(v) => setPlanned((p) => ({ ...p, grid: v }))} />
-                  <ToggleRow icon="activity" label="FPS meter" desc="Pin a live frame-rate readout to the corner." planned checked={planned.fps} onChange={(v) => setPlanned((p) => ({ ...p, fps: v }))} />
-                  <ToggleRow icon="crosshair" label="Component outlines" desc="Outline React component boundaries." planned checked={planned.outlines} onChange={(v) => setPlanned((p) => ({ ...p, outlines: v }))} />
+                  <ToggleRow icon="zap" label="Reduce motion" desc="Collapse animations and transitions across the app." checked={instruments.reduceMotion} onChange={(v) => setInstruments((p) => ({ ...p, reduceMotion: v }))} />
+                  <ToggleRow icon="grid" label="Debug grid overlay" desc="Overlay the isometric tile grid + coordinates." planned checked={false} onChange={() => {}} />
+                  <ToggleRow icon="activity" label="FPS meter" desc="Pin a live frame-rate readout to the corner." checked={instruments.fps} onChange={(v) => setInstruments((p) => ({ ...p, fps: v }))} />
+                  <ToggleRow icon="crosshair" label="Component outlines" desc="Outline every element boundary to spot layout bugs." checked={instruments.outlines} onChange={(v) => setInstruments((p) => ({ ...p, outlines: v }))} />
                 </div>
               </div>
             )}
@@ -462,8 +569,8 @@ export function DevMenu() {
               <div>
                 <SectionLabel>Inspect</SectionLabel>
                 <div className="flex flex-col gap-2 mb-4">
-                  <DevButton icon="code" label="Dump Zustand stores to console" planned />
-                  <DevButton icon="copy" label="Copy app-state snapshot" planned />
+                  <DevButton icon="code" label="Dump Zustand stores to console" state={clientState.dump} onClick={() => runClient("dump", dumpStores)} />
+                  <DevButton icon="copy" label="Copy app-state snapshot" state={clientState.snapshot} onClick={() => runClient("snapshot", () => navigator.clipboard.writeText(appStateSnapshot()))} />
                 </div>
                 <SectionLabel>Feature flags</SectionLabel>
                 <div className="flex flex-col gap-2">
@@ -480,10 +587,10 @@ export function DevMenu() {
                 <div className="flex flex-col gap-2">
                   <Field label="Version" value={`v${APP_VERSION}`} copyable />
                   <Field label="Mode" value={process.env.NODE_ENV ?? "—"} />
-                  <Field label="Commit" value="" planned />
+                  <Field label="Commit" value={GIT_SHA || "unknown"} copyable={!!GIT_SHA} />
                   <Field label="DB size" value={stats ? fmtBytes(stats.dbSizeBytes) : "…"} />
                   <Field label="DB path" value={stats?.dbPath ?? "…"} copyable />
-                  <Field label="Uptime" value="" planned />
+                  <Field label="Uptime" value={fmtUptime(uptimeNow - BOOT_TS)} />
                 </div>
               </div>
             )}
@@ -493,9 +600,9 @@ export function DevMenu() {
                 <SectionLabel>Utilities</SectionLabel>
                 <div className="flex flex-col gap-2">
                   <DevButton icon="refresh" label="Reload window" onClick={() => window.location.reload()} />
-                  <DevButton icon="archive" label="Clear caches & hard reload" planned />
+                  <DevButton icon="archive" label="Clear caches & hard reload" onClick={() => void clearCachesAndReload()} />
                   <DevButton icon="folder" label="Open logs folder" planned />
-                  <DevButton icon="undo" label="Reset onboarding" planned />
+                  <DevButton icon="undo" label="Reset onboarding" onClick={() => void resetOnboarding()} />
                 </div>
               </div>
             )}

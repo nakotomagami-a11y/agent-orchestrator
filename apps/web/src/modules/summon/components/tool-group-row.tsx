@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Icon, type IconName } from "@/components/ui/icon";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
+import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { useExpandedState } from "./expanded-state";
 
 /**
@@ -65,13 +67,13 @@ function ToolCallRow({ name, arg }: { name: string; arg?: string }) {
 export function ToolGroupRow({
   id,
   tools,
-  avatar,
+  agent,
   running = false,
   hideAvatar = false,
 }: {
   id: string;
   tools: Array<{ id: string; name: string; arg?: string }>;
-  avatar: string;
+  agent: OfficeAgent;
   running?: boolean;
   hideAvatar?: boolean;
 }) {
@@ -81,11 +83,9 @@ export function ToolGroupRow({
   return (
     <div className="flex items-start gap-[12px] relative group/msg">
       {hideAvatar ? (
-        <div className="w-[30px] shrink-0" aria-hidden />
+        <div className="w-[60px] shrink-0" aria-hidden />
       ) : (
-        <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
-          <span className="text-base">{avatar}</span>
-        </div>
+        <AgentAvatar unit={agent.unitChoice} size={60} label={agent.name} className="shrink-0" />
       )}
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-ao-line-1 rounded-[10px] bg-ao-bg-2 overflow-hidden${open ? " ao-open" : ""}`}>

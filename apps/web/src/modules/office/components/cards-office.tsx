@@ -337,8 +337,8 @@ function OfficeCard({
         <span className={cn(
           "inline-flex items-center gap-[6px] rounded-full bg-bg-3 border border-line text-txt-3 lowercase shrink-0 px-[9px] py-[4px] font-[var(--font-mono)] text-[10.5px] tracking-[0.04em]",
           agent.status === "working" && "status-chip live",
-          agent.status === "thinking" && "status-chip busy",
-          isError && "status-chip error",
+          agent.status === "thinking" && "bg-[color-mix(in_srgb,var(--thinking)_10%,transparent)] border-[color-mix(in_srgb,var(--thinking)_30%,transparent)] text-[var(--thinking)]",
+          isError && "bg-[color-mix(in_srgb,var(--error)_10%,transparent)] border-[color-mix(in_srgb,var(--error)_30%,transparent)] text-[var(--error)]",
         )}>
           <span className={cn(
             "rounded-full w-[5px] h-[5px]",
@@ -350,7 +350,7 @@ function OfficeCard({
 
       <div className={cn(
         "border border-line bg-bg-1 relative rounded-[10px] p-[10px_12px]",
-        isLive && "state-box",
+        isLive && "border-[color-mix(in_srgb,var(--working)_25%,transparent)] bg-[color-mix(in_srgb,var(--working)_4%,var(--bg-1))]",
       )}>
         <div className="flex items-center gap-[6px] text-txt-4 uppercase font-[var(--font-mono)] text-[9.5px] tracking-[0.1em] mb-[4px]">
           {agent.taskKind === "tool" && <Icon name="hammer" size={10} className={isLive ? "text-[var(--working)]" : ""} />}

@@ -1,15 +1,26 @@
 import createNextIntlPlugin from "next-intl/plugin";
 import { createRequire } from "module";
+import { execSync } from "node:child_process";
 
 const require = createRequire(import.meta.url);
 const pkg = require("./package.json");
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+let gitSha = "";
+try {
+  gitSha = execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] })
+    .toString()
+    .trim();
+} catch {
+  // Not a git checkout (e.g. standalone build) — leave commit blank.
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
+    NEXT_PUBLIC_GIT_SHA: gitSha,
   },
   output: "standalone",
   reactStrictMode: true,

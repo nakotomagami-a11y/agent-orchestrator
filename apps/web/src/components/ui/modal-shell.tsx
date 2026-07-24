@@ -100,7 +100,7 @@ export function ModalShell({
           aria-modal="true"
           aria-label={title}
           onClick={(e) => e.stopPropagation()}
-          className={cn("bg-bg-1 border border-line rounded-[var(--r-lg)] shadow-1 w-full flex flex-col outline-none", className)}
+          className={cn("bg-bg-1 border border-line rounded-[8px] shadow-1 w-full flex flex-col outline-none", className)}
           style={{
             maxWidth: maxWidth ?? SIZE_PX[size],
             maxHeight: "calc(100vh - 90px)",

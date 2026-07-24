@@ -305,7 +305,7 @@ export function WorkflowPickerDialog({ open, onClose, onSelect }: WorkflowPicker
           aria-modal="true"
           aria-label={t("workflows.dialog_title")}
           tabIndex={-1}
-          className="relative w-full max-w-[640px] max-h-[80vh] bg-bg-1 border border-line rounded-[12px] shadow-[0_4px_24px_rgba(20,12,8,0.22),0_1px_4px_rgba(20,12,8,0.12)] flex flex-col outline-none overflow-hidden"
+          className="relative w-full max-w-[640px] max-h-[80vh] bg-bg-1 border border-line rounded-[8px] shadow-[0_4px_24px_rgba(20,12,8,0.22),0_1px_4px_rgba(20,12,8,0.12)] flex flex-col outline-none overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

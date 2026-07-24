@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { ExpandedStateContext, MessageBubble, ToolGroupRow } from "./message-bubble";
 import { LiveStatus, type ChatPhase } from "./live-status";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
@@ -252,12 +253,12 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
     <div className="overflow-y-auto overscroll-contain px-[16px] pt-[18px] pb-[20px] flex-1" ref={scrollRef}>
       {items.length === 0 && phase === "idle" ? (
         <div className="text-center flex flex-col gap-[20px] items-center max-w-[760px] mx-auto mt-[60px] px-[24px]">
-          <div
-            className="w-[72px] h-[72px] rounded-[16px] bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] flex items-center justify-center text-[36px] font-bold text-[var(--ao-fg-1)] shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] shrink-0"
-            aria-hidden
-          >
-            {agent.short[0]?.toUpperCase() ?? "?"}
-          </div>
+          <AgentAvatar
+            unit={agent.unitChoice}
+            size={72}
+            label={agent.name}
+            className="rounded-[16px] border border-[var(--ao-line-1)] bg-[var(--ao-bg-3)] shadow-[0_8px_30px_-12px_rgba(0,0,0,0.5)] shrink-0"
+          />
           <div>
             <h2 className="font-bold mt-[6px] mb-[4px] text-[22px] tracking-[-0.02em]">Hi, I&apos;m {formatAgentDisplayName(agent.name)}.</h2>
             <p className="text-[var(--txt-3)] m-0 text-[13px]">{agent.description || "Ready when you are - pick a starter or ask anything."}</p>
@@ -334,7 +335,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
                   key={row.id}
                   id={row.id}
                   tools={row.tools.map((t) => ({ id: t.id, name: t.name, arg: t.arg }))}
-                  avatar={agent.short[0]?.toUpperCase() ?? "?"}
+                  agent={agent}
                   hideAvatar={hideAvatar}
                   running={running}
                 />

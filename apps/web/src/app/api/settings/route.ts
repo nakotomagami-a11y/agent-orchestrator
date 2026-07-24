@@ -8,7 +8,11 @@ export async function GET() {
   return NextResponse.json(settings.readSettings());
 }
 
-/** Partial-update for feature flags: PATCH { features: { multiInstance: boolean } } */
+/**
+ * Partial-update: PATCH { features: { multiInstance: boolean } } for feature
+ * flags, or PATCH { firstRunComplete: boolean } to re-arm the first-run wizard
+ * (used by the dev console's "Reset onboarding").
+ */
 export async function PATCH(request: Request) {
   const raw: unknown = await request.json();
   const current = settings.readSettings();
@@ -20,6 +24,9 @@ export async function PATCH(request: Request) {
         ...(current.features ?? {}),
         ...(patch.features as AppSettings["features"]),
       };
+    }
+    if (typeof patch.firstRunComplete === "boolean") {
+      current.firstRunComplete = patch.firstRunComplete;
     }
   }
   settings.writeSettings(current);

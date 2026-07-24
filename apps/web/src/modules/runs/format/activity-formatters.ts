@@ -15,7 +15,3 @@ export function elapsedSince(ts: number): string {
   const rem = s % 60;
   return `${m}m ${rem}s`;
 }
-
-export function agentInitial(name: string): string {
-  return name.slice(0, 2).toUpperCase();
-}
