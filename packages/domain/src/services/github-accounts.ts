@@ -1,8 +1,10 @@
 /**
  * GitHub accounts service — registry of GitHub identities agent-office can inject
  * into a run's environment via `GH_CONFIG_DIR` (see paths.ts). Each non-default
- * account owns a config dir under GITHUB_ACCOUNTS_DIR that `gh` (and, once
- * `gh auth setup-git` has run, git-over-HTTPS) reads its token/hosts from. The
+ * account owns a config dir under GITHUB_ACCOUNTS_DIR that `gh` reads its
+ * token/hosts from. git-over-HTTPS is pointed at the same dir per-run by
+ * `resolveSpawnEnv`, which injects a `gh auth git-credential` credential helper
+ * via GIT_CONFIG_* env (no global ~/.gitconfig / `gh auth setup-git` needed). The
  * `default` account maps to the system gh config (`~/.config/gh`) and is NEVER
  * injected — a project on the default account inherits the machine's active gh
  * auth, identical to pre-feature behavior.
