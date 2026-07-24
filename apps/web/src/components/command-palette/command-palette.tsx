@@ -37,6 +37,7 @@ const COMMANDS: Command[] = [
   // ── Navigate ──────────────────────────────────────────────────────────────
   { id: "nav-office",    label: "Go to Office",    icon: "home",      section: "Navigate", action: (r) => r.push(PAGE_ROUTES.office) },
   { id: "nav-activity",  label: "Go to Activity",  icon: "activity",  section: "Navigate", action: (r) => r.push(PAGE_ROUTES.activity) },
+  { id: "nav-analytics", label: "Go to Analytics", icon: "gauge",     section: "Navigate", action: (r) => r.push(PAGE_ROUTES.analytics) },
   { id: "nav-agents",    label: "Go to Agents",    icon: "templates", section: "Navigate", action: (r) => r.push(PAGE_ROUTES.agents) },
   { id: "nav-projects",  label: "Go to Projects",  icon: "folder",    section: "Navigate", action: (r) => r.push(PAGE_ROUTES.projects) },
   { id: "nav-memory",    label: "Go to Memory",    icon: "memory",    section: "Navigate", action: (r) => r.push(PAGE_ROUTES.memory) },
@@ -64,16 +65,6 @@ const COMMANDS: Command[] = [
     },
   },
   // ── Tools ─────────────────────────────────────────────────────────────────
-  {
-    // Analytics moved from a modal to a page — this used to call
-    // setOpen(true) on a modal that is no longer mounted, i.e. a palette
-    // entry that silently did nothing.
-    id: "nav-analytics",
-    label: "Go to Analytics",
-    icon: "gauge",
-    section: "Navigate",
-    action: (r) => r.push(PAGE_ROUTES.analytics),
-  },
   {
     id: "open-servers",
     label: "Running Servers",

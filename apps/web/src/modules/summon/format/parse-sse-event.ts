@@ -40,7 +40,7 @@ const doneSchema = z.object({
   cost: z.number().optional(),
 });
 const errorSchema = z.object({ runId: z.string(), message: z.string() });
-const rateLimitSchema = z.object({ runId: z.string(), message: z.string(), resetsAt: z.number().optional(), severity: z.enum(["warning", "limit"]) });
+const rateLimitSchema = z.object({ runId: z.string(), message: z.string(), resetsAt: z.number().optional(), severity: z.enum(["warning", "limit"]).default("limit") });
 
 const subAgentStatusSchema = z.enum(["queued", "running", "cancelling", "done", "error", "cancelled", "timeout"]);
 
