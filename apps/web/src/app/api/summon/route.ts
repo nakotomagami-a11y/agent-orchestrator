@@ -93,7 +93,7 @@ async function summonRun(request: Request) {
     effort: built.effort,
     cwd: cwdResolution.cwd,
     projectId: req.projectId,
-    instanceId: instance?.instanceId,
+    instanceId: req.instanceId ?? instance?.instanceId,
     instanceLabel,
     args: built.args,
   });

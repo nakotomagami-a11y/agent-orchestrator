@@ -11,7 +11,7 @@ import {
   runTokens,
 } from "@/modules/office/derive/history-format";
 
-export function HistoryTab({ agentId }: { agentId: string }) {
+export function HistoryTab({ agentId, instanceId }: { agentId: string; instanceId: string | null }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [confirmWipe, setConfirmWipe] = useState(false);
 
@@ -28,7 +28,7 @@ export function HistoryTab({ agentId }: { agentId: string }) {
     setFilter,
     wipe,
     isWiping,
-  } = useAgentHistory(agentId, { onWiped: () => setConfirmWipe(false) });
+  } = useAgentHistory(agentId, instanceId, { onWiped: () => setConfirmWipe(false) });
 
   if (isLoading) {
     return (

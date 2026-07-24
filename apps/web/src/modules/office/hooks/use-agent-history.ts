@@ -44,14 +44,15 @@ function groupByDay(runs: PersistedRun[]): AgentHistoryGroup[] {
   return groups;
 }
 
-export function useAgentHistory(agentId: string, opts?: { onWiped?: () => void }) {
+export function useAgentHistory(agentId: string, instanceId: string | null, opts?: { onWiped?: () => void }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<HistoryFilter>("all");
   const qc = useQueryClient();
 
-  // Don't filter by instanceId - standalone agents always store runs as
-  // instance_id="default" regardless of the UI's selectedInstanceId.
-  const runsQ = useRuns({ agentId, limit: 200 });
+  // History is scoped to the selected instance. Runs are persisted with the
+  // UI's instanceId (the summon route records req.instanceId), so each instance
+  // shows only its own runs. No instance selected → unscoped (all agent runs).
+  const runsQ = useRuns({ agentId, instanceId: instanceId ?? undefined, limit: 200 });
   const allRuns = useMemo(() => runsQ.data ?? [], [runsQ.data]);
 
   const wipeMutation = useMutation({

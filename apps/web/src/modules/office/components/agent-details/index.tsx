@@ -598,7 +598,7 @@ export function AgentDetailsModal() {
               />
             )}
             {tab === "history" && (
-              <HistoryTab agentId={agent.id} />
+              <HistoryTab agentId={agent.id} instanceId={selectedInstanceId} />
             )}
             {tab === "memory" && <MemoryTab agentId={agent.id} discardRef={memoryDiscardRef} />}
             {tab === "settings" && (
