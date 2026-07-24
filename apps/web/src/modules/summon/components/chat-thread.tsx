@@ -12,6 +12,7 @@ import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { ThreadItem } from "../format/thread-types";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import { groupRows, isAgentRow, looksLikeQuestion } from "../format/thread-rows";
+import { dedupeThread } from "../format/dedupe-thread";
 
 const LIVE_PHASES = new Set<ChatPhase>(["sending", "connecting", "working", "streaming"]);
 const CONVERSATIONAL_KINDS = new Set<string>(["you", "agent-text", "system-done", "system-error", "system-rate-limit", "agent-subagent"]);
@@ -55,7 +56,12 @@ const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
   { lbl: "Explain", text: "Walk me through how this part of the system handles errors." },
 ];
 
-export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairWorktree, onAbortRun, onDismissRateLimit, phase, phaseHint, phaseStats, queuedMessages, onCancelQueuedMessage }: ChatThreadProps) {
+export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit, onRepairWorktree, onAbortRun, onDismissRateLimit, phase, phaseHint, phaseStats, queuedMessages, onCancelQueuedMessage }: ChatThreadProps) {
+  // Idempotent guard: collapse a user bubble that was double-added by a
+  // resume / queue-drain / recovery effect re-firing (common because the dev
+  // server restarts on any server-side edit and the panel replays the active
+  // run on remount). Keeps display clean regardless of how the dup got in.
+  const items = useMemo(() => dedupeThread(rawItems), [rawItems]);
   const t = useTranslations("chat_thread");
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomAnchorRef = useRef<HTMLDivElement>(null);
