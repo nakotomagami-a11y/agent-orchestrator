@@ -25,7 +25,7 @@ export function AccountsTab() {
           title="Accounts"
           sub="Multiple Claude accounts, one per project. Route customer-sponsored projects to the account that pays for them."
           right={
-            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>
+            <Button variant="primary" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => setAddOpen(true)}>
               <Icon name="plus" size={14} />
               <span className="ml-[6px]">Add account</span>
             </Button>

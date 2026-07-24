@@ -131,6 +131,26 @@
   --error:   #dc2626;
   --thinking:#c2410c;
 
+  /* Code block — light surface + One Light-family syntax palette.
+     Dark theme re-declares all of these below. */
+  --code-bg:          #f6f7f9;
+  --code-fg:          #383a42;
+  --code-head-bg:     rgba(0, 0, 0, 0.03);
+  --code-head-border: rgba(0, 0, 0, 0.07);
+  --code-head-fg:     #5f6773;
+  --code-head-muted:  rgba(0, 0, 0, 0.45);
+  --code-head-faint:  rgba(0, 0, 0, 0.30);
+  --code-cp-border:   rgba(0, 0, 0, 0.14);
+  /* Inline `code` text. A darkened accent so mono file-paths clear WCAG AA
+     (4.5:1) on the light chip — the raw --acc (#7c6af5) only scores ~3.6:1. */
+  --code-inline-fg:   #5b4bd4;
+  --hl-k:  #a626a4;
+  --hl-s:  #50a14f;
+  --hl-c:  #a0a1a7;
+  --hl-n:  #b76b01;
+  --hl-fn: #4078f2;
+  --hl-i:  #986801;
+
   --r-sm: 6px;
   --r-md: 10px;
   --r-lg: 14px;
@@ -220,6 +240,25 @@
   --error:   #ef4444;
   --thinking:#f97316;
   --idle:    #666666;
+
+  /* Code block — dark surface + One Dark-family syntax palette. */
+  --code-bg:          #1c1714;
+  --code-fg:          #e8ddd5;
+  --code-head-bg:     rgba(255, 255, 255, 0.04);
+  --code-head-border: rgba(255, 255, 255, 0.07);
+  --code-head-fg:     #c7bfb7;
+  --code-head-muted:  rgba(255, 255, 255, 0.45);
+  --code-head-faint:  rgba(255, 255, 255, 0.25);
+  --code-cp-border:   rgba(255, 255, 255, 0.12);
+  /* Lighter than --acc so inline code clears AA on the dark chip too
+     (raw #7c6af5 scored ~3.3:1). */
+  --code-inline-fg:   #a78bfa;
+  --hl-k:  #c792ea;
+  --hl-s:  #98c379;
+  --hl-c:  #5c6370;
+  --hl-n:  #f78c6c;
+  --hl-fn: #82aaff;
+  --hl-i:  #e5c07b;
 
   --shadow-window: 0 1px 0 rgba(255,255,255,0.04) inset,
                    0 20px 50px rgba(0,0,0,0.50),
@@ -313,26 +352,29 @@ body {
 .tile-cell.active { border-color: color-mix(in srgb, var(--acc) 30%, transparent); }
 
 
-/* ─── Code block — syntax highlighting for dynamically generated HTML ─── */
-.code-block .hl-k { color: #c792ea; }
-.code-block .hl-s { color: #98c379; }
-.code-block .hl-c { color: #5c6370; font-style: italic; }
-.code-block .hl-n { color: #f78c6c; }
-.code-block .hl-fn{ color: #82aaff; }
-.code-block .hl-i { color: #e5c07b; }
+/* ─── Code block — theme-aware surface + syntax highlighting ─── */
+.code-block { background: var(--code-bg); color: var(--code-fg); }
+.code-block .hl-k { color: var(--hl-k); }
+.code-block .hl-s { color: var(--hl-s); }
+.code-block .hl-c { color: var(--hl-c); font-style: italic; }
+.code-block .hl-n { color: var(--hl-n); }
+.code-block .hl-fn{ color: var(--hl-fn); }
+.code-block .hl-i { color: var(--hl-i); }
 .code-block .head {
   display: flex; align-items: center; gap: 6px;
   padding: 7px 14px;
-  background: rgba(255,255,255,0.04);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  font-size: 11px; color: #C7BFB7;
+  background: var(--code-head-bg);
+  border-bottom: 1px solid var(--code-head-border);
+  font-size: 11px; color: var(--code-head-fg);
 }
 .code-block .head .cp {
   display: inline-flex; align-items: center; gap: 5px;
-  background: transparent; border: 1px solid rgba(255,255,255,0.12);
-  color: #C7BFB7; cursor: pointer; padding: 2px 8px; border-radius: 4px;
+  background: transparent; border: 1px solid var(--code-cp-border);
+  color: var(--code-head-fg); cursor: pointer; padding: 2px 8px; border-radius: 4px;
   font-family: inherit; font-size: 11px;
+  transition: background-color 120ms, color 120ms, border-color 120ms;
 }
+.code-block .head .cp:hover { background: var(--code-head-bg); color: var(--code-fg); }
 
 
 /* ─── Drag-and-drop (color-mix background) ─── */
@@ -803,15 +845,15 @@ html[data-perf="off"] .chat-jump-latest {
 .ao-modal .ao-prose strong { color: var(--ao-fg-0); font-weight: 700; }
 .ao-modal .ao-prose em { color: var(--ao-fg-1); font-style: italic; }
 .ao-modal .ao-prose code {
-  background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px;
-  font-family: var(--ao-font-mono); font-size: 12.5px; color: var(--ao-accent);
+  background: var(--md-inline-bg); padding: 1px 5px; border-radius: 4px;
+  font-family: var(--ao-font-mono); font-size: 12.5px; color: var(--code-inline-fg);
 }
 
 /* ao-codeblock — generated code block HTML */
-.ao-modal .ao-codeblock { margin: 12px 0 14px; border: 1px solid var(--ao-line-1); border-radius: 10px; overflow: hidden; background: #0a0a0f; }
+.ao-modal .ao-codeblock { margin: 12px 0 14px; border: 1px solid var(--ao-line-1); border-radius: 10px; overflow: hidden; background: var(--code-bg); }
 .ao-modal .ao-codeblock .ao-head {
   display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-  background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--ao-line-0);
+  background: var(--code-head-bg); border-bottom: 1px solid var(--code-head-border);
   font-family: var(--ao-font-mono); font-size: 11px; color: var(--ao-fg-2); letter-spacing: 0.04em;
 }
 .ao-modal .ao-codeblock .ao-head .ao-lang { color: var(--ao-fg-1); }
@@ -822,17 +864,17 @@ html[data-perf="off"] .chat-jump-latest {
   border-radius: 5px; color: var(--ao-fg-2); font-size: 11px;
   font-family: var(--ao-font-mono); border: 0; background: transparent; cursor: pointer; padding: 0;
 }
-.ao-modal .ao-codeblock .ao-head .ao-actions button:hover { background: rgba(255,255,255,0.05); color: var(--ao-fg-0); }
+.ao-modal .ao-codeblock .ao-head .ao-actions button:hover { background: var(--code-head-bg); color: var(--ao-fg-0); }
 .ao-modal .ao-codeblock pre {
   margin: 0; padding: 12px 14px; font-family: var(--ao-font-mono);
-  font-size: 12.5px; line-height: 1.6; color: #e2dccf; overflow-x: auto;
+  font-size: 12.5px; line-height: 1.6; color: var(--code-fg); overflow-x: auto;
 }
-.ao-modal .ao-codeblock .tk-key { color: #c792ea; }
-.ao-modal .ao-codeblock .tk-str { color: #c3e88d; }
-.ao-modal .ao-codeblock .tk-com { color: #5c6370; font-style: italic; }
-.ao-modal .ao-codeblock .tk-num { color: #f78c6c; }
-.ao-modal .ao-codeblock .tk-typ { color: #82aaff; }
-.ao-modal .ao-codeblock .tk-fn  { color: #ffcb6b; }
+.ao-modal .ao-codeblock .tk-key { color: var(--hl-k); }
+.ao-modal .ao-codeblock .tk-str { color: var(--hl-s); }
+.ao-modal .ao-codeblock .tk-com { color: var(--hl-c); font-style: italic; }
+.ao-modal .ao-codeblock .tk-num { color: var(--hl-n); }
+.ao-modal .ao-codeblock .tk-typ { color: var(--hl-fn); }
+.ao-modal .ao-codeblock .tk-fn  { color: var(--hl-i); }
 
 /* ao-cursor — streaming cursor */
 .ao-modal .ao-cursor {
@@ -893,10 +935,9 @@ html[data-perf="off"] .chat-jump-latest {
 
 /* ── Roster grouped tree (Sidebar.html reference) ───────────────────────── */
 .ag-row {
-  display: grid;
-  grid-template-columns: 30px 1fr auto;
-  gap: 10px;
+  display: flex;
   align-items: center;
+  gap: 10px;
   padding: 6px;
   border-radius: 8px;
   cursor: pointer;

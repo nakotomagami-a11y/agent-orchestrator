@@ -28,7 +28,7 @@ export function GithubAccountsTab() {
           title="GitHub accounts"
           sub="Route each project's git pushes through the right GitHub identity. Agents inherit the selected account's gh auth, so pushes land on the correct account."
           right={
-            <Button variant="primary" size="sm" onClick={() => setAddOpen(true)}>
+            <Button variant="primary" size="sm" className="shrink-0 whitespace-nowrap" onClick={() => setAddOpen(true)}>
               <Icon name="plus" size={14} />
               <span className="ml-[6px]">Add account</span>
             </Button>

@@ -6,7 +6,7 @@ import { splitProse, escapeHtml, type ProseItem } from "@/lib/markdown";
 
 function inlineMd(s: string): string {
   return escapeHtml(s)
-    .replace(/`([^`]+)`/g, '<code class="px-[3px] py-[1px] rounded-[4px] bg-[rgba(255,255,255,0.08)] text-[#e8ddd5] font-mono text-[0.9em]">$1</code>')
+    .replace(/`([^`]+)`/g, '<code class="px-[4px] py-[1px] rounded-[4px] bg-[var(--md-inline-bg)] text-[var(--code-inline-fg)] font-mono text-[0.9em]">$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
     .replace(/\*([^*]+)\*/g, "<em>$1</em>");
 }

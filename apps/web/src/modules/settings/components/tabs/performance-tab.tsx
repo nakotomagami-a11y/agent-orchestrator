@@ -5,7 +5,6 @@ import {
   usePerformanceStore,
   type PerformanceMode,
 } from "@/lib/performance-store";
-import { CleanupPanel } from "./cleanup-panel";
 
 /**
  * Performance tab of the Settings page. Radio-group control over the
@@ -125,10 +124,6 @@ export function PerformanceTab() {
           );
         })}
       </fieldset>
-
-      <div className="h-px bg-line my-[6px]" role="separator" />
-
-      <CleanupPanel />
     </div>
   );
 }

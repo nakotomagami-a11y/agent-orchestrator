@@ -18,6 +18,19 @@ import {
 
 const LIVE: AgentStatusInfo["status"][] = ["working", "thinking"];
 
+/**
+ * Shared style for the roster row's small hover actions (pin / spawn / remove).
+ * Flat by default — no border, transparent fill — so on the row's hover surface
+ * they read as quiet affordances rather than floating outlined circles (which
+ * looked muddy in dark mode and cheap in light). Colour + a soft tinted fill
+ * only arrive on hover, tuned per action via the token-based classes appended
+ * at each call site. Works on both themes because the tints are translucent.
+ */
+const ROSTER_ACTION_BTN =
+  "w-[22px] h-[22px] rounded-[6px] inline-flex items-center justify-center cursor-pointer " +
+  "transition-[background-color,color] duration-[120ms] " +
+  "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-acc";
+
 function agentLedClass(status: AgentStatusInfo["status"]) {
   return cn(
     "absolute -bottom-[2px] -right-[2px] w-[8px] h-[8px] rounded-full border-[2px] border-bg-2",
@@ -40,13 +53,13 @@ function PinButton({ pinned, onToggle }: { pinned: boolean; onToggle: (e: React.
         onClick={onToggle}
         aria-label={pinned ? "Unpin agent" : "Pin agent to top"}
         className={cn(
-          "w-[20px] h-[20px] rounded-full inline-flex items-center justify-center transition-colors cursor-pointer",
+          ROSTER_ACTION_BTN,
           pinned
-            ? "text-acc bg-acc-faint opacity-100"
-            : "bg-bg-1 border border-line text-txt-3 opacity-0 group-hover:opacity-100 hover:text-acc hover:border-acc",
+            ? "text-acc bg-acc-faint opacity-100 hover:bg-acc-tint"
+            : "text-txt-3 opacity-0 group-hover:opacity-100 hover:bg-acc-faint hover:text-acc",
         )}
       >
-        <Icon name="pin" size={10} />
+        <Icon name="pin" size={11} />
       </button>
     </Tooltip>
   );
@@ -140,7 +153,7 @@ export function RosterGroup({
         aria-expanded={isMulti ? expanded : undefined}
       >
         {/* Avatar + LED */}
-        <div className="relative w-8 h-8">
+        <div className="relative w-8 h-8 shrink-0">
           <AgentAvatar unit={agent.unitChoice} size={40} />
           <span className={agentLedClass(aggregated)} />
         </div>
@@ -177,40 +190,54 @@ export function RosterGroup({
           )}
         </div>
 
-        {/* Hover actions (single-instance mode) — absolutely positioned so
-            they overlay the row instead of reserving grid space and
-            squeezing the name column (mirrors `.ses-actions` on session
-            rows below). */}
+        {/* Hover actions (single-instance mode) — the name owns the full row
+            width and truncates with an ellipsis; these controls are absolutely
+            positioned so they overlay the row's right edge on top of the name
+            instead of reserving flow space and squeezing it. A left-to-right
+            fade mask (row hover colour → transparent) sits behind them so a
+            long, truncated name dissolves cleanly under the buttons rather
+            than bleeding through the gaps. */}
         {!isMulti && (
-          <div className="absolute right-[6px] top-1/2 -translate-y-1/2 flex items-center gap-[3px] z-[2]">
-            {onTogglePin && (
-              <PinButton pinned={pinned} onToggle={(e) => { e.stopPropagation(); onTogglePin(); }} />
-            )}
-            <span className="flex gap-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-[120ms]">
-              <Tooltip content={t("sidebar.spawn_instance_title")} side="top">
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onSpawn(agent.id); }}
-                  aria-label={t("sidebar.spawn_instance_aria", { name: agent.name })}
-                  className="w-[20px] h-[20px] bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 hover:text-acc hover:border-acc transition-colors cursor-pointer"
-                >
-                  <Icon name="plus" size={10} />
-                </button>
-              </Tooltip>
-              {inst && (
-                <Tooltip content={t("sidebar.remove_from_project_title")} side="top">
+          <>
+            <span
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute right-0 top-0 bottom-0 w-[96px] rounded-r-[8px] z-[1]",
+                "bg-gradient-to-l from-[var(--bg-3)] from-55% to-transparent",
+                "opacity-0 transition-opacity duration-[120ms]",
+                "group-hover:opacity-100",
+              )}
+            />
+            <div className="absolute right-[6px] top-1/2 -translate-y-1/2 flex items-center gap-[3px] z-[2]">
+              {onTogglePin && (
+                <PinButton pinned={pinned} onToggle={(e) => { e.stopPropagation(); onTogglePin(); }} />
+              )}
+              <span className="flex gap-[3px] opacity-0 group-hover:opacity-100 transition-opacity duration-[120ms]">
+                <Tooltip content={t("sidebar.spawn_instance_title")} side="top">
                   <button
                     type="button"
-                    onClick={(e) => { e.stopPropagation(); onRemove(inst.instanceId); }}
-                    aria-label={t("sidebar.remove_from_project_aria", { name: agent.name })}
-                    className="w-[20px] h-[20px] bg-bg-1 border border-line rounded-full inline-flex items-center justify-center text-txt-3 hover:text-[var(--error)] hover:border-[var(--error)] transition-colors cursor-pointer"
+                    onClick={(e) => { e.stopPropagation(); onSpawn(agent.id); }}
+                    aria-label={t("sidebar.spawn_instance_aria", { name: agent.name })}
+                    className={cn(ROSTER_ACTION_BTN, "text-txt-3 hover:bg-acc-faint hover:text-acc")}
                   >
-                    <Icon name="x" size={10} />
+                    <Icon name="plus" size={12} />
                   </button>
                 </Tooltip>
-              )}
-            </span>
-          </div>
+                {inst && (
+                  <Tooltip content={t("sidebar.remove_from_project_title")} side="top">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); onRemove(inst.instanceId); }}
+                      aria-label={t("sidebar.remove_from_project_aria", { name: agent.name })}
+                      className={cn(ROSTER_ACTION_BTN, "text-txt-3 hover:bg-[color-mix(in_oklab,var(--error)_16%,transparent)] hover:text-[var(--error)]")}
+                    >
+                      <Icon name="x" size={12} />
+                    </button>
+                  </Tooltip>
+                )}
+              </span>
+            </div>
+          </>
         )}
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import { match } from "ts-pattern";
 import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
@@ -8,61 +8,76 @@ import { CardHeader } from "@/components/ui/card-header";
 import { TextInput } from "@/components/ui/text-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Icon } from "@/components/ui/icon";
-import { Tabs } from "@/components/ui/tabs";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { useScanProjects, useSettings, useWriteSettings } from "../hooks/use-settings";
 import { AboutYouTab } from "./tabs/about-you-tab";
 import { PerformanceTab } from "./tabs/performance-tab";
+import { CleanupPanel } from "./tabs/cleanup-panel";
 import { BundledAgentsTab } from "./tabs/bundled-agents-tab";
+import { SettingsNav, type SettingsTabValue } from "./settings-nav";
 import { AccountsTab } from "@/modules/accounts/components/accounts-tab";
 import { GithubAccountsTab } from "@/modules/github-accounts/components/github-accounts-tab";
 
-type TabValue = "projects" | "accounts" | "github-accounts" | "about-you" | "bundled-agents" | "performance";
+/**
+ * Content column. Everything sits in a single measured column left-aligned
+ * against the nav — 720px for forms/prose, 880px for the account surfaces
+ * that carry the usage table.
+ */
+function SettingsSection({ wide, children }: { wide?: boolean; children: ReactNode }) {
+  return (
+    <div className="flex-1 min-w-0 overflow-auto">
+      <div
+        className={cn(
+          "px-6 py-[20px] flex flex-col gap-[14px]",
+          wide ? "max-w-[880px]" : "max-w-[720px]",
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function SettingsPage() {
   const t = useTranslations();
-  const [tab, setTab] = useState<TabValue>("projects");
+  const [tab, setTab] = useState<SettingsTabValue>("projects");
 
   return (
-    <>
-      <Tabs<TabValue>
-        items={[
-          { value: "projects",        label: t("settings.tab_projects") },
-          { value: "accounts",        label: "Accounts" },
-          { value: "github-accounts", label: "GitHub accounts" },
-          { value: "about-you",       label: t("settings.tab_about_you") },
-          // Not translated — new tabs. Add translation keys later if the
-          // Projects / About You tabs move to a full i18n pass. For now,
-          // the fallback matches the codebase pattern (Settings row uses
-          // `t(...)` but the values in the two existing tabs are also
-          // English literals in `en.json`).
-          { value: "bundled-agents", label: "Bundled agents" },
-          { value: "performance",    label: "Performance" },
-        ]}
-        value={tab}
-        onChange={setTab}
-        ariaLabel={t("settings.tabs_aria")}
-      />
-      <div className="overflow-auto py-[18px] px-6 flex flex-col gap-[14px]">
-        {match(tab)
-          .with("projects",        () => <ProjectsPane />)
-          .with("accounts",        () => <AccountsTab />)
-          .with("github-accounts", () => <GithubAccountsTab />)
-          .with("about-you",       () => <AboutYouTab />)
-          .with("bundled-agents", () => <BundledAgentsTab />)
-          .with("performance",    () => <PerformanceTab />)
-          .exhaustive()}
-      </div>
-    </>
+    <div className="flex-1 min-h-0 flex flex-nowrap max-[640px]:flex-col">
+      <SettingsNav value={tab} onChange={setTab} ariaLabel={t("settings.tabs_aria")} />
+      {match(tab)
+        .with("projects", () => (
+          <SettingsSection><ProjectsPane /></SettingsSection>
+        ))
+        .with("bundled-agents", () => (
+          <SettingsSection><BundledAgentsTab /></SettingsSection>
+        ))
+        .with("accounts", () => (
+          <SettingsSection wide><AccountsTab /></SettingsSection>
+        ))
+        .with("github-accounts", () => (
+          <SettingsSection><GithubAccountsTab /></SettingsSection>
+        ))
+        .with("about-you", () => (
+          <SettingsSection><AboutYouTab /></SettingsSection>
+        ))
+        .with("performance", () => (
+          <SettingsSection><PerformanceTab /></SettingsSection>
+        ))
+        .with("cleanup", () => (
+          <SettingsSection><CleanupPanel /></SettingsSection>
+        ))
+        .exhaustive()}
+    </div>
   );
 }
 
 /**
  * Projects pane — the original single-view settings surface: pick the
  * projects root, manage exclusions, and preview what the scanner picks up.
- * Extracted so the About You tab can sit next to it under a Tabs header
- * without leaking form state across tabs.
+ * Rendered as one entry in the grouped settings nav; kept as its own
+ * component so form state does not leak across nav sections.
  */
 function ProjectsPane() {
   const t = useTranslations();
@@ -183,9 +198,16 @@ function ProjectsPane() {
         <div className="p-4">
           {scanQ.isLoading ? (
             <Skeleton width="100%" height={80} />
+          ) : !scanQ.data || scanQ.data.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-[10px] py-[28px] text-center">
+              <span className="flex items-center justify-center w-[40px] h-[40px] rounded-full bg-bg-2 border border-line text-txt-4">
+                <Icon name="folder" size={18} />
+              </span>
+              <span className="text-[12.5px] text-txt-3 max-w-[320px]">{t("settings.scanned_empty")}</span>
+            </div>
           ) : (
             <ul className="list-none m-0 p-0 flex flex-col gap-1">
-              {(scanQ.data ?? []).map((entry) => (
+              {scanQ.data.map((entry) => (
                 <li
                   key={entry.id}
                   className={cn(
@@ -195,15 +217,12 @@ function ProjectsPane() {
                 >
                   <Icon name="folder" size={13} />
                   <span className="font-medium">{entry.name}</span>
-                  <span className="font-mono text-[11px] text-txt-3">{entry.fullPath}</span>
+                  <span className="font-mono text-[11px] text-txt-3 truncate">{entry.fullPath}</span>
                   {entry.excluded ? (
                     <span className="ml-auto text-[11px] text-txt-4">{t("settings.excluded_badge")}</span>
                   ) : null}
                 </li>
               ))}
-              {!scanQ.data || scanQ.data.length === 0 ? (
-                <span className="text-xs text-txt-3">{t("settings.scanned_empty")}</span>
-              ) : null}
             </ul>
           )}
         </div>
