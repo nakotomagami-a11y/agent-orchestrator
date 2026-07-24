@@ -120,19 +120,26 @@ export function UnitSprite({
   // top of the function (before the placeholder early-return) so React
   // sees the same hook order on every render.
 
-  // Scale so the character bbox fits inside the avatar square (preserving
-  // aspect). The remaining transparent margin is the natural padding.
-  const scale = size / Math.max(def.bbox.w, def.bbox.h);
+  // Scale the character *body* to a consistent visual weight, then feet-anchor.
+  // Weapon-dominated kinds (the Lancer's spear) declare a `sizeMultiplier` so
+  // their body reads at the same size as other units instead of shrinking to
+  // fit the tall spear bbox; the spear then extends above the frame and is
+  // clipped by `overflow-hidden`. For units without a multiplier/groundY this
+  // is mathematically identical to the previous bbox-fit + centre behaviour.
+  const mult = def.sizeMultiplier ?? 1;
+  const scale = (size / Math.max(def.bbox.w, def.bbox.h)) * mult;
   const frameW = def.frameW * scale;
   const sheetW = frameW * sheet.frames;
   const sheetH = def.frameH * scale;
 
-  // Centre the bbox inside the square; some kinds (Lancer) are tall+narrow so
-  // they'll have horizontal slack, while Pawn-style sprites fit edge-to-edge.
-  const padX = (size - def.bbox.w * scale) / 2;
-  const padY = (size - def.bbox.h * scale) / 2;
-  const offX = padX - (def.bbox.x * scale + frame * frameW);
-  const offY = padY - def.bbox.y * scale;
+  // Horizontal: centre the character body (bbox centre) in the square.
+  const bodyCenterX = def.bbox.x + def.bbox.w / 2;
+  // Vertical: stand the feet (`groundY`, falling back to the bbox bottom) on
+  // the avatar baseline so every unit shares a ground line regardless of the
+  // weapon extent above.
+  const groundY = def.groundY ?? def.bbox.y + def.bbox.h;
+  const offX = size / 2 - bodyCenterX * scale - frame * frameW;
+  const offY = size - groundY * scale;
 
   const ariaProps = label
     ? { role: "img" as const, "aria-label": label }
