@@ -116,17 +116,3 @@ export async function clearTranscript(key: string): Promise<void> {
     await apiClient.delete(API_ROUTES.transcripts, { params: { agentId, instanceId } });
   } catch { /* best-effort */ }
 }
-
-export async function listAgentTranscripts(
-  agentId: string,
-): Promise<Array<{ instanceId: string; sessionId: string | null; updatedAt: number }>> {
-  try {
-    const res = await apiClient.get<Array<{ instanceId: string; sessionId: string | null; updatedAt: number }>>(
-      API_ROUTES.transcripts,
-      { params: { agentId } },
-    );
-    return Array.isArray(res.data) ? res.data : [];
-  } catch {
-    return [];
-  }
-}

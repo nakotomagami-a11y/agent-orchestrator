@@ -206,11 +206,6 @@ export function subscribeToRunStream(
   };
 }
 
-/** Read the current state without subscribing. */
-export function readRunStreamState(runId: string): RunStreamState {
-  return registry.get(runId)?.state ?? INITIAL_STREAM_STATE;
-}
-
 /**
  * Force-close and re-open the EventSource for `runId`. No-op if the run is
  * absent from the registry — usually because subscription hasn't happened
@@ -222,17 +217,4 @@ export function reconnectRunStream(runId: string): void {
   entry.cleanupHandlers();
   entry.retryCount = 0;
   attachSource(entry);
-}
-
-/**
- * Explicit disposal — closes the socket and forgets state. Called by tests
- * or the `new thread` flow; normal tab-close does NOT dispose the entry so
- * a returning subscriber gets the final state.
- */
-export function disposeRunStream(runId: string): void {
-  const entry = registry.get(runId);
-  if (!entry) return;
-  entry.cleanupHandlers();
-  entry.source?.close();
-  registry.delete(runId);
 }

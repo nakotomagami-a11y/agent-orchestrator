@@ -285,11 +285,3 @@ export function useTabsHydration(): void {
     hydrate();
   }, [hydrate]);
 }
-
-/** Convenience selector for the currently-active tab, or null if none open. */
-export function useActiveTab(): Tab | null {
-  return useTabsStore((s) => {
-    if (!s.activeTabId) return null;
-    return s.tabs.find((t) => t.id === s.activeTabId) ?? null;
-  });
-}

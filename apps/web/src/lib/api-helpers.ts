@@ -150,9 +150,3 @@ export function handleDeleteUpload(dir: string, filename: string): NextResponse 
   rmSync(path);
   return NextResponse.json({ deleted: safe });
 }
-
-export function cachedJson(data: unknown, maxAgeSeconds: number): NextResponse {
-  const res = NextResponse.json(data);
-  res.headers.set("Cache-Control", `private, max-age=${maxAgeSeconds}`);
-  return res;
-}

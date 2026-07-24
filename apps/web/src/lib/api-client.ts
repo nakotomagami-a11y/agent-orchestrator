@@ -12,7 +12,7 @@
  * keep working regardless of which transport made the call.
  */
 
-import axios, { type AxiosError, type AxiosRequestConfig } from "axios";
+import axios, { type AxiosError } from "axios";
 import { ApiError } from "@agent-office/domain/hooks/api";
 
 export { ApiError };
@@ -54,9 +54,3 @@ apiClient.interceptors.response.use(
     throw new ApiError(res.status, message, fieldsFrom(raw), data);
   },
 );
-
-/** Thin helper for api modules that only want the parsed response body. */
-export async function apiRequest<T>(config: AxiosRequestConfig): Promise<T> {
-  const res = await apiClient.request<T>(config);
-  return res.data;
-}

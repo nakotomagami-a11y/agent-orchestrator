@@ -50,17 +50,3 @@ export function useRecordWorkflowUsage() {
     },
   });
 }
-
-export function useBulkInsertWorkflows() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (workflows: Array<{ title: string; body: string; category: string }>) =>
-      apiFetch<{ inserted: number }>(API_ROUTES.workflowsBulk, {
-        method: "POST",
-        body: { workflows },
-      }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: queryKeys.workflows.all });
-    },
-  });
-}

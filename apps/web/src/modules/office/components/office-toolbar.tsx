@@ -2,19 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { ActionBar } from "@/components/ui/action-bar";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ProjectChip } from "@/modules/projects/components/project-chip";
 import { cn } from "@/lib/cn";
 import { useActiveProjectStore } from "@/lib/active-project-store";
-import { useProject, useGitStatus } from "@/modules/projects/hooks/use-projects";
+import { useProject } from "@/modules/projects/hooks/use-projects";
 import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
 import { useFlutterStore } from "@/lib/flutter-store";
 import { useFlutterDevices } from "@/modules/flutter/hooks/use-flutter-devices";
 import { useDevServerStore } from "@/lib/dev-server-store";
-import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import {
   getDevConfig,
   startDevCommand,
@@ -25,7 +23,6 @@ import {
   openProjectFolder,
 } from "@/lib/api/dev-server";
 import { listProcesses, getProcess, killProcess } from "@/lib/api/processes";
-import { abortAllRuns, listRuns } from "@/lib/api/runs-ops";
 
 // Shared compact button style for all toolbar action buttons
 const TBTN = "inline-flex items-center gap-[5px] px-[9px] h-[30px] rounded-[7px] text-[12px] text-txt-2 border border-transparent hover:bg-bg-3 hover:text-txt transition-[background,color,border-color] duration-[120ms] cursor-pointer select-none shrink-0";
@@ -331,66 +328,6 @@ export function OpenInVSCodeButton({ projectId }: { projectId: string }) {
       <button type="button" className={TBTN}
         onClick={() => { void openProjectFolder(projectId, "code"); }}>
         <Icon name="code" size={13} />
-      </button>
-    </Tooltip>
-  );
-}
-
-export function GitStatusButton({ projectId }: { projectId: string }) {
-  const router = useRouter();
-  const gitQ = useGitStatus(projectId, true);
-  const git = gitQ.data;
-  if (!git?.isGit || !git.branch) return null;
-  const dirty = git.filesChanged > 0;
-  const tip = [
-    `Branch: ${git.branch}`,
-    dirty ? `${git.filesChanged} changed, +${git.added} -${git.removed}` : "clean",
-    git.ahead ? `${git.ahead} ahead` : "",
-    git.behind ? `${git.behind} behind` : "",
-  ].filter(Boolean).join(" · ");
-
-  return (
-    <Tooltip content={tip} side="bottom">
-      <button
-        type="button"
-        className={cn(TBTN, dirty ? "text-[var(--acc-2)]" : "")}
-        onClick={() => router.push(PAGE_ROUTES.project(projectId))}
-      >
-        <Icon name="branch" size={12} />
-        <span className="font-mono">{git.branch}</span>
-        {dirty && <span className="text-[10.5px] font-mono text-txt-4">·{git.filesChanged}</span>}
-        {git.ahead > 0 && <span className="text-[10.5px] font-mono text-[var(--ok)]">↑{git.ahead}</span>}
-        {git.behind > 0 && <span className="text-[10.5px] font-mono text-yellow-400">↓{git.behind}</span>}
-      </button>
-    </Tooltip>
-  );
-}
-
-export function KillAgentsButton({ projectId }: { projectId: string }) {
-  const countQ = useQuery({
-    queryKey: ["project-running-count", projectId],
-    queryFn: () =>
-      listRuns({ project: projectId, limit: 100 })
-        .then((rs) => rs.filter((r) => r.status === "running").length),
-    refetchInterval: 4000,
-    staleTime: 2000,
-  });
-  const count = countQ.data ?? 0;
-  if (count === 0) return null;
-
-  async function killAll() {
-    await abortAllRuns(projectId);
-  }
-
-  return (
-    <Tooltip content={`Stop all ${count} running agent${count !== 1 ? "s" : ""}`} side="bottom">
-      <button
-        type="button"
-        className={cn(TBTN, "text-[var(--error)] hover:bg-[color-mix(in_srgb,var(--error)_12%,transparent)] hover:text-[var(--error)] hover:border-[color-mix(in_srgb,var(--error)_25%,transparent)]")}
-        onClick={() => { void killAll(); }}
-      >
-        <Icon name="stop" size={11} />
-        Stop {count}
       </button>
     </Tooltip>
   );

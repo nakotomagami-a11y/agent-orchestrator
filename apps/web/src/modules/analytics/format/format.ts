@@ -34,10 +34,6 @@ export function duration(ms: number): string {
   return `${Math.round(h)}h`;
 }
 
-export function pct(n: number, digits = 0): string {
-  return `${n.toFixed(digits)}%`;
-}
-
 /** `+18%` / `−36%` / `—` when there's no baseline to compare against. */
 export function delta(now: number, prev: number): { text: string; dir: "up" | "down" | "flat" } {
   if (prev === 0) return { text: now === 0 ? "—" : "new", dir: "flat" };
