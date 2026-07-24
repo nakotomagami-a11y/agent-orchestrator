@@ -15,3 +15,26 @@ export function elapsedSince(ts: number): string {
   const rem = s % 60;
   return `${m}m ${rem}s`;
 }
+
+export function todayIso(): string {
+  return isoDay(Date.now());
+}
+
+export function yesterdayIso(): string {
+  return isoDay(Date.now() - 86_400_000);
+}
+
+export interface Delta {
+  text: string;
+  cls: "" | "neg" | "flat";
+}
+
+export function formatDelta(cur: number, ref: number): Delta {
+  if (ref === 0) return { text: "-", cls: "flat" };
+  const pct = Math.round((100 * (cur - ref)) / ref);
+  if (pct === 0) return { text: "no change vs yesterday", cls: "flat" };
+  return {
+    text: `${pct > 0 ? "↑" : "↓"} ${Math.abs(pct)}% vs yesterday`,
+    cls: pct > 0 ? "" : "neg",
+  };
+}

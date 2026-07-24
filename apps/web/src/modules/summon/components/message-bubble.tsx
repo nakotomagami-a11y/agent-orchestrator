@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { match } from "ts-pattern";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../format/thread-types";
 import { Icon } from "@/components/ui/icon";
@@ -396,7 +397,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       const youText = stripAttachmentFooter(item.text);
       return (
         <div className="flex flex-row-reverse self-end max-w-[80%] gap-[12px] relative group/msg min-w-0">
-          <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
+          <UserAvatar size={60} className="shrink-0" />
           <div className="flex flex-col items-end min-w-0 flex-1">
             <div className="bg-ao-bg-3 border border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere] max-w-full">
               {youText}

@@ -84,7 +84,11 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     frameH: 192,
     idle: { frames: 8 },
     run: { frames: 6 },
-    bbox: { x: 56, y: 56, w: 80, h: 112 },
+    // Pixel-verified across every idle + run frame (native 192x192): content
+    // spans y:46-136, x:53-145. The old shared {56,56,80,112} box put the top
+    // 10px below the head's actual highest point, so the head clipped
+    // against `overflow-hidden` on the idle sway frames.
+    bbox: { x: 53, y: 46, w: 92, h: 90 },
     label: "Warrior",
   },
   archer: {
@@ -92,7 +96,9 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     frameH: 192,
     idle: { frames: 6 },
     run: { frames: 4 },
-    bbox: { x: 56, y: 56, w: 80, h: 112 },
+    // Pixel-verified across every idle + run frame: content spans y:46-135,
+    // x:56-129 — same head-clipping issue as warrior, same fix.
+    bbox: { x: 56, y: 46, w: 73, h: 89 },
     label: "Archer",
   },
   monk: {
@@ -108,9 +114,19 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     frameH: 320,
     idle: { frames: 12 },
     run: { frames: 6 },
-    bbox: { x: 96, y: 24, w: 128, h: 272 },
+    // bbox.x/w are pixel-verified to the character's body only (helmet to
+    // boots, x:128-183 in the native 320x320 frame) so `bodyCenterX` centres
+    // on the human, not the spear. bbox.h stays the old spear-inflated value
+    // (272, not the body's true ~72px) so `scale` derives from it; combined
+    // with sizeMultiplier below, this fills the tile at roughly the same
+    // visual weight as warrior/archer instead of reading tiny and off-centre.
+    bbox: { x: 128, y: 24, w: 55, h: 272 },
     label: "Lancer",
-    sizeMultiplier: 2.5,
+    // 2.5 read too small next to the other units (body filled ~66% of the
+    // tile height vs ~80% for warrior/archer) - 3.0 matches their weight and
+    // still leaves the spear tip poking over the top edge, clipped by
+    // `overflow-hidden`, which is the intended look.
+    sizeMultiplier: 3.0,
     groundY: 185,
   },
 };

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { ExpandedStateContext, MessageBubble, ToolGroupRow } from "./message-bubble";
 import { LiveStatus, type ChatPhase } from "./live-status";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
@@ -346,7 +347,7 @@ export function ChatThread({ items, agent, onPickSuggestion, onSubmit, onRepairW
             <div className="max-w-[760px] mx-auto px-2 mt-5 flex flex-col gap-3">
               {queuedMessages.map((q, i) => (
                 <div key={q.id} className="flex flex-row-reverse ml-auto w-fit max-w-[80%] gap-[12px] relative opacity-[0.55]">
-                  <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[12px] text-white border border-white/[0.08] bg-[linear-gradient(135deg,#d6336c_0%,#b21e5d_100%)] font-[var(--ao-font-sans)]" aria-hidden>P</div>
+                  <UserAvatar size={60} className="shrink-0" />
                   <div className="flex flex-col items-end gap-[6px]">
                     <div className="bg-ao-bg-3 border border-dashed border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0">{q.text}</div>
                     <div className="flex items-center gap-[6px]">

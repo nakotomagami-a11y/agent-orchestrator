@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { NavItem } from "./nav-item";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { isActiveRoute } from "./sidebar-routing";
 import { Icon } from "@/components/ui/icon";
@@ -425,9 +426,7 @@ function SidebarFoot({ spendToday }: { spendToday: number }) {
         aria-label={t("common.open_settings")}
         aria-expanded={open}
       >
-        <div className="w-[30px] h-[30px] rounded-full flex items-center justify-center text-white font-bold text-[12px] [background:linear-gradient(135deg,#5c4bb8,#7c6af5)] shrink-0" aria-hidden>
-          P
-        </div>
+        <UserAvatar size={60} className="shrink-0" />
         <div className="min-w-0 max-[1024px]:hidden">
           <div className="text-[12px] font-medium">{t("sidebar.me_name")}</div>
           <div className="text-[10.5px] text-txt-3 font-[var(--font-mono)]">{t("sidebar.me_sub")}</div>

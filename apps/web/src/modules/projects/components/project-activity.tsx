@@ -104,10 +104,10 @@ function RunRow({ run, onOpen }: { run: PersistedRun; onOpen: () => void }) {
     >
       <div
         className="grid gap-3 items-center px-[18px] py-[11px] border-b border-line"
-        style={{ gridTemplateColumns: "32px 1fr auto auto" }}
+        style={{ gridTemplateColumns: "64px 1fr auto auto" }}
       >
-        <div className="w-8 h-8" aria-hidden>
-          <UnitSprite unit={unit} size={32} animate />
+        <div className="w-16 h-16" aria-hidden>
+          <UnitSprite unit={unit} size={64} animate />
         </div>
         <div className="min-w-0">
           <div className="text-[13px] font-semibold flex items-center gap-1.5">

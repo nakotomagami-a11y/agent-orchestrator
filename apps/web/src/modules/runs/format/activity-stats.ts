@@ -58,3 +58,49 @@ export function classifyHeatmapLevel(v: number, max: number): "" | "l1" | "l2" |
   if (r < 0.8) return "l3";
   return "l4";
 }
+
+export function buildSuccessSpark(runs: PersistedRun[]): number[] {
+  return Array.from({ length: 14 }, (_, i) => {
+    const d = new Date(Date.now() - (13 - i) * 86_400_000);
+    d.setHours(0, 0, 0, 0);
+    const key = d.toISOString().slice(0, 10);
+    const dayRuns = runs.filter((r) => isoDay(r.ts) === key);
+    if (dayRuns.length === 0) return 100;
+    return Math.round(
+      (100 * dayRuns.filter((r) => r.status === "done").length) / dayRuns.length,
+    );
+  });
+}
+
+export function buildSparkGeometry(
+  data: number[],
+  width: number,
+  height: number,
+): { path: string; area: string } {
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = Math.max(max - min, 0.0001);
+  const stepX = width / Math.max(data.length - 1, 1);
+  const pts = data.map((v, i) => {
+    const x = i * stepX;
+    const y = height - ((v - min) / range) * (height - 4) - 2;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return {
+    path: `M ${pts[0]} L ${pts.slice(1).join(" ")}`,
+    area: `M 0,${height} L ${pts.join(" ")} L ${width},${height} Z`,
+  };
+}
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+export function buildHeatmapDayLabels(): string[] {
+  const now = new Date();
+  const days: string[] = [];
+  for (let d = 6; d >= 0; d--) {
+    const dt = new Date(now);
+    dt.setDate(dt.getDate() - d);
+    days.push(WEEKDAYS[dt.getDay()] ?? "Mon");
+  }
+  return days;
+}

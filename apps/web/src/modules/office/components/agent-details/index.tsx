@@ -16,6 +16,7 @@ import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useRegisterModal } from "@/lib/modal-manager";
 import { useProject, useAddInstance, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { UnitSprite } from "@/components/ui/unit-sprite";
 import { AgentStrip } from "./agent-strip";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
@@ -437,7 +438,7 @@ export function AgentDetailsModal() {
           {/* ── Agent header ── */}
           <div className="flex items-center gap-[14px] px-6 h-[84px] border-b border-ao-line-1 bg-gradient-to-b from-white/[0.015] to-transparent shrink-0">
             <div className="relative shrink-0 w-[40px] h-[70px] flex items-center justify-center">
-              <AgentAvatar unit={agent.unitChoice} size={70} label={agent.name} />
+              <UnitSprite unit={agent.unitChoice} size={70} label={agent.name} animate />
               <span className={`absolute right-[-2px] bottom-0 mb-2 w-[12px] h-[12px] rounded-full border-2 border-[var(--ao-bg-1)] ${
                 isWorking
                   ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]"
