@@ -1,7 +1,7 @@
 ---
 name: web-researcher
 description: "Fetches and summarizes live web data on demand. Returns structured findings with source citations. No analysis — just clean, cited facts for other agents to reason on."
-default-model: claude-haiku-4-5
+default-model: haiku
 default-effort: low
 skills: []
 tools: [WebSearch, WebFetch, Read]

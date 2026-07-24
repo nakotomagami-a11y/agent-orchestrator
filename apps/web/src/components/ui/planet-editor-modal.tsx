@@ -30,7 +30,7 @@ interface PlanetEditorModalProps {
 
 const PLANET_TYPES: PlanetType[] = ["gas-giant", "rocky", "dry", "terran", "ice", "islands", "lava", "black-hole", "galaxy", "star", "asteroid"];
 
-const DEFAULT_PIXELS = 50;
+const DEFAULT_PIXELS = 1000;
 const PREVIEW_SIZES = [168, 96, 54] as const;
 const PREVIEW_LABELS = ["Detail", "List", "Nav"] as const;
 

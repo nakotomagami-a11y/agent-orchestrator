@@ -1,7 +1,184 @@
 # Next session — agent-office
 
-Last updated: 2026-07-20 (multi-account 5 slices built + **phantom-run-failure
-bugfix**, both awaiting user test + commit)
+Last updated: 2026-07-24 (developer-lite: added "open conversation" button
+on Activity page LIVE NOW rows, see "2026-07-24 — developer-lite session
+(open-conversation button on live rows)" directly below. Older handoffs
+unchanged beneath it.)
+
+## 2026-07-24 — developer-lite session (open-conversation button on live rows)
+
+**Ask:** the Activity page "LIVE NOW" run cards (`LiveStrip` in
+`activity-feed.tsx`) only had a chevron button linking to the run detail
+page (`PAGE_ROUTES.run`) — no way to jump straight into the agent
+conversation modal for a live run.
+
+**Fix:** mirrored the existing pattern already used by `FeedRow`'s
+"Branch from here" button (and `agent-list.tsx`) — `useOfficeStore((s) =>
+s.select)` then `select(agentId, { tab: "conversation", instanceId })`
+opens the agent details modal straight to the conversation tab. Added a
+second ghost `Button` (icon `terminal`, title "Open conversation") next to
+the existing "Open run" chevron button in each live-run row. Bumped
+`gridTemplateColumns` from 6 to 7 `auto` slots to fit it. No icon for
+"chat/message" exists in `icon.tsx`, used `terminal` as the closest
+existing analog (already used elsewhere for agent/process-adjacent UI).
+
+**Verified:**
+- `cd apps/web && npx tsc --noEmit` → exit 0.
+- `npx eslint src/modules/runs/components/activity-feed.tsx` → 0 errors,
+  7 pre-existing `max-lines-per-function`/`max-lines` warnings (file was
+  already over these limits before my edit; `LiveStrip` grew from 50→61
+  lines but no new warning category introduced).
+- Read the diff back — change is isolated to `LiveStrip`: one new
+  `selectAgent` binding, one grid-column slot, one new `Button`. Did not
+  touch the unrelated in-progress `expandedDays`/"Show N more" pagination
+  work that was already uncommitted in this file from a prior/parallel
+  session — left it untouched.
+
+**Not done:** did not start a dev server to click through it (out of
+scope for developer-lite). Worth a quick manual check: Activity page →
+LIVE NOW row → click the new terminal-icon button → agent conversation
+modal opens on the right instance.
+
+---
+
+Previous handoff:
+
+## 2026-07-24 — developer-lite session (activity progress bar removal)
+
+**Ask:** the "LIVE NOW" run cards on the Activity page show a thin
+progress bar at the bottom that "makes no sense" — agent runs have no
+determinate progress, so a progress bar is misleading. Remove it.
+
+**Root cause:** `.act-live-run::before` in `apps/web/src/app/globals.css`
+rendered a bottom bar with `width: var(--progress, 60%)`. The `--progress`
+CSS var was never set anywhere in the codebase (grepped, zero hits in
+JS/TS) — it was always falling back to the hardcoded `60%` default. Pure
+decoration with no real data behind it.
+
+**Fix (one file, one rule removed):** deleted the `.act-live-run::before`
+block entirely from `globals.css`. Left `.act-live-run` itself (the card
+background/border) untouched. No JS/TSX changes needed — nothing
+references `--progress` or relies on the pseudo-element.
+
+**Verified:**
+- `grep -rn "act-live-run"` after the edit — only the base class remains
+  in CSS, and the one `className="act-live-run"` usage in
+  `apps/web/src/modules/runs/components/activity-feed.tsx` (unaffected,
+  still valid).
+- `cd apps/web && npx tsc --noEmit` → exit 0, no errors.
+- Did not start a dev server to eyeball it (out of scope for
+  developer-lite: never restart dev servers). Pure CSS deletion, low risk.
+
+---
+
+Previous handoff:
+
+Last updated: 2026-07-24 (developer: per-tab modal/conversation restore, see
+"2026-07-24 — developer session" directly below. Older handoffs unchanged
+beneath it.)
+
+## 2026-07-24 — developer session (per-tab modal state on tab switch)
+
+**Ask:** switching project tabs should restore whatever agent conversation /
+modal was open in that tab — "feel like a browser".
+
+**Root cause:** tabs already persist the full path incl. `?modal=agent&…` in
+`tab.currentPath` (`tabs-router-sync.tsx`) and chat content survives remounts
+(`chat-state-registry.ts`). But the "which modal is open" state is a *global*
+store (`use-office-store.ts`) and `ModalUrlSync` only copied URL→store **once
+on mount** (deps `[]`). So a tab switch pushed the new URL but never reopened
+the modal, and the store→URL effect rewrote the URL back to the old selection.
+
+**Fix (one file):** `apps/web/src/components/modal-url-sync.tsx` — replaced the
+two one-directional effects with a single bidirectional reconciler. Derives a
+canonical `modalKey()` for both URL and store; whichever side changed since the
+last render drives, the other follows; equal keys → no-op (kills the loop).
+Covers all three modals: agent conversation, processes, compare. Applies to
+agent-modal `activeTab` directly (not just `pendingTab`) so it settles in one
+pass.
+
+**Verified:** `tsc --noEmit` clean for this file; eslint 0 errors (1
+`max-lines-per-function` warning on `ModalUrlSync`, cosmetic — left as-is).
+NOTE: `tsc` currently reports unrelated errors in
+`modules/runs/components/activity-feed.tsx` (`expandedDays` unused) — that's a
+separate in-progress user edit, not from this session.
+
+**Not manually clicked through** (dev server on :3000 is the user's — did not
+touch it). Behaviour reasoned from code; worth a quick manual: open Developer
+convo in project A tab, open a different modal/convo in project B tab, alt-tab
+between them and confirm each restores.
+
+---
+
+Previous handoff:
+
+Last updated: 2026-07-24 (developer-lite: two light-mode contrast/styling
+fixes, see "2026-07-24 — developer-lite session" section below. Everything
+under this notice is the previous 2026-07-20 handoff, unchanged.)
+
+## 2026-07-24 — developer-lite session (two small light-mode fixes)
+
+**Files touched:**
+- `apps/web/src/app/globals.css` — `.hero-title-shadow` rule (~line 260),
+  edited in worktree `.worktrees/developer-lite-tu4vle0` (stale, on commit
+  `5dc1070`, BEHIND `main` `e0b29df` at time of edit — **needs merging
+  forward onto main**, don't assume it's live).
+- `apps/web/src/modules/office/components/agent-details/agent-strip.tsx`
+  (main repo directly, this file only exists on main / post-refactor —
+  the stale worktree above still has the old pre-`AgentStrip` inline code).
+
+**Fix 1 — hero title shadow too heavy in light mode:**
+Project hero title (`project-detail.tsx`, `.hero-title-shadow` class) had
+one fixed heavy black text-shadow meant to keep the title legible over a
+bleeding planet-ring/black-hole glow in dark mode. In light mode it looked
+like a smudge. Split into a soft low-opacity default (light) and moved the
+original heavy shadow under `[data-theme="dark"] .hero-title-shadow`
+(mirrors the existing `[data-theme="dark"]` override convention already
+used for `--shadow-window` in the same file).
+
+**Fix 2 — agent-strip multi-instance flyout low contrast + design mismatch:**
+User reported: in the "conversation with agent" modal's left agent strip,
+hovering a multi-instance agent (2+ instances) shows a custom flyout
+(`AgentStrip` → `StripBubble`, not the shared `Tooltip` component) whose
+uppercase header text was `text-white/45` on a `#1c1714` dark box — real
+low contrast, and visually inconsistent vs. the single-instance case which
+uses the shared `Tooltip` (`text-white`, full opacity). Bumped the header
+to `text-white/65`. Left the `#N` (`white/90`) and instance-label
+(`white/70`) rows alone — those already have reasonable contrast.
+
+**Not done / flagged as out of scope for developer-lite:**
+The user also asked about a broader "difference between tooltip designs"
+(single-instance plain-name `Tooltip` vs. multi-instance custom
+`StripBubble` flyout with header + list). Full unification into one shared
+component would be a design/refactor judgment call — didn't do this, only
+fixed the concrete contrast bug. If the user wants one shared tooltip
+component for both cases, that's a `developer` (senior) dispatch.
+
+**Verification done:**
+- Read both files before editing.
+- `cd apps/web && npx tsc --noEmit` → exit 0, no errors, after the
+  `agent-strip.tsx` change.
+- Did NOT run a full `next build` for the globals.css change (pure CSS,
+  and that worktree is stale vs main anyway).
+- Could not fully confirm the exact visual contrast in a live browser —
+  no dev server was started (out of scope for developer-lite: "do not
+  restart dev servers"). Diagnosis is based on reading the actual
+  Tailwind classes and computing contrast, plus a zoomed crop of the
+  user's screenshot.
+
+**Gotchas:**
+- Multiple stale/parallel worktrees exist under `.worktrees/*` — always
+  `git log -1` / diff vs `main` before trusting a file's state matches
+  what's actually live in the app. The `developer-lite-tu4vle0` worktree
+  in particular predates the `AgentStrip` extraction refactor entirely.
+- **This file (`NEXT_SESSION.md`) was previously clobbered mid-session by
+  an earlier `cat > NEXT_SESSION.md` heredoc that overwrote the 928-line
+  2026-07-20 handoff with a 27-line note, bypassing the Read-before-Write
+  guard rail (heredocs via Bash don't go through the Edit/Write tool's
+  safety check). Restored from git history (`git show HEAD:NEXT_SESSION.md`)
+  and re-added as this section instead. **Always use the Write tool (which
+  enforces read-before-write) or Edit tool for this file, never a raw
+  shell heredoc.**
 
 ## Required reading (in order, every session)
 
@@ -926,3 +1103,21 @@ Note: the CLI on this machine can self-complete login via the OS keychain
 Gotcha: the previous task's project-scoped status edit in
 `office/components/agent-details/index.tsx` appears to have been reverted by a
 linter/user between sessions — re-check if that behavior is wanted.
+
+---
+
+## 2026-07-24 — light-mode title shadow + planet default 1000px
+
+- `globals.css` `.hero-title-shadow`: was a heavy black text-shadow (fine on
+  dark, muddy blur on light). Now base = soft white halo; the black shadow is
+  scoped to `[data-theme="dark"]`.
+- `planet-editor-modal.tsx` `DEFAULT_PIXELS` 50 → 1000 (slider max was already
+  1000, zod `validation-schemas.ts` already allows max 1000).
+- Updated all existing projects on disk: `sed` set every `planet.pixels` line
+  in `~/.claude/projects/*/project.md` to 1000 (21 files; were 13×50, 2×300).
+- `types/index.ts` PlanetConfig.pixels comment updated (10-1000, default 1000).
+- Left `packages/pixel-planets/src/params.ts` render fallback at 50 on purpose
+  (generic package default for planets with no pixels field, e.g. avatars) —
+  changing it globally risks perf regressions unrelated to the ask.
+
+Verified: web `tsc --noEmit` exit 0; all 21 project.md now `pixels: 1000`.

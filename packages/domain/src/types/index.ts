@@ -144,7 +144,7 @@ export interface PlanetConfig {
   type: PlanetType;
   seed: number;
   paletteIdx: number;
-  pixels?: number;   // logical pixel density 10-300, default 50
+  pixels?: number;   // logical pixel density 10-1000, editor default 1000
   rotation?: number; // radians, default derived from seed
   dither?: boolean;  // dither mode, default true
   customPalette?: [number, number, number][][]; // per-layer color overrides (RGB 0-1)

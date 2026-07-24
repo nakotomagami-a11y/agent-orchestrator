@@ -28,6 +28,7 @@ One-liner: _replace this with a sentence-long description of what the app does a
 7. **Server state goes through TanStack Query.** No raw `fetch` calls in components or hooks. Every endpoint is a function in an API module under `src/lib/api/` (axios); URLs come from a central routes config, never hardcoded inline.
 8. **`match()` over `switch`/`if-else` chains.** Use ts-pattern for any branch driven by a value (discriminated union, status, key). Prefer `.exhaustive()`.
 9. **Split logic from markup.** `.tsx` files are for JSX. Pure helpers (formatting, parsing, grouping, classification) go in `src/<module>/utils/`; stateful/derived logic (a `useState`+`useMemo` cluster, data wiring, mutations) goes in a `use-<name>` hook. A component should read as: call a hook, map the result, render. Never declare a module-scope `function foo()` or a fat `reduce`/`filter`/`for` block inside a component file — extract it. Reuse an existing util before writing a near-duplicate. See `docs/component-conventions.md`.
+10. **No CSS Grid. Use Flexbox for all layouts.** `grid`, `grid-cols-*`, `grid-rows-*`, `grid-template-*` are banned. Every layout — page shells, card decks, forms, dashboards, everything — is built with `flex` + `flex-wrap` + gap utilities. Grid consistently produces subtle alignment and sizing bugs in this codebase; flex is the house standard. If you think you need grid, you don't — reach for `flex` with `basis-*` / `w-*` / `flex-1` instead.
 
 ## Before you change X, read Y
 

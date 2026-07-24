@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Icon } from "@/components/ui/icon";
@@ -97,6 +97,13 @@ function Spark({
 // ── LiveStrip ─────────────────────────────────────────────────────────────────
 
 function LiveStrip({ runs }: { runs: PersistedRun[] }) {
+  const selectAgent = useOfficeStore((s) => s.select);
+  const [, tick] = useState(0);
+  useEffect(() => {
+    if (runs.length === 0) return;
+    const id = setInterval(() => tick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [runs.length]);
   if (runs.length === 0) return null;
   return (
     <section className="flex flex-col gap-[8px]">
@@ -113,7 +120,7 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
         <div
           key={r.id}
           className="act-live-run"
-          style={{ gridTemplateColumns: "30px minmax(0,1fr) auto auto auto auto" }}
+          style={{ gridTemplateColumns: "30px minmax(0,1fr) auto auto auto auto auto" }}
         >
           <div className="flex items-center justify-center shrink-0 bg-bg-3 border border-line uppercase font-bold text-txt-2 w-[28px] h-[28px] rounded-[6px] text-[14px] font-[var(--font-mono)]">{agentInitial(r.agentName)}</div>
           <div className="min-w-0">
@@ -134,7 +141,15 @@ function LiveStrip({ runs }: { runs: PersistedRun[] }) {
           <span className="text-txt-2 whitespace-nowrap font-[var(--font-mono)] text-[11px]">
             {fmtTok(r.tokensIn + r.tokensOut)} tok · {formatCost(r.cost)}
           </span>
-          <Button href={PAGE_ROUTES.run(r.id)} variant="ghost" size="sm">
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Open conversation"
+            onClick={() => selectAgent(r.agentId, { tab: "conversation", instanceId: r.instanceId ?? null })}
+          >
+            <Icon name="terminal" size={12} />
+          </Button>
+          <Button href={PAGE_ROUTES.run(r.id)} variant="ghost" size="sm" title="Open run">
             <Icon name="chevron" size={12} />
           </Button>
         </div>
@@ -570,6 +585,7 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
     statuses: [],
   });
   const [openId, setOpenId] = useState<string | null>(null);
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
 
   const { data: allRuns = [], isLoading } = useRuns({
     agentId,
@@ -692,7 +708,7 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
                       {formatCost(dayCost)} · {fmtTok(dayTok)} tok
                     </span>
                   </div>
-                  {g.runs.map((r) => (
+                  {(expandedDays.has(g.day) ? g.runs : g.runs.slice(0, 10)).map((r) => (
                     <FeedRow
                       key={r.id}
                       run={r}
@@ -703,6 +719,24 @@ export function ActivityFeed({ agentId, projectId }: ActivityFeedProps) {
                       maxCost={maxCost}
                     />
                   ))}
+                  {g.runs.length > 10 && (
+                    <button
+                      type="button"
+                      className="w-full text-center text-txt-3 bg-bg-1 border border-line rounded-[10px] px-[14px] py-[9px] mb-[5px] text-[12px] font-[var(--font-mono)] hover:text-[var(--txt)] hover:border-[var(--line-2)] hover:bg-[var(--bg-2)]"
+                      onClick={() =>
+                        setExpandedDays((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(g.day)) next.delete(g.day);
+                          else next.add(g.day);
+                          return next;
+                        })
+                      }
+                    >
+                      {expandedDays.has(g.day)
+                        ? "Show less"
+                        : `Show ${g.runs.length - 10} more`}
+                    </button>
+                  )}
                 </div>
               );
             })}

@@ -143,7 +143,7 @@ function StripBubble({
             onMouseLeave={scheduleClose}
             className="z-[9999] min-w-[190px] max-w-[260px] bg-[#1c1714] border border-[rgba(255,255,255,0.09)] rounded-[8px] p-1 shadow-[0_6px_20px_rgba(0,0,0,0.6)] flex flex-col gap-[1px]"
           >
-            <div className="px-2 pt-[5px] pb-[3px] text-[10.5px] font-semibold uppercase tracking-[0.04em] text-white/45">
+            <div className="px-2 pt-[5px] pb-[3px] text-[10.5px] font-semibold uppercase tracking-[0.04em] text-white/65">
               {formatAgentDisplayName(agent.name)}
             </div>
             {instances.map((inst, i) => {

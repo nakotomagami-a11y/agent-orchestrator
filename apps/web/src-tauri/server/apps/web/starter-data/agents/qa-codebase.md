@@ -3,7 +3,7 @@ name: qa-codebase
 description: Static codebase QA — finds dead code, unused imports, missing test coverage, inconsistent error handling, and stale TODOs. Read-only, returns a structured report.
 default-model: sonnet
 default-effort: high
-skills: []
+skills: [alz-dependency-auditor, pt-ponytail-audit, sp-verification-before-completion]
 tools: [Read, Bash, Grep]
 permission-mode: bypassPermissions
 ---
