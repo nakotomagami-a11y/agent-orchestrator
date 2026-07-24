@@ -76,7 +76,11 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     hammer: { frames: 3 },
     pickaxe: { frames: 6 },
     knife: { frames: 4 },
-    bbox: { x: 64, y: 60, w: 64, h: 104 },
+    // Pixel-verified across every idle + run frame (native 192x192): content
+    // spans y:58-134, x:65-130. The old {64,60,64,104} box left ~30px of
+    // phantom padding below the real feet, so the character read smaller
+    // and floated above the tile's ground line vs warrior/archer/lancer.
+    bbox: { x: 65, y: 58, w: 65, h: 76 },
     label: "Pawn",
   },
   warrior: {
@@ -106,7 +110,9 @@ export const UNIT_DEFS: Record<UnitKind, UnitDef> = {
     frameH: 192,
     idle: { frames: 6 },
     run: { frames: 4 },
-    bbox: { x: 56, y: 56, w: 80, h: 112 },
+    // Pixel-verified across every idle + run frame: content spans y:63-133,
+    // x:55-137 — same undersized/floating issue as pawn, same fix.
+    bbox: { x: 55, y: 63, w: 82, h: 70 },
     label: "Monk",
   },
   lancer: {
