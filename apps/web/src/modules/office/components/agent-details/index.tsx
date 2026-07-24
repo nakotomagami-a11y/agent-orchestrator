@@ -13,6 +13,7 @@ import { SettingsTab } from "./tabs/settings-tab";
 import { Icon } from "@/components/ui/icon";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useActiveProjectStore } from "@/lib/active-project-store";
+import { useRegisterModal } from "@/lib/modal-manager";
 import { useProject, useAddInstance, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { AgentStrip } from "./agent-strip";
@@ -175,6 +176,10 @@ export function AgentDetailsModal() {
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const consumePendingTab = useOfficeStore((s) => s.consumePendingTab);
   const selectAgent = useOfficeStore((s) => s.select);
+
+  // Single-active-modal: opening any other modal closes this, and vice versa.
+  useRegisterModal(inspectorOpen, closeInspector);
+
   const { agents } = useOfficeAgents();
   const agent = selectedId ? agents.find((a) => a.id === selectedId) ?? null : null;
 
@@ -353,7 +358,7 @@ export function AgentDetailsModal() {
   return (
     <Portal>
       <div
-        className="app-modal-backdrop fixed inset-0 flex items-center justify-center z-[210] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(18,18,28,0.94),rgba(6,6,12,0.995)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(10,10,18,0.20)] after:pointer-events-none"
+        className="app-modal-backdrop fixed inset-0 flex items-center justify-center z-[200] bg-[radial-gradient(ellipse_1200px_700px_at_50%_35%,rgba(18,18,28,0.94),rgba(6,6,12,0.995)_80%)] after:content-[''] after:absolute after:inset-0 after:[backdrop-filter:blur(14px)_saturate(0.85)] after:[-webkit-backdrop-filter:blur(14px)_saturate(0.85)] after:bg-[rgba(10,10,18,0.20)] after:pointer-events-none"
         style={{ top: 74, padding: 8 }}
         role="presentation"
         onClick={closeInspector}

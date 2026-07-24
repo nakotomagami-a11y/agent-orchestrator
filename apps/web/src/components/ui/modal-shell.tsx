@@ -4,6 +4,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Portal } from "./portal";
 import { Icon } from "./icon";
 import { cn } from "@/lib/cn";
+import { useRegisterModal } from "@/lib/modal-manager";
 
 export type ModalShellProps = {
   open: boolean;
@@ -41,6 +42,9 @@ export function ModalShell({
   bareContent = false,
 }: ModalShellProps) {
   const ref = useRef<HTMLDivElement>(null);
+
+  // Single-active-modal: opening this closes any other open modal.
+  useRegisterModal(open, onClose);
 
   useEffect(() => {
     if (!open) return;
@@ -86,7 +90,7 @@ export function ModalShell({
       <div
         role="presentation"
         onClick={onClose}
-        className="app-modal-backdrop fixed inset-0 bg-[rgba(10,10,18,0.55)] backdrop-blur-sm flex items-center justify-center z-[100]"
+        className="app-modal-backdrop fixed inset-0 bg-[rgba(10,10,18,0.55)] backdrop-blur-sm flex items-center justify-center z-[200]"
         style={{ top: 74, padding: 8 }}
       >
         <div

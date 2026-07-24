@@ -6,6 +6,7 @@ import { Portal } from "@/components/ui/portal";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { useRegisterModal } from "@/lib/modal-manager";
 import {
   useWorkflows,
   useCreateWorkflow,
@@ -183,6 +184,7 @@ function AddWorkflowForm({ onAdded }: { onAdded?: () => void }) {
 // ── Dialog ───────────────────────────────────────────────────────────────────
 
 export function WorkflowPickerDialog({ open, onClose, onSelect }: WorkflowPickerDialogProps) {
+  useRegisterModal(open, onClose);
   const t = useTranslations();
   const [rawSearch, setRawSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { match } from "ts-pattern";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
 import type { OfficeAgent } from "@/modules/office/hooks/use-office-agents";
 import type { ThreadItem } from "../format/thread-types";
 import { Icon } from "@/components/ui/icon";
@@ -19,9 +20,10 @@ import { ToolGroupRow } from "./tool-group-row";
 import { SubAgentCard } from "./sub-agent-card";
 import { RateLimitCard } from "./rate-limit-card";
 import { MsgActions } from "./msg-actions";
-import { SignInModal } from "@/modules/accounts/components/sign-in-modal";
+import { useSignInModalStore } from "@/lib/sign-in-modal-store";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
+import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 
 // Re-export so `chat-thread` and any other consumer keeps its existing
 // `from "./message-bubble"` imports working. Actual definitions live in
@@ -100,12 +102,16 @@ function CodeBlock({ lang, body }: { lang: string; body: string }) {
   const lines = body.split("\n").length;
   return (
     <div className="ao-codeblock">
-      <div className="ao-head">
-        <span className="ao-lang">{lang || "text"}</span>
-        <span className="ao-dot" />
+      <div className="flex items-center gap-[8px] px-[12px] py-[8px] bg-[var(--code-head-bg)] border-b border-[var(--code-head-border)] font-[var(--ao-font-mono)] text-[11px] text-[var(--ao-fg-2)] tracking-[0.04em]">
+        <span className="text-[var(--ao-fg-1)]">{lang || "text"}</span>
+        <span className="w-[3px] h-[3px] rounded-full bg-[var(--ao-fg-3)]" />
         <span>{lines} {lines === 1 ? "line" : "lines"}</span>
-        <div className="ao-actions">
-          <button type="button" onClick={() => copyText(body)}>
+        <div className="ml-auto flex gap-[2px]">
+          <button
+            type="button"
+            onClick={() => copyText(body)}
+            className="inline-flex items-center gap-[5px] rounded-[5px] border-0 bg-transparent p-0 cursor-pointer font-[var(--ao-font-mono)] text-[11px] text-[var(--ao-fg-2)] hover:bg-[var(--code-head-bg)] hover:text-[var(--ao-fg-0)]"
+          >
             <Icon name="code" size={12} /> copy
           </button>
         </div>
@@ -168,7 +174,7 @@ function ProseBlock({ items, streaming }: { items: ProseItem[]; streaming?: bool
 
 // ── Single tool call detail panel ─────────────────────────────────────────────
 // ── Thinking row ──────────────────────────────────────────────────────────────
-function ThinkingRow({ id, text, avatar, hideAvatar = false }: { id: string; text: string; avatar: string; hideAvatar?: boolean }) {
+function ThinkingRow({ id, text, agent, hideAvatar = false }: { id: string; text: string; agent: OfficeAgent; hideAvatar?: boolean }) {
   const [open, toggle] = useExpandedState(id);
   const tokenEst = Math.max(1, Math.round(text.split(/\s+/).length * 1.3));
   return (
@@ -176,9 +182,7 @@ function ThinkingRow({ id, text, avatar, hideAvatar = false }: { id: string; tex
       {hideAvatar ? (
         <div className="w-[30px] shrink-0" aria-hidden />
       ) : (
-        <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
-          <span className="text-base">{avatar}</span>
-        </div>
+        <AgentAvatar unit={agent.unitChoice} size={30} label={agent.name} className="shrink-0 rounded-full border border-ao-line-1 bg-ao-bg-3" />
       )}
       <div className="flex-1 min-w-0 w-full">
         <div className={`border border-dashed border-ao-line-1 rounded-[10px] bg-white/[0.015]${open ? " ao-open" : ""}`}>
@@ -334,10 +338,24 @@ function ErrorCard({
  * project runs under, then retries the failed message automatically.
  */
 function AuthErrorCard({ message, onRetry }: { message: string; onRetry?: () => void }) {
-  const [open, setOpen] = useState(false);
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const projectQ = useProject(activeProjectId);
   const accountId = projectQ.data?.meta.accountId ?? "default";
+  const openSignIn = useSignInModalStore((s) => s.open);
+
+  const handleSignIn = () => {
+    // Opening Sign-in replaces (closes) this chat modal. Capture the current
+    // selection so success can reopen the chat, where the user can Retry.
+    const { selectedId, selectedInstanceId, select } = useOfficeStore.getState();
+    openSignIn({
+      accountId,
+      onSuccess: () => {
+        if (selectedId) {
+          select(selectedId, { instanceId: selectedInstanceId, tab: "conversation" });
+        }
+      },
+    });
+  };
 
   return (
     <div className="border border-[rgba(234,179,8,0.30)] border-l-[3px] border-l-[#ca8a04] rounded-[8px] px-[14px] py-3 bg-[rgba(234,179,8,0.05)] flex items-start gap-[10px]">
@@ -353,7 +371,7 @@ function AuthErrorCard({ message, onRetry }: { message: string; onRetry?: () => 
         <div className="text-ao-fg-3 text-[11px] mt-1 font-mono break-words">{message}</div>
         <div className="mt-2 flex items-center gap-3">
           <button
-            onClick={() => setOpen(true)}
+            onClick={handleSignIn}
             className="text-[#ca8a04] text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0"
           >
             <Icon name="external-link" size={11} /> Sign in
@@ -367,19 +385,11 @@ function AuthErrorCard({ message, onRetry }: { message: string; onRetry?: () => 
           </button>
         </div>
       </div>
-      <SignInModal
-        open={open}
-        accountId={accountId}
-        onClose={() => setOpen(false)}
-        onSuccess={() => onRetry?.()}
-      />
     </div>
   );
 }
 
 export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, onRepair, onStopRun, onDismissRateLimit, hideAvatar }: MessageBubbleProps) {
-  const avatar = agent.short[0]?.toUpperCase() ?? "?";
-
   return match(item)
     .with({ kind: "you" }, (item) => {
       const youImgs = extractImages(item.text);
@@ -406,9 +416,7 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
           {hideAvatar ? (
             <div className="w-[30px] shrink-0" aria-hidden />
           ) : (
-            <div className="w-[30px] h-[30px] rounded-full shrink-0 flex items-center justify-center font-bold text-[18px] text-white border border-ao-line-1 bg-ao-bg-3 [image-rendering:pixelated]" aria-hidden>
-              <span className="text-base">{avatar}</span>
-            </div>
+            <AgentAvatar unit={agent.unitChoice} size={30} label={agent.name} className="shrink-0 rounded-full border border-ao-line-1 bg-ao-bg-3" />
           )}
           <div className="flex-1 min-w-0 pt-0.5">
             {!hideAvatar && (
@@ -441,12 +449,12 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       <ToolGroupRow
         id={item.id}
         tools={[{ id: item.id, name: item.name, arg: item.arg }]}
-        avatar={avatar}
+        agent={agent}
       />
     ))
     .with({ kind: "agent-subagent" }, (item) => <SubAgentCard item={item} />)
     .with({ kind: "agent-thinking" }, (item) => (
-      <ThinkingRow id={item.id} text={item.text} avatar={avatar} hideAvatar={hideAvatar} />
+      <ThinkingRow id={item.id} text={item.text} agent={agent} hideAvatar={hideAvatar} />
     ))
     .with({ kind: "system-rate-limit" }, (item) => (
       <RateLimitCard message={item.message} resetsAt={item.resetsAt} severity={item.severity} onStop={onStopRun} onDismiss={onDismissRateLimit} />
