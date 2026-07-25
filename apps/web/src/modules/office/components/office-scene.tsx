@@ -766,6 +766,22 @@ export function OfficeScene({
         )}
       </AnimatePresence>
 
+      {/* Build-mode FPS badge — the canvas-tools bar (which holds the FPS) hides
+          in build mode, so a standalone FPS readout animates in to replace it. */}
+      <AnimatePresence initial={false}>
+        {buildMode && (
+          <motion.div
+            key="build-fps"
+            className="absolute z-[10] pointer-events-none flex items-center top-[14px] left-[14px] bg-[rgba(20,16,14,0.95)] border border-[rgba(255,240,230,0.12)] rounded-[8px] px-[6px] py-[3px]"
+            initial={{ opacity: 0, scale: 0.85, x: -6, y: -6 }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 300, damping: 26, delay: 0.16 } }}
+            exit={{ opacity: 0, scale: 0.8, x: -6, y: -6, transition: { duration: 0.13, ease: "easeIn" } }}
+          >
+            <FpsCounter />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* View toggle - top-left below zoom bar (hidden in build mode) */}
       <AnimatePresence initial={false}>
         {!buildMode && (
