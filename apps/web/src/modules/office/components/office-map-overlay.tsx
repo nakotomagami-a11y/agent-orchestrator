@@ -275,8 +275,9 @@ export function OfficeMapOverlay({
         );
       })()}
 
-      {/* Free-hand select tool: click-through backdrop (deselect) + per-instance
-          hit-targets with an orange hover/selected outline. */}
+      {/* Free-hand select tool: per-instance hit-targets with an orange
+          hover/selected outline. Empty-ground clicks deselect via onCellClick,
+          and agents stay clickable (no full-screen backdrop). */}
       {selectMode && (
         <>
           {Object.entries(decorations).flatMap(([key, stack]) => {

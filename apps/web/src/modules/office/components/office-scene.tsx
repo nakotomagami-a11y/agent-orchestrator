@@ -599,23 +599,29 @@ export function OfficeScene({
     if (tool !== "select" || !buildMode) setSelectedDeco(null);
   }, [tool, buildMode]);
 
-  // Keyboard: Escape deselects, Delete/Backspace removes, arrows nudge 1px.
+  // Keyboard: Escape deselects, Delete removes, R rotate, M mirror, arrows nudge.
+  // Capture phase + stopImmediatePropagation so these win over the camera's
+  // arrow-pan and the build-mode Escape (which would otherwise also fire).
   useEffect(() => {
     if (tool !== "select" || !selectedDeco) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === "Escape") { setSelectedDeco(null); return; }
-      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelected(); return; }
-      if (e.key === "r" || e.key === "R") { e.preventDefault(); rotateSelected(); return; }
-      if (e.key === "m" || e.key === "M") { e.preventDefault(); flipSelected(); return; }
       const step = e.shiftKey ? 8 : 1;
-      if (e.key === "ArrowLeft")  { e.preventDefault(); nudgeSelected(-step, 0); }
-      if (e.key === "ArrowRight") { e.preventDefault(); nudgeSelected(step, 0); }
-      if (e.key === "ArrowUp")    { e.preventDefault(); nudgeSelected(0, -step); }
-      if (e.key === "ArrowDown")  { e.preventDefault(); nudgeSelected(0, step); }
+      const claim = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+      switch (e.key) {
+        case "Escape": claim(); setSelectedDeco(null); break;
+        case "Delete":
+        case "Backspace": claim(); deleteSelected(); break;
+        case "r": case "R": claim(); rotateSelected(); break;
+        case "m": case "M": claim(); flipSelected(); break;
+        case "ArrowLeft":  claim(); nudgeSelected(-step, 0); break;
+        case "ArrowRight": claim(); nudgeSelected(step, 0); break;
+        case "ArrowUp":    claim(); nudgeSelected(0, -step); break;
+        case "ArrowDown":  claim(); nudgeSelected(0, step); break;
+      }
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("keydown", onKey, { capture: true });
+    return () => window.removeEventListener("keydown", onKey, { capture: true });
   }, [tool, selectedDeco, deleteSelected, nudgeSelected, rotateSelected, flipSelected]);
 
   const onAgentDrop = useCallback((x: number, y: number, ref: DragRef) => {
