@@ -45,20 +45,28 @@ export function parseDecorations(raw: string): DecorationsMap | null {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const out: DecorationsMap = {};
+    // Legacy house1/2/3 kinds are now the single rotatable "house" (rot 0/1/2).
+    const HOUSE_ROT: Record<string, 0 | 1 | 2> = { house1: 0, house2: 1, house3: 2 };
     // Accepts legacy formats (a bare kind string, or an array of kind strings)
     // and the current object form `{ kind, rot?, flip?, dx?, dy? }`.
     const toInstance = (v: unknown): DecoInstance | null => {
       if (typeof v === "string") {
+        if (v in HOUSE_ROT) {
+          const rot = HOUSE_ROT[v]!;
+          return rot === 0 ? { kind: "house" } : { kind: "house", rot };
+        }
         const kind = migrateKind(v);
         return kind ? { kind } : null;
       }
       if (v && typeof v === "object" && !Array.isArray(v)) {
         const o = v as Record<string, unknown>;
         if (typeof o.kind !== "string") return null;
-        const kind = migrateKind(o.kind);
+        const houseRot = o.kind in HOUSE_ROT ? HOUSE_ROT[o.kind] : undefined;
+        const kind = houseRot !== undefined ? "house" : migrateKind(o.kind);
         if (!kind) return null;
         const inst: DecoInstance = { kind };
-        if (o.rot === 1 || o.rot === 2) inst.rot = o.rot;
+        const rot = houseRot ?? o.rot;
+        if (rot === 1 || rot === 2) inst.rot = rot;
         if (o.flip === true) inst.flip = true;
         if (typeof o.dx === "number" && o.dx !== 0) inst.dx = o.dx;
         if (typeof o.dy === "number" && o.dy !== 0) inst.dy = o.dy;

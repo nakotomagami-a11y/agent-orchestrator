@@ -449,7 +449,9 @@ async function buildStaticLayers(
   }
   for (const kind of usedKinds) {
     if (kind === "path") continue; // drawn via Graphics — no texture needed
-    urls.add(DECORATIONS[kind].src);
+    const d = DECORATIONS[kind];
+    urls.add(d.src);
+    if (d.rotFrames) for (const f of d.rotFrames) urls.add(f);
   }
 
   // Bridge cap URLs (preload if any bridges exist)
@@ -601,7 +603,8 @@ async function buildStaticLayers(
     }
 
     const def = DECORATIONS[kind];
-    const baseTex = textureMap.get(def.src);
+    const srcForRot = def.rotFrames?.[inst.rot ?? 0] ?? def.src;
+    const baseTex = textureMap.get(srcForRot);
     if (!baseTex) continue;
 
     // Per-instance pixel offset from the free-hand tool.

@@ -71,9 +71,7 @@ export type DecorationKind =
   | "tree2"
   | "tree3"
   | "tree4"
-  | "house1"
-  | "house2"
-  | "house3"
+  | "house"
   | "house4"
   | "house5"
   | "house6"
@@ -160,6 +158,9 @@ export interface DecorationDef {
   /** Shown in the build palette but greyed out and unselectable. Used for
    *  assets that aren't style-matched/finished yet. */
   locked?: boolean;
+  /** Alternate sprites for discrete rotation. Index = DecoInstance.rot (0/1/2);
+   *  index 0 should equal `src`. Enables the free-hand rotate control. */
+  rotFrames?: string[];
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -272,23 +273,14 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
   // ─ Buildings (static). Houses are 128×192; tower 128×256; castle
   //   320×256 (footprint of a small fortress). All anchor at the
   //   bottom-centre of a single cell - tall buildings extend upward. ──
-  house1: {
-    label: "House 1",
+  // House 1-3 are the same building at 3 angles — merged into one rotatable
+  // "house". rot (0/1/2) picks the frame; the free-hand tool rotates + mirrors.
+  house: {
+    label: "House",
     src: "/decorations/house1.png",
     frameW: 128, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
-  },
-  house2: {
-    label: "House 2",
-    src: "/decorations/house2.png",
-    frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
-  },
-  house3: {
-    label: "House 3",
-    src: "/decorations/house3.png",
-    frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
+    rotFrames: ["/decorations/house1.png", "/decorations/house2.png", "/decorations/house3.png"],
   },
   // House 4-8: 5 new AI-generated houses (dropped in 2026-07-25). Native art
   // was much higher-res/detailed than the Tiny Swords set (1024×1024ish
