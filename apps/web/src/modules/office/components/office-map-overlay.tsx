@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { UNIT_DEFS } from "@/components/ui/unit-sprite-registry";
 import type { OfficeAgent } from "../hooks/use-office-agents";
-import { decorationKey, familyOf, type DecorationsMap } from "./decorations";
+import { DECORATIONS, decorationKey, familyOf, type DecorationsMap, type DecoInstance } from "./decorations";
 import type { BuildTool } from "./office-build-toolbar";
 import {
   AGENT_DRAG_MIME,
@@ -38,6 +38,18 @@ function unitBoxAt(kind: string, tx: number, ty: number) {
   return { left, top: ty * TILE + TARGET_FEET_Y - feetInBox, size: agentSize };
 }
 
+// Screen box of a placed decoration instance — mirrors the pixi deco renderer
+// (left/top incl. dx/dy offset) so select hit-targets line up with the sprites.
+function decoBoxAt(inst: DecoInstance, x: number, y: number) {
+  const def = DECORATIONS[inst.kind];
+  const left = x * TILE + (TILE - def.frameW) / 2 + (inst.dx ?? 0);
+  const top =
+    (def.anchor === "center"
+      ? y * TILE + (TILE - def.frameH) / 2
+      : (y + 1) * TILE - def.frameH) + (inst.dy ?? 0);
+  return { left, top, width: def.frameW, height: def.frameH };
+}
+
 // ─── Interaction overlay for the PixiJS renderer path ─────────────────────────
 // Sits on top of the Pixi canvas at the same world transform. Handles build-mode
 // grid cells (hover tint + click/drag-paint) and agent click targets (invisible
@@ -58,6 +70,10 @@ export type OfficeMapOverlayProps = {
   // Notifies the parent which agent tile is hovered ("x,y") so the PixiJS
   // renderer can glow the actual sprite. null = no hover.
   onAgentHoverChange?: (key: string | null) => void;
+  // Free-hand "select" tool: currently-selected decoration instance + callbacks.
+  selectedDeco?: { key: string; index: number } | null;
+  onDecoSelect?: (key: string, index: number) => void;
+  onDecoDeselect?: () => void;
 };
 
 export function OfficeMapOverlay({
@@ -72,8 +88,12 @@ export function OfficeMapOverlay({
   onAgentClick,
   onAgentDrop,
   onAgentHoverChange,
+  selectedDeco,
+  onDecoSelect,
+  onDecoDeselect,
 }: OfficeMapOverlayProps) {
   const cols = grid[0]?.length ?? 0;
+  const selectMode = tool === "select";
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
   const setDragging = useOfficeDragStore((s) => s.setDragging);
@@ -164,8 +184,8 @@ export function OfficeMapOverlay({
       className="absolute left-0 top-0 pointer-events-none"
       style={{ width: cols * TILE, height: grid.length * TILE }}
     >
-      {/* Build mode grid + drag-and-drop targets */}
-      {(buildMode || dragging) && Array.from({ length: yEnd - yStart + 1 }).flatMap((_, i) => {
+      {/* Build mode grid + drag-and-drop targets (hidden under the select tool) */}
+      {(buildMode || dragging) && !selectMode && Array.from({ length: yEnd - yStart + 1 }).flatMap((_, i) => {
         const y = yStart + i;
         return Array.from({ length: xEnd - xStart + 1 }).map((_, j) => {
           const x = xStart + j;
@@ -254,6 +274,34 @@ export function OfficeMapOverlay({
           </div>
         );
       })()}
+
+      {/* Free-hand select tool: click-through backdrop (deselect) + per-instance
+          hit-targets with an orange hover/selected outline. */}
+      {selectMode && (
+        <>
+          {Object.entries(decorations).flatMap(([key, stack]) => {
+            const [xs, ys] = key.split(",");
+            const x = Number(xs);
+            const y = Number(ys);
+            if (x < xStart || x > xEnd || y < yStart || y > yEnd) return [];
+            return stack.map((inst, i) => {
+              const { left, top, width, height } = decoBoxAt(inst, x, y);
+              const isSelected = selectedDeco?.key === key && selectedDeco.index === i;
+              return (
+                <button
+                  key={`deco-target-${key}-${i}`}
+                  type="button"
+                  className={`absolute pointer-events-auto cursor-pointer bg-transparent transition-[outline-color,background] duration-100 hover:bg-[rgba(233,84,32,0.12)] hover:outline hover:outline-2 hover:outline-[#e95420]${isSelected ? " outline outline-2 outline-[#e95420] bg-[rgba(233,84,32,0.10)]" : ""}`}
+                  style={{ left, top, width, height }}
+                  onClick={(e) => { e.stopPropagation(); onDecoSelect?.(key, i); }}
+                  onContextMenu={(e) => { e.preventDefault(); onDecoDeselect?.(); }}
+                  aria-label={`Select ${DECORATIONS[inst.kind].label}`}
+                />
+              );
+            });
+          })}
+        </>
+      )}
     </div>
   );
 }

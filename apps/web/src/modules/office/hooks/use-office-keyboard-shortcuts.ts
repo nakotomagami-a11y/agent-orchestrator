@@ -66,6 +66,7 @@ export function useOfficeKeyboardShortcuts(params: {
       if (e.key === "b" || e.key === "B") { e.preventDefault(); setTool("grass"); }
       if (e.key === "e" || e.key === "E") { e.preventDefault(); setTool("erase"); }
       if (e.key === "f" || e.key === "F") { e.preventDefault(); setTool("fill"); }
+      if (e.key === "v" || e.key === "V") { e.preventDefault(); setTool("select"); }
       if (e.key === "Escape") { setBuildMode(false); setPendingChanges(0); undoStack.current = []; redoStack.current = []; }
     };
     window.addEventListener("keydown", onKeyDown);

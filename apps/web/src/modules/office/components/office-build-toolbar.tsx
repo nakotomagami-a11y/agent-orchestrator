@@ -17,7 +17,7 @@ import {
 } from "./grass-colors";
 import { useFilter } from "@/hooks/use-filter";
 
-export type BuildTool = "grass" | "erase" | "fill" | DecorationKind;
+export type BuildTool = "grass" | "erase" | "fill" | "select" | DecorationKind;
 
 export type OfficeBuildToolbarProps = {
   active: boolean;
@@ -191,6 +191,16 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
             <Icon name="paint-bucket" size={16} />
             <span className="uppercase tracking-[0.06em] font-mono text-[9px]">fill</span>
             <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "fill" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>F</span>
+          </button>
+          <button
+            type="button"
+            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "select" ? " bg-acc text-white" : ""}`}
+            onClick={() => onSelectTool("select")}
+            title="Select — click a placed decoration to rotate/mirror/move (V)"
+          >
+            <Icon name="crosshair" size={16} />
+            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">select</span>
+            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "select" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>V</span>
           </button>
         </div>
       </div>

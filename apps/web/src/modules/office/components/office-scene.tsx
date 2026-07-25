@@ -16,6 +16,7 @@ import {
   isPlacementValid,
   popDecoration,
   type DecorationsMap,
+  type DecoInstance,
 } from "./decorations";
 import { useOfficeAgents } from "../hooks/use-office-agents";
 import { useOfficeStore } from "../hooks/use-office-store";
@@ -84,6 +85,8 @@ export function OfficeScene({
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
   const [hoveredAgentKey, setHoveredAgentKey] = useState<string | null>(null);
+  // Free-hand select tool: which placed decoration instance is selected.
+  const [selectedDeco, setSelectedDeco] = useState<{ key: string; index: number } | null>(null);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [agentSearch, setAgentSearch] = useState("");
   const [useCustomMap, setUseCustomMap] = useState(false);
@@ -266,6 +269,9 @@ export function OfficeScene({
       const cellHasGrass = grid[y]?.[x] === true;
 
       if (!tool) return;
+      // Free-hand select never paints — decoration hit-targets in the overlay
+      // handle selection. A click on empty ground just clears the selection.
+      if (tool === "select") { setSelectedDeco(null); return; }
 
       // Shift-click rectangle fill for paint/erase terrain tools
       if (shiftKey && rectStart && (tool === "grass" || tool === "erase")) {
@@ -532,6 +538,86 @@ export function OfficeScene({
     setPendingChanges((n) => n + 1);
   }, []);
 
+  // ── Free-hand decoration editing (rotate / mirror / nudge / delete) ─────────
+  const NUDGE_MAX = TILE; // clamp per-instance offset to ±1 tile
+  const mutateDeco = useCallback(
+    (key: string, index: number, fn: (inst: DecoInstance) => DecoInstance | null) => {
+      const { grid, decorations, agentPositions } = currentStateRef.current;
+      undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+      redoStack.current = [];
+      setDecorations((prev) => {
+        const stack = prev[key];
+        if (!stack || !stack[index]) return prev;
+        const updated = fn(stack[index]!);
+        const nextStack = [...stack];
+        if (updated === null) nextStack.splice(index, 1);
+        else nextStack[index] = updated;
+        const next = { ...prev };
+        if (nextStack.length === 0) delete next[key];
+        else next[key] = nextStack;
+        return next;
+      });
+      setPendingChanges((n) => n + 1);
+    },
+    [],
+  );
+
+  const rotateSelected = useCallback(() => {
+    if (!selectedDeco) return;
+    mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => ({
+      ...inst,
+      rot: (((inst.rot ?? 0) + 1) % 3) as 0 | 1 | 2,
+    }));
+  }, [selectedDeco, mutateDeco]);
+
+  const flipSelected = useCallback(() => {
+    if (!selectedDeco) return;
+    mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => ({ ...inst, flip: !inst.flip }));
+  }, [selectedDeco, mutateDeco]);
+
+  const nudgeSelected = useCallback(
+    (dx: number, dy: number) => {
+      if (!selectedDeco) return;
+      const clamp = (v: number) => Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, v));
+      mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => ({
+        ...inst,
+        dx: clamp((inst.dx ?? 0) + dx),
+        dy: clamp((inst.dy ?? 0) + dy),
+      }));
+    },
+    [selectedDeco, mutateDeco, NUDGE_MAX],
+  );
+
+  const deleteSelected = useCallback(() => {
+    if (!selectedDeco) return;
+    mutateDeco(selectedDeco.key, selectedDeco.index, () => null);
+    setSelectedDeco(null);
+  }, [selectedDeco, mutateDeco]);
+
+  // Clear selection when leaving the select tool / build mode.
+  useEffect(() => {
+    if (tool !== "select" || !buildMode) setSelectedDeco(null);
+  }, [tool, buildMode]);
+
+  // Keyboard: Escape deselects, Delete/Backspace removes, arrows nudge 1px.
+  useEffect(() => {
+    if (tool !== "select" || !selectedDeco) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "Escape") { setSelectedDeco(null); return; }
+      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteSelected(); return; }
+      if (e.key === "r" || e.key === "R") { e.preventDefault(); rotateSelected(); return; }
+      if (e.key === "m" || e.key === "M") { e.preventDefault(); flipSelected(); return; }
+      const step = e.shiftKey ? 8 : 1;
+      if (e.key === "ArrowLeft")  { e.preventDefault(); nudgeSelected(-step, 0); }
+      if (e.key === "ArrowRight") { e.preventDefault(); nudgeSelected(step, 0); }
+      if (e.key === "ArrowUp")    { e.preventDefault(); nudgeSelected(0, -step); }
+      if (e.key === "ArrowDown")  { e.preventDefault(); nudgeSelected(0, step); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tool, selectedDeco, deleteSelected, nudgeSelected, rotateSelected, flipSelected]);
+
   const onAgentDrop = useCallback((x: number, y: number, ref: DragRef) => {
     setAgentPositions((prev) => {
       const next: AgentPositions = {};
@@ -683,8 +769,100 @@ export function OfficeScene({
           onAgentClick={onAgentClick}
           onAgentDrop={onAgentDrop}
           onAgentHoverChange={setHoveredAgentKey}
+          selectedDeco={selectedDeco}
+          onDecoSelect={(key, index) => setSelectedDeco({ key, index })}
+          onDecoDeselect={() => setSelectedDeco(null)}
         />
       </div>
+
+      {/* Free-hand select popover — floats above the selected decoration in
+          screen space (outside the zoomed overlay so it stays a fixed size). */}
+      {buildMode && tool === "select" && selectedDeco && (() => {
+        const inst = decorations[selectedDeco.key]?.[selectedDeco.index];
+        if (!inst) return null;
+        const [xs, ys] = selectedDeco.key.split(",");
+        const cx = Number(xs);
+        const cy = Number(ys);
+        const screenX = panX + (cx * TILE + TILE / 2) * zoom;
+        const screenY = panY + cy * TILE * zoom;
+        const canRotate = !!DECORATIONS[inst.kind].rotFrames;
+        return (
+          <div
+            className="absolute z-[11] -translate-x-1/2 -translate-y-full flex items-center gap-[2px] bg-[rgba(20,16,14,0.97)] border border-[rgba(255,240,230,0.14)] rounded-[8px] p-[4px] shadow-[var(--shadow-2)]"
+            style={{ left: screenX, top: screenY - 8 }}
+          >
+            {canRotate && (
+              <button
+                type="button"
+                className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] text-[rgba(199,191,183,0.9)] cursor-pointer transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.1)] hover:text-[#f4efea]"
+                onClick={rotateSelected}
+                title="Rotate (R)"
+                aria-label="Rotate"
+              >
+                <Icon name="refresh" size={14} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] text-[rgba(199,191,183,0.9)] text-[15px] leading-none cursor-pointer transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.1)] hover:text-[#f4efea]"
+              onClick={flipSelected}
+              title="Mirror (M)"
+              aria-label="Mirror"
+            >
+              ⇋
+            </button>
+            <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.12)] mx-[2px]" />
+            <button
+              type="button"
+              className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] text-[rgba(199,191,183,0.9)] cursor-pointer transition-[background,color] duration-100 hover:bg-[rgba(233,84,32,0.16)] hover:text-[#e95420]"
+              onClick={deleteSelected}
+              title="Delete (⌫)"
+              aria-label="Delete"
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* Free-hand select popover — screen space, floats above the selected sprite. */}
+      {selectedDeco && (() => {
+        const inst = decorations[selectedDeco.key]?.[selectedDeco.index];
+        if (!inst) return null;
+        const [xs, ys] = selectedDeco.key.split(",");
+        const cx = Number(xs);
+        const cy = Number(ys);
+        const def = DECORATIONS[inst.kind];
+        const boxLeft = cx * TILE + (TILE - def.frameW) / 2 + (inst.dx ?? 0);
+        const boxTop =
+          (def.anchor === "center"
+            ? cy * TILE + (TILE - def.frameH) / 2
+            : (cy + 1) * TILE - def.frameH) + (inst.dy ?? 0);
+        const screenX = panX + (boxLeft + def.frameW / 2) * zoom;
+        const screenY = panY + boxTop * zoom;
+        const canRotate = !!def.rotFrames;
+        const btn = "w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-[rgba(199,191,183,0.9)] cursor-pointer transition-[background,color] duration-100 hover:bg-[rgba(255,240,230,0.10)] hover:text-[#f4efea] disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent";
+        return (
+          <div
+            className="absolute z-[11] pointer-events-auto -translate-x-1/2 -translate-y-full flex items-center gap-[1px] bg-[rgba(20,16,14,0.97)] border border-[rgba(255,240,230,0.14)] rounded-[8px] p-[3px] shadow-[var(--shadow-2)]"
+            style={{ left: screenX, top: screenY - 10 }}
+          >
+            <button type="button" className={btn} onClick={rotateSelected} disabled={!canRotate} title={canRotate ? "Rotate" : "This decoration has no rotations"} aria-label="Rotate">
+              <span className="text-[15px] leading-none">↻</span>
+            </button>
+            <button type="button" className={btn} onClick={flipSelected} title="Mirror" aria-label="Mirror">
+              <span className="text-[15px] leading-none">⇋</span>
+            </button>
+            <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.12)] mx-[2px]" />
+            <button type="button" className={`${btn} hover:!bg-[rgba(233,84,32,0.14)] hover:!text-[#e95420]`} onClick={deleteSelected} title="Delete (Del)" aria-label="Delete">
+              <Icon name="trash" size={13} />
+            </button>
+            <button type="button" className={btn} onClick={() => setSelectedDeco(null)} title="Close (Esc)" aria-label="Close">
+              <Icon name="x" size={12} />
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Canvas tools - top-left: zoom + recenter (hidden in build mode) */}
       <AnimatePresence initial={false}>
@@ -878,6 +1056,52 @@ export function OfficeScene({
         )}
       </AnimatePresence>
       </div>
+
+      {/* Free-hand select popover — screen-space, anchored above the selected deco */}
+      {buildMode && tool === "select" && selectedDeco && (() => {
+        const selInst = decorations[selectedDeco.key]?.[selectedDeco.index];
+        if (!selInst) return null;
+        const [sxs, sys] = selectedDeco.key.split(",");
+        const sx = Number(sxs);
+        const sy = Number(sys);
+        const def = DECORATIONS[selInst.kind];
+        const worldLeft = sx * TILE + (TILE - def.frameW) / 2 + (selInst.dx ?? 0);
+        const worldTop =
+          (def.anchor === "center"
+            ? sy * TILE + (TILE - def.frameH) / 2
+            : (sy + 1) * TILE - def.frameH) + (selInst.dy ?? 0);
+        const screenX = panX + (worldLeft + def.frameW / 2) * zoom;
+        const screenY = panY + worldTop * zoom;
+        const btn =
+          "w-[30px] h-[30px] flex items-center justify-center rounded-[6px] text-txt-2 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt";
+        return (
+          <div
+            className="absolute z-[11] flex items-center gap-[2px] bg-[rgba(20,16,14,0.97)] border border-[rgba(255,240,230,0.14)] rounded-[9px] p-[4px] shadow-[var(--shadow-2)]"
+            style={{ left: screenX, top: screenY - 10, transform: "translate(-50%, -100%)" }}
+          >
+            {def.rotFrames && (
+              <button type="button" className={btn} onClick={rotateSelected} title="Rotate (or ↻)" aria-label="Rotate">
+                <span className="text-[15px] leading-none">⟳</span>
+              </button>
+            )}
+            <button type="button" className={btn} onClick={flipSelected} title="Mirror" aria-label="Mirror">
+              <span className="text-[15px] leading-none">⇋</span>
+            </button>
+            <div className="shrink-0 w-[1px] h-[16px] bg-line mx-[2px]" />
+            <span className="font-mono text-[9.5px] text-txt-4 px-[4px] select-none">arrows nudge</span>
+            <div className="shrink-0 w-[1px] h-[16px] bg-line mx-[2px]" />
+            <button
+              type="button"
+              className="w-[30px] h-[30px] flex items-center justify-center rounded-[6px] text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-[rgba(233,84,32,0.16)] hover:text-[#e95420]"
+              onClick={deleteSelected}
+              title="Delete (Del)"
+              aria-label="Delete decoration"
+            >
+              <Icon name="trash" size={14} />
+            </button>
+          </div>
+        );
+      })()}
 
       <OfficeBuildToolbar
         active={buildMode}

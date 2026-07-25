@@ -226,6 +226,7 @@ export function isToolValidAt(
   if (tool === "grass") return !cellHasGrass;
   if (tool === "fill") return !cellHasGrass;
   if (tool === "erase") return cellHasGrass || (stack !== undefined && stack.length > 0);
+  if (tool === "select") return false; // select never paints cells
   if (!isPlacementValid(tool, cellHasGrass)) return false;
   if (stack?.some((e) => e.kind === tool)) return false; // already exactly that kind
   // Cells acting as a bridge ramp are reserved for the cap - block any
