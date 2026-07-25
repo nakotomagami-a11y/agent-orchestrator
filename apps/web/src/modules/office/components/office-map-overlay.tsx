@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { UNIT_DEFS } from "@/components/ui/unit-sprite-registry";
 import type { OfficeAgent } from "../hooks/use-office-agents";
@@ -74,6 +74,10 @@ export type OfficeMapOverlayProps = {
   selectedDeco?: { key: string; index: number } | null;
   onDecoSelect?: (key: string, index: number) => void;
   onDecoDeselect?: () => void;
+  // Drag-to-reposition (select tool). zoom converts screen px → world px.
+  zoom?: number;
+  onDecoDragStart?: (key: string, index: number) => void;
+  onDecoOffset?: (key: string, index: number, dx: number, dy: number) => void;
 };
 
 export function OfficeMapOverlay({
@@ -91,9 +95,36 @@ export function OfficeMapOverlay({
   selectedDeco,
   onDecoSelect,
   onDecoDeselect,
+  zoom,
+  onDecoDragStart,
+  onDecoOffset,
 }: OfficeMapOverlayProps) {
   const cols = grid[0]?.length ?? 0;
   const selectMode = tool === "select";
+
+  // Drag-to-reposition state. Refs so the window listeners read live values
+  // without re-subscribing. `pushed` gates the one-time undo snapshot to the
+  // first real move, so a plain click doesn't pollute the undo stack.
+  const decoDragRef = useRef<{ key: string; index: number; cx: number; cy: number; dx0: number; dy0: number; pushed: boolean } | null>(null);
+  const decoCbRef = useRef({ zoom, onDecoDragStart, onDecoOffset });
+  decoCbRef.current = { zoom, onDecoDragStart, onDecoOffset };
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const d = decoDragRef.current;
+      if (!d) return;
+      if (!d.pushed) {
+        if (Math.hypot(e.clientX - d.cx, e.clientY - d.cy) < 3) return;
+        d.pushed = true;
+        decoCbRef.current.onDecoDragStart?.(d.key, d.index);
+      }
+      const z = decoCbRef.current.zoom || 1;
+      decoCbRef.current.onDecoOffset?.(d.key, d.index, d.dx0 + (e.clientX - d.cx) / z, d.dy0 + (e.clientY - d.cy) / z);
+    };
+    const onUp = () => { decoDragRef.current = null; };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, []);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
   const setDragging = useOfficeDragStore((s) => s.setDragging);
@@ -293,7 +324,12 @@ export function OfficeMapOverlay({
                   key={`deco-target-${key}-${i}`}
                   type="button"
                   className={`absolute pointer-events-auto cursor-pointer bg-transparent transition-[outline-color,background] duration-100 hover:bg-[rgba(233,84,32,0.12)] hover:outline hover:outline-2 hover:outline-[#e95420]${isSelected ? " outline outline-2 outline-[#e95420] bg-[rgba(233,84,32,0.10)]" : ""}`}
-                  style={{ left, top, width, height }}
+                  style={{ left, top, width, height, touchAction: "none" }}
+                  onPointerDown={(e) => {
+                    if (e.button !== 0) return;
+                    e.stopPropagation();
+                    decoDragRef.current = { key, index: i, cx: e.clientX, cy: e.clientY, dx0: inst.dx ?? 0, dy0: inst.dy ?? 0, pushed: false };
+                  }}
                   onClick={(e) => { e.stopPropagation(); onDecoSelect?.(key, i); }}
                   onContextMenu={(e) => { e.preventDefault(); onDecoDeselect?.(); }}
                   aria-label={`Select ${DECORATIONS[inst.kind].label}`}

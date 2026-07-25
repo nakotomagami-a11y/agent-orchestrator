@@ -594,6 +594,28 @@ export function OfficeScene({
     setSelectedDeco(null);
   }, [selectedDeco, mutateDeco]);
 
+  // Drag-to-reposition: overlay records the drag; on the first move it calls
+  // beginDecoDrag (one undo snapshot + select), then setDecoOffset live (no more
+  // snapshots) until pointer-up.
+  const beginDecoDrag = useCallback((key: string, index: number) => {
+    const { grid, decorations, agentPositions } = currentStateRef.current;
+    undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+    redoStack.current = [];
+    setSelectedDeco({ key, index });
+  }, []);
+
+  const setDecoOffset = useCallback((key: string, index: number, dx: number, dy: number) => {
+    const clamp = (v: number) => Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, Math.round(v)));
+    setDecorations((prev) => {
+      const stack = prev[key];
+      if (!stack || !stack[index]) return prev;
+      const ns = [...stack];
+      ns[index] = { ...ns[index]!, dx: clamp(dx), dy: clamp(dy) };
+      return { ...prev, [key]: ns };
+    });
+    setPendingChanges((n) => n + 1);
+  }, [NUDGE_MAX]);
+
   // Clear selection when leaving the select tool / build mode.
   useEffect(() => {
     if (tool !== "select" || !buildMode) setSelectedDeco(null);
@@ -778,6 +800,9 @@ export function OfficeScene({
           selectedDeco={selectedDeco}
           onDecoSelect={(key, index) => setSelectedDeco({ key, index })}
           onDecoDeselect={() => setSelectedDeco(null)}
+          zoom={zoom}
+          onDecoDragStart={beginDecoDrag}
+          onDecoOffset={setDecoOffset}
         />
       </div>
 
