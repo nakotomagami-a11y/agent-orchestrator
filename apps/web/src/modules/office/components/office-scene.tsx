@@ -83,6 +83,7 @@ export function OfficeScene({
   const [grassColor, setGrassColor] = useState<GrassColor>(() => DEFAULT_GRASS_COLOR);
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
+  const [hoveredAgentKey, setHoveredAgentKey] = useState<string | null>(null);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [agentSearch, setAgentSearch] = useState("");
   const [useCustomMap, setUseCustomMap] = useState(false);
@@ -608,6 +609,7 @@ export function OfficeScene({
           isMultiInstance={isMultiInstance}
           rosterInstances={rosterInstances}
           spendByInstance={spendByInstance}
+          hoveredAgentKey={hoveredAgentKey}
         />
       )}
       {/* Interaction overlay — same world transform, handles build mode + agent clicks */}
@@ -630,6 +632,7 @@ export function OfficeScene({
           onCellClick={onCellClick}
           onAgentClick={onAgentClick}
           onAgentDrop={onAgentDrop}
+          onAgentHoverChange={setHoveredAgentKey}
         />
       </div>
 

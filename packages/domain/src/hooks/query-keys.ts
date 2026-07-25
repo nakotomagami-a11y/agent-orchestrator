@@ -56,6 +56,7 @@ export const queryKeys = {
     detail: (name: string) => [...queryKeys.skills.all, "detail", name] as const,
     manifest: () => [...queryKeys.skills.all, "manifest"] as const,
     compatibility: () => [...queryKeys.skills.all, "compatibility"] as const,
+    icons: () => [...queryKeys.skills.all, "icons"] as const,
   },
 
   runs: {

@@ -19,7 +19,12 @@ export function ChatHead({ agent, onNew, actions }: ChatHeadProps) {
   return (
     <div className="flex items-center gap-3 px-[18px] py-3 border-b border-[var(--line)]">
       <div className="w-[40px] h-[40px]">
-        <UnitSprite unit={agent.unitChoice} size={40} action="idle" animate />
+        <UnitSprite
+          unit={agent.unitChoice}
+          size={40}
+          action={agent.status === "working" || agent.status === "thinking" ? "working" : "idle"}
+          animate
+        />
       </div>
       <div>
         <h2 className="m-0 text-[15px] font-bold tracking-[-0.01em]">{formatAgentDisplayName(agent.name)}</h2>

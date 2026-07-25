@@ -271,9 +271,9 @@ export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit,
             <p className="text-[var(--txt-3)] m-0 text-[13px]">{agent.description || "Ready when you are - pick a starter or ask anything."}</p>
           </div>
           <div className="flex flex-wrap gap-2 w-full mt-3 [&>*]:basis-[calc(50%-4px)]">
-            {SUGGESTIONS.map((s) => (
+            {SUGGESTIONS.map((s, i) => (
               <button
-                key={s.lbl}
+                key={s.lbl+"sggs_"+ i}
                 type="button"
                 className="text-left cursor-pointer bg-[var(--bg-1)] border border-[var(--line)] text-[var(--txt-2)] rounded-[12px] px-[14px] py-3 text-[13px] transition-all duration-[120ms] hover:border-[var(--acc)] hover:text-[var(--txt)] hover:-translate-y-px hover:shadow-[var(--shadow-1)]"
                 onClick={() => onPickSuggestion?.(s.text)}
@@ -314,7 +314,7 @@ export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit,
                   : undefined;
                 return (
                   <MessageBubble
-                    key={row.item.id}
+                    key={row.item.id + "mbbl_"+idx}
                     item={row.item}
                     agent={agent}
                     isQuestion={isQuestion}
@@ -339,7 +339,7 @@ export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit,
               const running = isTail && LIVE_PHASES.has(phase);
               return (
                 <ToolGroupRow
-                  key={row.id}
+                  key={row.id + "tgr_"+idx}
                   id={row.id}
                   tools={row.tools.map((t) => ({ id: t.id, name: t.name, arg: t.arg }))}
                   agent={agent}
@@ -352,7 +352,7 @@ export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit,
           {queuedMessages && queuedMessages.length > 0 ? (
             <div className="max-w-[760px] mx-auto px-2 mt-5 flex flex-col gap-3">
               {queuedMessages.map((q, i) => (
-                <div key={q.id} className="flex flex-row-reverse ml-auto w-fit max-w-[80%] gap-[12px] relative opacity-[0.55]">
+                <div key={q.id + "qm_"+i} className="flex flex-row-reverse ml-auto w-fit max-w-[80%] gap-[12px] relative opacity-[0.55]">
                   <UserAvatar size={60} className="shrink-0" />
                   <div className="flex flex-col items-end gap-[6px]">
                     <div className="bg-ao-bg-3 border border-dashed border-ao-line-1 rounded-[14px_14px_4px_14px] px-4 py-3 text-[14px] leading-[1.55] text-ao-fg-0">{q.text}</div>

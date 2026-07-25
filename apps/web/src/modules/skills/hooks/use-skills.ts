@@ -90,6 +90,65 @@ export function useSkillCompatibility() {
   });
 }
 
+// ── Generated weapon icons ────────────────────────────────────────────────
+
+import type { IconConfig } from "@agent-office/pixel-icons";
+
+export type SkillIconMap = Record<string, IconConfig>;
+
+/** Stable key + default (derived) icon config for a skill. */
+export function skillIconKey(skill: Pick<RegistrySkill, "source" | "name">): string {
+  return `${skill.source}/${skill.name}`;
+}
+
+/** Persisted override if present, else a deterministic icon derived from the key. */
+export function skillIconConfig(map: SkillIconMap | undefined, key: string): IconConfig {
+  return map?.[key] ?? { seed: key, iconClass: "any" };
+}
+
+export function useSkillIcons() {
+  return useQuery({
+    queryKey: queryKeys.skills.icons(),
+    queryFn: () => apiFetch<SkillIconMap>(API_ROUTES.skillsIcons),
+    staleTime: 60 * 60_000,
+  });
+}
+
+export function useRerollSkillIcon() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (key: string) =>
+      apiFetch<{ ok: boolean; key: string; config: IconConfig }>(API_ROUTES.skillsIcons, {
+        method: "POST",
+        body: { key },
+      }),
+    onSuccess: (res) => {
+      qc.setQueryData<SkillIconMap>(queryKeys.skills.icons(), (prev) => ({
+        ...(prev ?? {}),
+        [res.key]: res.config,
+      }));
+    },
+  });
+}
+
+/** Persist an explicit icon config (chosen seed + weapon type) for a skill. */
+export function useSetSkillIcon() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ key, config }: { key: string; config: IconConfig }) =>
+      apiFetch<{ ok: boolean; key: string; config: IconConfig }>(API_ROUTES.skillsIcons, {
+        method: "POST",
+        body: { key, seed: config.seed, iconClass: config.iconClass },
+      }),
+    onSuccess: (res) => {
+      qc.setQueryData<SkillIconMap>(queryKeys.skills.icons(), (prev) => ({
+        ...(prev ?? {}),
+        [res.key]: res.config,
+      }));
+    },
+  });
+}
+
 export function useUninstallSkill() {
   const qc = useQueryClient();
   return useMutation({

@@ -53,6 +53,9 @@ export type OfficeMapOverlayProps = {
   onCellClick: (x: number, y: number, shiftKey?: boolean) => void;
   onAgentClick: (x: number, y: number, ref: DragRef) => void;
   onAgentDrop?: (x: number, y: number, ref: DragRef) => void;
+  // Notifies the parent which agent tile is hovered ("x,y") so the PixiJS
+  // renderer can glow the actual sprite. null = no hover.
+  onAgentHoverChange?: (key: string | null) => void;
 };
 
 export function OfficeMapOverlay({
@@ -66,15 +69,15 @@ export function OfficeMapOverlay({
   onCellClick,
   onAgentClick,
   onAgentDrop,
+  onAgentHoverChange,
 }: OfficeMapOverlayProps) {
   const cols = grid[0]?.length ?? 0;
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
-  const [agentHoverKey, setAgentHoverKey] = useState<string | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
   const setDragging = useOfficeDragStore((s) => s.setDragging);
 
-  const stateRef = useRef({ grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging });
-  stateRef.current = { grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging };
+  const stateRef = useRef({ grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging, onAgentHoverChange });
+  stateRef.current = { grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging, onAgentHoverChange };
 
    
   const stableOnEnter = useCallback((x: number, y: number) => setHover({ x, y }), []);
@@ -209,8 +212,8 @@ export function OfficeMapOverlay({
             className="absolute pointer-events-auto opacity-0 cursor-grab active:cursor-grabbing"
             style={{ left: x * TILE, top: y * TILE, width: TILE, height: TILE }}
             onClick={() => stateRef.current.onAgentClick(x, y, ref)}
-            onMouseEnter={() => setAgentHoverKey(key)}
-            onMouseLeave={() => setAgentHoverKey((h) => h === key ? null : h)}
+            onMouseEnter={() => stateRef.current.onAgentHoverChange?.(key)}
+            onMouseLeave={() => stateRef.current.onAgentHoverChange?.(null)}
             onDragStart={(e) => {
               e.dataTransfer.setData(AGENT_DRAG_MIME, JSON.stringify(ref));
               e.dataTransfer.setData("text/plain", ref.agentId);
@@ -223,32 +226,8 @@ export function OfficeMapOverlay({
         );
       })}
 
-      {/* Hover glow — sprite-shaped golden drop-shadow on the hovered agent */}
-      {agentHoverKey && !dragging && (() => {
-        const [xs, ys] = agentHoverKey.split(",");
-        const hx = Number(xs);
-        const hy = Number(ys);
-        const hRef = agentPositions[agentHoverKey];
-        const hAgent = hRef ? agentsById.get(hRef.agentId) : null;
-        if (!hAgent) return null;
-        const { left, top, size: agentSize } = unitBoxAt(hAgent.unitChoice.kind, hx, hy);
-        return (
-          <div
-            aria-hidden
-            className="absolute pointer-events-none"
-            style={{
-              left,
-              top,
-              width: agentSize,
-              height: agentSize,
-              transform: "scale(1.12)",
-              filter: "drop-shadow(0 0 5px #fbbf24) drop-shadow(0 0 3px #fbbf24)",
-            }}
-          >
-            <UnitSprite unit={hAgent.unitChoice} size={agentSize} action="idle" animate={false} />
-          </div>
-        );
-      })()}
+      {/* Hover glow is rendered by OfficePixiCanvas directly on the real sprite
+          (see hoveredAgentKey) — no DOM duplicate here. */}
 
       {/* Drag ghost — semi-transparent sprite at the hovered drop cell while dragging */}
       {dragging && hover && (() => {

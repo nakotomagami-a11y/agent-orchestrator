@@ -578,3 +578,48 @@ export function readCompatibility(): SkillCompatibility | null {
     return null;
   }
 }
+
+// ── Generated weapon icons ────────────────────────────────────────────────
+// Each skill gets a deterministic procedural icon (see @agent-office/pixel-icons).
+// Display seed defaults to the skill's `source/name` key so it's stable and
+// "remembered" without any storage. A reroll persists an override here so the
+// user can regenerate an icon and have it stick.
+
+const SKILL_ICONS_FILE = join(APP_STATE_DIR, "skill-icons.json");
+
+export type SkillIconClass = "any" | "anyweapon" | "blades" | "spears" | "axes";
+export interface SkillIconConfig {
+  seed: string;
+  iconClass: SkillIconClass;
+}
+export type SkillIconMap = Record<string, SkillIconConfig>;
+
+/** All persisted icon overrides, keyed by `source/name`. */
+export function getSkillIcons(): SkillIconMap {
+  if (!existsSync(SKILL_ICONS_FILE)) return {};
+  try {
+    const raw = JSON.parse(readFileSync(SKILL_ICONS_FILE, "utf8"));
+    return raw && typeof raw === "object" ? (raw as SkillIconMap) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveSkillIcons(map: SkillIconMap): void {
+  ensureDir(APP_STATE_DIR);
+  writeFileAtomic(SKILL_ICONS_FILE, JSON.stringify(map, null, 2));
+}
+
+/** Persist an explicit icon config for a skill key. */
+export function setSkillIcon(key: string, cfg: SkillIconConfig): SkillIconConfig {
+  const map = getSkillIcons();
+  map[key] = cfg;
+  saveSkillIcons(map);
+  return cfg;
+}
+
+/** Generate + persist a fresh random icon for a skill key. */
+export function rerollSkillIcon(key: string, iconClass: SkillIconClass = "any"): SkillIconConfig {
+  const seed = randomUUID().replace(/-/g, "").slice(0, 16);
+  return setSkillIcon(key, { seed, iconClass });
+}

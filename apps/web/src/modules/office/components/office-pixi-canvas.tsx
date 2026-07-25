@@ -11,6 +11,8 @@ import {
   Texture,
   AnimatedSprite,
   Text,
+  BlurFilter,
+  ColorMatrixFilter,
 } from "pixi.js";
 import { TILE, buildTiles, buildFoam, type AgentPositions } from "./office-map";
 import {
@@ -39,6 +41,26 @@ const FOAM_ANIM_SPEED = 10 / 60;
 // Agent sprite constants
 const AGENT_SIZE = 96;
 const UNIT_ANIM_SPEED = 8 / 60; // 8 fps at ~60fps ticker
+
+// Hover glow: a blurred silhouette recoloured to a warm amber, drawn behind the
+// real sprite. ColorMatrix forces every visible pixel to the glow colour (RGB
+// from the offset column, alpha preserved); BlurFilter spreads it into a halo.
+const GLOW_RGB: [number, number, number] = [251 / 255, 191 / 255, 36 / 255]; // #fbbf24
+function makeGlowFilters(): [ColorMatrixFilter, BlurFilter] {
+  const cm = new ColorMatrixFilter();
+  const [r, g, b] = GLOW_RGB;
+  cm.matrix = [
+    0, 0, 0, 0, r,
+    0, 0, 0, 0, g,
+    0, 0, 0, 0, b,
+    0, 0, 0, 1, 0,
+  ];
+  return [cm, new BlurFilter({ strength: 5 })];
+}
+
+// Container props stashed on each agent container so the hover effect can toggle
+// the glow and keep its texture in sync with the animated main sprite.
+type AgentContainerExtras = { __glow?: Sprite; __main?: AnimatedSprite };
 
 // Path tiles are drawn with PixiJS Graphics (no PNG needed).
 // Geometry constants — TILE=64, path band is 36px centred, 2px dark border.
@@ -99,6 +121,8 @@ interface Props {
   isMultiInstance?: boolean;
   rosterInstances?: AgentInstance[];
   spendByInstance?: Record<string, number>;
+  // "x,y" of the hovered agent tile → glow that sprite. null = none.
+  hoveredAgentKey?: string | null;
 }
 
 export function OfficePixiCanvas({
@@ -116,6 +140,7 @@ export function OfficePixiCanvas({
   isMultiInstance,
   rosterInstances,
   spendByInstance,
+  hoveredAgentKey,
 }: Props) {
   // Container div — the canvas is created imperatively so each effect invocation
   // gets its own fresh HTMLCanvasElement (and thus its own WebGL context). React
@@ -137,6 +162,11 @@ export function OfficePixiCanvas({
   // async rebuild can detect it has been superseded and bail early.
   const buildGenRef = useRef(0);
   const agentBuildGenRef = useRef(0);
+
+  // Always-current hovered agent key, read by the glow ticker without
+  // re-subscribing on every hover change.
+  const hoveredKeyRef = useRef<string | null | undefined>(hoveredAgentKey);
+  hoveredKeyRef.current = hoveredAgentKey;
 
   // Signals that the PixiJS app is ready to receive scene data
   const [ready, setReady] = useState(false);
@@ -302,6 +332,29 @@ export function OfficePixiCanvas({
     rosterInstances,
     spendByInstance,
   ]);
+
+  // ─── Hover glow: one persistent ticker toggles/syncs glows each frame ──────
+  // Re-queries children every frame so it survives async agent rebuilds without
+  // racing them. Cost is a short loop over agent containers per frame.
+  useEffect(() => {
+    if (!ready) return;
+    const app = appRef.current;
+    if (!app) return;
+    const tick = () => {
+      const al = agentLayerRef.current;
+      if (!al) return;
+      const key = hoveredKeyRef.current;
+      for (const child of al.children) {
+        const c = child as Container & AgentContainerExtras;
+        if (!c.__glow) continue;
+        const on = c.label === key;
+        c.__glow.visible = on;
+        if (on && c.__main) c.__glow.texture = c.__main.texture;
+      }
+    };
+    app.ticker.add(tick);
+    return () => { app.ticker.remove(tick); };
+  }, [ready]);
 
   return <div ref={containerRef} className="absolute inset-0 w-full h-full" />;
 }
@@ -746,7 +799,22 @@ async function buildAgentLayer(
     animSprite.y = spriteY;
     animSprite.animationSpeed = UNIT_ANIM_SPEED;
     animSprite.play();
+
+    // Hover glow: recoloured, blurred silhouette behind the sprite (hidden until
+    // hovered). Shares the main sprite's transform; texture is synced to the
+    // current animation frame by the hover effect while active.
+    const glow = new Sprite(frameTextures[animSprite.currentFrame] ?? frameTextures[0]);
+    glow.scale.set(flip ? -spriteScale : spriteScale, spriteScale);
+    glow.x = flip ? spriteXFlip : spriteX;
+    glow.y = spriteY;
+    glow.filters = makeGlowFilters();
+    glow.visible = false;
+    agentContainer.addChild(glow);
     agentContainer.addChild(animSprite);
+    agentContainer.label = `${x},${y}`;
+    const extras = agentContainer as Container & AgentContainerExtras;
+    extras.__glow = glow;
+    extras.__main = animSprite;
 
     // ── Instance badge & spend pill ────────────────────────────────────────
     const instanceIdx = ref.instanceId

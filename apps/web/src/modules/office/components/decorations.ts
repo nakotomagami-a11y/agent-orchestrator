@@ -73,6 +73,11 @@ export type DecorationKind =
   | "house1"
   | "house2"
   | "house3"
+  | "house4"
+  | "house5"
+  | "house6"
+  | "house7"
+  | "house8"
   | "house_blue"
   | "house_purple"
   | "house_red"
@@ -278,6 +283,42 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "House 3",
     src: "/decorations/house3.png",
     frameW: 128, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  // House 4-8: 5 new AI-generated houses (dropped in 2026-07-25). Native art
+  // was much higher-res/detailed than the Tiny Swords set (1024×1024ish
+  // square renders vs the pack's flat 128×192 sprites) - auto-cropped to
+  // their opaque bbox and downscaled to ~192px tall (house1-3's height) as a
+  // functional first pass. Style-match and per-sprite anchor/scale tuning
+  // is a follow-up, not done here.
+  house4: {
+    label: "House 4",
+    src: "/decorations/house4.png",
+    frameW: 192, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  house5: {
+    label: "House 5",
+    src: "/decorations/house5.png",
+    frameW: 182, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  house6: {
+    label: "House 6",
+    src: "/decorations/house6.png",
+    frameW: 192, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  house7: {
+    label: "House 7",
+    src: "/decorations/house7.png",
+    frameW: 187, frameH: 192, frames: 1,
+    terrain: "land", category: "buildings", family: "house",
+  },
+  house8: {
+    label: "House 8",
+    src: "/decorations/house8.png",
+    frameW: 192, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
   },
   // Knights House - 4 faction colour variants from the Update 010 pack.
