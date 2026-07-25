@@ -26,6 +26,11 @@ export type OfficeBuildToolbarProps = {
   onToggle: () => void;
   onSelectTool: (next: BuildTool | null) => void;
   onSelectGrassColor: (next: GrassColor) => void;
+  canUndo: boolean;
+  canRedo: boolean;
+  onUndo: () => void;
+  onRedo: () => void;
+  onReset: () => void;
 };
 
 const CATEGORY_TABS: { id: DecoCategory; label: string }[] = [
@@ -41,6 +46,11 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
   onToggle,
   onSelectTool,
   onSelectGrassColor,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  onReset,
 }: OfficeBuildToolbarProps) {
   const [activeTab, setActiveTab] = useState<DecoCategory>("land");
 
@@ -117,6 +127,38 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
           <div>
             <div className="font-bold text-[14px] text-txt">Build</div>
             <div className="text-txt-3 text-[11px] mt-[1px] font-mono">painting decor · agent-office</div>
+          </div>
+          <div className="ml-auto flex items-center gap-[2px]">
+            <button
+              type="button"
+              className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              onClick={onUndo}
+              disabled={!canUndo}
+              title="Undo (⌘Z)"
+              aria-label="Undo"
+            >
+              <Icon name="undo" size={14} />
+            </button>
+            <button
+              type="button"
+              className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              onClick={onRedo}
+              disabled={!canRedo}
+              title="Redo (⌘⇧Z)"
+              aria-label="Redo"
+            >
+              <Icon name="redo" size={14} />
+            </button>
+            <div className="shrink-0 w-[1px] h-[16px] bg-line mx-[3px]" />
+            <button
+              type="button"
+              className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-[rgba(233,84,32,0.14)] hover:text-[#e95420]"
+              onClick={onReset}
+              title="Reset canvas"
+              aria-label="Reset canvas"
+            >
+              <Icon name="trash" size={14} />
+            </button>
           </div>
         </div>
         <div className="flex gap-[3px] mt-[10px] bg-bg-2 border border-line p-[3px] rounded-[8px]">

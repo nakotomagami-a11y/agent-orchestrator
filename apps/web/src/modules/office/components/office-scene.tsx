@@ -498,6 +498,40 @@ export function OfficeScene({
     setPendingChanges(0);
   }, []);
 
+  // Toolbar undo/redo/reset — same stacks the keyboard shortcuts use.
+  const onUndo = useCallback(() => {
+    const snapshot = undoStack.current.pop();
+    if (!snapshot) return;
+    redoStack.current.push(currentStateRef.current);
+    setGrid(snapshot.grid);
+    setDecorations(snapshot.decorations);
+    setAgentPositions(snapshot.agentPositions);
+    setRectStart(null);
+    setPendingChanges((n) => n + 1);
+  }, []);
+
+  const onRedo = useCallback(() => {
+    const snapshot = redoStack.current.pop();
+    if (!snapshot) return;
+    undoStack.current.push(currentStateRef.current);
+    setGrid(snapshot.grid);
+    setDecorations(snapshot.decorations);
+    setAgentPositions(snapshot.agentPositions);
+    setRectStart(null);
+    setPendingChanges((n) => n + 1);
+  }, []);
+
+  const onResetCanvas = useCallback(() => {
+    if (!window.confirm("Reset the canvas? This clears all decorations and placed agents and fills the map with grass.")) return;
+    undoStack.current = [...undoStack.current.slice(-49), currentStateRef.current];
+    redoStack.current = [];
+    setGrid(Array.from({ length: GRID_ROWS }, () => Array.from({ length: GRID_COLS }, () => true)));
+    setDecorations({});
+    setAgentPositions({});
+    setRectStart(null);
+    setPendingChanges((n) => n + 1);
+  }, []);
+
   const onAgentDrop = useCallback((x: number, y: number, ref: DragRef) => {
     setAgentPositions((prev) => {
       const next: AgentPositions = {};
@@ -836,6 +870,11 @@ export function OfficeScene({
         onToggle={onBuildToggle}
         onSelectTool={setTool}
         onSelectGrassColor={setGrassColor}
+        canUndo={undoStack.current.length > 0}
+        canRedo={redoStack.current.length > 0}
+        onUndo={onUndo}
+        onRedo={onRedo}
+        onReset={onResetCanvas}
       />
     </div>
   );
