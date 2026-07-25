@@ -18,6 +18,7 @@ import { TILE, buildTiles, buildFoam, type AgentPositions } from "./office-map";
 import {
   DECORATIONS,
   type DecorationKind,
+  type DecoInstance,
   type DecorationsMap,
 } from "./decorations";
 import { grassTilesetSrc, type GrassColor } from "./grass-colors";
@@ -444,7 +445,7 @@ async function buildStaticLayers(
   // Collect unique decoration URLs that are actually used
   const usedKinds = new Set<DecorationKind>();
   for (const stack of Object.values(decorations)) {
-    for (const kind of stack) usedKinds.add(kind);
+    for (const inst of stack) usedKinds.add(inst.kind);
   }
   for (const kind of usedKinds) {
     if (kind === "path") continue; // drawn via Graphics — no texture needed
@@ -564,7 +565,7 @@ async function buildStaticLayers(
   const decoEntries: Array<{
     x: number;
     y: number;
-    kind: DecorationKind;
+    inst: DecoInstance;
     layer: number;
   }> = [];
   for (const [key, stack] of Object.entries(decorations)) {
@@ -572,7 +573,7 @@ async function buildStaticLayers(
     const x = Number(xs);
     const y = Number(ys);
     for (let i = 0; i < stack.length; i++) {
-      decoEntries.push({ x, y, kind: stack[i]!, layer: i });
+      decoEntries.push({ x, y, inst: stack[i]!, layer: i });
     }
   }
   decoEntries.sort((a, b) => a.y - b.y || a.layer - b.layer);
@@ -580,10 +581,11 @@ async function buildStaticLayers(
   // Path neighbour helper used inside the decoration loop below.
   const hasPath = (cx: number, cy: number): boolean => {
     const stack = decorations[`${cx},${cy}`];
-    return !!stack && stack.includes("path");
+    return !!stack && stack.some((e) => e.kind === "path");
   };
 
-  for (const { x, y, kind } of decoEntries) {
+  for (const { x, y, inst } of decoEntries) {
+    const kind = inst.kind;
     // ── Path: draw with Graphics (no external PNG) ──────────────────────
     if (kind === "path") {
       const g = drawPathGraphics(
@@ -602,11 +604,22 @@ async function buildStaticLayers(
     const baseTex = textureMap.get(def.src);
     if (!baseTex) continue;
 
-    const left = x * TILE + (TILE - def.frameW) / 2;
+    // Per-instance pixel offset from the free-hand tool.
+    const left = x * TILE + (TILE - def.frameW) / 2 + (inst.dx ?? 0);
     const top =
-      def.anchor === "center"
+      (def.anchor === "center"
         ? y * TILE + (TILE - def.frameH) / 2
-        : (y + 1) * TILE - def.frameH;
+        : (y + 1) * TILE - def.frameH) + (inst.dy ?? 0);
+    // Horizontal mirror: flip around the sprite's own centre.
+    const applyFlip = (s: Sprite | AnimatedSprite) => {
+      if (inst.flip) {
+        s.scale.x = -1;
+        s.x = left + def.frameW;
+      } else {
+        s.x = left;
+      }
+      s.y = top;
+    };
 
     if (def.frames > 1 && def.animClass) {
       const frames: Texture[] = Array.from(
@@ -614,16 +627,14 @@ async function buildStaticLayers(
         (_, i) => cropTexture(baseTex, i * def.frameW, 0, def.frameW, def.frameH),
       );
       const anim = new AnimatedSprite(frames);
-      anim.x = left;
-      anim.y = top;
+      applyFlip(anim);
       anim.animationSpeed = decoAnimSpeed(kind);
       anim.play();
       decoLayer.addChild(anim);
     } else {
       const tex = cropTexture(baseTex, 0, 0, def.frameW, def.frameH);
       const sprite = new Sprite(tex);
-      sprite.x = left;
-      sprite.y = top;
+      applyFlip(sprite);
       decoLayer.addChild(sprite);
     }
   }
@@ -633,8 +644,8 @@ async function buildStaticLayers(
     const isLand = (cx: number, cy: number): boolean =>
       grid[cy]?.[cx] === true;
     for (const [key, stack] of Object.entries(decorations)) {
-      const hasH = stack.includes("bridge_h");
-      const hasV = stack.includes("bridge_v");
+      const hasH = stack.some((e) => e.kind === "bridge_h");
+      const hasV = stack.some((e) => e.kind === "bridge_v");
       if (!hasH && !hasV) continue;
       const [xs, ys] = key.split(",");
       const bx = Number(xs);

@@ -17,7 +17,7 @@ export function getAgentActionAndFlip(
   if (!isWorking || kind !== "pawn") return { action: "idle", flip: false };
   const has = (nx: number, ny: number, f: string): boolean => {
     const stack = decorations[decorationKey(nx, ny)];
-    return !!stack && stack.some((k) => familyOf(k) === f);
+    return !!stack && stack.some((k) => familyOf(k.kind) === f);
   };
   // Trees are tall — check the agent's cell, one cell above, and all four
   // cardinal neighbours (plus their y+1 row) so standing next to a tree fires axe.
@@ -46,5 +46,5 @@ export function isBridgeCell(
 ): boolean {
   if (grid[y]?.[x] === true) return false;
   const stack = decorations[decorationKey(x, y)];
-  return !!stack && stack.some((k) => familyOf(k) === "bridge");
+  return !!stack && stack.some((k) => familyOf(k.kind) === "bridge");
 }

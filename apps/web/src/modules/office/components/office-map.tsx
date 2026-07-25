@@ -227,7 +227,7 @@ export function isToolValidAt(
   if (tool === "fill") return !cellHasGrass;
   if (tool === "erase") return cellHasGrass || (stack !== undefined && stack.length > 0);
   if (!isPlacementValid(tool, cellHasGrass)) return false;
-  if (stack?.includes(tool)) return false; // already exactly that kind
+  if (stack?.some((e) => e.kind === tool)) return false; // already exactly that kind
   // Cells acting as a bridge ramp are reserved for the cap - block any
   // new decoration placement there.
   if (hasBridgeCap(x, y, grid, decorations)) return false;

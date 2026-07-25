@@ -336,7 +336,7 @@ export function OfficeScene({
           setDecorations((prev) => {
             const existing = prev[key];
             if (!existing) return prev;
-            const kept = existing.filter((k) => DECORATIONS[k].terrain === "land");
+            const kept = existing.filter((k) => DECORATIONS[k.kind].terrain === "land");
             if (kept.length === existing.length) return prev;
             const next = { ...prev };
             if (kept.length === 0) delete next[key];
@@ -387,7 +387,7 @@ export function OfficeScene({
             });
             // If a bridge was removed from a water cell, evict any agent.
             const isWater = grid[y]?.[x] !== true;
-            const bridgeGone = isWater && !popped.stack.some((k) => familyOf(k) === "bridge");
+            const bridgeGone = isWater && !popped.stack.some((k) => familyOf(k.kind) === "bridge");
             if (bridgeGone && agentPositions[key]) {
               setAgentPositions((prev) => {
                 const next = { ...prev };

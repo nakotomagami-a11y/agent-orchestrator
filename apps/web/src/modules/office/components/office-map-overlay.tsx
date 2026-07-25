@@ -119,7 +119,7 @@ export function OfficeMapOverlay({
       const isGrass = g[y]?.[x] === true;
       if (!isGrass) {
         const stack = d[decorationKey(x, y)];
-        if (!stack || !stack.some((k) => familyOf(k) === "bridge")) return;
+        if (!stack || !stack.some((k) => familyOf(k.kind) === "bridge")) return;
       }
       const existing = ap[decorationKey(x, y)];
       if (existing && dragRefKey(existing) !== dragRefKey(ref)) return;
@@ -136,7 +136,7 @@ export function OfficeMapOverlay({
           const isGrass = grid[cy]?.[cx] === true;
           if (!isGrass) {
             const stack = decorations[decorationKey(cx, cy)];
-            const hasBridge = !!stack && stack.some((k) => familyOf(k) === "bridge");
+            const hasBridge = !!stack && stack.some((k) => familyOf(k.kind) === "bridge");
             if (!hasBridge) continue;
           }
           const existing = agentPositions[decorationKey(cx, cy)];

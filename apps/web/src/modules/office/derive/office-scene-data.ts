@@ -1,5 +1,5 @@
 import { GRID_COLS, GRID_ROWS } from "../hooks/use-office-camera";
-import { DECORATIONS, type DecorationKind, type DecorationsMap } from "../components/decorations";
+import { DECORATIONS, type DecorationKind, type DecoInstance, type DecorationsMap } from "../components/decorations";
 import type { AgentPositions } from "../components/office-map";
 import type { AgentInstance } from "@agent-office/domain/types";
 
@@ -45,18 +45,38 @@ export function parseDecorations(raw: string): DecorationsMap | null {
     const parsed = JSON.parse(raw) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const out: DecorationsMap = {};
+    // Accepts legacy formats (a bare kind string, or an array of kind strings)
+    // and the current object form `{ kind, rot?, flip?, dx?, dy? }`.
+    const toInstance = (v: unknown): DecoInstance | null => {
+      if (typeof v === "string") {
+        const kind = migrateKind(v);
+        return kind ? { kind } : null;
+      }
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        const o = v as Record<string, unknown>;
+        if (typeof o.kind !== "string") return null;
+        const kind = migrateKind(o.kind);
+        if (!kind) return null;
+        const inst: DecoInstance = { kind };
+        if (o.rot === 1 || o.rot === 2) inst.rot = o.rot;
+        if (o.flip === true) inst.flip = true;
+        if (typeof o.dx === "number" && o.dx !== 0) inst.dx = o.dx;
+        if (typeof o.dy === "number" && o.dy !== 0) inst.dy = o.dy;
+        return inst;
+      }
+      return null;
+    };
     for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
       if (typeof value === "string") {
-        const migrated = migrateKind(value);
-        if (migrated) out[key] = [migrated];
+        const inst = toInstance(value);
+        if (inst) out[key] = [inst];
         continue;
       }
       if (Array.isArray(value)) {
-        const arr: DecorationKind[] = [];
+        const arr: DecoInstance[] = [];
         for (const v of value) {
-          if (typeof v !== "string") continue;
-          const migrated = migrateKind(v);
-          if (migrated) arr.push(migrated);
+          const inst = toInstance(v);
+          if (inst) arr.push(inst);
         }
         if (arr.length > 0) out[key] = arr;
       }

@@ -684,7 +684,23 @@ export const DECORATION_KINDS: DecorationKind[] = Object.keys(DECORATIONS) as De
  * Sparse - cells with no decoration aren't keys (empty arrays are
  * cleaned up on erase so the map size stays minimal).
  */
-export type DecorationsMap = Record<string, DecorationKind[]>;
+/**
+ * A single placed decoration instance. `kind` is the sprite; the rest are
+ * per-instance edits applied by the free-hand tool:
+ *   - rot:  rotation frame index (0/1/2) for kinds that declare rotation frames
+ *   - flip: horizontal mirror
+ *   - dx/dy: pixel offset within the cell (clamped to ±TILE at the edit site)
+ * All optional → an unedited instance is just `{ kind }`.
+ */
+export type DecoInstance = {
+  kind: DecorationKind;
+  rot?: 0 | 1 | 2;
+  flip?: boolean;
+  dx?: number;
+  dy?: number;
+};
+
+export type DecorationsMap = Record<string, DecoInstance[]>;
 
 export function decorationKey(x: number, y: number): string {
   return `${x},${y}`;
@@ -722,7 +738,7 @@ export function hasBridgeCap(
   if (grid[y]?.[x] !== true) return false;
   const has = (cx: number, cy: number, kind: DecorationKind): boolean => {
     const stack = decorations[decorationKey(cx, cy)];
-    return !!stack && stack.includes(kind);
+    return !!stack && stack.some((e) => e.kind === kind);
   };
   return (
     has(x - 1, y, "bridge_h") ||
@@ -745,22 +761,22 @@ export function hasBridgeCap(
 const MAX_STACK = 2;
 
 export function applyPlacement(
-  existing: DecorationKind[] | undefined,
+  existing: DecoInstance[] | undefined,
   next: DecorationKind,
-): DecorationKind[] {
-  if (!existing || existing.length === 0) return [next];
+): DecoInstance[] {
+  if (!existing || existing.length === 0) return [{ kind: next }];
   const family = familyOf(next);
-  const idx = existing.findIndex((k) => familyOf(k) === family);
+  const idx = existing.findIndex((e) => familyOf(e.kind) === family);
   // Same family: replace in-place regardless of cap
   if (idx !== -1) {
-    if (existing[idx] === next) return existing; // no-op
+    if (existing[idx]!.kind === next) return existing; // no-op
     const out = [...existing];
-    out[idx] = next;
+    out[idx] = { kind: next };
     return out;
   }
   // Different family: only append if under the cap
   if (existing.length >= MAX_STACK) return existing;
-  return [...existing, next];
+  return [...existing, { kind: next }];
 }
 
 /**
@@ -769,8 +785,8 @@ export function applyPlacement(
  * if nothing was there.
  */
 export function popDecoration(
-  existing: DecorationKind[] | undefined,
-): { stack: DecorationKind[]; removed: DecorationKind } | null {
+  existing: DecoInstance[] | undefined,
+): { stack: DecoInstance[]; removed: DecoInstance } | null {
   if (!existing || existing.length === 0) return null;
   const stack = [...existing];
   const removed = stack.pop()!;
