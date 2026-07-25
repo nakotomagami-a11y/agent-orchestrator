@@ -111,6 +111,7 @@ export function OfficeScene({
     onPointerUp: camPointerUp,
     zoomBy,
     resetCamera,
+    focusOn,
   } = useOfficeCamera();
 
   const {
@@ -210,6 +211,21 @@ export function OfficeScene({
     for (const a of agents) m.set(a.id, a);
     return m;
   }, [agents]);
+
+  // Elastic agent search → dropdown of matching placed agents.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchMatches = useMemo(() => {
+    const q = agentSearch.toLowerCase().trim();
+    if (!q) return [] as { key: string; x: number; y: number; name: string }[];
+    const out: { key: string; x: number; y: number; name: string }[] = [];
+    for (const [key, ref] of Object.entries(agentPositions)) {
+      const agent = agentsById.get(ref.agentId);
+      if (!agent || !agent.name.toLowerCase().includes(q)) continue;
+      const [xs, ys] = key.split(",");
+      out.push({ key, x: Number(xs), y: Number(ys), name: agent.name });
+    }
+    return out.slice(0, 8);
+  }, [agentSearch, agentPositions, agentsById]);
 
   // Multi-instance data: roster + feature flag + spend
   const settingsQ = useSettings();
@@ -682,14 +698,36 @@ export function OfficeScene({
               <Icon name="crosshair" size={13} />
             </button>
             <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
-            <input
-              className="bg-transparent border-none outline-none text-[rgba(199,191,183,0.9)] font-mono text-[11px] w-[110px] px-[4px] py-[2px] focus:text-[#f4efea] placeholder:text-[rgba(199,191,183,0.4)]"
-              type="search"
-              placeholder="Find agent…"
-              value={agentSearch}
-              onChange={(e) => setAgentSearch(e.target.value)}
-              aria-label="Search agents"
-            />
+            <div className="relative">
+              <input
+                className="bg-transparent border-none outline-none text-[rgba(199,191,183,0.9)] font-mono text-[11px] w-[110px] px-[4px] py-[2px] focus:text-[#f4efea] placeholder:text-[rgba(199,191,183,0.4)]"
+                type="search"
+                placeholder="Find agent…"
+                value={agentSearch}
+                onChange={(e) => { setAgentSearch(e.target.value); setSearchOpen(true); }}
+                onFocus={() => setSearchOpen(true)}
+                onBlur={() => setTimeout(() => setSearchOpen(false), 120)}
+                aria-label="Search agents"
+              />
+              {searchOpen && searchMatches.length > 0 && (
+                <div className="absolute left-0 top-[calc(100%+6px)] min-w-[180px] max-h-[240px] overflow-y-auto bg-[rgba(20,16,14,0.98)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] shadow-[var(--shadow-2)] [scrollbar-width:thin]">
+                  {searchMatches.map((m) => (
+                    <button
+                      key={m.key}
+                      type="button"
+                      className="w-full flex items-center gap-[7px] text-left px-[8px] py-[6px] rounded-[5px] text-[rgba(199,191,183,0.9)] font-mono text-[11.5px] transition-[background,color] duration-100 hover:bg-[rgba(233,84,32,0.14)] hover:text-[#f4efea]"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => { focusOn(m.x, m.y, 0.75); setSearchOpen(false); }}
+                    >
+                      <span className="w-[6px] h-[6px] rounded-full bg-[#ff2d1e] shrink-0" />
+                      <span className="truncate">{m.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
+            <FpsCounter />
           </motion.div>
         )}
       </AnimatePresence>
@@ -799,6 +837,38 @@ export function OfficeScene({
         onSelectTool={setTool}
         onSelectGrassColor={setGrassColor}
       />
+    </div>
+  );
+}
+
+// Live FPS readout — rAF loop, updates the label ~4×/sec to avoid re-render spam.
+function FpsCounter() {
+  const [fps, setFps] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    let frames = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      frames++;
+      if (now - last >= 250) {
+        setFps(Math.round((frames * 1000) / (now - last)));
+        frames = 0;
+        last = now;
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  const color = fps >= 50 ? "#7fd88a" : fps >= 30 ? "#e0c060" : "#e0705a";
+  return (
+    <div
+      className="font-mono text-[11px] px-[6px] py-[2px] tabular-nums select-none"
+      style={{ color }}
+      title="Frames per second"
+      aria-label={`${fps} frames per second`}
+    >
+      {fps} fps
     </div>
   );
 }

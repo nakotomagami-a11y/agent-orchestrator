@@ -295,6 +295,23 @@ function DecoTileCell({
   onSelect: (k: BuildTool | null) => void;
 }) {
   const def = DECORATIONS[kind];
+  if (def.locked) {
+    return (
+      <div
+        className="relative flex flex-col items-center justify-end gap-[3px] overflow-hidden bg-bg-2 border border-line px-[3px] pt-[6px] pb-[5px] rounded-[7px] min-h-[56px] opacity-50 cursor-not-allowed"
+        title={`${def.label} · locked`}
+        aria-disabled
+      >
+        <span className="absolute top-[3px] right-[3px] text-txt-3">
+          <Icon name="lock" size={11} />
+        </span>
+        <span className="grayscale">
+          <DecoSprite def={def} size={32} />
+        </span>
+        <div className="text-center overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[8px] leading-[1.2] max-w-full text-txt-4">{def.label}</div>
+      </div>
+    );
+  }
   return (
     <button
       type="button"

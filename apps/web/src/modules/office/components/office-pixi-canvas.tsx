@@ -42,25 +42,35 @@ const FOAM_ANIM_SPEED = 10 / 60;
 const AGENT_SIZE = 96;
 const UNIT_ANIM_SPEED = 8 / 60; // 8 fps at ~60fps ticker
 
-// Hover glow: a blurred silhouette recoloured to a warm amber, drawn behind the
-// real sprite. ColorMatrix forces every visible pixel to the glow colour (RGB
-// from the offset column, alpha preserved); BlurFilter spreads it into a halo.
-const GLOW_RGB: [number, number, number] = [251 / 255, 191 / 255, 36 / 255]; // #fbbf24
-function makeGlowFilters(): [ColorMatrixFilter, BlurFilter] {
-  const cm = new ColorMatrixFilter();
-  const [r, g, b] = GLOW_RGB;
+// Glow: a blurred silhouette recoloured via ColorMatrix (RGB from the offset
+// column, alpha preserved), drawn behind the real sprite; BlurFilter spreads it
+// into a halo. Amber = hover, red = search match.
+const GLOW_AMBER: [number, number, number] = [251 / 255, 191 / 255, 36 / 255]; // #fbbf24
+const GLOW_RED: [number, number, number] = [1, 0.14, 0.1]; // bright red
+function setGlowColor(cm: ColorMatrixFilter, [r, g, b]: [number, number, number]): void {
   cm.matrix = [
     0, 0, 0, 0, r,
     0, 0, 0, 0, g,
     0, 0, 0, 0, b,
     0, 0, 0, 1, 0,
   ];
-  return [cm, new BlurFilter({ strength: 5 })];
+}
+function makeGlow(): { cm: ColorMatrixFilter; filters: (ColorMatrixFilter | BlurFilter)[] } {
+  const cm = new ColorMatrixFilter();
+  setGlowColor(cm, GLOW_AMBER);
+  // Low strength + tight quality keeps the halo hugging the silhouette so it
+  // doesn't pool below the feet (which reads as the agent sinking downward).
+  return { cm, filters: [cm, new BlurFilter({ strength: 3, quality: 2 })] };
 }
 
-// Container props stashed on each agent container so the hover effect can toggle
-// the glow and keep its texture in sync with the animated main sprite.
-type AgentContainerExtras = { __glow?: Sprite; __main?: AnimatedSprite };
+// Container props stashed on each agent container so the glow ticker can toggle
+// visibility/colour, keep the texture synced, and match against search.
+type AgentContainerExtras = {
+  __glow?: Sprite;
+  __main?: AnimatedSprite;
+  __cm?: ColorMatrixFilter;
+  __name?: string;
+};
 
 // Path tiles are drawn with PixiJS Graphics (no PNG needed).
 // Geometry constants — TILE=64, path band is 36px centred, 2px dark border.
@@ -167,6 +177,10 @@ export function OfficePixiCanvas({
   // re-subscribing on every hover change.
   const hoveredKeyRef = useRef<string | null | undefined>(hoveredAgentKey);
   hoveredKeyRef.current = hoveredAgentKey;
+
+  // Always-current lowercased search query, read by the glow ticker.
+  const searchRef = useRef("");
+  searchRef.current = (agentSearch ?? "").toLowerCase().trim();
 
   // Signals that the PixiJS app is ready to receive scene data
   const [ready, setReady] = useState(false);
@@ -312,7 +326,6 @@ export function OfficePixiCanvas({
       agentsById,
       grid,
       decorations,
-      agentSearch ?? "",
       isMultiInstance ?? false,
       rosterInstances ?? [],
       spendByInstance ?? {},
@@ -327,7 +340,6 @@ export function OfficePixiCanvas({
     agentsById,
     grid,
     decorations,
-    agentSearch,
     isMultiInstance,
     rosterInstances,
     spendByInstance,
@@ -344,12 +356,25 @@ export function OfficePixiCanvas({
       const al = agentLayerRef.current;
       if (!al) return;
       const key = hoveredKeyRef.current;
+      const query = searchRef.current;
       for (const child of al.children) {
         const c = child as Container & AgentContainerExtras;
-        if (!c.__glow) continue;
-        const on = c.label === key;
-        c.__glow.visible = on;
-        if (on && c.__main) c.__glow.texture = c.__main.texture;
+        if (!c.__glow || !c.__cm) continue;
+        const hover = c.label === key;
+        const match = query !== "" && (c.__name?.includes(query) ?? false);
+        // Hover wins (amber); otherwise a search match glows red.
+        if (hover) {
+          setGlowColor(c.__cm, GLOW_AMBER);
+          c.__glow.visible = true;
+        } else if (match) {
+          setGlowColor(c.__cm, GLOW_RED);
+          c.__glow.visible = true;
+        } else {
+          c.__glow.visible = false;
+        }
+        if (c.__glow.visible && c.__main) c.__glow.texture = c.__main.texture;
+        // Spotlight: dim non-matches while a query is active.
+        c.alpha = query !== "" && !match && !hover ? 0.25 : 1;
       }
     };
     app.ticker.add(tick);
@@ -646,7 +671,6 @@ async function buildAgentLayer(
   agentsById: Map<string, OfficeAgent>,
   grid: boolean[][],
   decorations: DecorationsMap,
-  agentSearch: string,
   isMultiInstance: boolean,
   rosterInstances: AgentInstance[],
   spendByInstance: Record<string, number>,
@@ -712,9 +736,9 @@ async function buildAgentLayer(
     .sort((a, b) => a.y - b.y);
 
   // Feet Y target: world pixels below a tile's top edge where all units'
-  // ground contact should land. Derived from the default-sized unit formula
-  // so existing units are unchanged: (TILE + AGENT_SIZE) / 2 = 80.
-  const TARGET_FEET_Y = (TILE + AGENT_SIZE) / 2;
+  // ground contact should land. Sits 10% of a tile above the cell's bottom
+  // edge (the decoration ground line) so agents read as standing on the tile.
+  const TARGET_FEET_Y = TILE * 0.9;
 
   // ── Build a Container per agent ────────────────────────────────────────────
   for (const { x, y, ref } of sortedEntries) {
@@ -807,7 +831,8 @@ async function buildAgentLayer(
     glow.scale.set(flip ? -spriteScale : spriteScale, spriteScale);
     glow.x = flip ? spriteXFlip : spriteX;
     glow.y = spriteY;
-    glow.filters = makeGlowFilters();
+    const glowFx = makeGlow();
+    glow.filters = glowFx.filters;
     glow.visible = false;
     agentContainer.addChild(glow);
     agentContainer.addChild(animSprite);
@@ -815,6 +840,8 @@ async function buildAgentLayer(
     const extras = agentContainer as Container & AgentContainerExtras;
     extras.__glow = glow;
     extras.__main = animSprite;
+    extras.__cm = glowFx.cm;
+    extras.__name = agent.name.toLowerCase();
 
     // ── Instance badge & spend pill ────────────────────────────────────────
     const instanceIdx = ref.instanceId
@@ -858,11 +885,8 @@ async function buildAgentLayer(
       agentContainer.addChild(pill);
     }
 
-    // ── Search dimming ─────────────────────────────────────────────────────
-    const searchMatch =
-      !agentSearch ||
-      agent.name.toLowerCase().includes(agentSearch.toLowerCase());
-    agentContainer.alpha = searchMatch ? 1 : 0.2;
+    // Search highlight (dim non-matches + red glow) is applied per frame by the
+    // glow ticker via __name, so it doesn't rebuild the scene on each keystroke.
 
     agentLayer.addChild(agentContainer);
   }

@@ -48,6 +48,7 @@ export type DecoFamily =
   | "grave"
   | "scarecrow"
   | "sheep"
+  | "pig"
   | "gold_mine"
   | "cursed_chest"
   | "bridge"
@@ -106,6 +107,7 @@ export type DecorationKind =
   | "gravestone"
   | "scarecrow"
   | "sheep"
+  | "pig"
   | "gold_mine_active"
   | "gold_mine_inactive"
   | "gold_mine_destroyed"
@@ -155,6 +157,9 @@ export interface DecorationDef {
   previewCol?: number;
   /** Preview tile row index within a 2D tilesheet. */
   previewRow?: number;
+  /** Shown in the build palette but greyed out and unselectable. Used for
+   *  assets that aren't style-matched/finished yet. */
+  locked?: boolean;
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -307,19 +312,19 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "House 6",
     src: "/decorations/house6.png",
     frameW: 192, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
+    terrain: "land", category: "buildings", family: "house", locked: true,
   },
   house7: {
     label: "House 7",
     src: "/decorations/house7.png",
     frameW: 187, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
+    terrain: "land", category: "buildings", family: "house", locked: true,
   },
   house8: {
     label: "House 8",
     src: "/decorations/house8.png",
     frameW: 192, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
+    terrain: "land", category: "buildings", family: "house", locked: true,
   },
   // Knights House - 4 faction colour variants from the Update 010 pack.
   house_blue: {
@@ -544,6 +549,16 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/sheep.png",
     frameW: 128, frameH: 128, frames: 8,
     terrain: "land", category: "land", family: "sheep", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
+    anchor: "center",
+  },
+
+  // ─ Pig (animated, 8 × 128×128). Same 1024×128 stride as the sheep so it
+  //   reuses the deco-bush keyframe and centres on its tile. ───────────────
+  pig: {
+    label: "Pig",
+    src: "/decorations/pig.png",
+    frameW: 128, frameH: 128, frames: 8,
+    terrain: "land", category: "land", family: "pig", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
     anchor: "center",
   },
 

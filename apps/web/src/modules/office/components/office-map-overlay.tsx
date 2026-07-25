@@ -32,7 +32,9 @@ function unitBoxAt(kind: string, tx: number, ty: number) {
   const padY = (agentSize - def.bbox.h * scale) / 2;
   const groundNativeY = def.groundY ?? (def.bbox.y + def.bbox.h);
   const feetInBox = padY + (groundNativeY - def.bbox.y) * scale;
-  const TARGET_FEET_Y = (TILE + AGENT_SIZE) / 2;
+  // Must match TARGET_FEET_Y in office-pixi-canvas so the drag ghost lines up
+  // with the real sprite: 10% of a tile above the cell's bottom edge.
+  const TARGET_FEET_Y = TILE * 0.9;
   return { left, top: ty * TILE + TARGET_FEET_Y - feetInBox, size: agentSize };
 }
 

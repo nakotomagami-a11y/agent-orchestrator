@@ -149,6 +149,20 @@ export function useOfficeCamera() {
     setPanY(cy - wy * newZoom);
   }, []);
 
+  // Centre the viewport on a specific tile at a target zoom (0..1+). Used by the
+  // agent search to fly to a picked agent.
+  const focusOn = useCallback((tileX: number, tileY: number, targetZoom = 0.75) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, targetZoom));
+    const worldX = tileX * TILE + TILE / 2;
+    const worldY = tileY * TILE + TILE / 2;
+    setZoom(z);
+    setPanX(width / 2 - worldX * z);
+    setPanY(height / 2 - worldY * z);
+  }, []);
+
   const resetCamera = useCallback(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -170,5 +184,6 @@ export function useOfficeCamera() {
     onPointerUp,
     zoomBy,
     resetCamera,
+    focusOn,
   };
 }
