@@ -711,6 +711,16 @@ export function familyOf(kind: DecorationKind): DecoFamily {
 }
 
 /**
+ * Props (bushes, trees, rocks, flowers, ducks, …) may be placed multiple times
+ * in a single cell and spread apart with per-instance offsets. Structural kinds
+ * — buildings, bridges, and paths — stay one-per-cell.
+ */
+export function isStackable(kind: DecorationKind): boolean {
+  const def = DECORATIONS[kind];
+  return def.category !== "buildings" && def.family !== "bridge" && kind !== "path";
+}
+
+/**
  * True when a bridge end-cap would render on cell `(x, y)`. Mirrors the
  * cap-painting logic in OfficeMap: a cap appears iff the cell is land
  * AND a neighbouring water cell holds a bridge middle that points at
@@ -751,12 +761,21 @@ export function hasBridgeCap(
  * `existing` may be undefined for empty cells.
  */
 const MAX_STACK = 2;
+// Stackable props can pile up in a cell (spread apart with per-instance
+// offsets); higher cap keeps the map JSON bounded.
+const MAX_STACK_PROPS = 12;
 
 export function applyPlacement(
   existing: DecoInstance[] | undefined,
   next: DecorationKind,
 ): DecoInstance[] {
   if (!existing || existing.length === 0) return [{ kind: next }];
+  // Stackable props: always add another instance (up to the prop cap) so the
+  // user can place several bushes/rocks/flowers in one cell and nudge them apart.
+  if (isStackable(next)) {
+    if (existing.length >= MAX_STACK_PROPS) return existing;
+    return [...existing, { kind: next }];
+  }
   const family = familyOf(next);
   const idx = existing.findIndex((e) => familyOf(e.kind) === family);
   // Same family: replace in-place regardless of cap
