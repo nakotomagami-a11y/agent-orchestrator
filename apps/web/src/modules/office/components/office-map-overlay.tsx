@@ -213,44 +213,68 @@ function OfficeMapOverlayImpl({
 
   const { yMin: yStart, yMax: yEnd, xMin: xStart, xMax: xEnd } = visibleRange;
 
+  const cellValid = useCallback((x: number, y: number): boolean => {
+    if (!validitySet) return false;
+    if (validitySet === "inline-grass") return grid[y]?.[x] !== true;
+    if (validitySet === "inline-erase") return grid[y]?.[x] === true || !!decorations[decorationKey(x, y)];
+    return validitySet.has(decorationKey(x, y));
+  }, [validitySet, grid, decorations]);
+
+  // Build-mode interaction grid. Memoised (deps exclude `hover`) so moving the
+  // cursor re-renders only the single hover-tint div below, not thousands of
+  // cells. Capped: past ~2500 visible cells (zoomed out on a big map, where
+  // per-tile clicks aren't useful anyway) we skip the grid entirely — that
+  // 7k-button render was the FPS killer. Paint/erase still work via pointer math.
+  const MAX_GRID_CELLS = 2500;
+  const gridCells = useMemo(() => {
+    if (selectMode || (!buildMode && !dragging)) return null;
+    if ((yEnd - yStart + 1) * (xEnd - xStart + 1) > MAX_GRID_CELLS) return null;
+    const out: React.ReactNode[] = [];
+    for (let y = yStart; y <= yEnd; y++) {
+      for (let x = xStart; x <= xEnd; x++) {
+        out.push(
+          <GridCell
+            key={`overlay-cell-${x}-${y}`}
+            x={x}
+            y={y}
+            isValid={cellValid(x, y)}
+            isEditable
+            onEnter={stableOnEnter}
+            onLeave={stableOnLeave}
+            onClick={stableOnClick}
+            onDragOver={stableOnDragOver}
+            onDragLeave={stableOnDragLeave}
+            onDrop={stableOnDrop}
+          />,
+        );
+      }
+    }
+    return out;
+  }, [selectMode, buildMode, dragging, yStart, yEnd, xStart, xEnd, cellValid, stableOnEnter, stableOnLeave, stableOnClick, stableOnDragOver, stableOnDragLeave, stableOnDrop]);
+
   return (
     <div
       className="absolute left-0 top-0 pointer-events-none"
       style={{ width: cols * TILE, height: grid.length * TILE }}
     >
-      {/* Build mode grid + drag-and-drop targets (hidden under the select tool) */}
-      {(buildMode || dragging) && !selectMode && Array.from({ length: yEnd - yStart + 1 }).flatMap((_, i) => {
-        const y = yStart + i;
-        return Array.from({ length: xEnd - xStart + 1 }).map((_, j) => {
-          const x = xStart + j;
-          let valid: boolean;
-          if (!validitySet) {
-            valid = false;
-          } else if (validitySet === "inline-grass") {
-            valid = grid[y]?.[x] !== true;
-          } else if (validitySet === "inline-erase") {
-            valid = grid[y]?.[x] === true || !!decorations[decorationKey(x, y)];
-          } else {
-            valid = validitySet.has(decorationKey(x, y));
-          }
-          return (
-            <GridCell
-              key={`overlay-cell-${x}-${y}`}
-              x={x}
-              y={y}
-              isHovered={hover?.x === x && hover.y === y}
-              isValid={valid}
-              isEditable
-              onEnter={stableOnEnter}
-              onLeave={stableOnLeave}
-              onClick={stableOnClick}
-              onDragOver={stableOnDragOver}
-              onDragLeave={stableOnDragLeave}
-              onDrop={stableOnDrop}
-            />
-          );
-        });
-      })}
+      {/* Build mode grid hit-targets (hidden under the select tool / when capped) */}
+      {gridCells}
+
+      {/* Single hover-tint cell — the only thing that re-renders on cursor move */}
+      {gridCells && hover && (
+        <div
+          className="absolute pointer-events-none transition-[background] duration-[80ms]"
+          style={{
+            left: hover.x * TILE,
+            top: hover.y * TILE,
+            width: TILE,
+            height: TILE,
+            background: cellValid(hover.x, hover.y)
+              ? "rgba(34, 197, 94, 0.28)"
+              : "rgba(239, 68, 68, 0.28)",
+          }}
+        />
+      )}
 
       {/* Agent interaction targets: transparent draggable buttons over each agent tile */}
       {Object.entries(agentPositions).map(([key, ref]) => {

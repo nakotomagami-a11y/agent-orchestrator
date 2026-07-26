@@ -240,7 +240,6 @@ export function isToolValidAt(
 export type GridCellProps = {
   x: number;
   y: number;
-  isHovered: boolean;
   isValid: boolean;
   isEditable: boolean;
   onEnter: (x: number, y: number) => void;
@@ -251,13 +250,12 @@ export type GridCellProps = {
   onDrop: (x: number, y: number, e: React.DragEvent<HTMLButtonElement>) => void;
 };
 
-/** Memoised overlay cell for build mode. Isolating hover into a prop means
- *  only the 2 cells that change (old hover → new hover) re-render per cursor
- *  move instead of the entire visible grid. All callbacks are stable refs. */
+/** Memoised overlay cell for build mode — a transparent hit-target only. The
+ *  hover tint is a single separate div in the overlay, so cursor moves don't
+ *  re-render the whole visible grid (which tanks FPS on large maps). */
 export const GridCell = memo(function GridCell({
   x,
   y,
-  isHovered,
   isValid,
   isEditable,
   onEnter,
@@ -276,17 +274,12 @@ export const GridCell = memo(function GridCell({
       onDragOver={(e) => onDragOver(x, y, e, isValid)}
       onDragLeave={() => onDragLeave(x, y)}
       onDrop={(e) => onDrop(x, y, e)}
-      className="absolute p-0 pointer-events-auto transition-[background] duration-[80ms] ease-[ease]"
+      className="absolute p-0 pointer-events-auto"
       style={{
         left: x * TILE,
         top: y * TILE,
         width: TILE,
         height: TILE,
-        background: isHovered
-          ? isValid
-            ? "rgba(34, 197, 94, 0.28)"
-            : "rgba(239, 68, 68, 0.28)"
-          : "transparent",
         border: isEditable ? "1px dashed rgba(255, 255, 255, 0.25)" : "none",
         cursor: isEditable ? (isValid ? "pointer" : "not-allowed") : "default",
       }}
