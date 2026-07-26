@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { UNIT_DEFS } from "@/components/ui/unit-sprite-registry";
 import type { OfficeAgent } from "../hooks/use-office-agents";
@@ -80,7 +80,10 @@ export type OfficeMapOverlayProps = {
   onDecoOffset?: (key: string, index: number, dx: number, dy: number) => void;
 };
 
-export function OfficeMapOverlay({
+// Memoized: during a camera pan the parent re-renders every frame, but this
+// overlay renders hundreds of build-mode GridCells — skipping its reconciliation
+// when props are unchanged is the single biggest pan-FPS win.
+function OfficeMapOverlayImpl({
   grid,
   decorations,
   agentPositions,
@@ -342,3 +345,5 @@ export function OfficeMapOverlay({
     </div>
   );
 }
+
+export const OfficeMapOverlay = memo(OfficeMapOverlayImpl);

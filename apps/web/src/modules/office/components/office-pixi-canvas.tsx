@@ -173,6 +173,9 @@ export function OfficePixiCanvas({
   // async rebuild can detect it has been superseded and bail early.
   const buildGenRef = useRef(0);
   const agentBuildGenRef = useRef(0);
+  // One shared ticker drives every foam sprite's frame (instead of N
+  // AnimatedSprites each subscribing to the ticker). Cleared on each rebuild.
+  const foamTickerRef = useRef<((t: { deltaTime: number }) => void) | null>(null);
 
   // Always-current hovered agent key, read by the glow ticker without
   // re-subscribing on every hover change.
@@ -274,6 +277,7 @@ export function OfficePixiCanvas({
       worldRef.current = null;
       staticContainerRef.current = null;
       agentLayerRef.current = null;
+      foamTickerRef.current = null;
       setReady(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -307,7 +311,9 @@ export function OfficePixiCanvas({
     if (!sc) return;
 
     const gen = ++buildGenRef.current;
-    buildStaticLayers(sc, grid, decorations, grassColor, gen, buildGenRef).catch(
+    const app = appRef.current;
+    if (!app) return;
+    buildStaticLayers(sc, app, foamTickerRef, grid, decorations, grassColor, gen, buildGenRef).catch(
       (err: unknown) => {
         console.error("[PixiJS] static layer build failed:", err);
       },
@@ -426,12 +432,19 @@ function drawPathGraphics(n: boolean, e: boolean, s: boolean, w: boolean): Graph
 // ─── Static layer builder (renamed from buildPixiScene) ────────────────────────
 async function buildStaticLayers(
   staticContainer: Container,
+  app: Application,
+  foamTickerRef: MutableRefObject<((t: { deltaTime: number }) => void) | null>,
   grid: boolean[][],
   decorations: DecorationsMap,
   grassColor: GrassColor,
   gen: number,
   genRef: MutableRefObject<number>,
 ): Promise<void> {
+  // Drop the previous foam ticker before rebuilding its sprites.
+  if (foamTickerRef.current) {
+    app.ticker.remove(foamTickerRef.current);
+    foamTickerRef.current = null;
+  }
   // Destroy previous sub-containers (stops AnimatedSprite ticker subscriptions
   // and releases texture wrapper references via destroy({ children: true }))
   for (const child of staticContainer.removeChildren()) {
@@ -551,14 +564,31 @@ async function buildStaticLayers(
     );
 
     const foamCells = buildFoam(grid);
+    // Plain sprites driven by ONE shared ticker: all foam shows the same frame,
+    // so we advance a single counter and reassign textures instead of running N
+    // independent AnimatedSprites (N ticker subscriptions → 1).
+    const foamSprites: Sprite[] = [];
     for (const { x, y } of foamCells) {
-      const anim = new AnimatedSprite(foamFrames);
+      const sprite = new Sprite(foamFrames[0]);
       // Same offset as CSS: x*TILE - TILE to centre the 3×3 foam frame on the cell
-      anim.x = x * TILE - TILE;
-      anim.y = y * TILE - TILE;
-      anim.animationSpeed = FOAM_ANIM_SPEED;
-      anim.play();
-      foamLayer.addChild(anim);
+      sprite.x = x * TILE - TILE;
+      sprite.y = y * TILE - TILE;
+      foamLayer.addChild(sprite);
+      foamSprites.push(sprite);
+    }
+    if (foamSprites.length > 0) {
+      let frame = 0;
+      let acc = 0;
+      const tick = (ticker: { deltaTime: number }) => {
+        acc += FOAM_ANIM_SPEED * ticker.deltaTime;
+        if (acc < 1) return;
+        acc -= 1;
+        frame = (frame + 1) % FOAM_FRAMES;
+        const tex = foamFrames[frame]!;
+        for (const s of foamSprites) s.texture = tex;
+      };
+      app.ticker.add(tick);
+      foamTickerRef.current = tick;
     }
   }
 

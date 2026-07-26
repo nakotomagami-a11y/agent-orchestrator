@@ -604,6 +604,10 @@ export function OfficeScene({
     setSelectedDeco(null);
   }, [selectedDeco, mutateDeco]);
 
+  // Stable callbacks so OfficeMapOverlay's memo holds across camera pans.
+  const selectDeco = useCallback((key: string, index: number) => setSelectedDeco({ key, index }), []);
+  const deselectDeco = useCallback(() => setSelectedDeco(null), []);
+
   // Drag-to-reposition: overlay records the drag; on the first move it calls
   // beginDecoDrag (one undo snapshot + select), then setDecoOffset live (no more
   // snapshots) until pointer-up.
@@ -808,8 +812,8 @@ export function OfficeScene({
           onAgentDrop={onAgentDrop}
           onAgentHoverChange={setHoveredAgentKey}
           selectedDeco={selectedDeco}
-          onDecoSelect={(key, index) => setSelectedDeco({ key, index })}
-          onDecoDeselect={() => setSelectedDeco(null)}
+          onDecoSelect={selectDeco}
+          onDecoDeselect={deselectDeco}
           zoom={zoom}
           onDecoDragStart={beginDecoDrag}
           onDecoOffset={setDecoOffset}
