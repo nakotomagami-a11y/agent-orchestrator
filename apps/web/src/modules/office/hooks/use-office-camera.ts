@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TILE } from "../components/office-map";
 
-// Build area — a large Civ-style map (~5× the earlier 48×30) so a generated
-// landmass still leaves plenty of water to expand into. Off-screen tiles/foam
-// are culled by pixi's CullerPlugin so the size costs little when zoomed in.
-export const GRID_COLS = 108;
-export const GRID_ROWS = 68;
+// Build area. Bigger than the original 40×26 (a generated landmass still leaves
+// a water margin to expand into) but kept modest: every tile is a live sprite,
+// so 108×68 (~7k sprites) tanked FPS. A truly huge map needs chunked rendering.
+export const GRID_COLS = 64;
+export const GRID_ROWS = 40;
 const MAP_W = GRID_COLS * TILE;
 const MAP_H = GRID_ROWS * TILE;
-// Low enough to fit the whole enlarged map on screen when zoomed all the way out.
-const ZOOM_MIN = 0.1;
+// Low enough to fit the whole map on screen when zoomed all the way out.
+const ZOOM_MIN = 0.12;
 const ZOOM_MAX = 3.0;
 export const ZOOM_STEP = 0.15;
 
