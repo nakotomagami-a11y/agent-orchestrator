@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Application, Container, CullerPlugin, extensions } from "pixi.js";
+import { Application, Container } from "pixi.js";
 import { TILE, type AgentPositions } from "../components/office-map";
 import type { DecorationsMap } from "../components/decorations";
 import type { GrassColor } from "../components/grass-colors";
@@ -10,10 +10,6 @@ import type { AgentInstance } from "@agent-office/domain/types";
 import { buildStaticLayers } from "../pixi/build-static-layers";
 import { buildAgentLayer } from "../pixi/build-agent-layer";
 import { GLOW_AMBER, GLOW_RED, setGlowColor, type AgentContainerExtras } from "../pixi/glow";
-
-// Register pixi's automatic culler once so off-screen tiles/foam are skipped at
-// render time (sprites are marked `cullable` in the static-layer builder).
-extensions.add(CullerPlugin);
 
 export interface OfficePixiProps {
   width: number;

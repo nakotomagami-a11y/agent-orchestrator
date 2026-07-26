@@ -1,5 +1,6 @@
 import type { MutableRefObject } from "react";
 import { AnimatedSprite, Application, Assets, Container, Rectangle, Sprite, Texture } from "pixi.js";
+import { CompositeTilemap } from "@pixi/tilemap";
 import { TILE, buildTiles, buildFoam } from "../components/office-map";
 import {
   DECORATIONS,
@@ -92,11 +93,15 @@ export async function buildStaticLayers(
   if (gen !== genRef.current) return;
 
   // ── Create sub-containers ───────────────────────────────────────────────────
-  const foamLayer = new Container();
-  const tileLayer = new Container();
+  // Terrain + foam render as batched tilemaps (≈one draw call each, no per-tile
+  // scene nodes) so map size barely affects frame cost. Rare rotated grass caps
+  // stay as Sprites; decorations/bridge caps remain sprites (sparse).
+  const foamTilemap = new CompositeTilemap();
+  const terrainTilemap = new CompositeTilemap();
+  const rotatedTiles = new Container();
   const decoLayer = new Container();
   const capLayer = new Container();
-  staticContainer.addChild(foamLayer, tileLayer, decoLayer, capLayer);
+  staticContainer.addChild(foamTilemap, terrainTilemap, rotatedTiles, decoLayer, capLayer);
 
   // ── Helper: create a cropped texture from a base texture ──────────────────
   function cropTexture(
@@ -129,24 +134,21 @@ export async function buildStaticLayers(
           QUARTER,
           QUARTER,
         );
-        const sprite = new Sprite(tex);
-        sprite.x = t.x * TILE + qx;
-        sprite.y = t.y * TILE + qy;
-        sprite.cullable = true;
-        tileLayer.addChild(sprite);
-      } else {
+        terrainTilemap.tile(tex, t.x * TILE + qx, t.y * TILE + qy);
+      } else if (t.rotate === 90) {
+        // Rare 1-wide horizontal grass cap — keep as a rotated Sprite (the
+        // tilemap batches only the unrotated tiles, which is ~all of them).
         const tex = cropTexture(tilesetTex, t.c * TILE, t.r * TILE, TILE, TILE);
         const sprite = new Sprite(tex);
-        sprite.x = t.x * TILE;
+        sprite.rotation = Math.PI / 2;
+        // Pivot compensation: after 90° CW rotation, the left edge moves to the
+        // bottom. Shift right by TILE so the sprite stays in its cell.
+        sprite.x = t.x * TILE + TILE;
         sprite.y = t.y * TILE;
-        if (t.rotate === 90) {
-          sprite.rotation = Math.PI / 2;
-          // Pivot compensation: after 90° CW rotation, the left edge moves to
-          // the bottom. Shift right by TILE so the sprite stays in its cell.
-          sprite.x += TILE;
-        }
-        sprite.cullable = true;
-        tileLayer.addChild(sprite);
+        rotatedTiles.addChild(sprite);
+      } else {
+        const tex = cropTexture(tilesetTex, t.c * TILE, t.r * TILE, TILE, TILE);
+        terrainTilemap.tile(tex, t.x * TILE, t.y * TILE);
       }
     }
   }
@@ -154,26 +156,18 @@ export async function buildStaticLayers(
   // ── Foam layer ─────────────────────────────────────────────────────────────
   const foamBaseTex = textureMap.get(FOAM_SHEET);
   if (foamBaseTex) {
-    // Pre-build the 16 frame textures (shared across all foam sprites)
-    const foamFrames: Texture[] = Array.from({ length: FOAM_FRAMES }, (_, i) =>
-      cropTexture(foamBaseTex, i * FOAM_FRAME, 0, FOAM_FRAME, FOAM_FRAME),
-    );
-
+    // Frame-0 crop; the tilemap animates every foam tile by stepping animX along
+    // the sheet, so a single tileAnim update per tick drives them all.
+    const foamFrame0 = cropTexture(foamBaseTex, 0, 0, FOAM_FRAME, FOAM_FRAME);
     const foamCells = buildFoam(grid);
-    // Plain sprites driven by ONE shared ticker: all foam shows the same frame,
-    // so we advance a single counter and reassign textures instead of running N
-    // independent AnimatedSprites (N ticker subscriptions → 1).
-    const foamSprites: Sprite[] = [];
     for (const { x, y } of foamCells) {
-      const sprite = new Sprite(foamFrames[0]);
       // Same offset as CSS: x*TILE - TILE to centre the 3×3 foam frame on the cell
-      sprite.x = x * TILE - TILE;
-      sprite.y = y * TILE - TILE;
-      sprite.cullable = true;
-      foamLayer.addChild(sprite);
-      foamSprites.push(sprite);
+      foamTilemap.tile(foamFrame0, x * TILE - TILE, y * TILE - TILE, {
+        animX: FOAM_FRAME,
+        animCountX: FOAM_FRAMES,
+      });
     }
-    if (foamSprites.length > 0) {
+    if (foamCells.length > 0) {
       let frame = 0;
       let acc = 0;
       const tick = (ticker: { deltaTime: number }) => {
@@ -181,8 +175,7 @@ export async function buildStaticLayers(
         if (acc < 1) return;
         acc -= 1;
         frame = (frame + 1) % FOAM_FRAMES;
-        const tex = foamFrames[frame]!;
-        for (const s of foamSprites) s.texture = tex;
+        foamTilemap.tileAnim[0] = frame;
       };
       app.ticker.add(tick);
       foamTickerRef.current = tick;
