@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -69,7 +69,16 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
   const [genCoverage, setGenCoverage] = useState(0.65);
   const [genRoughness, setGenRoughness] = useState(0.5);
   const [genRooms, setGenRooms] = useState(4);
+  // True once the user types a seed → the next Generate uses it verbatim; a plain
+  // repeat Generate re-rolls a fresh seed so pressing it again gives a new map.
+  const seedEdited = useRef(false);
   const shapeDef = LAND_SHAPES.find((s) => s.id === genShape)!;
+  const runGenerate = () => {
+    const seed = seedEdited.current ? genSeed : Math.floor(Math.random() * 100000);
+    seedEdited.current = false;
+    setGenSeed(seed);
+    onGenerateLand({ shape: genShape, seed, coverage: genCoverage, roughness: genRoughness, rooms: genRooms });
+  };
 
   // Keep tab in sync when a deco tool is selected externally
   useEffect(() => {
@@ -255,10 +264,18 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
               <option key={s.id} value={s.id}>{s.label}</option>
             ))}
           </select>
+          <input
+            type="number"
+            className="w-[68px] shrink-0 bg-bg-2 border border-line text-txt text-[12px] rounded-[6px] px-[8px] py-[6px] outline-none tabular-nums focus:border-[color-mix(in_srgb,var(--acc)_30%,transparent)]"
+            value={genSeed}
+            onChange={(e) => { seedEdited.current = true; setGenSeed(Number(e.target.value) || 0); }}
+            title="Seed"
+            aria-label="Seed"
+          />
           <button
             type="button"
             className="w-[30px] h-[30px] shrink-0 flex items-center justify-center rounded-[6px] bg-bg-2 border border-line text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt"
-            onClick={() => setGenSeed(Math.floor(Math.random() * 100000))}
+            onClick={() => { seedEdited.current = true; setGenSeed(Math.floor(Math.random() * 100000)); }}
             title="Randomize seed"
             aria-label="Randomize seed"
           >
@@ -281,7 +298,7 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
         <button
           type="button"
           className="mt-[1px] inline-flex items-center justify-center gap-[6px] bg-acc text-white font-semibold text-[12.5px] rounded-[7px] px-[12px] py-[8px] cursor-pointer transition-[filter] duration-100 hover:brightness-110"
-          onClick={() => onGenerateLand({ shape: genShape, seed: genSeed, coverage: genCoverage, roughness: genRoughness, rooms: genRooms })}
+          onClick={runGenerate}
         >
           <Icon name="sparkle" size={13} />
           Generate

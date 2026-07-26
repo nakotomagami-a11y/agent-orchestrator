@@ -13,7 +13,13 @@ import {
   Text,
   BlurFilter,
   ColorMatrixFilter,
+  CullerPlugin,
+  extensions,
 } from "pixi.js";
+
+// Register pixi's automatic culler once so off-screen tiles/foam on the large
+// map are skipped at render time (sprites are marked `cullable` below).
+extensions.add(CullerPlugin);
 import { TILE, buildTiles, buildFoam, type AgentPositions } from "./office-map";
 import {
   DECORATIONS,
@@ -538,6 +544,7 @@ async function buildStaticLayers(
         const sprite = new Sprite(tex);
         sprite.x = t.x * TILE + qx;
         sprite.y = t.y * TILE + qy;
+        sprite.cullable = true;
         tileLayer.addChild(sprite);
       } else {
         const tex = cropTexture(tilesetTex, t.c * TILE, t.r * TILE, TILE, TILE);
@@ -550,6 +557,7 @@ async function buildStaticLayers(
           // the bottom. Shift right by TILE so the sprite stays in its cell.
           sprite.x += TILE;
         }
+        sprite.cullable = true;
         tileLayer.addChild(sprite);
       }
     }
@@ -573,6 +581,7 @@ async function buildStaticLayers(
       // Same offset as CSS: x*TILE - TILE to centre the 3×3 foam frame on the cell
       sprite.x = x * TILE - TILE;
       sprite.y = y * TILE - TILE;
+      sprite.cullable = true;
       foamLayer.addChild(sprite);
       foamSprites.push(sprite);
     }

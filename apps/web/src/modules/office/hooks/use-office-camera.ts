@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TILE } from "../components/office-map";
 
-// Build area — enlarged ~40% over the original 40×26 so a generated landmass
-// still leaves a ring of water for the user to expand into (Civ-style map).
-export const GRID_COLS = 48;
-export const GRID_ROWS = 30;
+// Build area — a large Civ-style map (~5× the earlier 48×30) so a generated
+// landmass still leaves plenty of water to expand into. Off-screen tiles/foam
+// are culled by pixi's CullerPlugin so the size costs little when zoomed in.
+export const GRID_COLS = 108;
+export const GRID_ROWS = 68;
 const MAP_W = GRID_COLS * TILE;
 const MAP_H = GRID_ROWS * TILE;
-const ZOOM_MIN = 0.25;
+// Low enough to fit the whole enlarged map on screen when zoomed all the way out.
+const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 3.0;
 export const ZOOM_STEP = 0.15;
 
