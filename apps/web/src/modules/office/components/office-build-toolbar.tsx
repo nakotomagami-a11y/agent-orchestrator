@@ -15,6 +15,7 @@ import {
   type GrassColor,
   type GrassColorDef,
 } from "./grass-colors";
+import { LAND_SHAPES, type LandShape } from "../derive/land-generator";
 import { useFilter } from "@/hooks/use-filter";
 
 export type BuildTool = "grass" | "erase" | "fill" | "select" | DecorationKind;
@@ -31,6 +32,15 @@ export type OfficeBuildToolbarProps = {
   onUndo: () => void;
   onRedo: () => void;
   onReset: () => void;
+  onGenerateLand: (opts: LandGenParams) => void;
+};
+
+export type LandGenParams = {
+  shape: LandShape;
+  seed: number;
+  coverage: number;
+  roughness: number;
+  rooms: number;
 };
 
 const CATEGORY_TABS: { id: DecoCategory; label: string }[] = [
@@ -51,8 +61,15 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
   onUndo,
   onRedo,
   onReset,
+  onGenerateLand,
 }: OfficeBuildToolbarProps) {
   const [activeTab, setActiveTab] = useState<DecoCategory>("land");
+  const [genShape, setGenShape] = useState<LandShape>("island");
+  const [genSeed, setGenSeed] = useState(() => Math.floor(Math.random() * 100000));
+  const [genCoverage, setGenCoverage] = useState(0.65);
+  const [genRoughness, setGenRoughness] = useState(0.5);
+  const [genRooms, setGenRooms] = useState(4);
+  const shapeDef = LAND_SHAPES.find((s) => s.id === genShape)!;
 
   // Keep tab in sync when a deco tool is selected externally
   useEffect(() => {
@@ -223,6 +240,54 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
         </div>
       </div>
 
+      {/* ── Generate terrain ────────────────────────────────────────── */}
+      <div className="border-b border-line shrink-0 px-[14px] py-[10px] flex flex-col gap-[8px]">
+        <div className="flex items-center gap-[8px] uppercase text-txt-3 font-mono text-[10px] [letter-spacing:0.08em]">
+          Generate land
+        </div>
+        <div className="flex items-center gap-[6px]">
+          <select
+            className="flex-1 bg-bg-2 border border-line text-txt text-[12px] rounded-[6px] px-[8px] py-[6px] outline-none cursor-pointer focus:border-[color-mix(in_srgb,var(--acc)_30%,transparent)]"
+            value={genShape}
+            onChange={(e) => setGenShape(e.target.value as LandShape)}
+          >
+            {LAND_SHAPES.map((s) => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+          <button
+            type="button"
+            className="w-[30px] h-[30px] shrink-0 flex items-center justify-center rounded-[6px] bg-bg-2 border border-line text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt"
+            onClick={() => setGenSeed(Math.floor(Math.random() * 100000))}
+            title="Randomize seed"
+            aria-label="Randomize seed"
+          >
+            <Icon name="refresh" size={13} />
+          </button>
+        </div>
+        <GenSlider label="Coverage" value={genCoverage} onChange={setGenCoverage} />
+        <GenSlider label="Roughness" value={genRoughness} onChange={setGenRoughness} />
+        {shapeDef.rooms && (
+          <GenSlider
+            label={genShape === "archipelago" ? "Islands" : "Rooms"}
+            value={genRooms}
+            min={2}
+            max={8}
+            step={1}
+            format={(v) => String(v)}
+            onChange={setGenRooms}
+          />
+        )}
+        <button
+          type="button"
+          className="mt-[1px] inline-flex items-center justify-center gap-[6px] bg-acc text-white font-semibold text-[12.5px] rounded-[7px] px-[12px] py-[8px] cursor-pointer transition-[filter] duration-100 hover:brightness-110"
+          onClick={() => onGenerateLand({ shape: genShape, seed: genSeed, coverage: genCoverage, roughness: genRoughness, rooms: genRooms })}
+        >
+          <Icon name="sparkle" size={13} />
+          Generate
+        </button>
+      </div>
+
       {/* ── Search ──────────────────────────────────────────────────── */}
       <div className="border-b border-line shrink-0 px-[14px] py-[8px]">
         <div className="flex items-center gap-[8px] bg-bg-2 border border-line text-txt-3 px-[10px] py-[6px] rounded-[7px] text-[12.5px] focus-within:border-[color-mix(in_srgb,var(--acc)_30%,transparent)]">
@@ -336,6 +401,40 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
 });
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function GenSlider({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max = 1,
+  step = 0.01,
+  format = (v: number) => `${Math.round(v * 100)}%`,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  format?: (v: number) => string;
+}) {
+  return (
+    <label className="flex items-center gap-[8px]">
+      <span className="w-[64px] shrink-0 text-txt-3 font-mono text-[10px] uppercase [letter-spacing:0.06em]">{label}</span>
+      <input
+        type="range"
+        className="flex-1 accent-[var(--acc)] cursor-pointer h-[4px]"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+      <span className="w-[34px] shrink-0 text-right text-txt-2 font-mono text-[10px] tabular-nums">{format(value)}</span>
+    </label>
+  );
+}
 
 function DecoTileCell({
   kind,

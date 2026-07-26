@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TILE } from "../components/office-map";
 
-export const GRID_COLS = 40;
-export const GRID_ROWS = 26;
+// Build area — enlarged ~40% over the original 40×26 so a generated landmass
+// still leaves a ring of water for the user to expand into (Civ-style map).
+export const GRID_COLS = 48;
+export const GRID_ROWS = 30;
 const MAP_W = GRID_COLS * TILE;
 const MAP_H = GRID_ROWS * TILE;
 const ZOOM_MIN = 0.25;

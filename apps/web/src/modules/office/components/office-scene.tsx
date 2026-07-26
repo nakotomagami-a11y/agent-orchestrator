@@ -6,7 +6,8 @@ import { Icon } from "@/components/ui/icon";
 import { TILE, type AgentPositions, type VisibleRange } from "./office-map";
 import { OfficeMapOverlay } from "./office-map-overlay";
 import { OfficePixiCanvas } from "./office-pixi-canvas";
-import { OfficeBuildToolbar, type BuildTool } from "./office-build-toolbar";
+import { OfficeBuildToolbar, type BuildTool, type LandGenParams } from "./office-build-toolbar";
+import { generateLand } from "../derive/land-generator";
 import {
   DECORATIONS,
   applyPlacement,
@@ -534,6 +535,15 @@ export function OfficeScene({
     setGrid(Array.from({ length: GRID_ROWS }, () => Array.from({ length: GRID_COLS }, () => true)));
     setDecorations({});
     setAgentPositions({});
+    setRectStart(null);
+    setPendingChanges((n) => n + 1);
+  }, []);
+
+  const onGenerateLand = useCallback((opts: LandGenParams) => {
+    const { grid, decorations, agentPositions } = currentStateRef.current;
+    undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
+    redoStack.current = [];
+    setGrid(generateLand({ ...opts, cols: GRID_COLS, rows: GRID_ROWS }));
     setRectStart(null);
     setPendingChanges((n) => n + 1);
   }, []);
@@ -1146,6 +1156,7 @@ export function OfficeScene({
         onUndo={onUndo}
         onRedo={onRedo}
         onReset={onResetCanvas}
+        onGenerateLand={onGenerateLand}
       />
     </div>
   );
