@@ -175,7 +175,10 @@ export async function buildStaticLayers(
         if (acc < 1) return;
         acc -= 1;
         frame = (frame + 1) % FOAM_FRAMES;
-        foamTilemap.tileAnim[0] = frame;
+        // tileAnim defaults to null; assign a fresh array (the pipe reads it as
+        // `parent.tileAnim || [0,0]`). Mutating null throws and halts the render
+        // loop — which froze the whole canvas, camera included.
+        foamTilemap.tileAnim = [frame, 0];
       };
       app.ticker.add(tick);
       foamTickerRef.current = tick;
