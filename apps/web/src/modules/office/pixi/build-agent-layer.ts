@@ -95,7 +95,7 @@ export async function buildAgentLayer(
       const [xs, ys] = key.split(",");
       return { x: Number(xs), y: Number(ys), ref };
     })
-    .sort((a, b) => a.y - b.y);
+    .sort((a, b) => (a.ref.z ?? 0) - (b.ref.z ?? 0) || a.y - b.y);
 
   // Feet Y target: world pixels below a tile's top edge where all units'
   // ground contact should land. Sits 10% of a tile above the cell's bottom
@@ -110,7 +110,9 @@ export async function buildAgentLayer(
     const { faction, kind } = agent.unitChoice;
     const def = UNIT_DEFS[kind];
     const isWorking = agent.status === "working" || agent.status === "thinking";
-    const { action, flip } = getAgentActionAndFlip(x, y, isWorking, kind, decorations);
+    const { action, flip: autoFlip } = getAgentActionAndFlip(x, y, isWorking, kind, decorations);
+    // Manual mirror (select tool) toggles the auto-derived facing.
+    const flip = autoFlip !== (ref.flip ?? false);
     const state = getSheetState(action, def);
 
     // Resolve texture. For pawn action sheets that only exist for black faction,
@@ -170,9 +172,9 @@ export async function buildAgentLayer(
     const feetInContainer = spriteY + groundNativeY * spriteScale;
 
     const onBridge = isBridgeCell(x, y, grid, decorations);
-    const agentLeft = x * TILE + (TILE - agentSize) / 2;
+    const agentLeft = x * TILE + (TILE - agentSize) / 2 + (ref.dx ?? 0);
     const agentTop =
-      y * TILE + TARGET_FEET_Y - feetInContainer - (onBridge ? Math.round(TILE * 0.35) : 0);
+      y * TILE + TARGET_FEET_Y - feetInContainer - (onBridge ? Math.round(TILE * 0.35) : 0) + (ref.dy ?? 0);
 
     // Container at the tile position; AnimatedSprite inside with the offset
     const agentContainer = new Container();

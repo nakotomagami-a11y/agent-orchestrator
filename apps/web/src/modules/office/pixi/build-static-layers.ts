@@ -4,6 +4,8 @@ import { CompositeTilemap } from "@pixi/tilemap";
 import { TILE, buildTiles, buildFoam } from "../components/office-map";
 import {
   DECORATIONS,
+  decoSrc,
+  footprintCenterShift,
   type DecorationKind,
   type DecoInstance,
   type DecorationsMap,
@@ -66,6 +68,14 @@ export async function buildStaticLayers(
     const d = DECORATIONS[kind];
     urls.add(d.src);
     if (d.rotFrames) for (const f of d.rotFrames) urls.add(f);
+  }
+  // Faction-coloured building sprites resolve per-instance, so add the exact
+  // recoloured URL each placed instance needs (blue reuses the base above).
+  for (const stack of Object.values(decorations)) {
+    for (const inst of stack) {
+      if (inst.kind === "path") continue;
+      urls.add(decoSrc(DECORATIONS[inst.kind], inst));
+    }
   }
 
   // Bridge cap URLs (preload if any bridges exist)
@@ -197,7 +207,8 @@ export async function buildStaticLayers(
   }
 
   // ── Decorations ────────────────────────────────────────────────────────────
-  // Sort by y (lower y first, higher rows render on top), then by layer
+  // Sort by manual z bias first, then y (lower rows render behind), then by
+  // stack layer. z lets the user push a sprite in front of / behind overlaps.
   const decoEntries: Array<{
     x: number;
     y: number;
@@ -212,7 +223,7 @@ export async function buildStaticLayers(
       decoEntries.push({ x, y, inst: stack[i]!, layer: i });
     }
   }
-  decoEntries.sort((a, b) => a.y - b.y || a.layer - b.layer);
+  decoEntries.sort((a, b) => (a.inst.z ?? 0) - (b.inst.z ?? 0) || a.y - b.y || a.layer - b.layer);
 
   // Path neighbour helper used inside the decoration loop below.
   const hasPath = (cx: number, cy: number): boolean => {
@@ -237,12 +248,13 @@ export async function buildStaticLayers(
     }
 
     const def = DECORATIONS[kind];
-    const srcForRot = def.rotFrames?.[inst.rot ?? 0] ?? def.src;
+    const srcForRot = decoSrc(def, inst);
     const baseTex = textureMap.get(srcForRot);
     if (!baseTex) continue;
 
-    // Per-instance pixel offset from the free-hand tool.
-    const left = x * TILE + (TILE - def.frameW) / 2 + (inst.dx ?? 0);
+    // Per-instance pixel offset from the free-hand tool. footprintCenterShift
+    // re-centres even-width buildings over their whole footprint.
+    const left = x * TILE + (TILE - def.frameW) / 2 + footprintCenterShift(kind) * TILE + (inst.dx ?? 0);
     const top =
       (def.anchor === "center"
         ? y * TILE + (TILE - def.frameH) / 2

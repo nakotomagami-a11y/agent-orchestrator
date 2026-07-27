@@ -2,7 +2,10 @@
 
 import { memo } from "react";
 import {
+  DECORATIONS,
+  buildingOccupancy,
   decorationKey,
+  footprintCells,
   hasBridgeCap,
   isPlacementValid,
   isStackable,
@@ -11,8 +14,17 @@ import {
 import type { BuildTool } from "./office-build-toolbar";
 import { type DragRef } from "../hooks/use-office-drag";
 
-/** "x,y" → DragRef. Sparse - cells with no agent aren't keys. */
-export type AgentPositions = Record<string, DragRef>;
+/** A placed agent: its identity (DragRef) plus optional per-instance transforms
+ *  edited via the select tool — manual mirror, draw-order bias, pixel nudge. */
+export type AgentPlacement = DragRef & {
+  flip?: boolean;
+  z?: number;
+  dx?: number;
+  dy?: number;
+};
+
+/** "x,y" → placed agent. Sparse - cells with no agent aren't keys. */
+export type AgentPositions = Record<string, AgentPlacement>;
 
 /** Inclusive tile-index bounding box for viewport culling. */
 export type VisibleRange = {
@@ -234,6 +246,17 @@ export function isToolValidAt(
   // Cells acting as a bridge ramp are reserved for the cap - block any
   // new decoration placement there.
   if (hasBridgeCap(x, y, grid, decorations)) return false;
+  // Multi-tile buildings: every footprint cell must be land and free of any
+  // OTHER building's footprint (the anchor cell itself may be replaced).
+  if (DECORATIONS[tool].category === "buildings") {
+    const anchorKey = decorationKey(x, y);
+    const occ = buildingOccupancy(decorations);
+    for (const [cx, cy] of footprintCells(tool, x, y)) {
+      if (grid[cy]?.[cx] !== true) return false;
+      const owner = occ.get(decorationKey(cx, cy));
+      if (owner && owner !== anchorKey) return false;
+    }
+  }
   return true;
 }
 

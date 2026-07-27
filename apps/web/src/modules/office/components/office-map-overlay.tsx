@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { UNIT_DEFS } from "@/components/ui/unit-sprite-registry";
 import type { OfficeAgent } from "../hooks/use-office-agents";
-import { DECORATIONS, decorationKey, familyOf, type DecorationsMap, type DecoInstance } from "./decorations";
+import { DECORATIONS, decorationKey, familyOf, footprintCells, footprintCenterShift, type DecorationsMap, type DecoInstance } from "./decorations";
 import type { BuildTool } from "./office-build-toolbar";
 import {
   AGENT_DRAG_MIME,
@@ -41,7 +41,7 @@ function unitBoxAt(kind: string, tx: number, ty: number) {
 // (left/top incl. dx/dy offset) so select hit-targets line up with the sprites.
 function decoBoxAt(inst: DecoInstance, x: number, y: number) {
   const def = DECORATIONS[inst.kind];
-  const left = x * TILE + (TILE - def.frameW) / 2 + (inst.dx ?? 0);
+  const left = x * TILE + (TILE - def.frameW) / 2 + footprintCenterShift(inst.kind) * TILE + (inst.dx ?? 0);
   const top =
     (def.anchor === "center"
       ? y * TILE + (TILE - def.frameH) / 2
@@ -79,6 +79,11 @@ export type OfficeMapOverlayProps = {
   zoom?: number;
   onDecoDragStart?: (key: string, index: number) => void;
   onDecoOffset?: (key: string, index: number, dx: number, dy: number) => void;
+  // Agent editing with the select tool: select + pixel-nudge (no conversation).
+  selectedAgentKey?: string | null;
+  onAgentSelect?: (key: string) => void;
+  onAgentDragStart?: (key: string) => void;
+  onAgentOffset?: (key: string, dx: number, dy: number) => void;
 };
 
 // Memoized: during a camera pan the parent re-renders every frame, but this
@@ -96,13 +101,16 @@ function OfficeMapOverlayImpl({
   onAgentClick,
   onAgentDrop,
   onAgentHoverChange,
-  selectedDeco,
   onDecoSelect,
   onDecoDeselect,
   onDecoHoverChange,
   zoom,
   onDecoDragStart,
   onDecoOffset,
+  selectedAgentKey,
+  onAgentSelect,
+  onAgentDragStart,
+  onAgentOffset,
 }: OfficeMapOverlayProps) {
   const cols = grid[0]?.length ?? 0;
   const selectMode = tool === "select";
@@ -130,6 +138,29 @@ function OfficeMapOverlayImpl({
     window.addEventListener("pointerup", onUp);
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
   }, []);
+
+  // Agent pixel-nudge drag (select tool) — same pattern as the deco drag above.
+  const agentDragRef = useRef<{ key: string; cx: number; cy: number; dx0: number; dy0: number; pushed: boolean } | null>(null);
+  const agentCbRef = useRef({ zoom, onAgentDragStart, onAgentOffset });
+  agentCbRef.current = { zoom, onAgentDragStart, onAgentOffset };
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const d = agentDragRef.current;
+      if (!d) return;
+      if (!d.pushed) {
+        if (Math.hypot(e.clientX - d.cx, e.clientY - d.cy) < 3) return;
+        d.pushed = true;
+        agentCbRef.current.onAgentDragStart?.(d.key);
+      }
+      const z = agentCbRef.current.zoom || 1;
+      agentCbRef.current.onAgentOffset?.(d.key, d.dx0 + (e.clientX - d.cx) / z, d.dy0 + (e.clientY - d.cy) / z);
+    };
+    const onUp = () => { agentDragRef.current = null; };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
+  }, []);
+
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
   const setDragging = useOfficeDragStore((s) => s.setDragging);
@@ -257,21 +288,40 @@ function OfficeMapOverlayImpl({
             onDragOver={(e) => { const t = tileFromEvent(e); stableOnDragOver(t.x, t.y, e, cellValid(t.x, t.y)); }}
             onDrop={(e) => { const t = tileFromEvent(e); stableOnDrop(t.x, t.y, e); }}
           />
-          {/* Single hover-tint cell — the only thing that re-renders on cursor move */}
-          {hover && (
-            <div
-              className="absolute pointer-events-none transition-[background] duration-[80ms]"
-              style={{
-                left: hover.x * TILE,
-                top: hover.y * TILE,
-                width: TILE,
-                height: TILE,
-                background: cellValid(hover.x, hover.y)
-                  ? "rgba(34, 197, 94, 0.28)"
-                  : "rgba(239, 68, 68, 0.28)",
-              }}
-            />
-          )}
+          {/* Hover-tint — one cell for most tools, the full footprint region for
+              multi-tile buildings. Colour reflects placement validity. */}
+          {hover && (() => {
+            const kind = tool && tool !== "grass" && tool !== "erase" && tool !== "fill" ? tool : null;
+            const isBuilding = !!kind && DECORATIONS[kind].category === "buildings";
+            const cells = isBuilding ? footprintCells(kind, hover.x, hover.y) : [[hover.x, hover.y] as [number, number]];
+            const bg = cellValid(hover.x, hover.y) ? "rgba(34, 197, 94, 0.28)" : "rgba(239, 68, 68, 0.28)";
+            return cells.map(([cx, cy]) => (
+              <div
+                key={`hover-${cx}-${cy}`}
+                className="absolute pointer-events-none transition-[background] duration-[80ms]"
+                style={{ left: cx * TILE, top: cy * TILE, width: TILE, height: TILE, background: bg }}
+              />
+            ));
+          })()}
+          {/* Ghost preview — translucent sprite at the hovered cell so you can
+              see how a building/prop lands before placing. Only for single-frame
+              decoration tools (skips grass/erase/fill/select + animated sheets). */}
+          {hover && tool && tool !== "grass" && tool !== "erase" && tool !== "fill" && (() => {
+            const def = DECORATIONS[tool];
+            if (def.frames !== 1 || def.sheetW) return null;
+            const { left, top, width, height } = decoBoxAt({ kind: tool }, hover.x, hover.y);
+            const tint = cellValid(hover.x, hover.y) ? "#22c55e" : "#ef4444";
+            return (
+              <img
+                src={def.src}
+                alt=""
+                aria-hidden
+                draggable={false}
+                className="absolute pointer-events-none opacity-50 [image-rendering:pixelated]"
+                style={{ left, top, width, height, filter: `drop-shadow(0 0 3px ${tint})` }}
+              />
+            );
+          })()}
         </>
       )}
 
@@ -283,6 +333,29 @@ function OfficeMapOverlayImpl({
         const agent = agentsById.get(ref.agentId);
         if (!agent) return null;
         if (x < xStart || x > xEnd || y < yStart || y > yEnd) return null;
+        // Build + select tool: the agent becomes an editable object — click
+        // selects it (no conversation), drag pixel-nudges it (like a decoration).
+        if (buildMode && selectMode) {
+          const isSel = selectedAgentKey === key;
+          return (
+            <button
+              key={`agent-target-${key}`}
+              type="button"
+              className="absolute pointer-events-auto bg-transparent cursor-pointer"
+              style={{ left: x * TILE, top: y * TILE, width: TILE, height: TILE, touchAction: "none" }}
+              onPointerDown={(e) => {
+                if (e.button !== 0) return;
+                e.stopPropagation();
+                agentDragRef.current = { key, cx: e.clientX, cy: e.clientY, dx0: ref.dx ?? 0, dy0: ref.dy ?? 0, pushed: false };
+              }}
+              onPointerEnter={() => onAgentHoverChange?.(key)}
+              onPointerLeave={() => onAgentHoverChange?.(null)}
+              onClick={(e) => { e.stopPropagation(); onAgentSelect?.(key); }}
+              aria-label={`Select ${agent.name}`}
+              aria-pressed={isSel}
+            />
+          );
+        }
         return (
           <button
             key={`agent-target-${key}`}
@@ -344,12 +417,11 @@ function OfficeMapOverlayImpl({
             if (x < xStart || x > xEnd || y < yStart || y > yEnd) return [];
             return stack.map((inst, i) => {
               const { left, top, width, height } = decoBoxAt(inst, x, y);
-              const isSelected = selectedDeco?.key === key && selectedDeco.index === i;
               return (
                 <button
                   key={`deco-target-${key}-${i}`}
                   type="button"
-                  className={`absolute pointer-events-auto cursor-pointer bg-transparent transition-[outline-color] duration-100${isSelected ? " outline outline-2 outline-[#e95420]" : ""}`}
+                  className="absolute pointer-events-auto cursor-pointer bg-transparent"
                   style={{ left, top, width, height, touchAction: "none" }}
                   onPointerDown={(e) => {
                     if (e.button !== 0) return;

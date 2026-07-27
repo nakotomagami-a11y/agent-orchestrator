@@ -36,6 +36,9 @@ export type DecoFamily =
   | "house"
   | "tower"
   | "castle"
+  | "archery"
+  | "barracks"
+  | "monastery"
   | "campfire"
   | "water_rock"
   | "duck"
@@ -84,6 +87,9 @@ export type DecorationKind =
   | "house_goblin"
   | "tower"
   | "castle"
+  | "archery"
+  | "barracks"
+  | "monastery"
   | "water_rock"
   | "water_rock2"
   | "water_rock3"
@@ -161,6 +167,10 @@ export interface DecorationDef {
   /** Alternate sprites for discrete rotation. Index = DecoInstance.rot (0/1/2);
    *  index 0 should equal `src`. Enables the free-hand rotate control. */
   rotFrames?: string[];
+  /** When true, the building has faction-colour variants. Blue is the base
+   *  sprite (`src`/`rotFrames`); other colours resolve to `<name>_<color>.png`
+   *  via {@link decoSrc}. Enables the colour swatches in the select menu. */
+  colorable?: boolean;
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -279,7 +289,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "House",
     src: "/decorations/house1.png",
     frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
+    terrain: "land", category: "buildings", family: "house", colorable: true,
     rotFrames: ["/decorations/house1.png", "/decorations/house2.png", "/decorations/house3.png"],
   },
   // House 4-8: 5 new AI-generated houses (dropped in 2026-07-25). Native art
@@ -387,13 +397,33 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Tower",
     src: "/decorations/tower.png",
     frameW: 128, frameH: 256, frames: 1,
-    terrain: "land", category: "buildings", family: "tower",
+    terrain: "land", category: "buildings", family: "tower", colorable: true,
   },
   castle: {
     label: "Castle",
     src: "/decorations/castle.png",
     frameW: 320, frameH: 256, frames: 1,
-    terrain: "land", category: "buildings", family: "castle",
+    terrain: "land", category: "buildings", family: "castle", colorable: true,
+  },
+  // Archery, Barracks, Monastery — the remaining Tiny Swords building types.
+  // Blue is the base sprite; red/purple/yellow/black resolve via decoSrc().
+  archery: {
+    label: "Archery",
+    src: "/decorations/archery.png",
+    frameW: 192, frameH: 256, frames: 1,
+    terrain: "land", category: "buildings", family: "archery", colorable: true,
+  },
+  barracks: {
+    label: "Barracks",
+    src: "/decorations/barracks.png",
+    frameW: 192, frameH: 256, frames: 1,
+    terrain: "land", category: "buildings", family: "barracks", colorable: true,
+  },
+  monastery: {
+    label: "Monastery",
+    src: "/decorations/monastery.png",
+    frameW: 192, frameH: 320, frames: 1,
+    terrain: "land", category: "buildings", family: "monastery", colorable: true,
   },
 
   // ─ Water rocks (16 frames × 64×64, bobs in time with foam) ─────────
@@ -685,13 +715,42 @@ export const DECORATION_KINDS: DecorationKind[] = Object.keys(DECORATIONS) as De
  *   - dx/dy: pixel offset within the cell (clamped to ±TILE at the edit site)
  * All optional → an unedited instance is just `{ kind }`.
  */
+/** Faction colours for `colorable` buildings. Blue is the base sprite. */
+export type BuildingColor = "blue" | "red" | "purple" | "yellow" | "black";
+
+/** Ordered list for the colour swatches, with their display hex. */
+export const BUILDING_COLORS: { id: BuildingColor; hex: string }[] = [
+  { id: "blue", hex: "#4a90d9" },
+  { id: "red", hex: "#d94a4a" },
+  { id: "purple", hex: "#9b6bd6" },
+  { id: "yellow", hex: "#e0b23c" },
+  { id: "black", hex: "#3a3a42" },
+];
+
 export type DecoInstance = {
   kind: DecorationKind;
   rot?: 0 | 1 | 2;
   flip?: boolean;
   dx?: number;
   dy?: number;
+  /** Faction colour for `colorable` buildings. Omitted = blue (base sprite). */
+  color?: BuildingColor;
+  /** Manual draw-order bias. Sprites sort by z first, then row (y), then stack
+   *  position — so a higher z brings the item in front of overlapping sprites,
+   *  lower sends it behind. Omitted = 0. */
+  z?: number;
 };
+
+/**
+ * Resolves the sprite URL for an instance, accounting for rotation frame and
+ * faction colour. Blue (or no colour) uses the base sprite; other colours map
+ * to `<name>_<color>.png`.
+ */
+export function decoSrc(def: DecorationDef, inst: DecoInstance): string {
+  const base = def.rotFrames?.[inst.rot ?? 0] ?? def.src;
+  if (!def.colorable || !inst.color || inst.color === "blue") return base;
+  return base.replace(/\.png$/, `_${inst.color}.png`);
+}
 
 export type DecorationsMap = Record<string, DecoInstance[]>;
 
@@ -719,6 +778,76 @@ export function familyOf(kind: DecorationKind): DecoFamily {
 export function isStackable(kind: DecorationKind): boolean {
   const def = DECORATIONS[kind];
   return def.category !== "buildings" && def.family !== "bridge" && kind !== "path";
+}
+
+/**
+ * Ground footprint in tiles (`w` wide × `d` deep) for buildings that occupy
+ * more than one cell. Anchored at the placement cell: centred horizontally
+ * (even widths bias left) and extending `d` rows back/up. Anything not listed
+ * is 1×1. Tune these per building — they're the ground the building "sits on",
+ * not the full sprite width (roofs overhang).
+ */
+export const BUILDING_FOOTPRINTS: Partial<Record<DecorationKind, { w: number; d: number }>> = {
+  house: { w: 2, d: 2 },
+  house4: { w: 2, d: 2 },
+  house5: { w: 2, d: 2 },
+  house6: { w: 2, d: 2 },
+  house7: { w: 2, d: 2 },
+  house8: { w: 2, d: 2 },
+  house_blue: { w: 2, d: 2 },
+  house_purple: { w: 2, d: 2 },
+  house_red: { w: 2, d: 2 },
+  house_yellow: { w: 2, d: 2 },
+  house_goblin: { w: 1, d: 2 },
+  tower: { w: 1, d: 2 },
+  archery: { w: 2, d: 2 },
+  barracks: { w: 3, d: 2 },
+  monastery: { w: 2, d: 2 },
+  castle: { w: 5, d: 2 },
+  gold_mine_active: { w: 3, d: 2 },
+  gold_mine_inactive: { w: 3, d: 2 },
+  gold_mine_destroyed: { w: 3, d: 2 },
+};
+
+/** The set of cells a decoration occupies when anchored at (x, y). */
+export function footprintCells(kind: DecorationKind, x: number, y: number): [number, number][] {
+  const fp = BUILDING_FOOTPRINTS[kind];
+  if (!fp) return [[x, y]];
+  const startX = x - Math.floor((fp.w - 1) / 2);
+  const cells: [number, number][] = [];
+  for (let dx = 0; dx < fp.w; dx++) {
+    for (let dy = 0; dy < fp.d; dy++) cells.push([startX + dx, y - dy]);
+  }
+  return cells;
+}
+
+/**
+ * Horizontal sprite shift (in tiles) so the sprite centres over its whole
+ * footprint rather than over just the anchor cell. Even-width footprints
+ * straddle a tile boundary, so their centre is ½ tile right of the anchor
+ * cell's centre; odd widths (and 1×1) need no shift. Multiply by TILE and add
+ * to the sprite's left in every place that positions a decoration.
+ */
+export function footprintCenterShift(kind: DecorationKind): number {
+  const w = BUILDING_FOOTPRINTS[kind]?.w ?? 1;
+  return -Math.floor((w - 1) / 2) + w / 2 - 0.5;
+}
+
+/**
+ * All cells covered by a placed building's footprint, mapped back to the anchor
+ * key that owns them. Used to block overlapping placement. Non-building decos
+ * (props, bridges, paths) don't reserve area.
+ */
+export function buildingOccupancy(decorations: DecorationsMap): Map<string, string> {
+  const occ = new Map<string, string>();
+  for (const [key, stack] of Object.entries(decorations)) {
+    const [x, y] = key.split(",").map(Number) as [number, number];
+    for (const inst of stack) {
+      if (DECORATIONS[inst.kind].category !== "buildings") continue;
+      for (const [cx, cy] of footprintCells(inst.kind, x, y)) occ.set(decorationKey(cx, cy), key);
+    }
+  }
+  return occ;
 }
 
 /**

@@ -71,6 +71,10 @@ export function parseDecorations(raw: string): DecorationsMap | null {
         if (o.flip === true) inst.flip = true;
         if (typeof o.dx === "number" && o.dx !== 0) inst.dx = o.dx;
         if (typeof o.dy === "number" && o.dy !== 0) inst.dy = o.dy;
+        if (o.color === "red" || o.color === "purple" || o.color === "yellow" || o.color === "black") {
+          inst.color = o.color;
+        }
+        if (typeof o.z === "number" && o.z !== 0) inst.z = o.z;
         return inst;
       }
       return null;
@@ -105,8 +109,13 @@ export function parseAgentPositions(raw: string): AgentPositions | null {
         value && typeof value === "object" && !Array.isArray(value) &&
         typeof (value as { agentId?: unknown }).agentId === "string"
       ) {
-        const v = value as { agentId: string; instanceId?: unknown };
-        out[key] = { agentId: v.agentId, instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined };
+        const v = value as { agentId: string; instanceId?: unknown; flip?: unknown; z?: unknown; dx?: unknown; dy?: unknown };
+        const placement: AgentPositions[string] = { agentId: v.agentId, instanceId: typeof v.instanceId === "string" ? v.instanceId : undefined };
+        if (v.flip === true) placement.flip = true;
+        if (typeof v.z === "number" && v.z !== 0) placement.z = v.z;
+        if (typeof v.dx === "number" && v.dx !== 0) placement.dx = v.dx;
+        if (typeof v.dy === "number" && v.dy !== 0) placement.dy = v.dy;
+        out[key] = placement;
       }
     }
     return out;
