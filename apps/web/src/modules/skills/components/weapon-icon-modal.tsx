@@ -13,6 +13,8 @@ const WEAPON_TYPES: { value: IconClassSelector; label: string }[] = [
   { value: "blades", label: "Blade" },
   { value: "spears", label: "Spear" },
   { value: "axes", label: "Axe" },
+  { value: "staffs", label: "Staff" },
+  { value: "tridents", label: "Trident" },
 ];
 
 interface WeaponIconModalProps {

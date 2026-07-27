@@ -236,7 +236,9 @@ async function fetchSkillMd(source: string, ref: string, path: string): Promise<
 }
 
 function parseFrontmatterDescription(content: string): string {
-  const fm = content.match(/^---\n([\s\S]*?)\n---/);
+  // Normalize CRLF — GitHub-hosted SKILL.md files are often \r\n, which the
+  // `\n`-anchored frontmatter regex would otherwise fail to match entirely.
+  const fm = content.replace(/\r\n/g, "\n").match(/^---\n([\s\S]*?)\n---/);
   if (!fm) return "";
   try {
     const meta = parseYaml(fm[1]!) as { description?: string };
@@ -404,7 +406,7 @@ export function listInstalled(): InstalledSkill[] {
     if (dir.startsWith("_")) continue;
     const skillMdPath = join(SKILLS_DIR, dir, "SKILL.md");
     if (!existsSync(skillMdPath)) continue;
-    const content = readFileSync(skillMdPath, "utf8");
+    const content = readFileSync(skillMdPath, "utf8").replace(/\r\n/g, "\n");
     const fm = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
     let description = "";
     let body = content;
@@ -430,7 +432,7 @@ export function listInstalled(): InstalledSkill[] {
 export function readInstalledSkill(name: string): InstalledSkill | null {
   const skillMdPath = join(SKILLS_DIR, name, "SKILL.md");
   if (!existsSync(skillMdPath)) return null;
-  const content = readFileSync(skillMdPath, "utf8");
+  const content = readFileSync(skillMdPath, "utf8").replace(/\r\n/g, "\n");
   const fm = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   let description = "";
   let body = content;
@@ -587,7 +589,7 @@ export function readCompatibility(): SkillCompatibility | null {
 
 const SKILL_ICONS_FILE = join(APP_STATE_DIR, "skill-icons.json");
 
-export type SkillIconClass = "any" | "anyweapon" | "blades" | "spears" | "axes";
+export type SkillIconClass = "any" | "anyweapon" | "blades" | "spears" | "axes" | "staffs" | "tridents";
 export interface SkillIconConfig {
   seed: string;
   iconClass: SkillIconClass;

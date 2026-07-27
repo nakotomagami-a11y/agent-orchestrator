@@ -4,7 +4,7 @@ import type { SkillIconClass } from "@agent-office/domain/services/skills";
 import { log } from "@agent-office/domain/services/log";
 import { badRequest, serverError } from "@/lib/api-helpers";
 
-const CLASSES: SkillIconClass[] = ["any", "anyweapon", "blades", "spears", "axes"];
+const CLASSES: SkillIconClass[] = ["any", "anyweapon", "blades", "spears", "axes", "staffs", "tridents"];
 
 export async function GET() {
   try {

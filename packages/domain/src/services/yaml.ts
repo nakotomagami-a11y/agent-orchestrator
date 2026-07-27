@@ -145,11 +145,30 @@ function parseMap(state: ParseState, baseIndent: number): Record<string, YamlVal
     } else if (after.startsWith("{")) {
       // We don't use flow maps in our payloads; treat as raw string.
       obj[key] = parseScalar(after);
+    } else if (/^[|>][+-]?$/.test(after)) {
+      // Block scalar: `|` literal (keep newlines) or `>` folded (join with
+      // spaces). Common in SKILL.md frontmatter descriptions.
+      obj[key] = parseBlockScalar(state, baseIndent, after[0] as "|" | ">");
     } else {
       obj[key] = parseScalar(after);
     }
   }
   return obj;
+}
+
+function parseBlockScalar(state: ParseState, parentIndent: number, style: "|" | ">"): string {
+  const parts: string[] = [];
+  let blockIndent = -1;
+  while (state.i < state.lines.length) {
+    const line = state.lines[state.i]!;
+    if (line.indent <= parentIndent) break;
+    if (blockIndent === -1) blockIndent = line.indent;
+    parts.push(line.raw.slice(blockIndent));
+    state.i++;
+  }
+  // Blank lines are dropped by tokenize, so folded paragraph breaks collapse to
+  // single spaces — fine for the short descriptions this parser handles.
+  return style === "|" ? parts.join("\n") : parts.join(" ");
 }
 
 function parseList(state: ParseState, baseIndent: number): YamlValue[] {

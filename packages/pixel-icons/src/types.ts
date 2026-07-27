@@ -14,7 +14,7 @@ export interface Color {
  * A concrete icon category. Each maps to a distinct procedural generator.
  * All are weapons.
  */
-export type IconClass = "blades" | "spears" | "axes";
+export type IconClass = "blades" | "spears" | "axes" | "staffs" | "tridents";
 
 /**
  * What to generate. In addition to the concrete classes, two meta-values
