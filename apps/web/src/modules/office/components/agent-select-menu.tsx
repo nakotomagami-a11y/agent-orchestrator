@@ -1,9 +1,10 @@
 import { Icon } from "@/components/ui/icon";
+import { MoveControl } from "./move-control";
 
 /**
- * Select-tool menu for a placed agent — mirror, draw-order (layer), and a hint
- * that arrows/drag nudge its position. Mirrors DecoSelectMenu but agents have
- * no rotation/colour/delete here (delete is the erase tool).
+ * Select-tool menu for a placed agent — mirror, move (nudge), draw-order
+ * (layer). Mirrors DecoSelectMenu but agents have no rotation/colour/delete
+ * here (delete is the erase tool).
  */
 export function AgentSelectMenu({
   name,
@@ -12,6 +13,9 @@ export function AgentSelectMenu({
   left,
   top,
   onMirror,
+  moveMode,
+  onMoveMode,
+  onReset,
   onForward,
   onBackward,
   onClose,
@@ -22,6 +26,9 @@ export function AgentSelectMenu({
   left: number;
   top: number;
   onMirror: () => void;
+  moveMode: "tile" | "pixel";
+  onMoveMode: (m: "tile" | "pixel") => void;
+  onReset: () => void;
   onForward: () => void;
   onBackward: () => void;
   onClose: () => void;
@@ -60,6 +67,8 @@ export function AgentSelectMenu({
         <span className="ml-auto font-mono text-[10px] text-[rgba(199,191,183,0.4)]">M</span>
       </button>
 
+      <MoveControl mode={moveMode} onMode={onMoveMode} onReset={onReset} />
+
       <div className="w-full flex items-center gap-[9px] px-[10px] py-[5px] text-[12px] text-[rgba(199,191,183,0.92)]">
         <Icon name="layers" size={13} />
         Layer
@@ -72,10 +81,6 @@ export function AgentSelectMenu({
             <Icon name="plus" size={12} />
           </button>
         </span>
-      </div>
-
-      <div className="px-[10px] pt-[2px] pb-[3px] text-[10px] text-[rgba(199,191,183,0.4)]">
-        Drag or arrow keys to nudge
       </div>
     </div>
   );

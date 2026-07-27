@@ -39,7 +39,6 @@ export type DecoFamily =
   | "archery"
   | "barracks"
   | "monastery"
-  | "campfire"
   | "water_rock"
   | "duck"
   | "butterfly"
@@ -51,7 +50,6 @@ export type DecoFamily =
   | "grave"
   | "scarecrow"
   | "sheep"
-  | "pig"
   | "gold_mine"
   | "cursed_chest"
   | "bridge"
@@ -77,9 +75,6 @@ export type DecorationKind =
   | "house"
   | "house4"
   | "house5"
-  | "house6"
-  | "house7"
-  | "house8"
   | "house_blue"
   | "house_purple"
   | "house_red"
@@ -111,15 +106,12 @@ export type DecorationKind =
   | "gravestone"
   | "scarecrow"
   | "sheep"
-  | "pig"
   | "gold_mine_active"
   | "gold_mine_inactive"
   | "gold_mine_destroyed"
   | "cursed_chest"
   | "bridge_h"
   | "bridge_v"
-  // ── Campfire ─────────────────────────────────────────────────────────────
-  | "campfire"
   // ── Butterflies ──────────────────────────────────────────────────────────
   | "butterfly_blue"
   | "butterfly_grey"
@@ -301,7 +293,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
   house4: {
     label: "House 4",
     src: "/decorations/house4.png",
-    frameW: 192, frameH: 192, frames: 1,
+    frameW: 240, frameH: 240, frames: 1,
     terrain: "land", category: "buildings", family: "house",
   },
   house5: {
@@ -309,24 +301,6 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     src: "/decorations/house5.png",
     frameW: 182, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
-  },
-  house6: {
-    label: "House 6",
-    src: "/decorations/house6.png",
-    frameW: 192, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house", locked: true,
-  },
-  house7: {
-    label: "House 7",
-    src: "/decorations/house7.png",
-    frameW: 187, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house", locked: true,
-  },
-  house8: {
-    label: "House 8",
-    src: "/decorations/house8.png",
-    frameW: 192, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house", locked: true,
   },
   // Knights House - 4 faction colour variants from the Update 010 pack.
   house_blue: {
@@ -574,26 +548,6 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     anchor: "center",
   },
 
-  // ─ Pig (animated, 8 × 128×128). Same 1024×128 stride as the sheep so it
-  //   reuses the deco-bush keyframe and centres on its tile. ───────────────
-  pig: {
-    label: "Pig",
-    src: "/decorations/pig.png",
-    frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", family: "pig", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
-    anchor: "center",
-  },
-
-  // ─ Campfire (8 frames × 32×64, animated flicker). The sheet has 8
-  //   flame poses at 32px stride in a 256×64 image. Centred in the cell
-  //   via the (TILE - frameW) / 2 horizontal offset in OfficeMap. ──────
-  campfire: {
-    label: "Campfire",
-    src: "/decorations/campfire.png",
-    frameW: 32, frameH: 64, frames: 8,
-    terrain: "land", category: "land", family: "campfire", animClass: "animate-[deco-campfire_0.64s_steps(8)_infinite]",
-  },
-
   // ─ Butterflies (5 frames × 16×16, animated flutter). Six colour
   //   variants share the "butterfly" family - only one may occupy a
   //   cell at a time, matching the sheep/duck behaviour. Centred so
@@ -789,11 +743,8 @@ export function isStackable(kind: DecorationKind): boolean {
  */
 export const BUILDING_FOOTPRINTS: Partial<Record<DecorationKind, { w: number; d: number }>> = {
   house: { w: 2, d: 2 },
-  house4: { w: 2, d: 2 },
+  house4: { w: 3, d: 2 },
   house5: { w: 2, d: 2 },
-  house6: { w: 2, d: 2 },
-  house7: { w: 2, d: 2 },
-  house8: { w: 2, d: 2 },
   house_blue: { w: 2, d: 2 },
   house_purple: { w: 2, d: 2 },
   house_red: { w: 2, d: 2 },

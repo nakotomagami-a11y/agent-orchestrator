@@ -1,4 +1,5 @@
 import { Icon } from "@/components/ui/icon";
+import { MoveControl } from "./move-control";
 import {
   BUILDING_COLORS,
   type BuildingColor,
@@ -18,6 +19,9 @@ export function DecoSelectMenu({
   top,
   onRotate,
   onMirror,
+  moveMode,
+  onMoveMode,
+  onReset,
   onColor,
   onForward,
   onBackward,
@@ -30,6 +34,9 @@ export function DecoSelectMenu({
   top: number;
   onRotate: () => void;
   onMirror: () => void;
+  moveMode: "tile" | "pixel";
+  onMoveMode: (m: "tile" | "pixel") => void;
+  onReset: () => void;
   onColor: (color: BuildingColor) => void;
   onForward: () => void;
   onBackward: () => void;
@@ -74,6 +81,8 @@ export function DecoSelectMenu({
         Mirror
         <span className={shortcut}>M</span>
       </button>
+
+      <MoveControl mode={moveMode} onMode={onMoveMode} onReset={onReset} />
 
       <div className="w-full flex items-center gap-[9px] px-[10px] py-[5px] text-[12px] text-[rgba(199,191,183,0.92)]">
         <Icon name="layers" size={13} />

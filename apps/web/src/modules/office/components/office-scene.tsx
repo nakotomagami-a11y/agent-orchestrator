@@ -16,11 +16,10 @@ import {
   footprintCenterShift,
   popDecoration,
   type DecorationsMap,
-  type DecoInstance,
-  type BuildingColor,
 } from "./decorations";
 import { DecoSelectMenu } from "./deco-select-menu";
 import { AgentSelectMenu } from "./agent-select-menu";
+import { useCanvasEditing } from "../hooks/use-canvas-editing";
 import { useOfficeAgents } from "../hooks/use-office-agents";
 import { useOfficeStore } from "../hooks/use-office-store";
 import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
@@ -88,10 +87,6 @@ export function OfficeScene({
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
   const [hoveredAgentKey, setHoveredAgentKey] = useState<string | null>(null);
   const [hoveredDecoKey, setHoveredDecoKey] = useState<string | null>(null);
-  // Free-hand select tool: which placed decoration instance is selected.
-  const [selectedDeco, setSelectedDeco] = useState<{ key: string; index: number } | null>(null);
-  // Select tool: which placed agent (by "x,y" cell key) is selected for editing.
-  const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [pendingChanges, setPendingChanges] = useState(0);
   const [agentSearch, setAgentSearch] = useState("");
   const [useCustomMap, setUseCustomMap] = useState(false);
@@ -108,6 +103,20 @@ export function OfficeScene({
   currentStateRef.current = { grid, decorations, agentPositions };
   const rectStartRef = useRef<{ x: number; y: number } | null>(null);
   rectStartRef.current = rectStart;
+
+  // Select-tool editing — decoration + agent selection state, all the menu /
+  // keyboard mutations, and the keyboard wiring (see use-canvas-editing).
+  const {
+    selectedDeco, setSelectedDeco, selectedAgent, setSelectedAgent, arrowMode, setArrowMode,
+    rotateSelected, flipSelected, colorSelected, restackSelected,
+    deleteSelected, selectDeco, deselectDeco, beginDecoDrag, setDecoOffset,
+    resetDecoOffset,
+    flipAgent, restackAgent, selectAgentInstance, beginAgentDrag,
+    setAgentOffset, resetAgentOffset,
+  } = useCanvasEditing({
+    tool, buildMode, setDecorations, setAgentPositions,
+    currentStateRef, undoStack, redoStack, setPendingChanges,
+  });
 
   const {
     zoom, panX, panY,
@@ -519,7 +528,10 @@ export function OfficeScene({
   // semantics: if the same agent is already on the map, its old cell
   // becomes empty.
   const onBuildToggle = useCallback(() => {
-    setBuildMode((m) => { if (!m) setAgentSearch(""); return !m; });
+    setBuildMode((m) => {
+      if (!m) { setAgentSearch(""); setTool("select"); } // entering build mode → select active
+      return !m;
+    });
     setPendingChanges(0);
   }, []);
 
@@ -565,216 +577,6 @@ export function OfficeScene({
     setRectStart(null);
     setPendingChanges((n) => n + 1);
   }, []);
-
-  // ── Free-hand decoration editing (rotate / mirror / nudge / delete) ─────────
-  const NUDGE_MAX = TILE; // clamp per-instance offset to ±1 tile
-  const mutateDeco = useCallback(
-    (key: string, index: number, fn: (inst: DecoInstance) => DecoInstance | null) => {
-      const { grid, decorations, agentPositions } = currentStateRef.current;
-      undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
-      redoStack.current = [];
-      setDecorations((prev) => {
-        const stack = prev[key];
-        if (!stack || !stack[index]) return prev;
-        const updated = fn(stack[index]!);
-        const nextStack = [...stack];
-        if (updated === null) nextStack.splice(index, 1);
-        else nextStack[index] = updated;
-        const next = { ...prev };
-        if (nextStack.length === 0) delete next[key];
-        else next[key] = nextStack;
-        return next;
-      });
-      setPendingChanges((n) => n + 1);
-    },
-    [],
-  );
-
-  const rotateSelected = useCallback(() => {
-    if (!selectedDeco) return;
-    mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => ({
-      ...inst,
-      rot: (((inst.rot ?? 0) + 1) % 3) as 0 | 1 | 2,
-    }));
-  }, [selectedDeco, mutateDeco]);
-
-  const flipSelected = useCallback(() => {
-    if (!selectedDeco) return;
-    mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => ({ ...inst, flip: !inst.flip }));
-  }, [selectedDeco, mutateDeco]);
-
-  const colorSelected = useCallback((color: BuildingColor) => {
-    if (!selectedDeco) return;
-    mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => ({
-      ...inst,
-      color: color === "blue" ? undefined : color,
-    }));
-  }, [selectedDeco, mutateDeco]);
-
-  const restackSelected = useCallback((delta: number) => {
-    if (!selectedDeco) return;
-    mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => {
-      const z = (inst.z ?? 0) + delta;
-      return { ...inst, z: z === 0 ? undefined : z };
-    });
-  }, [selectedDeco, mutateDeco]);
-
-  const nudgeSelected = useCallback(
-    (dx: number, dy: number) => {
-      if (!selectedDeco) return;
-      const clamp = (v: number) => Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, v));
-      mutateDeco(selectedDeco.key, selectedDeco.index, (inst) => ({
-        ...inst,
-        dx: clamp((inst.dx ?? 0) + dx),
-        dy: clamp((inst.dy ?? 0) + dy),
-      }));
-    },
-    [selectedDeco, mutateDeco, NUDGE_MAX],
-  );
-
-  const deleteSelected = useCallback(() => {
-    if (!selectedDeco) return;
-    mutateDeco(selectedDeco.key, selectedDeco.index, () => null);
-    setSelectedDeco(null);
-  }, [selectedDeco, mutateDeco]);
-
-  // Stable callbacks so OfficeMapOverlay's memo holds across camera pans.
-  const selectDeco = useCallback((key: string, index: number) => { setSelectedAgent(null); setSelectedDeco({ key, index }); }, []);
-  const deselectDeco = useCallback(() => setSelectedDeco(null), []);
-
-  // Drag-to-reposition: overlay records the drag; on the first move it calls
-  // beginDecoDrag (one undo snapshot + select), then setDecoOffset live (no more
-  // snapshots) until pointer-up.
-  const beginDecoDrag = useCallback((key: string, index: number) => {
-    const { grid, decorations, agentPositions } = currentStateRef.current;
-    undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
-    redoStack.current = [];
-    setSelectedDeco({ key, index });
-  }, []);
-
-  const setDecoOffset = useCallback((key: string, index: number, dx: number, dy: number) => {
-    const clamp = (v: number) => Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, Math.round(v)));
-    setDecorations((prev) => {
-      const stack = prev[key];
-      if (!stack || !stack[index]) return prev;
-      const ns = [...stack];
-      ns[index] = { ...ns[index]!, dx: clamp(dx), dy: clamp(dy) };
-      return { ...prev, [key]: ns };
-    });
-    setPendingChanges((n) => n + 1);
-  }, [NUDGE_MAX]);
-
-  // ── Agent editing (select tool): mirror, layer/z, pixel nudge ──────────────
-  const mutateAgent = useCallback(
-    (key: string, fn: (a: AgentPositions[string]) => AgentPositions[string]) => {
-      const { grid, decorations, agentPositions } = currentStateRef.current;
-      undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
-      redoStack.current = [];
-      setAgentPositions((prev) => {
-        const cur = prev[key];
-        if (!cur) return prev;
-        return { ...prev, [key]: fn(cur) };
-      });
-      setPendingChanges((n) => n + 1);
-    },
-    [],
-  );
-
-  const flipAgent = useCallback(() => {
-    if (!selectedAgent) return;
-    mutateAgent(selectedAgent, (a) => ({ ...a, flip: a.flip ? undefined : true }));
-  }, [selectedAgent, mutateAgent]);
-
-  const restackAgent = useCallback((delta: number) => {
-    if (!selectedAgent) return;
-    mutateAgent(selectedAgent, (a) => {
-      const z = (a.z ?? 0) + delta;
-      return { ...a, z: z === 0 ? undefined : z };
-    });
-  }, [selectedAgent, mutateAgent]);
-
-  const nudgeAgent = useCallback((dx: number, dy: number) => {
-    if (!selectedAgent) return;
-    const clamp = (v: number) => Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, v));
-    mutateAgent(selectedAgent, (a) => ({
-      ...a,
-      dx: clamp((a.dx ?? 0) + dx) || undefined,
-      dy: clamp((a.dy ?? 0) + dy) || undefined,
-    }));
-  }, [selectedAgent, mutateAgent, NUDGE_MAX]);
-
-  const selectAgentInstance = useCallback((key: string) => {
-    setSelectedDeco(null);
-    setSelectedAgent(key);
-  }, []);
-
-  const beginAgentDrag = useCallback((key: string) => {
-    const { grid, decorations, agentPositions } = currentStateRef.current;
-    undoStack.current = [...undoStack.current.slice(-49), { grid, decorations, agentPositions }];
-    redoStack.current = [];
-    setSelectedDeco(null);
-    setSelectedAgent(key);
-  }, []);
-
-  const setAgentOffset = useCallback((key: string, dx: number, dy: number) => {
-    const clamp = (v: number) => Math.max(-NUDGE_MAX, Math.min(NUDGE_MAX, Math.round(v)));
-    setAgentPositions((prev) => {
-      const cur = prev[key];
-      if (!cur) return prev;
-      return { ...prev, [key]: { ...cur, dx: clamp(dx) || undefined, dy: clamp(dy) || undefined } };
-    });
-    setPendingChanges((n) => n + 1);
-  }, [NUDGE_MAX]);
-
-  // Clear selection when leaving the select tool / build mode.
-  useEffect(() => {
-    if (tool !== "select" || !buildMode) { setSelectedDeco(null); setSelectedAgent(null); }
-  }, [tool, buildMode]);
-
-  // Keyboard: Escape deselects, Delete removes, R rotate, M mirror, arrows nudge.
-  // Capture phase + stopImmediatePropagation so these win over the camera's
-  // arrow-pan and the build-mode Escape (which would otherwise also fire).
-  useEffect(() => {
-    if (tool !== "select" || !selectedDeco) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      const step = e.shiftKey ? 8 : 1;
-      const claim = () => { e.preventDefault(); e.stopImmediatePropagation(); };
-      switch (e.key) {
-        case "Escape": claim(); setSelectedDeco(null); break;
-        case "Delete":
-        case "Backspace": claim(); deleteSelected(); break;
-        case "r": case "R": claim(); rotateSelected(); break;
-        case "m": case "M": claim(); flipSelected(); break;
-        case "ArrowLeft":  claim(); nudgeSelected(-step, 0); break;
-        case "ArrowRight": claim(); nudgeSelected(step, 0); break;
-        case "ArrowUp":    claim(); nudgeSelected(0, -step); break;
-        case "ArrowDown":  claim(); nudgeSelected(0, step); break;
-      }
-    };
-    window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, { capture: true });
-  }, [tool, selectedDeco, deleteSelected, nudgeSelected, rotateSelected, flipSelected]);
-
-  // Same keyboard editing for a selected agent (mirror + nudge; no rotate/delete).
-  useEffect(() => {
-    if (tool !== "select" || !selectedAgent) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      const step = e.shiftKey ? 8 : 1;
-      const claim = () => { e.preventDefault(); e.stopImmediatePropagation(); };
-      switch (e.key) {
-        case "Escape": claim(); setSelectedAgent(null); break;
-        case "m": case "M": claim(); flipAgent(); break;
-        case "ArrowLeft":  claim(); nudgeAgent(-step, 0); break;
-        case "ArrowRight": claim(); nudgeAgent(step, 0); break;
-        case "ArrowUp":    claim(); nudgeAgent(0, -step); break;
-        case "ArrowDown":  claim(); nudgeAgent(0, step); break;
-      }
-    };
-    window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, { capture: true });
-  }, [tool, selectedAgent, flipAgent, nudgeAgent]);
 
   const onAgentDrop = useCallback((x: number, y: number, ref: DragRef) => {
     setAgentPositions((prev) => {
@@ -843,6 +645,7 @@ export function OfficeScene({
   }, [projectId]);
 
   const selectAgent = useOfficeStore((s) => s.select);
+  const setView = useOfficeStore((s) => s.setView);
   const onAgentClick = useCallback(
     (x: number, y: number, ref: DragRef) => {
       if (buildMode && tool === "erase") {
@@ -876,6 +679,14 @@ export function OfficeScene({
     setRectStart,
     setPendingChanges,
   });
+
+  // Match the PixiJS world's pixel-snapping (see use-office-pixi camera sync) so
+  // the DOM interaction overlay — ghost preview, hover tint, select hit-targets,
+  // select menus — lines up exactly with the rendered sprites instead of drifting
+  // by the sub-pixel rounding the pixi camera applies.
+  const snapPanX = Math.round(panX);
+  const snapPanY = Math.round(panY);
+  const snapZoom = Math.round(zoom * TILE) / TILE;
 
   return (
     <div
@@ -916,7 +727,7 @@ export function OfficeScene({
         style={{
           width: GRID_COLS * TILE,
           height: GRID_ROWS * TILE,
-          transform: `translate(${panX}px, ${panY}px) scale(${zoom})`,
+          transform: `translate(${snapPanX}px, ${snapPanY}px) scale(${snapZoom})`,
         }}
       >
         <OfficeMapOverlay
@@ -963,10 +774,13 @@ export function OfficeScene({
           <DecoSelectMenu
             def={def}
             inst={inst}
-            left={panX + (boxLeft + def.frameW / 2) * zoom}
-            top={panY + boxTop * zoom}
+            left={snapPanX + (boxLeft + def.frameW / 2) * snapZoom}
+            top={snapPanY + boxTop * snapZoom}
             onRotate={rotateSelected}
             onMirror={flipSelected}
+            moveMode={arrowMode}
+            onMoveMode={setArrowMode}
+            onReset={resetDecoOffset}
             onColor={colorSelected}
             onForward={() => restackSelected(1)}
             onBackward={() => restackSelected(-1)}
@@ -992,9 +806,12 @@ export function OfficeScene({
             name={agent.name}
             flip={!!placement.flip}
             z={placement.z ?? 0}
-            left={panX + anchorX * zoom}
-            top={panY + anchorY * zoom}
+            left={snapPanX + anchorX * snapZoom}
+            top={snapPanY + anchorY * snapZoom}
             onMirror={flipAgent}
+            moveMode={arrowMode}
+            onMoveMode={setArrowMode}
+            onReset={resetAgentOffset}
             onForward={() => restackAgent(1)}
             onBackward={() => restackAgent(-1)}
             onClose={() => setSelectedAgent(null)}
@@ -1078,6 +895,34 @@ export function OfficeScene({
             </div>
             <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
             <FpsCounter />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* View toggle — top-right, animates out when entering build mode. */}
+      <AnimatePresence initial={false}>
+        {!buildMode && (
+          <motion.div
+            key="view-toggle"
+            className="absolute flex items-center z-[10] pointer-events-auto top-[14px] right-[14px] bg-[rgba(20,16,14,0.95)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] gap-[2px]"
+            initial={{ opacity: 0, scale: 0.85, x: 6, y: -6 }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 300, damping: 26, delay: 0.05 } }}
+            exit={{ opacity: 0, scale: 0.8, x: 6, y: -6, transition: { duration: 0.13, ease: "easeIn" } }}
+          >
+            <button
+              type="button"
+              className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[11.5px] font-mono transition-[background,color] duration-100 bg-[rgba(255,240,230,0.12)] text-[#f4efea]"
+              onClick={() => setView("iso")}
+            >
+              <Icon name="map" size={11} /> Iso
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[11.5px] font-mono transition-[background,color] duration-100 text-[rgba(199,191,183,0.9)] hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"
+              onClick={() => setView("cards")}
+            >
+              <Icon name="grid" size={11} /> Cards
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

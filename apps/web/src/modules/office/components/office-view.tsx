@@ -95,24 +95,6 @@ export function OfficeView() {
               onErrorFilter={() => setErrorFilter((v) => !v)}
             />
 
-            {canUseIso && (
-              <div className="absolute top-[14px] right-[14px] z-[10] inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px] shadow-1">
-                <button
-                  type="button"
-                  className="inline-flex items-center px-[12px] py-[6px] rounded-[5px] text-[12.5px] bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]"
-                >
-                  Iso
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex items-center px-[12px] py-[6px] rounded-[5px] text-[12.5px] text-txt-3 hover:text-txt"
-                  onClick={() => setView?.("cards")}
-                >
-                  Cards
-                </button>
-              </div>
-            )}
-
             {errorFilter && (
               <div
                 className="flex items-center gap-2 px-4 py-[6px] text-[12.5px] text-txt-2 bg-[color-mix(in_srgb,var(--error)_10%,transparent)] border-b border-b-[color-mix(in_srgb,var(--error)_20%,transparent)]"

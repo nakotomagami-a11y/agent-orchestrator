@@ -304,21 +304,29 @@ function OfficeMapOverlayImpl({
             ));
           })()}
           {/* Ghost preview — translucent sprite at the hovered cell so you can
-              see how a building/prop lands before placing. Only for single-frame
-              decoration tools (skips grass/erase/fill/select + animated sheets). */}
+              see how any placeable object lands before placing. Renders frame 0
+              of animated strips via a background-position crop; skips 2D
+              tilesheets (path) which are drawn procedurally. */}
           {hover && tool && tool !== "grass" && tool !== "erase" && tool !== "fill" && (() => {
             const def = DECORATIONS[tool];
-            if (def.frames !== 1 || def.sheetW) return null;
+            if (def.sheetW) return null; // 2D auto-tile (path) — no single-frame preview
             const { left, top, width, height } = decoBoxAt({ kind: tool }, hover.x, hover.y);
             const tint = cellValid(hover.x, hover.y) ? "#22c55e" : "#ef4444";
             return (
-              <img
-                src={def.src}
-                alt=""
+              <div
                 aria-hidden
-                draggable={false}
                 className="absolute pointer-events-none opacity-50 [image-rendering:pixelated]"
-                style={{ left, top, width, height, filter: `drop-shadow(0 0 3px ${tint})` }}
+                style={{
+                  left,
+                  top,
+                  width,
+                  height,
+                  backgroundImage: `url(${def.src})`,
+                  backgroundSize: `${def.frameW * def.frames}px ${def.frameH}px`,
+                  backgroundPosition: "0 0",
+                  backgroundRepeat: "no-repeat",
+                  filter: `drop-shadow(0 0 3px ${tint})`,
+                }}
               />
             );
           })()}
