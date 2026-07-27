@@ -12,6 +12,18 @@
 import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { platform, arch } from "node:os";
+
+function getTauriTargetTriple() {
+  const p = platform();
+  const a = arch();
+  if (p === "linux"  && a === "x64")   return "x86_64-unknown-linux-gnu";
+  if (p === "linux"  && a === "arm64") return "aarch64-unknown-linux-gnu";
+  if (p === "darwin" && a === "arm64") return "aarch64-apple-darwin";
+  if (p === "darwin" && a === "x64")   return "x86_64-apple-darwin";
+  if (p === "win32"  && a === "x64")   return "x86_64-pc-windows-msvc";
+  throw new Error(`Unsupported platform: ${p} ${a}`);
+}
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(__dirname, ".."); // apps/web/
@@ -161,17 +173,12 @@ if (!isWindows) {
 // 6. Bundle the running Node.js binary as the Tauri sidecar
 const binariesDir = join(tauriDir, "binaries");
 mkdirSync(binariesDir, { recursive: true });
-const isWindows = process.platform === "win32";
-const nodeTriple = isWindows
-  ? "node-x86_64-pc-windows-msvc.exe"
-  : "node-x86_64-unknown-linux-gnu";
-const nodeDest = join(binariesDir, nodeTriple);
+const targetTriple = getTauriTargetTriple();
+const nodeDest = join(binariesDir, `node-${targetTriple}`);
 copyFileSync(process.execPath, nodeDest);
-if (!isWindows) {
-  chmodSync(nodeDest, 0o755);
-}
+if (platform() !== "win32") chmodSync(nodeDest, 0o755);
 
 console.log("✓ Bundle prepared");
 console.log(`  server  → ${serverDestDir}`);
 console.log(`  node    → ${nodeDest}`);
-console.log(`  (node ${process.version} from ${process.execPath})`);
+console.log(`  (node ${process.version} from ${process.execPath} [${targetTriple}])`);

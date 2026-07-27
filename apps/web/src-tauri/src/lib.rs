@@ -45,16 +45,20 @@ pub fn run() {
                     .resource_dir()
                     .expect("resource dir not found");
 
-                #[cfg(target_os = "linux")]
+                #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+                let node_bin_name = "node-x86_64-unknown-linux-gnu";
+                #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+                let node_bin_name = "node-aarch64-unknown-linux-gnu";
+                #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+                let node_bin_name = "node-aarch64-apple-darwin";
+                #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
+                let node_bin_name = "node-x86_64-apple-darwin";
+                #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+                let node_bin_name = "node-x86_64-pc-windows-msvc.exe";
+
                 let node_bin = resource_dir
                     .join("binaries")
-                    .join("node-x86_64-unknown-linux-gnu");
-
-                #[cfg(target_os = "windows")]
-                let node_bin = resource_dir
-                    .join("binaries")
-                    .join("node-x86_64-pc-windows-msvc.exe");
-
+                    .join(node_bin_name);
                 // pnpm monorepo: standalone output nests the app under apps/web/
                 let server_js = resource_dir
                     .join("server")
