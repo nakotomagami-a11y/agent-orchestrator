@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon } from "@/components/ui/icon";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import {
   useBootstrapProject,
@@ -113,7 +114,7 @@ export function BootstrapProjectModal({ open, onClose }: BootstrapProjectModalPr
               <Link
                 href={PAGE_ROUTES.project(result.project.id)}
                 onClick={onClose}
-                className="inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold text-white bg-acc hover:bg-[var(--acc-hover)] transition-colors border-none cursor-pointer no-underline"
+                className={`inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold ${ACCENT_BTN} transition-colors cursor-pointer no-underline`}
               >
                 Open project
                 <Icon name="chevron" size={13} />
@@ -183,7 +184,7 @@ export function BootstrapProjectModal({ open, onClose }: BootstrapProjectModalPr
             type="submit"
             form="bootstrap-project-form"
             disabled={!canSubmit}
-            className="inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold text-white bg-acc hover:bg-[var(--acc-hover)] disabled:opacity-40 transition-colors border-none cursor-pointer"
+            className={`inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold ${ACCENT_BTN} transition-colors cursor-pointer`}
           >
             {bootstrap.isPending ? "Creating…" : "Create project"}
           </button>

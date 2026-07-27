@@ -5,6 +5,7 @@ import type { IconConfig, IconClassSelector } from "@agent-office/pixel-icons";
 import { createRandomSeed } from "@agent-office/pixel-icons";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon } from "@/components/ui/icon";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { WeaponIcon } from "@/components/ui/weapon-icon";
 
 const WEAPON_TYPES: { value: IconClassSelector; label: string }[] = [
@@ -55,7 +56,7 @@ export function WeaponIconModal({ open, name, current, onSave, onClose }: Weapon
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold text-white bg-acc hover:bg-[var(--acc-hover)] transition-colors border-none cursor-pointer"
+            className={`inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold ${ACCENT_BTN} transition-colors cursor-pointer`}
           >
             <Icon name="check" size={13} />
             Save
@@ -67,7 +68,7 @@ export function WeaponIconModal({ open, name, current, onSave, onClose }: Weapon
         {/* Big preview */}
         <div className="shrink-0 flex flex-col items-center gap-[6px]">
           <div className="flex items-center justify-center rounded-[10px] bg-bg-2 border border-line" style={{ width: 140, height: 140 }}>
-            <WeaponIcon config={draft} size={120} dimension={32} />
+            <WeaponIcon config={draft} size={120} />
           </div>
           <span className="text-[9px] font-mono text-txt-3 uppercase tracking-wide">Preview</span>
         </div>
@@ -92,7 +93,7 @@ export function WeaponIconModal({ open, name, current, onSave, onClose }: Weapon
                         : "bg-bg-2 border-line hover:bg-bg-3 hover:border-line-2",
                     ].join(" ")}
                   >
-                    <WeaponIcon config={{ seed: draft.seed, iconClass: wt.value }} size={28} dimension={32} />
+                    <WeaponIcon config={{ seed: draft.seed, iconClass: wt.value }} size={28} />
                     <span className={["text-[11px] font-semibold", selected ? "text-acc" : "text-txt-2"].join(" ")}>
                       {wt.label}
                     </span>

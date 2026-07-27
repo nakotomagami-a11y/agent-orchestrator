@@ -169,6 +169,12 @@ export interface ProjectMeta {
    * Set via the project detail github account picker.
    */
   githubAccountId?: string;
+  /**
+   * Shelved projects are hidden from the default project picker view (they
+   * move to the "Shelved" filter). Absent/false → active. Set by the user via
+   * the project picker's shelve toggle.
+   */
+  shelved?: boolean;
 }
 
 /**
@@ -247,6 +253,7 @@ export interface ProjectSummary {
   instanceCount: number;
   lastRunAt?: number;
   planet?: PlanetConfig;
+  shelved?: boolean;
 }
 
 export interface HealthInfo {

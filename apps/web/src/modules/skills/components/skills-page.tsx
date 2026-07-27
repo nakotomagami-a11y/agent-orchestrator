@@ -113,7 +113,7 @@ function SkillCard({
           title={t("skills.edit_icon")}
           className="shrink-0 self-start rounded hover:bg-bg-2 transition-colors"
         >
-          <WeaponIcon config={config} size={120} dimension={32} />
+          <WeaponIcon config={config} size={120} />
         </button>
         <WeaponIconModal
           open={editing}

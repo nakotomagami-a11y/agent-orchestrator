@@ -78,6 +78,7 @@ function yamlToProjectMeta(m: YamlMapping): Partial<ProjectMeta> {
   if (planet) out.planet = planet;
   if (typeof m.accountId === "string" && m.accountId.trim()) out.accountId = m.accountId.trim();
   if (typeof m.githubAccountId === "string" && m.githubAccountId.trim()) out.githubAccountId = m.githubAccountId.trim();
+  if (typeof m.shelved === "boolean") out.shelved = m.shelved;
   return out;
 }
 
@@ -159,6 +160,7 @@ function writeMetadata(id: string, meta: Partial<ProjectMeta>, memory: string): 
   }
   if (meta.accountId) fmObj.accountId = meta.accountId;
   if (meta.githubAccountId) fmObj.githubAccountId = meta.githubAccountId;
+  if (meta.shelved) fmObj.shelved = true;
   if (meta.planet) {
     const p = meta.planet;
     const pObj: Record<string, unknown> = { type: p.type, seed: p.seed, paletteIdx: p.paletteIdx };
@@ -186,6 +188,7 @@ function projectFromScan(entry: ScannedEntry): Project {
   if (md?.meta.planet) meta.planet = md.meta.planet;
   if (md?.meta.accountId) meta.accountId = md.meta.accountId;
   if (md?.meta.githubAccountId) meta.githubAccountId = md.meta.githubAccountId;
+  if (md?.meta.shelved) meta.shelved = true;
   return { id: entry.id, meta, memory: md?.memory ?? "" };
 }
 
@@ -212,6 +215,7 @@ export function listProjectSummaries(): ProjectSummary[] {
         instanceCount: p.meta.roster.length,
         lastRunAt: lastRuns.get(p.id),
         planet: p.meta.planet,
+        shelved: p.meta.shelved ?? false,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

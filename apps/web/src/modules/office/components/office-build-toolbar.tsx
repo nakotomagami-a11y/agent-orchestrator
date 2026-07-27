@@ -1,22 +1,23 @@
 "use client";
 
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Icon } from "@/components/ui/icon";
 import {
   DECORATIONS,
   DECORATION_KINDS,
-  type DecoCategory,
-  type DecorationDef,
   type DecorationKind,
 } from "./decorations";
+import { type GrassColor } from "./grass-colors";
+import { type LandShape } from "../derive/land-generator";
+import { useBuildToolbar } from "../hooks/use-build-toolbar";
 import {
-  GRASS_COLOR_LIST,
-  type GrassColor,
-  type GrassColorDef,
-} from "./grass-colors";
-import { LAND_SHAPES, type LandShape } from "../derive/land-generator";
-import { useFilter } from "@/hooks/use-filter";
+  ACC_BORDER, ACC_GRAD, GEN_SHADOW, PANEL_SHADOW, THUMB_BG, TOOLWELL_SHADOW, TOOL_ACTIVE_SHADOW,
+} from "./office-build-toolbar-styles";
+import {
+  BiomeThumb, CATEGORY_TABS, DecoSprite, DecoTileCell, HeaderBtn, InspectorChip, SoonBadge, TOOLS,
+} from "./office-build-toolbar-parts";
+import { TerrainPopover } from "./office-build-toolbar-terrain";
 
 export type BuildTool = "grass" | "erase" | "fill" | "select" | DecorationKind;
 
@@ -43,12 +44,6 @@ export type LandGenParams = {
   rooms: number;
 };
 
-const CATEGORY_TABS: { id: DecoCategory; label: string }[] = [
-  { id: "land", label: "Land" },
-  { id: "buildings", label: "Buildings" },
-  { id: "water", label: "Water" },
-];
-
 export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
   active,
   tool,
@@ -63,62 +58,22 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
   onReset,
   onGenerateLand,
 }: OfficeBuildToolbarProps) {
-  const [activeTab, setActiveTab] = useState<DecoCategory>("land");
-  const [genShape, setGenShape] = useState<LandShape>("island");
-  const [genSeed, setGenSeed] = useState(() => Math.floor(Math.random() * 100000));
-  const [genCoverage, setGenCoverage] = useState(0.65);
-  const [genRoughness, setGenRoughness] = useState(0.5);
-  const [genRooms, setGenRooms] = useState(4);
-  // True once the user types a seed → the next Generate uses it verbatim; a plain
-  // repeat Generate re-rolls a fresh seed so pressing it again gives a new map.
-  const seedEdited = useRef(false);
-  const shapeDef = LAND_SHAPES.find((s) => s.id === genShape)!;
-  const runGenerate = () => {
-    const seed = seedEdited.current ? genSeed : Math.floor(Math.random() * 100000);
-    seedEdited.current = false;
-    setGenSeed(seed);
-    onGenerateLand({ shape: genShape, seed, coverage: genCoverage, roughness: genRoughness, rooms: genRooms });
-  };
+  const t = useBuildToolbar({ active, tool, grassColor, onGenerateLand });
+  const {
+    activeTab, setActiveTab,
+    terrainOpen, setTerrainOpen, terrainBtnRef,
+    brush, setBrush,
+    scatter, setScatter,
+    shapeDef,
+    grassColorDef,
+    q, setQ,
+    filteredKinds,
+    searchGroups,
+    selectedDef,
+    paintingTool,
+  } = t;
 
-  // Keep tab in sync when a deco tool is selected externally
-  useEffect(() => {
-    if (!tool || tool === "grass" || tool === "erase" || tool === "fill") return;
-    const kind = tool as DecorationKind;
-    if (DECORATION_KINDS.includes(kind)) {
-      setActiveTab(DECORATIONS[kind].category);
-    }
-  }, [tool]);
-
-  const grassColorDef = GRASS_COLOR_LIST.find((c) => c.id === grassColor);
-
-  // Search across all categories; fall back to active-tab filter when empty
-  const { query: q, setQuery: setQ, filtered: searchResults } = useFilter(
-    DECORATION_KINDS,
-    (k, s) =>
-      DECORATIONS[k].label.toLowerCase().includes(s) ||
-      DECORATIONS[k].category.includes(s) ||
-      DECORATIONS[k].family.includes(s),
-  );
-
-  const filteredKinds = q.trim()
-    ? searchResults
-    : DECORATION_KINDS.filter((k) => DECORATIONS[k].category === activeTab);
-
-  const searchGroups = useMemo(() => {
-    if (!q.trim()) return null;
-    const map = new Map<string, DecorationKind[]>();
-    for (const k of searchResults) {
-      const cat = DECORATIONS[k].category;
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(k);
-    }
-    return [...map.entries()] as [string, DecorationKind[]][];
-  }, [q, searchResults]);
-
-  const selectedKind = DECORATION_KINDS.includes(tool as DecorationKind)
-    ? (tool as DecorationKind)
-    : null;
-  const selectedDef = selectedKind ? DECORATIONS[selectedKind] : null;
+  const activeToolDef = TOOLS.find((t) => t.id === tool);
 
   return (
     <AnimatePresence>
@@ -126,7 +81,8 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
         <motion.button
           key="build-entry"
           type="button"
-          className="build-entry-btn absolute inline-flex items-center gap-[6px] bg-bg-1 border border-line text-txt font-semibold cursor-pointer z-[6] right-[14px] bottom-[14px] px-[14px] py-2 rounded-[8px] shadow-[var(--shadow-2)] text-[13px] transition-[background,border-color] duration-100 hover:bg-bg-2 hover:border-line-2"
+          className="build-entry-btn absolute z-[6] right-[14px] bottom-[14px] inline-flex items-center gap-[7px] px-[15px] py-[9px] rounded-[10px] text-[13px] font-semibold text-white cursor-pointer transition-[filter,transform] duration-150 hover:brightness-[1.07] hover:-translate-y-[1px]"
+          style={{ background: ACC_GRAD, border: `1px solid ${ACC_BORDER}`, boxShadow: GEN_SHADOW }}
           onClick={onToggle}
           aria-label="Enter build mode"
           initial={{ opacity: 0, scale: 0.85, x: 4, y: 4 }}
@@ -139,413 +95,241 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
       ) : (
         <motion.div
           key="build-panel"
-          className="build-panel absolute flex flex-col min-h-0 overflow-hidden z-[6] bg-bg-1 border border-line right-[14px] top-[14px] bottom-[14px] w-[300px] rounded-[var(--r-lg)] shadow-[var(--shadow-2)]"
-          initial={{ opacity: 0, scale: 0.93, x: 22 }}
-          animate={{ opacity: 1, scale: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 28, delay: 0.18 } }}
-          exit={{ opacity: 0, scale: 0.93, x: 22, transition: { duration: 0.13, ease: "easeIn" } }}
+          className="build-panel absolute flex flex-col min-h-0 overflow-hidden z-[6] right-[14px] top-[14px] bottom-[14px] w-[320px] rounded-[16px] bg-bg-1 border border-line-2"
+          style={{ boxShadow: PANEL_SHADOW }}
+          initial={{ opacity: 0, scale: 0.94, x: 22 }}
+          animate={{ opacity: 1, scale: 1, x: 0, transition: { type: "spring", stiffness: 300, damping: 28, delay: 0.16 } }}
+          exit={{ opacity: 0, scale: 0.94, x: 22, transition: { duration: 0.13, ease: "easeIn" } }}
         >
-      {/* ── Header ──────────────────────────────────────────────────── */}
-      <div className="border-b border-line shrink-0 px-[16px] pt-[14px] pb-[10px]">
-        <div className="flex items-center gap-[10px]">
-          <div className="w-[28px] h-[28px] rounded-[7px] bg-acc-faint text-acc flex items-center justify-center shrink-0 border border-[color-mix(in_srgb,var(--acc)_30%,transparent)]">
-            <Icon name="hammer" size={14} />
-          </div>
-          <div>
-            <div className="font-bold text-[14px] text-txt">Build</div>
-            <div className="text-txt-3 text-[11px] mt-[1px] font-mono">painting decor · agent-office</div>
-          </div>
-          <div className="ml-auto flex items-center gap-[2px]">
-            <button
-              type="button"
-              className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              onClick={onUndo}
-              disabled={!canUndo}
-              title="Undo (⌘Z)"
-              aria-label="Undo"
-            >
-              <Icon name="undo" size={14} />
-            </button>
-            <button
-              type="button"
-              className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-              onClick={onRedo}
-              disabled={!canRedo}
-              title="Redo (⌘⇧Z)"
-              aria-label="Redo"
-            >
-              <Icon name="redo" size={14} />
-            </button>
-            <div className="shrink-0 w-[1px] h-[16px] bg-line mx-[3px]" />
-            <button
-              type="button"
-              className="w-[26px] h-[26px] flex items-center justify-center rounded-[6px] text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-[rgba(233,84,32,0.14)] hover:text-[#e95420]"
-              onClick={onReset}
-              title="Reset canvas"
-              aria-label="Reset canvas"
-            >
-              <Icon name="trash" size={14} />
-            </button>
-          </div>
-        </div>
-        <div className="flex gap-[3px] mt-[10px] bg-bg-2 border border-line p-[3px] rounded-[8px]">
-          <button
-            type="button"
-            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "grass" ? " bg-acc text-white" : ""}`}
-            onClick={() => onSelectTool("grass")}
-            title="Paint terrain (B)"
-          >
-            <Icon name="pen" size={16} />
-            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">paint</span>
-            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "grass" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>B</span>
-          </button>
-          <button
-            type="button"
-            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "erase" ? " bg-acc text-white" : ""}`}
-            onClick={() => onSelectTool("erase")}
-            title="Erase (E)"
-          >
-            <Icon name="trash" size={16} />
-            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">erase</span>
-            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "erase" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>E</span>
-          </button>
-          <button
-            type="button"
-            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "fill" ? " bg-acc text-white" : ""}`}
-            onClick={() => onSelectTool("fill")}
-            title="Flood fill (F)"
-          >
-            <Icon name="paint-bucket" size={16} />
-            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">fill</span>
-            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "fill" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>F</span>
-          </button>
-          <button
-            type="button"
-            className={`flex-1 flex flex-col items-center relative cursor-pointer gap-[2px] text-txt-3 px-[4px] py-[6px] rounded-[5px] transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt${tool === "select" ? " bg-acc text-white" : ""}`}
-            onClick={() => onSelectTool("select")}
-            title="Select — click a placed decoration to rotate/mirror/move (V)"
-          >
-            <Icon name="crosshair" size={16} />
-            <span className="uppercase tracking-[0.06em] font-mono text-[9px]">select</span>
-            <span className={`absolute top-[2px] right-[3px] font-mono text-[8.5px]${tool === "select" ? " text-[rgba(255,255,255,0.5)]" : " text-txt-4"}`}>V</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ── Island color ────────────────────────────────────────────── */}
-      <div className="border-b border-line shrink-0 px-[14px] py-[10px]">
-        <div className="flex items-center gap-[8px] uppercase text-txt-3 font-mono text-[10px] [letter-spacing:0.08em] mb-[6px]">
-          Island color
-          {grassColorDef && <span className="text-txt-2 text-[11px] normal-case tracking-normal">· {grassColorDef.label}</span>}
-        </div>
-        <div className="flex gap-[5px]">
-          {GRASS_COLOR_LIST.map((c) => (
-            <GrassColorSwatch
-              key={c.id}
-              def={c}
-              selected={grassColor === c.id}
-              onClick={() => onSelectGrassColor(c.id)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* ── Generate terrain ────────────────────────────────────────── */}
-      <div className="border-b border-line shrink-0 px-[14px] py-[10px] flex flex-col gap-[8px]">
-        <div className="flex items-center gap-[8px] uppercase text-txt-3 font-mono text-[10px] [letter-spacing:0.08em]">
-          Generate land
-        </div>
-        <div className="flex items-center gap-[6px]">
-          <select
-            className="flex-1 bg-bg-2 border border-line text-txt text-[12px] rounded-[6px] px-[8px] py-[6px] outline-none cursor-pointer focus:border-[color-mix(in_srgb,var(--acc)_30%,transparent)]"
-            value={genShape}
-            onChange={(e) => setGenShape(e.target.value as LandShape)}
-          >
-            {LAND_SHAPES.map((s) => (
-              <option key={s.id} value={s.id}>{s.label}</option>
-            ))}
-          </select>
-          <input
-            type="number"
-            className="w-[68px] shrink-0 bg-bg-2 border border-line text-txt text-[12px] rounded-[6px] px-[8px] py-[6px] outline-none tabular-nums focus:border-[color-mix(in_srgb,var(--acc)_30%,transparent)]"
-            value={genSeed}
-            onChange={(e) => { seedEdited.current = true; setGenSeed(Number(e.target.value) || 0); }}
-            title="Seed"
-            aria-label="Seed"
-          />
-          <button
-            type="button"
-            className="w-[30px] h-[30px] shrink-0 flex items-center justify-center rounded-[6px] bg-bg-2 border border-line text-txt-3 cursor-pointer transition-[background,color] duration-100 hover:bg-bg-3 hover:text-txt"
-            onClick={() => { seedEdited.current = true; setGenSeed(Math.floor(Math.random() * 100000)); }}
-            title="Randomize seed"
-            aria-label="Randomize seed"
-          >
-            <Icon name="refresh" size={13} />
-          </button>
-        </div>
-        <GenSlider label="Coverage" value={genCoverage} onChange={setGenCoverage} />
-        <GenSlider label="Roughness" value={genRoughness} onChange={setGenRoughness} />
-        {shapeDef.rooms && (
-          <GenSlider
-            label={genShape === "archipelago" ? "Islands" : "Rooms"}
-            value={genRooms}
-            min={2}
-            max={8}
-            step={1}
-            format={(v) => String(v)}
-            onChange={setGenRooms}
-          />
-        )}
-        <button
-          type="button"
-          className="mt-[1px] inline-flex items-center justify-center gap-[6px] bg-acc text-white font-semibold text-[12.5px] rounded-[7px] px-[12px] py-[8px] cursor-pointer transition-[filter] duration-100 hover:brightness-110"
-          onClick={runGenerate}
-        >
-          <Icon name="sparkle" size={13} />
-          Generate
-        </button>
-      </div>
-
-      {/* ── Search ──────────────────────────────────────────────────── */}
-      <div className="border-b border-line shrink-0 px-[14px] py-[8px]">
-        <div className="flex items-center gap-[8px] bg-bg-2 border border-line text-txt-3 px-[10px] py-[6px] rounded-[7px] text-[12.5px] focus-within:border-[color-mix(in_srgb,var(--acc)_30%,transparent)]">
-          <Icon name="search" size={13} />
-          <input
-            className="flex-1 bg-transparent border-0 outline-none text-txt text-[12px] placeholder:text-[var(--txt-3)]"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search tiles…"
-          />
-          {q && (
-            <button
-              type="button"
-              onClick={() => setQ("")}
-              className="flex items-center bg-transparent border-0 cursor-pointer text-txt-3 !p-0"
-            >
-              <Icon name="x" size={11} />
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Category tabs ───────────────────────────────────────────── */}
-      {!q && (
-        <div className="flex border-b border-line shrink-0 gap-0 px-[10px]" role="tablist" aria-label="Tile categories">
-          {CATEGORY_TABS.map(({ id, label }) => {
-            const count = DECORATION_KINDS.filter((k) => DECORATIONS[k].category === id).length;
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === id}
-                className={`bp-cat relative text-txt-3 font-medium cursor-pointer py-[7px] px-2 pb-[9px] text-[11.5px] transition-[color] duration-100 hover:text-txt ${activeTab === id ? "active text-txt font-semibold after:content-[''] after:absolute after:left-[6px] after:right-[6px] after:bottom-[-1px] after:h-[2px] after:bg-[var(--acc)] after:rounded-[2px_2px_0_0]" : ""}`}
-                onClick={() => setActiveTab(id)}
+          {/* ══ Header ═════════════════════════════════════════════════════ */}
+          <div className="shrink-0 px-[15px] pt-[13px] pb-[12px] border-b border-line">
+            <div className="flex items-center gap-[11px]">
+              <div
+                className="w-[30px] h-[30px] rounded-[9px] flex items-center justify-center shrink-0 text-white"
+                style={{ background: ACC_GRAD, boxShadow: "0 3px 10px -2px color-mix(in srgb, var(--acc) 55%, transparent)" }}
               >
-                {label}
-                <span className="ml-1 text-txt-4 font-mono text-[9.5px]">{count}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Tile grid ───────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-wrap content-start gap-[6px] p-[10px_12px_8px] [scrollbar-width:thin] [scrollbar-color:var(--bg-3)_transparent] [&>*:not(.tile-header):not(.tile-empty)]:basis-[calc(20%-5px)]" role="tabpanel">
-        {q.trim() ? (
-          searchGroups && searchGroups.length > 0 ? (
-            searchGroups.map(([cat, kinds]) => (
-              <div key={cat} className="flex flex-wrap gap-[6px] basis-full [&>*:not(.tile-header)]:basis-[calc(20%-5px)]">
-                <div className="tile-header basis-full flex items-center gap-2 uppercase text-txt-3 my-[6px] -mb-[2px] font-mono text-[9.5px] tracking-[0.08em] capitalize">
-                  {cat}<span className="flex-1 h-px bg-line" />
-                </div>
-                {kinds.map((kind) => (
-                  <DecoTileCell
-                    key={kind}
-                    kind={kind}
-                    selected={tool === kind}
-                    onSelect={onSelectTool}
-                  />
-                ))}
+                <Icon name="hammer" size={15} />
               </div>
-            ))
-          ) : (
-            <div className="tile-empty basis-full text-center text-txt-3 px-3 py-6 font-mono text-[11.5px]">No tiles match &ldquo;{q}&rdquo;</div>
-          )
-        ) : (
-          filteredKinds.map((kind) => (
-            <DecoTileCell
-              key={kind}
-              kind={kind}
-              selected={tool === kind}
-              onSelect={onSelectTool}
-            />
-          ))
-        )}
-      </div>
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-[14px] text-txt leading-none">Build</div>
+                <div className="text-[10.5px] mt-[3px] font-mono truncate text-txt-2">painting decor</div>
+              </div>
+              <div className="flex items-center gap-[2px]">
+                <HeaderBtn icon="undo" label="Undo" title="Undo (⌘Z)" onClick={onUndo} disabled={!canUndo} />
+                <HeaderBtn icon="redo" label="Redo" title="Redo (⌘⇧Z)" onClick={onRedo} disabled={!canRedo} />
+                <div className="shrink-0 w-[1px] h-[16px] bg-line-2 mx-[4px]" />
+                <button
+                  type="button"
+                  className="w-[27px] h-[27px] rounded-[7px] flex items-center justify-center text-txt-2 cursor-pointer transition-colors duration-100 hover:text-[#f0663a]"
+                  style={{ background: "transparent" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "color-mix(in srgb, #e95420 16%, transparent)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                  onClick={onReset}
+                  title="Reset canvas"
+                  aria-label="Reset canvas"
+                >
+                  <Icon name="trash" size={14} />
+                </button>
+              </div>
+            </div>
 
-      {/* ── Footer ──────────────────────────────────────────────────── */}
-      <div className="border-t border-line bg-bg-2 shrink-0 p-[10px_14px]">
-        <div className="flex items-center gap-[10px]">
-          <div className="w-[38px] h-[38px] rounded-[7px] bg-bg-3 border border-line flex items-center justify-center text-[20px] shrink-0">
-            {selectedDef ? (
-              <DecoSprite def={selectedDef} size={28} />
-            ) : (
-              <span className="text-txt-4 text-[18px]">·</span>
-            )}
+            {/* Tools */}
+            <div
+              className="flex gap-[4px] mt-[11px] p-[4px] rounded-[12px] bg-bg-0 border border-line"
+              style={{ boxShadow: TOOLWELL_SHADOW }}
+            >
+              {TOOLS.map((t) => {
+                const on = tool === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    type="button"
+                    className={`relative flex-1 flex flex-col items-center gap-[5px] px-[4px] pt-[10px] pb-[8px] rounded-[9px] cursor-pointer transition-[background,color] duration-150 ${on ? "text-white" : "text-txt-2 hover:bg-bg-2 hover:text-txt"}`}
+                    style={on ? { background: ACC_GRAD, boxShadow: TOOL_ACTIVE_SHADOW } : undefined}
+                    onClick={() => onSelectTool(t.id)}
+                    title={t.title}
+                    aria-pressed={on}
+                  >
+                    <Icon name={t.icon} size={17} />
+                    <span className="text-[9.5px] font-semibold uppercase tracking-[0.06em]">{t.label}</span>
+                    <span className={`absolute top-[4px] right-[5px] font-mono text-[8.5px] ${on ? "text-white/60" : "text-txt-3"}`}>{t.key}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Terrain summary */}
+            <button
+              ref={terrainBtnRef}
+              type="button"
+              className={`mt-[9px] w-full flex items-center gap-[11px] px-[11px] py-[9px] rounded-[12px] border cursor-pointer transition-[background,border-color] duration-150 ${terrainOpen ? "border-transparent" : "bg-bg-2 border-line hover:bg-bg-3 hover:border-line-2"}`}
+              style={terrainOpen ? { background: "color-mix(in srgb, var(--acc) 9%, var(--bg-2))", borderColor: ACC_BORDER } : undefined}
+              onClick={() => setTerrainOpen((v) => !v)}
+              aria-expanded={terrainOpen}
+              aria-label="Terrain settings — biome color and land generation"
+            >
+              {grassColorDef && (
+                <BiomeThumb
+                  def={grassColorDef}
+                  size={34}
+                  className="rounded-[8px] border border-line-2"
+                  extraStyle={{ boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), 0 1px 3px rgba(0,0,0,0.35)" }}
+                />
+              )}
+              <span className="flex flex-col items-start min-w-0 leading-tight gap-[2px]">
+                <span className="text-[9.5px] font-semibold uppercase tracking-[0.11em] text-txt-2">Terrain</span>
+                <span className="text-[12px] text-txt font-medium truncate max-w-[188px]">
+                  {grassColorDef?.label ?? "Biome"} <span className="text-txt-3">·</span> {shapeDef.label}
+                </span>
+              </span>
+              <span
+                className={`ml-auto shrink-0 transition-transform duration-200 ${terrainOpen ? "rotate-90 text-acc" : "text-txt-2"}`}
+              >
+                <Icon name="chevron" size={15} />
+              </span>
+            </button>
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-txt text-[12.5px]">{selectedDef?.label ?? "no selection"}</div>
-            <div className="text-txt-3 mt-[2px] font-mono text-[10px]">
-              {selectedDef ? (
-                <>
-                  <span>{selectedDef.category}</span>
-                  <span className="text-txt-4 mx-1">·</span>
-                  <span>{selectedDef.family}</span>
-                  <span className="text-txt-4 mx-1">·</span>
-                  <span>{selectedKind}</span>
-                </>
-              ) : (
-                "pick a tile from the palette"
+
+          {/* ══ Search + tabs ══════════════════════════════════════════════ */}
+          <div className="shrink-0 px-[13px] pt-[11px] border-b border-line">
+            <div className="flex items-center gap-[9px] px-[11px] py-[8px] rounded-[10px] bg-bg-0 border border-line text-txt-3 focus-within:border-[color-mix(in_srgb,var(--acc)_45%,transparent)] focus-within:shadow-[0_0_0_3px_var(--acc-faint)] transition-[border-color,box-shadow] duration-150">
+              <Icon name="search" size={14} />
+              <input
+                className="flex-1 min-w-0 bg-transparent border-0 outline-none text-txt text-[12.5px] placeholder:text-txt-3"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search tiles…"
+                aria-label="Search tiles"
+              />
+              {q && (
+                <button type="button" onClick={() => setQ("")} className="flex items-center bg-transparent border-0 cursor-pointer text-txt-2 hover:text-txt !p-0" aria-label="Clear search">
+                  <Icon name="x" size={12} />
+                </button>
               )}
             </div>
+            {!q && (
+              <div className="flex items-center gap-[2px] mt-[8px]" role="tablist" aria-label="Tile categories">
+                {CATEGORY_TABS.map(({ id, label }) => {
+                  const count = DECORATION_KINDS.filter((k) => DECORATIONS[k].category === id).length;
+                  const on = activeTab === id;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={on}
+                      className={`relative inline-flex items-center gap-[6px] px-[10px] pt-[8px] pb-[10px] text-[12px] cursor-pointer transition-colors duration-150 ${on ? "text-txt font-semibold after:content-[''] after:absolute after:left-[8px] after:right-[8px] after:bottom-[-1px] after:h-[2px] after:rounded-[2px_2px_0_0] after:bg-acc after:shadow-[0_0_10px_color-mix(in_srgb,var(--acc)_55%,transparent)]" : "text-txt-2 font-medium hover:text-txt"}`}
+                      onClick={() => setActiveTab(id)}
+                    >
+                      {label}
+                      <span className={`font-mono text-[9.5px] px-[5px] py-[1px] rounded-full ${on ? "bg-acc-faint text-acc" : "bg-bg-2 text-txt-3"}`}>{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+
+          {/* ══ Palette (scrolls) ══════════════════════════════════════════ */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-[13px] py-[12px] [scrollbar-width:thin] [scrollbar-color:var(--bg-3)_transparent]" role="tabpanel">
+            {q.trim() ? (
+              searchGroups && searchGroups.length > 0 ? (
+                <div className="flex flex-col gap-[8px]">
+                  {searchGroups.map(([cat, kinds]) => (
+                    <div key={cat}>
+                      <div className="flex items-center gap-[8px] mb-[8px] text-[9.5px] font-semibold uppercase tracking-[0.11em] text-txt-2 capitalize">
+                        {cat}<span className="flex-1 h-px bg-line" />
+                      </div>
+                      <div className="flex flex-wrap content-start gap-[8px]">
+                        {kinds.map((kind) => (
+                          <DecoTileCell key={kind} kind={kind} selected={tool === kind} onSelect={onSelectTool} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center px-3 py-8 font-mono text-[12px] text-txt-2">No tiles match &ldquo;{q}&rdquo;</div>
+              )
+            ) : (
+              <div className="flex flex-wrap content-start gap-[8px]">
+                {filteredKinds.map((kind) => (
+                  <DecoTileCell key={kind} kind={kind} selected={tool === kind} onSelect={onSelectTool} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ══ Inspector ══════════════════════════════════════════════════ */}
+          <div className="shrink-0 px-[15px] py-[11px] flex flex-col gap-[10px] border-t border-line" style={{ background: "linear-gradient(180deg, var(--bg-2), var(--bg-1))" }}>
+            <div className="flex items-center gap-[12px]">
+              <div
+                className="w-[44px] h-[44px] rounded-[11px] flex items-center justify-center shrink-0 border border-line"
+                style={{ background: THUMB_BG, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)" }}
+              >
+                {selectedDef ? (
+                  <DecoSprite def={selectedDef} size={30} />
+                ) : (
+                  <span className="text-txt-2"><Icon name={paintingTool ? "pen" : "crosshair"} size={17} /></span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="font-semibold text-txt text-[13px] truncate">
+                  {selectedDef?.label ?? (paintingTool ? `${activeToolDef?.label ?? "Tool"} mode` : "No selection")}
+                </div>
+                <div className="mt-[5px] flex items-center gap-[5px]">
+                  {selectedDef ? (
+                    <>
+                      <InspectorChip>{selectedDef.category}</InspectorChip>
+                      <InspectorChip>{selectedDef.family}</InspectorChip>
+                      <InspectorChip>{selectedDef.terrain}</InspectorChip>
+                    </>
+                  ) : (
+                    <span className="text-[11px] text-txt-2">{paintingTool ? "drag on the canvas to paint" : "pick a tile from the palette"}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {(paintingTool || selectedDef) && (
+              <div className="flex flex-wrap items-center gap-[9px] pt-[9px] border-t border-line">
+                <span className="inline-flex items-center gap-[6px] text-[9.5px] font-semibold uppercase tracking-[0.06em] text-txt-2">Brush <SoonBadge /></span>
+                <div className="flex gap-[2px] p-[2px] rounded-[8px] bg-bg-0 border border-line" role="group" aria-label="Brush size (coming soon)">
+                  {[1, 2, 3].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      className={`min-w-[26px] h-[22px] px-[6px] rounded-[6px] font-mono text-[10px] cursor-pointer transition-colors duration-100 ${brush === s ? "text-white" : "text-txt-2 hover:text-txt"}`}
+                      style={brush === s ? { background: ACC_GRAD, boxShadow: "inset 0 1px 0 rgba(255,255,255,0.28)" } : undefined}
+                      onClick={() => setBrush(s)}
+                      title={`${s}×${s} brush — coming soon`}
+                      aria-pressed={brush === s}
+                    >
+                      {s}×{s}
+                    </button>
+                  ))}
+                </div>
+                {selectedDef && (
+                  <button
+                    type="button"
+                    className={`inline-flex items-center gap-[6px] px-[9px] py-[5px] rounded-[8px] text-[10px] font-semibold uppercase tracking-[0.05em] border cursor-pointer transition-[background,color,border-color] duration-100 ${scatter ? "text-acc bg-acc-faint" : "text-txt-2 bg-bg-0 border-line hover:text-txt"}`}
+                    style={scatter ? { borderColor: ACC_BORDER } : undefined}
+                    onClick={() => setScatter((v) => !v)}
+                    title="Scatter — randomize variant & rotation while painting (coming soon)"
+                    aria-pressed={scatter}
+                  >
+                    <Icon name="sparkle" size={12} />
+                    Scatter
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ══ Terrain popover ════════════════════════════════════════════ */}
+          <TerrainPopover t={t} grassColor={grassColor} onSelectGrassColor={onSelectGrassColor} />
         </motion.div>
       )}
     </AnimatePresence>
   );
 });
-
-// ── Sub-components ────────────────────────────────────────────────────────────
-
-function GenSlider({
-  label,
-  value,
-  onChange,
-  min = 0,
-  max = 1,
-  step = 0.01,
-  format = (v: number) => `${Math.round(v * 100)}%`,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  format?: (v: number) => string;
-}) {
-  return (
-    <label className="flex items-center gap-[8px]">
-      <span className="w-[64px] shrink-0 text-txt-3 font-mono text-[10px] uppercase [letter-spacing:0.06em]">{label}</span>
-      <input
-        type="range"
-        className="flex-1 accent-[var(--acc)] cursor-pointer h-[4px]"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-      />
-      <span className="w-[34px] shrink-0 text-right text-txt-2 font-mono text-[10px] tabular-nums">{format(value)}</span>
-    </label>
-  );
-}
-
-function DecoTileCell({
-  kind,
-  selected,
-  onSelect,
-}: {
-  kind: DecorationKind;
-  selected: boolean;
-  onSelect: (k: BuildTool | null) => void;
-}) {
-  const def = DECORATIONS[kind];
-  if (def.locked) {
-    return (
-      <div
-        className="relative flex flex-col items-center justify-end gap-[3px] overflow-hidden bg-bg-2 border border-line px-[3px] pt-[6px] pb-[5px] rounded-[7px] min-h-[56px] opacity-50 cursor-not-allowed"
-        title={`${def.label} · locked`}
-        aria-disabled
-      >
-        <span className="absolute top-[3px] right-[3px] text-txt-3">
-          <Icon name="lock" size={11} />
-        </span>
-        <span className="grayscale">
-          <DecoSprite def={def} size={32} />
-        </span>
-        <div className="text-center overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[8px] leading-[1.2] max-w-full text-txt-4">{def.label}</div>
-      </div>
-    );
-  }
-  return (
-    <button
-      type="button"
-      className={`relative flex flex-col items-center justify-end gap-[3px] cursor-pointer overflow-hidden bg-bg-2 border border-line px-[3px] pt-[6px] pb-[5px] rounded-[7px] min-h-[56px] transition-[background,border-color] duration-100 hover:bg-bg-3 hover:border-line-2 ${selected ? "active bg-acc-faint" : ""}`}
-      onClick={() => onSelect(kind)}
-      title={`${def.label} · ${def.terrain}-only`}
-      aria-pressed={selected}
-    >
-      <DecoSprite def={def} size={32} />
-      <div className={`text-center overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[8px] leading-[1.2] max-w-full ${selected ? "text-acc" : "text-txt-3"}`}>{def.label}</div>
-    </button>
-  );
-}
-
-function DecoSprite({ def, size }: { def: DecorationDef; size: number }) {
-  const scale = Math.min(size / def.frameW, size / def.frameH);
-  const drawW = def.frameW * scale;
-  const drawH = def.frameH * scale;
-  const sheetW = def.sheetW ?? def.frameW * def.frames;
-  const sheetH = def.sheetH ?? def.frameH;
-  const srcX = (def.previewCol ?? 0) * def.frameW;
-  const srcY = (def.previewRow ?? 0) * def.frameH;
-  return (
-    <span
-      aria-hidden
-      style={{
-        display: "block",
-        width: drawW,
-        height: drawH,
-        backgroundImage: `url(${def.src})`,
-        backgroundRepeat: "no-repeat",
-        backgroundSize: `${sheetW * scale}px ${sheetH * scale}px`,
-        backgroundPosition: `-${srcX * scale}px -${srcY * scale}px`,
-        imageRendering: "pixelated",
-        flexShrink: 0,
-      }}
-    />
-  );
-}
-
-function GrassColorSwatch({
-  def,
-  selected,
-  onClick,
-}: {
-  def: GrassColorDef;
-  selected: boolean;
-  onClick: () => void;
-}) {
-  // CSS sprite trick: background-size 900%×600% (9 cols × 6 rows) makes one tile
-  // fill the element exactly at any dimensions. Position 12.5% 20% → tile [1,1]
-  // (first interior row/col), which shows the solid interior grass texture.
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={def.label}
-      className={`biome-swatch flex-1 relative cursor-pointer overflow-hidden h-[32px] rounded-[6px] transition-[transform,border-color] duration-100 hover:[transform:translateY(-1px)] hover:border-[var(--line-2)]${selected ? " active border-[var(--acc)] shadow-[0_0_0_2px_var(--acc-faint)] after:content-[''] after:absolute after:inset-[3px] after:rounded-[4px] after:border-[1.5px] after:border-[rgba(255,255,255,0.6)]" : " border-[1.5px] border-[var(--line)]"}`}
-      aria-pressed={selected}
-      aria-label={`Island color: ${def.label}`}
-      style={{
-        backgroundImage: `url(${def.src})`,
-        backgroundSize: "900% 600%",
-        backgroundPosition: "12.5% 20%",
-        imageRendering: "pixelated",
-      }}
-    />
-  );
-}

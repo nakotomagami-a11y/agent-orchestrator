@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useSkillUpdates, useUpdateSkill } from "@/modules/skills/hooks/use-skills";
 
@@ -77,7 +78,7 @@ export function SkillUpdatesBell() {
               type="button"
               onClick={() => { for (const u of updates) updateMut.mutate(u.name); }}
               disabled={updateMut.isPending}
-              className="inline-flex items-center gap-[4px] px-[10px] py-[6px] rounded-[6px] text-[12px] font-semibold text-white bg-acc hover:bg-[var(--acc-hover)] border-none cursor-pointer disabled:opacity-40"
+              className={`${ACCENT_BTN} inline-flex items-center gap-[4px] px-[10px] py-[6px] rounded-[6px] text-[12px] font-semibold cursor-pointer`}
             >
               Update all
             </button>

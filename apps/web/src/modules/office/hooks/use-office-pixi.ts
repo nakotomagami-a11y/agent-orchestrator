@@ -7,7 +7,7 @@ import type { DecorationsMap } from "../components/decorations";
 import type { GrassColor } from "../components/grass-colors";
 import type { OfficeAgent } from "./use-office-agents";
 import type { AgentInstance } from "@agent-office/domain/types";
-import { buildStaticLayers } from "../pixi/build-static-layers";
+import { buildStaticLayers, DECO_LAYER_LABEL } from "../pixi/build-static-layers";
 import { buildAgentLayer } from "../pixi/build-agent-layer";
 import { GLOW_AMBER, GLOW_RED, setGlowColor, type AgentContainerExtras } from "../pixi/glow";
 
@@ -31,6 +31,8 @@ export interface OfficePixiProps {
   spendByInstance?: Record<string, number>;
   // "x,y" of the hovered agent tile → glow that sprite. null = none.
   hoveredAgentKey?: string | null;
+  // "x,y:layer" of the hovered decoration instance (select tool) → glow it.
+  hoveredDecoKey?: string | null;
 }
 
 /**
@@ -55,6 +57,7 @@ export function useOfficePixi({
   rosterInstances,
   spendByInstance,
   hoveredAgentKey,
+  hoveredDecoKey,
 }: OfficePixiProps) {
   // Container div — the canvas is created imperatively so each effect invocation
   // gets its own fresh HTMLCanvasElement (and thus its own WebGL context). React
@@ -84,6 +87,9 @@ export function useOfficePixi({
   // re-subscribing on every hover change.
   const hoveredKeyRef = useRef<string | null | undefined>(hoveredAgentKey);
   hoveredKeyRef.current = hoveredAgentKey;
+
+  const hoveredDecoRef = useRef<string | null | undefined>(hoveredDecoKey);
+  hoveredDecoRef.current = hoveredDecoKey;
 
   // Always-current lowercased search query, read by the glow ticker.
   const searchRef = useRef("");
@@ -286,9 +292,24 @@ export function useOfficePixi({
         // Spotlight: dim non-matches while a query is active.
         c.alpha = query !== "" && !match && !hover ? 0.25 : 1;
       }
+
+      // Decoration hover glow (select tool) — same amber silhouette as agents.
+      const sc = staticContainerRef.current;
+      const decoKey = hoveredDecoRef.current;
+      const decoLayer = sc?.children.find((ch) => ch.label === DECO_LAYER_LABEL) as Container | undefined;
+      if (decoLayer) {
+        for (const child of decoLayer.children) {
+          const c = child as Container & AgentContainerExtras;
+          if (!c.__glow) continue;
+          c.__glow.visible = c.label === decoKey;
+        }
+      }
     };
     app.ticker.add(tick);
-    return () => { app.ticker.remove(tick); };
+    // `app.ticker` becomes null once `app.destroy()` runs. On unmount the mount
+    // effect's cleanup (declared earlier) destroys the app before this cleanup
+    // fires, so guard against the null ticker to avoid a navigation-time crash.
+    return () => { app.ticker?.remove(tick); };
   }, [ready]);
 
   return { containerRef };

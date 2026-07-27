@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { unitForAgent } from "@/components/ui/unit-sprite-registry";
 import { cn } from "@/lib/cn";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
@@ -342,7 +343,7 @@ function AgentCard({
       <div className="of-card-actions absolute flex gap-[3px] border opacity-0 top-[12px] right-[12px] p-[3px] bg-[var(--bg-elev)] border-line-2 rounded-[8px] [box-shadow:var(--shadow-2)] [transform:translateY(-2px)] transition-[opacity,transform] duration-[140ms] z-[2] group-hover:opacity-100 group-hover:[transform:translateY(0)]">
         <button
           type="button"
-          className="bg-acc inline-flex items-center font-semibold text-[var(--acc-ink)] px-[10px] py-0 h-[26px] gap-[4px] text-[11.5px] rounded-[5px] hover:bg-[var(--acc-hover)] hover:text-[var(--acc-ink)]"
+          className={`${ACCENT_BTN} inline-flex items-center font-semibold px-[10px] py-0 h-[26px] gap-[4px] text-[11.5px] rounded-[5px]`}
           onClick={e => { e.stopPropagation(); onOpen(); }}
         >
           <Icon name="send" size={11} /> Open

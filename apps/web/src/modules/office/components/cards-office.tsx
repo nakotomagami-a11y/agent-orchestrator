@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/cn";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import { Button } from "@/components/ui/button";
 import { useActiveProjectStore } from "@/lib/active-project-store";
@@ -27,12 +28,19 @@ export type CardsOfficeProps = {
   hasProject: boolean;
   selectedId: string | null;
   onSelect: (id: string) => void;
-  view: OfficeView;
-  setView: (v: OfficeView) => void;
   projectId: string | null;
   projectName: string | null;
   rosterCount: number;
   workingCount: number;
+  /**
+   * Iso capability + view switching. The in-app iso/cards switch renders only
+   * when `canUseIso` (iso enabled in the dev menu AND rendering budget Full);
+   * when iso is disabled the dev-menu toggle is the sole control and no switch
+   * shows. Optional so callers without iso can omit them.
+   */
+  view?: OfficeView;
+  setView?: (v: OfficeView) => void;
+  canUseIso?: boolean;
 };
 
 export function CardsOffice({
@@ -43,6 +51,7 @@ export function CardsOffice({
   onSelect,
   view,
   setView,
+  canUseIso,
   projectId,
   projectName: _projectName,
   rosterCount,
@@ -204,23 +213,25 @@ export function CardsOffice({
 
         <div className="ml-auto flex items-center gap-[8px]">
           {projectId && <ProjectActionsBar projectId={projectId} />}
-          <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
-            <button
-              type="button"
-              className={cn("inline-flex items-center gap-[6px] text-txt-3 px-[12px] py-[6px] rounded-[5px] text-[12.5px] transition-[background,color] duration-[120ms]", view === "iso" && "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]")}
-              onClick={() => setView("iso")}
-            >
-              <Icon name="map" size={12} /> Iso
-            </button>
-            <button
-              type="button"
-              className={cn("inline-flex items-center gap-[6px] text-txt-3 px-[12px] py-[6px] rounded-[5px] text-[12.5px] transition-[background,color] duration-[120ms]", view === "cards" && "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]")}
-              onClick={() => setView("cards")}
-            >
-              <Icon name="grid" size={12} /> Cards
-            </button>
-          </div>
-          <button type="button" className="inline-flex items-center gap-[6px] bg-acc font-semibold cursor-pointer px-[14px] py-[8px] text-white rounded-[9px] text-[13px] transition-[background] duration-[120ms] hover:bg-[var(--acc-hover)] border-none" onClick={() => setAddOpen(true)}>
+          {canUseIso && setView && (
+            <div className="inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px]">
+              <button
+                type="button"
+                className={cn("inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[5px] text-[12.5px] transition-[background,color] duration-[120ms]", view === "iso" ? "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]" : "text-txt-3")}
+                onClick={() => setView("iso")}
+              >
+                <Icon name="map" size={12} /> Iso
+              </button>
+              <button
+                type="button"
+                className={cn("inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[5px] text-[12.5px] transition-[background,color] duration-[120ms]", view === "cards" ? "bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]" : "text-txt-3")}
+                onClick={() => setView("cards")}
+              >
+                <Icon name="grid" size={12} /> Cards
+              </button>
+            </div>
+          )}
+          <button type="button" className={`inline-flex items-center gap-[6px] ${ACCENT_BTN} font-semibold cursor-pointer px-[14px] py-[8px] rounded-[9px] text-[13px]`} onClick={() => setAddOpen(true)}>
             <Icon name="plus" size={13} /> Add agent
           </button>
         </div>
@@ -388,7 +399,7 @@ function OfficeCard({
       <div className="of-card-actions absolute flex gap-[3px] border opacity-0 top-[12px] right-[12px] p-[3px] bg-[var(--bg-elev)] border-line-2 rounded-[8px] [box-shadow:var(--shadow-2)] [transform:translateY(-2px)] transition-[opacity,transform] duration-[140ms] z-[2] group-hover:opacity-100 group-hover:[transform:translateY(0)]">
         <button
           type="button"
-          className="bg-acc inline-flex items-center font-semibold text-[var(--acc-ink)] px-[10px] py-0 h-[26px] gap-[4px] text-[11.5px] rounded-[5px] hover:bg-[var(--acc-hover)] hover:text-[var(--acc-ink)]"
+          className={`${ACCENT_BTN} inline-flex items-center font-semibold px-[10px] py-0 h-[26px] gap-[4px] text-[11.5px] rounded-[5px]`}
           onClick={e => { e.stopPropagation(); onSelect(agent.id); }}
         >
           <Icon name="send" size={11} /> Chat

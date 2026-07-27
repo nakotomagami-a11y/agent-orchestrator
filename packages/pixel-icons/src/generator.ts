@@ -181,7 +181,11 @@ export class IconGenerator {
     const tipLength = Math.ceil(r.range(10, 20) * dscale);
     const tipStartDiag = canvasDiag - tipLength;
     const gripStartDiag = Math.ceil(r.range(0, tipStartDiag - gripLengthMin));
-    const gripLength = Math.ceil(r.range(gripLengthMin, tipStartDiag - gripStartDiag) * dscale);
+    // The upper bound is already in canvas-diagonal units (scales with the
+    // dimension), so only the literal `gripLengthMin` gets `* dscale` — the
+    // original port multiplied the whole range by dscale, which made the grip
+    // grow quadratically and swallow the shaft at high render resolutions.
+    const gripLength = Math.ceil(r.range(gripLengthMin * dscale, tipStartDiag - gripStartDiag));
 
     const tipResults = this.drawBladeHelper({
       startDiag: tipStartDiag,
@@ -281,7 +285,8 @@ export class IconGenerator {
     this.drawHaftHelper({
       startDiag: 0,
       lengthDiag: headDiag,
-      maxRadius: Math.max(1, r.range(1, 2)),
+      // Pre-scale to pixel units now that drawHaftHelper no longer applies dscale.
+      maxRadius: Math.max(1, r.range(1, 2)) * dscale,
       fractionalRadiusAllowed: true,
     });
 
@@ -603,9 +608,12 @@ export class IconGenerator {
 
     const minRadius = params.minRadius ? params.minRadius : 1;
     const maxRadius = params.maxRadius;
+    // Radii arrive already in pixel units (callers derive them from scaled
+    // blade/haft radii), so no extra `* dscale` here — the original port applied
+    // it twice, making grips balloon quadratically at high render resolutions.
     const hiltRadius = params.fractionalRadiusAllowed
-      ? 0.5 * Math.ceil(r.range(minRadius * 2, maxRadius * 2) * dscale)
-      : Math.ceil(r.range(minRadius, maxRadius) * dscale);
+      ? 0.5 * Math.ceil(r.range(minRadius * 2, maxRadius * 2))
+      : Math.ceil(r.range(minRadius, maxRadius));
 
     const hiltWavelength = Math.max(2, Math.ceil(r.range(3, 6) * dscale));
     const hiltColorLight = hsvToRgb({ h: r.range(0, 360), s: r.float(), v: r.rangeFloat(0.7, 1) });
@@ -626,14 +634,13 @@ export class IconGenerator {
     this.rng.checkpoint();
     const r = this.rng;
 
-    const bounds = new Bounds(0, 0, this.dimension, this.dimension);
-    const dscale = bounds.h / 32;
-
     const minRadius = params.minRadius ? params.minRadius : 1;
     const maxRadius = params.maxRadius;
+    // See drawGripHelper: incoming radii are already pixel-scaled, so no extra
+    // `* dscale` (double-scaling made hafts fatten into cones at high res).
     const haftRadius = params.fractionalRadiusAllowed
-      ? 0.5 * Math.ceil(r.range(minRadius * 2, maxRadius * 2) * dscale)
-      : Math.ceil(r.range(minRadius, maxRadius) * dscale);
+      ? 0.5 * Math.ceil(r.range(minRadius * 2, maxRadius * 2))
+      : Math.ceil(r.range(minRadius, maxRadius));
 
     const haftColor = params.color ?? hsvToRgb({ h: r.range(35, 45), s: r.float(), v: r.rangeFloat(0.5, 0.95) });
 

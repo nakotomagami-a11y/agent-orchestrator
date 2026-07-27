@@ -10,6 +10,8 @@ export type DropdownItem = {
   onSelect: () => void;
   disabled?: boolean;
   destructive?: boolean;
+  /** Marks the currently-chosen option: stays purple/ink regardless of hover. */
+  selected?: boolean;
 };
 
 export type DropdownMenuProps = {
@@ -18,9 +20,11 @@ export type DropdownMenuProps = {
   ariaLabel?: string;
   align?: "start" | "end";
   triggerClassName?: string;
+  /** Applied to the inline-block wrapper — e.g. `flex-1` to fill a flex row. */
+  className?: string;
 };
 
-export function DropdownMenu({ trigger, items, ariaLabel, align = "end", triggerClassName }: DropdownMenuProps) {
+export function DropdownMenu({ trigger, items, ariaLabel, align = "end", triggerClassName, className }: DropdownMenuProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [style, setStyle] = useState<CSSProperties>({});
@@ -81,7 +85,7 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end", trigger
   };
 
   return (
-    <div className="relative inline-block">
+    <div className={cn("relative inline-block", className)}>
       <button
         ref={triggerRef}
         type="button"
@@ -119,9 +123,10 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end", trigger
                 }}
                 onMouseEnter={() => setActiveIndex(i)}
                 className={cn(
-                "flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline hover:bg-bg-3 w-full",
+                "flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline w-full",
                 item.destructive && "text-status-error",
-                i === activeIndex && "bg-acc text-[var(--acc-ink)] shadow-[0_1px_0_rgba(0,0,0,0.06),0_2px_6px_rgba(233,84,32,0.30)]"
+                item.selected && "bg-acc text-[var(--acc-ink)]",
+                i === activeIndex && "bg-acc text-[var(--acc-ink)]"
               )}
               >
                 {item.label}

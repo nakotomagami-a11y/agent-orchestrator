@@ -7,7 +7,7 @@ import type { PlanetConfig } from "@agent-office/domain/types";
 import { Icon } from "@/components/ui/icon";
 import { PlanetCanvas } from "@/components/ui/planet-canvas";
 import { cn } from "@/lib/cn";
-import { useProjects } from "@/modules/projects/hooks/use-projects";
+import { useProjects, useUpdateProject } from "@/modules/projects/hooks/use-projects";
 import { useRuns } from "@/modules/runs/hooks/use-runs";
 import { BootstrapProjectModal } from "@/modules/projects/components/bootstrap-project-modal";
 
@@ -73,13 +73,21 @@ export function ProjectPickerDropdown({
   const { data, isLoading } = useProjects();
   const projects = useMemo(() => data ?? [], [data]);
   const { data: runs } = useRuns({ limit: 50 });
+  const updateProject = useUpdateProject();
 
   const [activeIndex, setActiveIndex] = useState(0);
+  const [filter, setFilter] = useState<"active" | "shelved">("active");
   const [bootstrapOpen, setBootstrapOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const menuId = useId();
 
-  // rows: optional "All projects" + each project.
+  const shelvedCount = useMemo(() => projects.filter((p) => p.shelved).length, [projects]);
+  const visibleProjects = useMemo(
+    () => projects.filter((p) => (filter === "shelved" ? p.shelved : !p.shelved)),
+    [projects, filter],
+  );
+
+  // rows: optional "All projects" + each visible project.
   const rows = useMemo(() => {
     const list: Array<{
       key: string;
@@ -87,11 +95,11 @@ export function ProjectPickerDropdown({
       type: "all" | "project";
     }> = [];
     if (onPickAll) list.push({ key: "__all", projectId: null, type: "all" });
-    for (const p of projects) {
+    for (const p of visibleProjects) {
       list.push({ key: p.id, projectId: p.id, type: "project" });
     }
     return list;
-  }, [projects, onPickAll]);
+  }, [visibleProjects, onPickAll]);
 
   useEffect(() => {
     if (!open) return;
@@ -109,7 +117,11 @@ export function ProjectPickerDropdown({
 
   useEffect(() => {
     if (open) setActiveIndex(0);
-  }, [open]);
+  }, [open, filter]);
+
+  const toggleShelve = (projectId: string, shelved: boolean) => {
+    updateProject.mutate({ id: projectId, patch: { meta: { shelved } } });
+  };
 
   const pickRow = (row: (typeof rows)[number]) => {
     if (row.type === "all") {
@@ -187,21 +199,34 @@ export function ProjectPickerDropdown({
                 <Separator />
               </>
             ) : null}
-            <SectionLabel>
-              {isLoading
-                ? t("project_switcher.section_loading")
-                : t("project_switcher.section_count", { count: projects.length })}
-            </SectionLabel>
+            <div className="flex items-center gap-2 px-3 pt-2 pb-1">
+              <span className="uppercase text-txt-3 font-[var(--font-mono)] text-[10px] tracking-[0.08em]">
+                {isLoading
+                  ? t("project_switcher.section_loading")
+                  : t("project_switcher.section_count", { count: visibleProjects.length })}
+              </span>
+              <div className="ml-auto flex items-center gap-[2px] p-[2px] rounded-[6px] bg-bg-2 border border-line">
+                <FilterTab active={filter === "active"} onClick={() => setFilter("active")}>
+                  {t("project_switcher.filter_active")}
+                </FilterTab>
+                <FilterTab active={filter === "shelved"} onClick={() => setFilter("shelved")}>
+                  {t("project_switcher.filter_shelved")}
+                  {shelvedCount > 0 && <span className="ml-1 opacity-70">{shelvedCount}</span>}
+                </FilterTab>
+              </div>
+            </div>
           </div>
 
           {/* Scrollable project list */}
           <div className="overflow-y-auto flex-1 min-h-0 px-1 [scrollbar-width:thin] [scrollbar-color:var(--line-strong)_transparent]">
-            {!isLoading && projects.length === 0 ? (
+            {!isLoading && visibleProjects.length === 0 ? (
               <div className="px-[10px] pt-2 pb-[10px] text-xs text-txt-3 italic">
-                {t("project_switcher.no_projects")}
+                {filter === "shelved"
+                  ? t("project_switcher.no_shelved")
+                  : t("project_switcher.no_projects")}
               </div>
             ) : (
-              projects.map((p, i) => {
+              visibleProjects.map((p, i) => {
                 const rowIndex = onPickAll ? i + 1 : i;
                 const isSelected = p.id === selectedProjectId;
                 const isAlreadyOpen = openTabProjectIds?.has(p.id) ?? false;
@@ -238,6 +263,9 @@ export function ProjectPickerDropdown({
                       onPickProject(p.id);
                       onClose();
                     }}
+                    shelved={p.shelved ?? false}
+                    shelveLabel={p.shelved ? t("project_switcher.unshelve") : t("project_switcher.shelve")}
+                    onToggleShelve={() => toggleShelve(p.id, !p.shelved)}
                   />
                 );
               })
@@ -275,11 +303,18 @@ function Separator() {
   return <div className="h-px bg-[var(--line)] my-1" />;
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function FilterTab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <div className="flex items-center uppercase text-txt-4 px-3 pt-2 pb-1 font-[var(--font-mono)] text-[10px] tracking-[0.08em] gap-[6px]">
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "px-[9px] h-[20px] rounded-[4px] text-[11px] font-medium transition-[background,color] duration-[100ms] inline-flex items-center",
+        active ? "bg-acc text-[var(--acc-ink)]" : "text-txt-3 hover:text-txt hover:bg-bg-3",
+      )}
+    >
       {children}
-    </div>
+    </button>
   );
 }
 
@@ -295,6 +330,9 @@ type RowProps = {
   projectId?: string | null;
   planetConfig?: PlanetConfig;
   tagLabel?: string;
+  shelved?: boolean;
+  shelveLabel?: string;
+  onToggleShelve?: () => void;
 };
 
 function PickerRow({
@@ -309,12 +347,15 @@ function PickerRow({
   projectId,
   planetConfig,
   tagLabel,
+  shelved,
+  shelveLabel,
+  onToggleShelve,
 }: RowProps) {
   return (
+    <div className="relative group/row" onMouseEnter={onHover}>
     <button
       type="button"
       role="menuitem"
-      onMouseEnter={onHover}
       onClick={(e) => {
         e.preventDefault();
         onSelect();
@@ -358,7 +399,10 @@ function PickerRow({
       </span>
       {healthDot && (
         <span
-          className="w-1.5 h-1.5 rounded-full shrink-0"
+          className={cn(
+            "w-1.5 h-1.5 rounded-full shrink-0",
+            onToggleShelve && "group-hover/row:opacity-0 transition-opacity duration-[100ms]",
+          )}
           style={{
             background: healthDot === "working" ? "var(--working)" : "var(--error)",
             boxShadow: healthDot === "working" ? "0 0 5px var(--working)" : "none",
@@ -366,5 +410,21 @@ function PickerRow({
         />
       )}
     </button>
+    {onToggleShelve && (
+      <button
+        type="button"
+        aria-label={shelveLabel}
+        title={shelveLabel}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onToggleShelve();
+        }}
+        className="absolute right-[8px] top-1/2 -translate-y-1/2 w-[24px] h-[24px] inline-flex items-center justify-center rounded-[6px] text-txt-3 opacity-0 group-hover/row:opacity-100 hover:bg-bg-4 hover:text-txt transition-[opacity,background,color] duration-[120ms] z-[2]"
+      >
+        <Icon name={shelved ? "undo" : "archive"} size={13} />
+      </button>
+    )}
+    </div>
   );
 }

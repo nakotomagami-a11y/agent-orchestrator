@@ -22,8 +22,11 @@ export interface WeaponIconProps {
   /** Display size in CSS pixels. @default 48 */
   size?: number;
   /**
-   * Native render resolution in pixels. Higher = smoother edges / finer detail
-   * (48 is a good balance; ≥96 can distort the composition). @default 48
+   * Native render resolution in pixels. Higher = finer pixels / smaller blocks
+   * when the icon is scaled up. Omit to auto-supersample from `size` (≈0.7× the
+   * display size, clamped to 48–96) — the generator's composition is now
+   * scale-invariant, so higher resolutions just refine the pixels. Pass an
+   * explicit value to override (32 for chunky retro blocks).
    */
   dimension?: number;
   /**
@@ -38,26 +41,30 @@ export interface WeaponIconProps {
 export const WeaponIcon = memo(function WeaponIcon({
   config,
   size = 48,
-  dimension = 48,
+  dimension,
   border,
   className,
 }: WeaponIconProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Auto-supersample: render finer than the display size so the pixels read
+  // small and smooth, clamped to 48–96. The generator's proportions are
+  // scale-invariant, so this only refines detail — it never reshapes the icon.
+  const nativeDim = dimension ?? Math.min(96, Math.max(48, Math.round(size * 0.7)));
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.clearRect(0, 0, dimension, dimension);
-    new IconGenerator(ctx, dimension, { border }).generate(config);
-  }, [config, dimension, border]);
+    ctx.clearRect(0, 0, nativeDim, nativeDim);
+    new IconGenerator(ctx, nativeDim, { border }).generate(config);
+  }, [config, nativeDim, border]);
 
   return (
     <canvas
       ref={canvasRef}
-      width={dimension}
-      height={dimension}
+      width={nativeDim}
+      height={nativeDim}
       className={className}
       style={{
         width: size,

@@ -16,6 +16,13 @@ type SelectOptions = { tab?: AgentTab; instanceId?: string | null };
 
 type OfficeState = {
   view: OfficeView;
+  /**
+   * Master capability gate for the isometric renderer (dev-menu toggle). When
+   * false the iso floor is never loaded, the in-app iso/cards switch is hidden,
+   * and only the flat card grid is reachable. `view` is still remembered so
+   * re-enabling restores the user's last iso/cards choice.
+   */
+  isoEnabled: boolean;
   selectedId: string | null;
   /** Roster instance under selection (one of selectedId's `AgentInstance`s). */
   selectedInstanceId: string | null;
@@ -35,6 +42,7 @@ type OfficeState = {
    */
   pinnedGroups: Record<string, string[]>;
   setView: (next: OfficeView) => void;
+  setIsoEnabled: (next: boolean) => void;
   select: (id: string | null, opts?: SelectOptions) => void;
   consumePendingTab: () => AgentTab | null;
   closeInspector: () => void;
@@ -46,6 +54,7 @@ type OfficeState = {
 
 export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   view: "iso",
+  isoEnabled: true,
   selectedId: null,
   selectedInstanceId: null,
   inspectorOpen: false,
@@ -54,6 +63,7 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   expandedGroups: {},
   pinnedGroups: {},
   setView: (next) => set({ view: next }),
+  setIsoEnabled: (next) => set({ isoEnabled: next }),
   select: (id, opts) =>
     set({
       selectedId: id,
@@ -104,5 +114,5 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   },
 }), {
   name: "office-view",
-  partialize: (s) => ({ view: s.view, expandedGroups: s.expandedGroups, pinnedGroups: s.pinnedGroups }),
+  partialize: (s) => ({ view: s.view, isoEnabled: s.isoEnabled, expandedGroups: s.expandedGroups, pinnedGroups: s.pinnedGroups }),
 }));

@@ -100,19 +100,20 @@ function StripBubble({
     timer.current = setTimeout(() => setFlyout(null), 120);
   }, []);
 
+  const stateClass = isActive
+    ? "border-[var(--ao-accent)] bg-[var(--ao-accent-soft)]"
+    : pinned
+      ? "border-[color-mix(in_oklab,#e6b35a_38%,transparent)] bg-[color-mix(in_oklab,#e6b35a_16%,transparent)] hover:bg-[color-mix(in_oklab,#e6b35a_26%,transparent)]"
+      : "border-transparent bg-transparent hover:bg-[var(--ao-bg-2)]";
+
   const bubble = (
     <button
       ref={btnRef}
       type="button"
-      className={`relative w-[38px] h-[38px] rounded-[10px] border-2 cursor-pointer flex items-center justify-center transition-[background,border-color] duration-[120ms] shrink-0 hover:bg-[var(--ao-bg-2)] ${isActive ? "border-[var(--ao-accent)] bg-[var(--ao-bg-2)]" : "border-transparent bg-transparent"}`}
+      className={`relative w-[38px] h-[38px] rounded-[10px] border-2 cursor-pointer flex items-center justify-center transition-[background,border-color] duration-[120ms] shrink-0 ${stateClass}`}
       onClick={() => onSelect(agent.id, primary?.instanceId ?? null)}
     >
       <AgentAvatar unit={agent.unitChoice} size={30} label={agent.name} />
-      {pinned && (
-        <span className="absolute top-0 left-0 w-[13px] h-[13px] rounded-full bg-[var(--ao-bg-1)] border border-[var(--ao-line-1)] flex items-center justify-center text-[var(--ao-accent)]">
-          <Icon name="pin" size={8} />
-        </span>
-      )}
       {multi && (
         <span className="absolute top-0 right-0 min-w-[14px] h-[14px] px-[3px] rounded-full bg-[var(--ao-bg-3)] border border-[var(--ao-line-1)] text-[var(--ao-fg-1)] text-[9px] font-bold leading-none flex items-center justify-center">
           {instances.length}

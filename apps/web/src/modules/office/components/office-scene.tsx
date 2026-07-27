@@ -40,7 +40,6 @@ import {
   ZOOM_STEP,
 } from "../hooks/use-office-camera";
 import { useOfficePainting } from "../hooks/use-office-painting";
-import type { OfficeView } from "../hooks/use-office-store";
 import {
 
   parseGrid,
@@ -52,6 +51,7 @@ import {
   EMPTY_ROSTER,
   EMPTY_SPEND,
 } from "../derive/office-scene-data";
+import { loadMapLocal, saveMapLocal } from "../derive/office-map-storage";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -70,22 +70,22 @@ import {
 
 export function OfficeScene({
   projectId,
-  view,
-  setView,
 }: {
   projectId: string | null;
-  view: OfficeView;
-  setView: (v: OfficeView) => void;
 }) {
-  const [grid, setGrid] = useState<boolean[][]>(() => makeSeedGrid());
-  const [decorations, setDecorations] = useState<DecorationsMap>(() => ({}));
-  const [agentPositions, setAgentPositions] = useState<AgentPositions>(() => ({}));
+  // Synchronous localStorage read — the map is available on the very first
+  // render, so it always survives a reload without waiting on the server.
+  const [initialLocal] = useState(() => loadMapLocal(projectId));
+  const [grid, setGrid] = useState<boolean[][]>(() => initialLocal?.grid ?? makeSeedGrid());
+  const [decorations, setDecorations] = useState<DecorationsMap>(() => initialLocal?.decorations ?? {});
+  const [agentPositions, setAgentPositions] = useState<AgentPositions>(() => initialLocal?.agentPositions ?? {});
   const [buildMode, setBuildMode] = useState(false);
   const [tool, setTool] = useState<BuildTool | null>(null);
-  const [grassColor, setGrassColor] = useState<GrassColor>(() => DEFAULT_GRASS_COLOR);
+  const [grassColor, setGrassColor] = useState<GrassColor>(() => initialLocal?.grassColor ?? DEFAULT_GRASS_COLOR);
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
   const [hoveredAgentKey, setHoveredAgentKey] = useState<string | null>(null);
+  const [hoveredDecoKey, setHoveredDecoKey] = useState<string | null>(null);
   // Free-hand select tool: which placed decoration instance is selected.
   const [selectedDeco, setSelectedDeco] = useState<{ key: string; index: number } | null>(null);
   const [pendingChanges, setPendingChanges] = useState(0);
@@ -181,6 +181,10 @@ export function OfficeScene({
           : false;
         if (customMap) setUseCustomMap(true);
 
+        // localStorage is authoritative for the map once present. Only migrate
+        // from the server when there's no local copy yet (first load / new device).
+        if (initialLocal) return;
+
         const gridKey  = customMap && projectId ? `office-grid:${projectId}`         : "office-grid";
         const decoKey  = customMap && projectId ? `office-decorations:${projectId}`  : "office-decorations";
         const grassKey = customMap && projectId ? `office-grass-color:${projectId}`  : "office-grass-color";
@@ -254,6 +258,16 @@ export function OfficeScene({
   // Auto-save effects — debounced 400ms so a 100-cell paint drag fires
   // one PATCH after the brush lifts, not 100 individual requests.
   useOfficeAutoSave({ sceneLoaded, useCustomMap, projectId, grid, decorations, agentPositions, grassColor });
+
+  // Primary persistence: write the whole map to localStorage (debounced). This
+  // is what makes the map survive a reload reliably, independent of the server.
+  useEffect(() => {
+    if (!sceneLoaded) return;
+    const t = setTimeout(() => {
+      saveMapLocal(projectId, { grid, decorations, grassColor, agentPositions });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [grid, decorations, grassColor, agentPositions, sceneLoaded, projectId]);
 
   // Clear rectStart when the user switches tools
   useEffect(() => { setRectStart(null); }, [tool]);
@@ -788,6 +802,7 @@ export function OfficeScene({
           rosterInstances={rosterInstances}
           spendByInstance={spendByInstance}
           hoveredAgentKey={hoveredAgentKey}
+          hoveredDecoKey={hoveredDecoKey}
         />
       )}
       {/* Interaction overlay — same world transform, handles build mode + agent clicks */}
@@ -814,6 +829,7 @@ export function OfficeScene({
           selectedDeco={selectedDeco}
           onDecoSelect={selectDeco}
           onDecoDeselect={deselectDeco}
+          onDecoHoverChange={setHoveredDecoKey}
           zoom={zoom}
           onDecoDragStart={beginDecoDrag}
           onDecoOffset={setDecoOffset}
@@ -1006,33 +1022,6 @@ export function OfficeScene({
       </AnimatePresence>
 
       {/* View toggle - top-left below zoom bar (hidden in build mode) */}
-      <AnimatePresence initial={false}>
-        {!buildMode && (
-          <motion.div
-            key="view-toggle"
-            className="absolute flex items-center z-[10] pointer-events-auto top-[14px] right-[14px] bg-[rgba(20,16,14,0.95)] border border-[rgba(255,240,230,0.12)] rounded-[8px] p-[4px] gap-[2px]"
-            initial={{ opacity: 0, scale: 0.85, x: 6, y: -6 }}
-            animate={{ opacity: 1, scale: 1, x: 0, y: 0, transition: { type: "spring", stiffness: 300, damping: 26, delay: 0.05 } }}
-            exit={{ opacity: 0, scale: 0.8, x: 6, y: -6, transition: { duration: 0.13, ease: "easeIn", delay: 0.07 } }}
-          >
-            <button
-              type="button"
-              className={`inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[11.5px] font-mono transition-[background,color] duration-100 ${view === "iso" ? "bg-[rgba(255,240,230,0.12)] text-[#f4efea]" : "text-[rgba(199,191,183,0.9)] hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"}`}
-              onClick={() => setView("iso")}
-            >
-              <Icon name="map" size={11} /> Iso
-            </button>
-            <button
-              type="button"
-              className={`inline-flex items-center gap-[4px] px-[8px] py-[5px] rounded-[5px] text-[11.5px] font-mono transition-[background,color] duration-100 ${view === "cards" ? "bg-[rgba(255,240,230,0.12)] text-[#f4efea]" : "text-[rgba(199,191,183,0.9)] hover:bg-[rgba(255,240,230,0.08)] hover:text-[#f4efea]"}`}
-              onClick={() => setView("cards")}
-            >
-              <Icon name="grid" size={11} /> Cards
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Canvas info - bottom-left: tile coords + map stats (hidden in build mode) */}
       <AnimatePresence initial={false}>
         {!buildMode && (

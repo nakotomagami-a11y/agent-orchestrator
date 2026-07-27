@@ -19,14 +19,17 @@ import { useMemo } from "react";
 
 export function OfficeView() {
   const t = useTranslations();
+  const isoEnabled = useOfficeStore((s) => s.isoEnabled);
   const storedView = useOfficeStore((s) => s.view);
   const setView = useOfficeStore((s) => s.setView);
   const perfMode = usePerformanceStore((s) => s.mode);
 
-  // Performance mode forces the cheaper `cards` renderer. The user's stored
-  // preference is preserved — flipping back to `full` restores the iso
-  // renderer without them re-selecting it.
-  const view = perfMode === "full" ? storedView : "cards";
+  // `canUseIso` = iso is enabled in the dev menu AND the rendering budget is
+  // Full. Only then is the iso floor loadable and the in-app iso/cards switch
+  // shown; the user's stored iso/cards choice (`storedView`) then decides which
+  // is active. When iso is disabled there is no switch and cards is the only view.
+  const canUseIso = isoEnabled && perfMode === "full";
+  const view = canUseIso ? storedView : "cards";
   const selectedId = useOfficeStore((s) => s.selectedId);
   const select = useOfficeStore((s) => s.select);
 
@@ -92,6 +95,24 @@ export function OfficeView() {
               onErrorFilter={() => setErrorFilter((v) => !v)}
             />
 
+            {canUseIso && (
+              <div className="absolute top-[14px] right-[14px] z-[10] inline-flex bg-bg-2 border border-line p-[3px] rounded-[8px] shadow-1">
+                <button
+                  type="button"
+                  className="inline-flex items-center px-[12px] py-[6px] rounded-[5px] text-[12.5px] bg-bg-3 text-txt [box-shadow:inset_0_0_0_1px_var(--line)]"
+                >
+                  Iso
+                </button>
+                <button
+                  type="button"
+                  className="inline-flex items-center px-[12px] py-[6px] rounded-[5px] text-[12.5px] text-txt-3 hover:text-txt"
+                  onClick={() => setView?.("cards")}
+                >
+                  Cards
+                </button>
+              </div>
+            )}
+
             {errorFilter && (
               <div
                 className="flex items-center gap-2 px-4 py-[6px] text-[12.5px] text-txt-2 bg-[color-mix(in_srgb,var(--error)_10%,transparent)] border-b border-b-[color-mix(in_srgb,var(--error)_20%,transparent)]"
@@ -112,7 +133,7 @@ export function OfficeView() {
               </div>
             )}
 
-            <OfficeScene key={activeProjectId ?? "global"} projectId={activeProjectId ?? null} view={view} setView={setView} />
+            <OfficeScene key={activeProjectId ?? "global"} projectId={activeProjectId ?? null} />
           </>
         ) : (
           <CardsOffice
@@ -123,6 +144,7 @@ export function OfficeView() {
             onSelect={selectFromFloor}
             view={view}
             setView={setView}
+            canUseIso={canUseIso}
             projectId={activeProjectId}
             projectName={project?.meta.name ?? null}
             rosterCount={project?.meta.roster.length ?? scopedAgents.length}

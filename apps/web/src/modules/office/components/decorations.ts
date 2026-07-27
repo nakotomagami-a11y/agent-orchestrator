@@ -624,6 +624,7 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     frameW: 64, frameH: 64, frames: 1,
     terrain: "land", category: "land", family: "path",
     sheetW: 256, sheetH: 256, // full sheet size; previewCol/Row=0 → isolated tile at (0,0)
+    locked: true, // path building not style-finished yet — disabled for sharing
   },
 
   // ─ Bridges (static 64×64, water-only). Only the middle plank is

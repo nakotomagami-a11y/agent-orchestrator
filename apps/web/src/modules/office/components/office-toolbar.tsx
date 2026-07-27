@@ -7,6 +7,7 @@ import { ActionBar } from "@/components/ui/action-bar";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ProjectChip } from "@/modules/projects/components/project-chip";
 import { cn } from "@/lib/cn";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { AddAgentModal } from "@/modules/projects/components/add-agent-modal";
@@ -514,7 +515,7 @@ export function OfficeToolbar({ agentCount, workingCount }: OfficeToolbarProps) 
 
       <div className="ml-auto flex items-center gap-[8px]">
         {activeProjectId && <ProjectActionsBar projectId={activeProjectId} />}
-        <button type="button" className="inline-flex items-center gap-[6px] bg-acc font-semibold cursor-pointer px-[14px] py-[8px] text-white rounded-[9px] text-[13px] transition-[background] duration-[120ms] hover:bg-[var(--acc-hover)] border-none" onClick={() => setAddOpen(true)}>
+        <button type="button" className={`inline-flex items-center gap-[6px] ${ACCENT_BTN} font-semibold cursor-pointer px-[14px] py-[8px] rounded-[9px] text-[13px]`} onClick={() => setAddOpen(true)}>
           <Icon name="plus" size={13} /> Add agent
         </button>
       </div>

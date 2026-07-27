@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { PROFILE_CYCLE, PROFILE_TOK } from "../format/composer-config";
 import type { ContextProfile } from "@agent-office/domain/types";
 
@@ -105,7 +106,7 @@ function SendButton({ disabled, onSend, label }: { disabled: boolean; onSend: ()
   return (
     <button
       type="button"
-      className="send-btn bg-acc text-white border-none inline-flex items-center justify-center cursor-pointer w-[32px] h-[32px] rounded-[10px] [box-shadow:0_1px_0_rgba(0,0,0,0.08),0_2px_6px_rgba(233,84,32,0.30)] hover:bg-[var(--acc-hover)] disabled:bg-bg-3 disabled:text-txt-3 disabled:cursor-not-allowed disabled:[box-shadow:none]"
+      className={`send-btn ${ACCENT_BTN} inline-flex items-center justify-center cursor-pointer w-[32px] h-[32px] rounded-[10px]`}
       onClick={onSend}
       disabled={disabled}
       aria-label={label}

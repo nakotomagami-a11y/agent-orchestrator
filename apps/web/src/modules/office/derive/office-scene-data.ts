@@ -24,18 +24,19 @@ export function migrateKind(raw: string): DecorationKind | null {
 export function parseGrid(raw: string): boolean[][] | null {
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (
-      Array.isArray(parsed) &&
-      parsed.length === GRID_ROWS &&
-      parsed.every(
-        (row): row is boolean[] =>
-          Array.isArray(row) &&
-          row.length === GRID_COLS &&
-          row.every((cell) => typeof cell === "boolean"),
-      )
-    ) {
-      return parsed;
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    if (!parsed.every((row) => Array.isArray(row) && row.every((c) => typeof c === "boolean"))) {
+      return null;
     }
+    const src = parsed as boolean[][];
+    // Pad/crop the saved grid to the current dimensions instead of rejecting it,
+    // so a map survives changes to GRID_COLS/GRID_ROWS (existing land keeps its
+    // tile coords; new area is water). Prevents dimension changes from wiping
+    // the user's build on reload.
+    if (src.length === GRID_ROWS && src[0]?.length === GRID_COLS) return src;
+    return Array.from({ length: GRID_ROWS }, (_, y) =>
+      Array.from({ length: GRID_COLS }, (_, x) => src[y]?.[x] === true),
+    );
   } catch { /* ignore */ }
   return null;
 }

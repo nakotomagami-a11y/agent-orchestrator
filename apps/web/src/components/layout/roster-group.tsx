@@ -160,7 +160,6 @@ export function RosterGroup({
 
         {/* Name */}
         <span className="flex-1 min-w-0 flex items-center gap-[6px] text-[14px] font-semibold text-txt overflow-hidden text-ellipsis whitespace-nowrap">
-          {pinned && <Icon name="pin" size={11} className="text-acc shrink-0" />}
           <span className="overflow-hidden text-ellipsis whitespace-nowrap">{formatAgentDisplayName(agent.name)}</span>
         </span>
 

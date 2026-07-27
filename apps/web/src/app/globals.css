@@ -1010,7 +1010,3 @@ html[data-perf="off"] .chat-jump-latest {
   background: var(--line-2);
 }
 .ses-new:hover { color: var(--acc); }
-/* hmr-trigger-1782138858 */
-
-/* DEBUG_MARKER */
-.debug-marker-test { color: red; }

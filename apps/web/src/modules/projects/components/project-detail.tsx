@@ -19,6 +19,7 @@ import { exportProject, importState } from "@/lib/api/save";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { CodeEditor } from "@/components/ui/code-editor";
 import { ProjectActionsBar } from "@/modules/office/components/office-toolbar";
 import { relativeTime } from "../format/format";
@@ -60,7 +61,7 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
           <ProjectActionsBar projectId={id} />
           <button
             type="button"
-            className="inline-flex items-center gap-[6px] bg-acc font-semibold cursor-pointer px-[14px] py-[8px] text-white rounded-[9px] text-[13px] transition-[background] duration-[120ms] hover:bg-[var(--acc-hover)] border-none"
+            className={`inline-flex items-center gap-[6px] ${ACCENT_BTN} font-semibold cursor-pointer px-[14px] py-[8px] rounded-[9px] text-[13px]`}
             onClick={() => setAddOpen(true)}
           >
             <Icon name="plus" size={13} /> Add agent
@@ -209,7 +210,8 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                 type="button"
                 onClick={() => setPlanetEditorOpen(true)}
                 title="Change planet"
-                className="relative shrink-0 group cursor-pointer border-0 bg-transparent p-0"
+                aria-label="Change planet"
+                className="relative shrink-0 group cursor-pointer border-0 bg-transparent p-0 transition-transform duration-150 ease-out hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-acc focus-visible:outline-offset-4"
                 style={{ width: 168, height: 168 }}
               >
                 <PlanetCanvas
@@ -217,8 +219,22 @@ export function ProjectDetail({ id }: ProjectDetailProps) {
                   config={project.meta.planet}
                   size={168}
                 />
-                <span className="absolute inset-0 rounded-full flex items-center justify-center bg-[rgba(0,0,0,0.5)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                  <Icon name="edit" size={28} className="text-white" />
+                {/*
+                  Avatar-style edit badge anchored to the disc's lower-right
+                  edge. The planet's visual footprint is dynamic — stars,
+                  black-holes and gas giants bleed *outside* the 168px box
+                  (CANVAS_SCALE 2×–3×), so the old full-disc `rounded-full`
+                  scrim clipped hard against those effects and smothered the
+                  art. A fixed-size corner badge stays put and legible no
+                  matter how large the planet renders. 34px badge at
+                  bottom/right 8px → center ≈ (143,143), tangent to the
+                  inscribed disc at 45°.
+                */}
+                <span
+                  aria-hidden="true"
+                  className="absolute bottom-[8px] right-[8px] flex items-center justify-center w-[34px] h-[34px] rounded-full bg-bg-1 border border-line-2 text-txt-2 shadow-2 transition-all duration-150 ease-out group-hover:bg-acc group-hover:border-acc group-hover:text-acc-ink group-hover:scale-110 group-hover:shadow-3 group-focus-visible:bg-acc group-focus-visible:border-acc group-focus-visible:text-acc-ink"
+                >
+                  <Icon name="edit" size={15} />
                 </span>
               </button>
               {/*

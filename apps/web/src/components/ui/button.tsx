@@ -1,14 +1,14 @@
 import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
+import { ACCENT_BTN } from "@/lib/button-styles";
 
 const BASE =
   "h-8 px-3 inline-flex items-center gap-[7px] bg-bg-1 border border-line-2 rounded-[var(--r-md)] font-[inherit] text-[13px] text-txt cursor-pointer shadow-1 hover:bg-bg-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acc";
 
 const VARIANTS: Record<string, string> = {
   default: "",
-  primary:
-    "bg-acc border-acc text-[var(--acc-ink)] shadow-[0_1px_0_rgba(0,0,0,0.08),0_2px_6px_rgba(233,84,32,0.30)] hover:bg-[var(--acc-hover)] hover:border-[var(--acc-hover)]",
+  primary: ACCENT_BTN,
   ghost: "bg-transparent border-transparent shadow-none hover:bg-bg-2",
   danger: "bg-[var(--error)] text-white border-[var(--error)]",
 };

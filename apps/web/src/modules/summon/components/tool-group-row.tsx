@@ -101,8 +101,8 @@ export function ToolGroupRow({
                 </>
               ) : (
                 <>
-                  {tools.length} tool calls
-                  <span className="text-ao-fg-2 font-mono text-[11.5px] ml-1">
+                  <span className="shrink-0 whitespace-nowrap">{tools.length} tool calls</span>
+                  <span className="text-ao-fg-2 font-mono text-[11.5px] ml-1 min-w-0 flex-1 truncate">
                     {[...new Set(tools.map((t) => t.name))].join(" · ")}
                   </span>
                 </>

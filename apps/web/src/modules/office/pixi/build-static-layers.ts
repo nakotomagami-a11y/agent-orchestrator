@@ -11,6 +11,11 @@ import {
 import { grassTilesetSrc, type GrassColor } from "../components/grass-colors";
 import { BRIDGE_CAP_SRCS, FOAM_ANIM_SPEED, FOAM_FRAME, FOAM_FRAMES, FOAM_SHEET } from "./constants";
 import { drawPathGraphics } from "./draw-path";
+import { makeGlow, type AgentContainerExtras } from "./glow";
+
+// The deco layer is looked up by this label so the hover-glow ticker can toggle
+// per-decoration glows (same amber silhouette used for agents).
+export const DECO_LAYER_LABEL = "deco-layer";
 
 // Decoration animation speed: frames / duration / 60fps
 function decoAnimSpeed(kind: DecorationKind): number {
@@ -35,9 +40,10 @@ export async function buildStaticLayers(
   gen: number,
   genRef: MutableRefObject<number>,
 ): Promise<void> {
-  // Drop the previous foam ticker before rebuilding its sprites.
+  // Drop the previous foam ticker before rebuilding its sprites. `app.ticker`
+  // is null if the app was destroyed while a rebuild was in flight.
   if (foamTickerRef.current) {
-    app.ticker.remove(foamTickerRef.current);
+    app.ticker?.remove(foamTickerRef.current);
     foamTickerRef.current = null;
   }
   // Destroy previous sub-containers (stops AnimatedSprite ticker subscriptions
@@ -89,8 +95,10 @@ export async function buildStaticLayers(
     }),
   );
 
-  // ── Stale-call guard: bail if a newer build was triggered while we awaited ──
-  if (gen !== genRef.current) return;
+  // ── Stale-call guard: bail if a newer build was triggered while we awaited,
+  //    or if the app was destroyed (navigation unmount). `app.renderer` is null
+  //    after `app.destroy()`, so this prevents touching a dead ticker/stage. ──
+  if (gen !== genRef.current || !app.renderer) return;
 
   // ── Create sub-containers ───────────────────────────────────────────────────
   // Terrain + foam render as batched tilemaps (≈one draw call each, no per-tile
@@ -100,6 +108,7 @@ export async function buildStaticLayers(
   const terrainTilemap = new CompositeTilemap();
   const rotatedTiles = new Container();
   const decoLayer = new Container();
+  decoLayer.label = DECO_LAYER_LABEL;
   const capLayer = new Container();
   staticContainer.addChild(foamTilemap, terrainTilemap, rotatedTiles, decoLayer, capLayer);
 
@@ -180,7 +189,9 @@ export async function buildStaticLayers(
         // loop — which froze the whole canvas, camera included.
         foamTilemap.tileAnim = [frame, 0];
       };
-      app.ticker.add(tick);
+      // Guard: the app may have been destroyed while this async rebuild was
+      // in flight (navigation), which nulls `app.ticker`.
+      app.ticker?.add(tick);
       foamTickerRef.current = tick;
     }
   }
@@ -209,7 +220,7 @@ export async function buildStaticLayers(
     return !!stack && stack.some((e) => e.kind === "path");
   };
 
-  for (const { x, y, inst } of decoEntries) {
+  for (const { x, y, inst, layer } of decoEntries) {
     const kind = inst.kind;
     // ── Path: draw with Graphics (no external PNG) ──────────────────────
     if (kind === "path") {
@@ -247,6 +258,19 @@ export async function buildStaticLayers(
       s.y = top;
     };
 
+    // Each decoration is a container: a hidden amber glow silhouette (frame 0,
+    // recoloured + blurred) behind the real sprite, toggled by the hover ticker
+    // — the same sprite-shaped hover glow agents get, not a square outline.
+    const container = new Container();
+    container.label = `${x},${y}:${layer}`;
+    const glowTex = cropTexture(baseTex, 0, 0, def.frameW, def.frameH);
+    const glow = new Sprite(glowTex);
+    applyFlip(glow);
+    const glowFx = makeGlow();
+    glow.filters = glowFx.filters;
+    glow.visible = false;
+    container.addChild(glow);
+
     if (def.frames > 1 && def.animClass) {
       const frames: Texture[] = Array.from(
         { length: def.frames },
@@ -256,13 +280,17 @@ export async function buildStaticLayers(
       applyFlip(anim);
       anim.animationSpeed = decoAnimSpeed(kind);
       anim.play();
-      decoLayer.addChild(anim);
+      container.addChild(anim);
     } else {
       const tex = cropTexture(baseTex, 0, 0, def.frameW, def.frameH);
       const sprite = new Sprite(tex);
       applyFlip(sprite);
-      decoLayer.addChild(sprite);
+      container.addChild(sprite);
     }
+    const ex = container as Container & AgentContainerExtras;
+    ex.__glow = glow;
+    ex.__cm = glowFx.cm;
+    decoLayer.addChild(container);
   }
 
   // ── Bridge caps ────────────────────────────────────────────────────────────

@@ -63,6 +63,8 @@ export const projectMetaPatchSchema = z.object({
       accountId: z.string().min(1).nullable().optional(),
       // Per-project github account: null clears back to the default (system gh).
       githubAccountId: z.string().min(1).nullable().optional(),
+      // Shelved projects are hidden from the default picker view.
+      shelved: z.boolean().optional(),
     })
     .optional(),
   memory: z.string().optional(),

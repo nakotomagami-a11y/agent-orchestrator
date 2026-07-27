@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ModalShell } from "@/components/ui/modal-shell";
 import { Icon, type IconName } from "@/components/ui/icon";
 import { cn } from "@/lib/cn";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { getDbStats, runSeed, type DbStats, type SeedAction } from "@/lib/api/dev-seed";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { usePerformanceStore, type PerformanceMode } from "@/lib/performance-store";
@@ -191,7 +192,7 @@ function DevButton({
     "w-full flex items-center justify-center gap-[7px] rounded-lg px-3 py-[7px] text-[12px] font-[var(--font-mono)] border transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acc";
   const variants: Record<string, string> = {
     default: "bg-bg-2 text-txt-2 hover:text-txt hover:bg-bg-3 border-line hover:border-line-2",
-    accent: "bg-acc text-[var(--acc-ink)] border-acc hover:bg-[var(--acc-hover)] hover:border-[var(--acc-hover)]",
+    accent: ACCENT_BTN,
     danger:
       "bg-transparent text-[var(--error)] border-[color-mix(in_oklab,var(--error)_38%,transparent)] hover:bg-[color-mix(in_oklab,var(--error)_12%,transparent)] hover:border-[color-mix(in_oklab,var(--error)_60%,transparent)]",
   };
@@ -305,8 +306,8 @@ export function DevMenu() {
   const queryClient = useQueryClient();
 
   // Wired interface state.
-  const view = useOfficeStore((s) => s.view);
-  const setView = useOfficeStore((s) => s.setView);
+  const isoEnabled = useOfficeStore((s) => s.isoEnabled);
+  const setIsoEnabled = useOfficeStore((s) => s.setIsoEnabled);
   const perfMode = usePerformanceStore((s) => s.mode);
   const setPerfMode = usePerformanceStore((s) => s.setMode);
 
@@ -473,9 +474,9 @@ export function DevMenu() {
                   <ToggleRow
                     icon="layers"
                     label="Isometric view"
-                    desc="Render the office as a 3D isometric floor (PixiJS). Off shows the flat card grid."
-                    checked={view === "iso"}
-                    onChange={(v) => setView(v ? "iso" : "cards")}
+                    desc="Render the office as a 3D isometric floor (PixiJS). Off hides it entirely — no iso/cards switch, only the flat card grid."
+                    checked={isoEnabled}
+                    onChange={setIsoEnabled}
                     disabled={isoForced}
                     hint={isoForced ? "Rendering budget is forcing cards — set it to Full to enable." : undefined}
                   />

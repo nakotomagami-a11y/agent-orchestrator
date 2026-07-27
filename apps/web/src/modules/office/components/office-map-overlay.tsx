@@ -15,7 +15,6 @@ import {
 import {
   TILE,
   AGENT_SIZE,
-  GridCell,
   isToolValidAt,
   type AgentPositions,
   type VisibleRange,
@@ -74,6 +73,8 @@ export type OfficeMapOverlayProps = {
   selectedDeco?: { key: string; index: number } | null;
   onDecoSelect?: (key: string, index: number) => void;
   onDecoDeselect?: () => void;
+  // "x,y:index" of the hovered decoration → pixi glows that sprite. null = none.
+  onDecoHoverChange?: (key: string | null) => void;
   // Drag-to-reposition (select tool). zoom converts screen px → world px.
   zoom?: number;
   onDecoDragStart?: (key: string, index: number) => void;
@@ -98,6 +99,7 @@ function OfficeMapOverlayImpl({
   selectedDeco,
   onDecoSelect,
   onDecoDeselect,
+  onDecoHoverChange,
   zoom,
   onDecoDragStart,
   onDecoOffset,
@@ -135,18 +137,11 @@ function OfficeMapOverlayImpl({
   const stateRef = useRef({ grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging, onAgentHoverChange });
   stateRef.current = { grid, decorations, agentPositions, dragging, onCellClick, onAgentClick, onAgentDrop, setDragging, onAgentHoverChange };
 
-   
-  const stableOnEnter = useCallback((x: number, y: number) => setHover({ x, y }), []);
-   
-  const stableOnLeave = useCallback((x: number, y: number) => {
-    setHover((h) => (h?.x === x && h.y === y ? null : h));
-  }, []);
-   
   const stableOnClick = useCallback((x: number, y: number, shiftKey: boolean) => {
     stateRef.current.onCellClick(x, y, shiftKey);
   }, []);
-   
-  const stableOnDragOver = useCallback((x: number, y: number, e: React.DragEvent<HTMLButtonElement>, isValid: boolean) => {
+
+  const stableOnDragOver = useCallback((x: number, y: number, e: React.DragEvent<HTMLElement>, isValid: boolean) => {
     if (!stateRef.current.dragging) return;
     if (Array.from(e.dataTransfer.types).includes(AGENT_DRAG_MIME)) {
       e.preventDefault();
@@ -154,12 +149,7 @@ function OfficeMapOverlayImpl({
       setHover({ x, y });
     }
   }, []);
-   
-  const stableOnDragLeave = useCallback((x: number, y: number) => {
-    setHover((h) => (h?.x === x && h.y === y ? null : h));
-  }, []);
-   
-  const stableOnDrop = useCallback((x: number, y: number, e: React.DragEvent<HTMLButtonElement>) => {
+  const stableOnDrop = useCallback((x: number, y: number, e: React.DragEvent<HTMLElement>) => {
     e.preventDefault();
     // Clear drag state immediately — don't rely on onDragEnd firing after the
     // source button may have been unmounted by the agentPositions update.
@@ -220,60 +210,69 @@ function OfficeMapOverlayImpl({
     return validitySet.has(decorationKey(x, y));
   }, [validitySet, grid, decorations]);
 
-  // Build-mode interaction grid. Memoised (deps exclude `hover`) so moving the
-  // cursor re-renders only the single hover-tint div below, not thousands of
-  // cells. Capped: past ~2500 visible cells (zoomed out on a big map, where
-  // per-tile clicks aren't useful anyway) we skip the grid entirely — that
-  // 7k-button render was the FPS killer. Paint/erase still work via pointer math.
-  const MAX_GRID_CELLS = 2500;
-  const gridCells = useMemo(() => {
-    if (selectMode || (!buildMode && !dragging)) return null;
-    if ((yEnd - yStart + 1) * (xEnd - xStart + 1) > MAX_GRID_CELLS) return null;
-    const out: React.ReactNode[] = [];
-    for (let y = yStart; y <= yEnd; y++) {
-      for (let x = xStart; x <= xEnd; x++) {
-        out.push(
-          <GridCell
-            key={`overlay-cell-${x}-${y}`}
-            x={x}
-            y={y}
-            isValid={cellValid(x, y)}
-            isEditable
-            onEnter={stableOnEnter}
-            onLeave={stableOnLeave}
-            onClick={stableOnClick}
-            onDragOver={stableOnDragOver}
-            onDragLeave={stableOnDragLeave}
-            onDrop={stableOnDrop}
-          />,
-        );
-      }
-    }
-    return out;
-  }, [selectMode, buildMode, dragging, yStart, yEnd, xStart, xEnd, cellValid, stableOnEnter, stableOnLeave, stableOnClick, stableOnDragOver, stableOnDragLeave, stableOnDrop]);
+  // Tile under the pointer. The overlay lives inside the zoom-scaled wrapper, so
+  // screen delta / zoom = world px. Single-surface pointer math means the build
+  // grid is O(1) DOM regardless of map size (a per-tile DOM grid tanked FPS and
+  // got capped-out on the big map, killing placement + the visible grid).
+  const tileFromEvent = useCallback((e: { currentTarget: HTMLElement; clientX: number; clientY: number }) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const z = zoom || 1;
+    return {
+      x: Math.floor((e.clientX - rect.left) / z / TILE),
+      y: Math.floor((e.clientY - rect.top) / z / TILE),
+    };
+  }, [zoom]);
+
+  const showGrid = (buildMode || dragging) && !selectMode;
 
   return (
     <div
       className="absolute left-0 top-0 pointer-events-none"
       style={{ width: cols * TILE, height: grid.length * TILE }}
     >
-      {/* Build mode grid hit-targets (hidden under the select tool / when capped) */}
-      {gridCells}
-
-      {/* Single hover-tint cell — the only thing that re-renders on cursor move */}
-      {gridCells && hover && (
-        <div
-          className="absolute pointer-events-none transition-[background] duration-[80ms]"
-          style={{
-            left: hover.x * TILE,
-            top: hover.y * TILE,
-            width: TILE,
-            height: TILE,
-            background: cellValid(hover.x, hover.y)
-              ? "rgba(34, 197, 94, 0.28)"
-              : "rgba(239, 68, 68, 0.28)",
-          }}
-        />
+      {showGrid && (
+        <>
+          {/* Grid lines — one CSS-drawn element, scales to any map size */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              backgroundImage:
+                `repeating-linear-gradient(to right, rgba(255,255,255,0.11) 0 1px, transparent 1px ${TILE}px),` +
+                `repeating-linear-gradient(to bottom, rgba(255,255,255,0.11) 0 1px, transparent 1px ${TILE}px)`,
+            }}
+          />
+          {/* Interaction surface — a full-map button so the camera treats it as
+              interactive (no pointer-capture → clicks register). Tile is derived
+              from the pointer, so it's one element instead of thousands. */}
+          <button
+            type="button"
+            aria-label="Build grid"
+            className="absolute inset-0 p-0 m-0 bg-transparent border-0 pointer-events-auto cursor-crosshair"
+            onPointerMove={(e) => {
+              const t = tileFromEvent(e);
+              setHover((h) => (h && h.x === t.x && h.y === t.y ? h : t));
+            }}
+            onPointerLeave={() => setHover(null)}
+            onClick={(e) => { if (e.detail === 0) return; const t = tileFromEvent(e); stableOnClick(t.x, t.y, e.shiftKey); }}
+            onDragOver={(e) => { const t = tileFromEvent(e); stableOnDragOver(t.x, t.y, e, cellValid(t.x, t.y)); }}
+            onDrop={(e) => { const t = tileFromEvent(e); stableOnDrop(t.x, t.y, e); }}
+          />
+          {/* Single hover-tint cell — the only thing that re-renders on cursor move */}
+          {hover && (
+            <div
+              className="absolute pointer-events-none transition-[background] duration-[80ms]"
+              style={{
+                left: hover.x * TILE,
+                top: hover.y * TILE,
+                width: TILE,
+                height: TILE,
+                background: cellValid(hover.x, hover.y)
+                  ? "rgba(34, 197, 94, 0.28)"
+                  : "rgba(239, 68, 68, 0.28)",
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* Agent interaction targets: transparent draggable buttons over each agent tile */}
@@ -350,13 +349,15 @@ function OfficeMapOverlayImpl({
                 <button
                   key={`deco-target-${key}-${i}`}
                   type="button"
-                  className={`absolute pointer-events-auto cursor-pointer bg-transparent transition-[outline-color,background] duration-100 hover:bg-[rgba(233,84,32,0.12)] hover:outline hover:outline-2 hover:outline-[#e95420]${isSelected ? " outline outline-2 outline-[#e95420] bg-[rgba(233,84,32,0.10)]" : ""}`}
+                  className={`absolute pointer-events-auto cursor-pointer bg-transparent transition-[outline-color] duration-100${isSelected ? " outline outline-2 outline-[#e95420]" : ""}`}
                   style={{ left, top, width, height, touchAction: "none" }}
                   onPointerDown={(e) => {
                     if (e.button !== 0) return;
                     e.stopPropagation();
                     decoDragRef.current = { key, index: i, cx: e.clientX, cy: e.clientY, dx0: inst.dx ?? 0, dy0: inst.dy ?? 0, pushed: false };
                   }}
+                  onPointerEnter={() => onDecoHoverChange?.(`${key}:${i}`)}
+                  onPointerLeave={() => onDecoHoverChange?.(null)}
                   onClick={(e) => { e.stopPropagation(); onDecoSelect?.(key, i); }}
                   onContextMenu={(e) => { e.preventDefault(); onDecoDeselect?.(); }}
                   aria-label={`Select ${DECORATIONS[inst.kind].label}`}

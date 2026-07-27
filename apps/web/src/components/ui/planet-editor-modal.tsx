@@ -6,6 +6,7 @@ import { PLANET_TYPE_DEFS, FREEFORM_TYPES, CANVAS_SCALE, randomPlanet, randomPla
 import { ModalShell } from "./modal-shell";
 import { PlanetCanvas } from "./planet-canvas";
 import { Icon } from "./icon";
+import { ACCENT_BTN } from "@/lib/button-styles";
 
 function rgbToHex(rgb: [number, number, number]): string {
   const clamp = (v: number) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0");
@@ -133,7 +134,7 @@ export function PlanetEditorModal({
           <button
             type="button"
             onClick={handleSave}
-            className="inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold text-white bg-acc hover:bg-[var(--acc-hover)] transition-colors border-none cursor-pointer"
+            className={`inline-flex items-center gap-[6px] px-4 py-[7px] rounded-[8px] text-[13px] font-semibold ${ACCENT_BTN} transition-colors cursor-pointer`}
           >
             <Icon name="check" size={13} />
             Save

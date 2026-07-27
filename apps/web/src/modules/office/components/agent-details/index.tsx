@@ -15,6 +15,11 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { useRegisterModal } from "@/lib/modal-manager";
 import { useProject, useAddInstance, useRemoveInstance } from "@/modules/projects/hooks/use-projects";
+import { useAgent, useAgentBody, useWriteAgent } from "@/modules/agents/hooks/use-agents";
+import { fromApi, toBody } from "@/modules/agents/form/agent-form";
+import { MODEL_OPTS, EFFORT_OPTS } from "@agent-office/domain";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { toast } from "@/lib/toast-store";
 import { AgentAvatar } from "@/components/ui/agent-avatar";
 import { UnitSprite } from "@/components/ui/unit-sprite";
 import { AgentStrip } from "./agent-strip";
@@ -22,7 +27,9 @@ import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { formatAgentDisplayName } from "@/lib/agent-display-name";
 import type { AgentInstance } from "@agent-office/domain/types";
 import type { OfficeAgent } from "../../hooks/use-office-agents";
-import { statusFromRuns, type AgentStatusInfo } from "../../derive/derive-status";
+import { statusFromRuns, statusFromRunsForInstance, type AgentStatusInfo } from "../../derive/derive-status";
+import { relativeTime } from "@/modules/projects/format/format";
+import { cn } from "@/lib/cn";
 
 type Tab = AgentTab;
 
@@ -33,6 +40,16 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
+/** Row label for the model/effort dropdowns — check marks the current value. */
+function runtimeItemLabel(value: string, selected: boolean) {
+  return (
+    <span className="flex items-center gap-[8px] font-mono">
+      <Icon name="check" size={12} className={cn("shrink-0", selected ? "opacity-100 text-white" : "opacity-0")} />
+      <span>{value}</span>
+    </span>
+  );
+}
+
 // ── Instance overview card ─────────────────────────────────────────────────
 
 function InstanceCard({
@@ -41,6 +58,7 @@ function InstanceCard({
   agent,
   lastLine,
   status,
+  lastTs,
   isSelected,
   onSelect,
 }: {
@@ -49,50 +67,100 @@ function InstanceCard({
   agent: OfficeAgent;
   lastLine: string;
   status: AgentStatusInfo["status"];
+  lastTs?: number;
   isSelected: boolean;
   onSelect: (instanceId: string) => void;
 }) {
-  const label = instance.label
-    ? `#${index + 1} · ${instance.label}`
-    : `#${index + 1}`;
-
-  const isWorking = status === "working" || status === "thinking";
+  const isLive = status === "working" || status === "thinking";
+  const isError = status === "error";
+  const statusText =
+    status === "working" ? "running" :
+    status === "thinking" ? "thinking" :
+    status === "error" ? "error" :
+    status === "done" ? "done" :
+    "idle";
 
   return (
     <button
       type="button"
       onClick={() => onSelect(instance.instanceId)}
-      className={`flex flex-col gap-2 p-3 rounded-[10px] border text-left transition-[background,border-color] duration-[120ms] cursor-pointer ${
+      className={cn(
+        "group flex flex-col gap-[14px] p-4 rounded-[12px] border text-left transition-[background,border-color,transform,box-shadow] duration-[120ms] cursor-pointer",
         isSelected
-          ? "border-[var(--ao-accent)] bg-[var(--ao-bg-2)]"
-          : "border-ao-line-1 bg-ao-bg-2 hover:bg-ao-bg-3 hover:border-ao-line-2"
-      }`}
+          ? "border-[var(--ao-accent)] bg-ao-bg-2 [box-shadow:0_0_0_1px_var(--ao-accent)]"
+          : "border-ao-line-1 bg-ao-bg-2 hover:bg-ao-bg-3 hover:border-ao-line-2 hover:-translate-y-px hover:[box-shadow:var(--ao-shadow-modal)]",
+      )}
     >
-      <div className="flex items-center gap-2">
-        <div className="relative w-8 h-8 rounded-[8px] bg-ao-bg-3 border border-ao-line-1 flex items-center justify-center shrink-0">
-          <AgentAvatar unit={agent.unitChoice} size={26} label={agent.name} />
+      {/* ── Header: avatar + #N + status chip ── */}
+      <div className="flex items-center gap-3">
+        <div className="relative w-11 h-11 rounded-[10px] bg-ao-bg-3 border border-ao-line-1 flex items-center justify-center shrink-0">
+          <AgentAvatar unit={agent.unitChoice} size={34} label={agent.name} />
           <span
-            className={`absolute right-[-2px] bottom-[-2px] w-[9px] h-[9px] rounded-full border-[1.5px] border-[var(--ao-bg-1)] ${
-              isWorking
-                ? "bg-[var(--ao-ok)] shadow-[0_0_5px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]"
-                : "bg-[var(--ao-fg-3)]"
-            }`}
+            className={cn(
+              "absolute right-[-3px] bottom-[-3px] w-[11px] h-[11px] rounded-full border-2 border-[var(--ao-bg-2)]",
+              isLive ? "bg-[var(--ao-ok)] shadow-[0_0_6px_var(--ao-ok)] animate-[ao-pulse_1.5s_infinite]" :
+              isError ? "bg-[var(--ao-bad)]" :
+              "bg-[var(--ao-fg-3)]",
+            )}
           />
         </div>
-        <div className="font-mono text-[12px] font-semibold text-ao-fg-0 min-w-0 truncate">
-          {label}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-[6px] font-mono text-[13px] font-semibold text-ao-fg-0">
+            <span className="shrink-0">#{index + 1}</span>
+            {instance.label && (
+              <>
+                <span className="text-ao-fg-3 shrink-0" aria-hidden>·</span>
+                <span className="text-ao-fg-1 truncate">{instance.label}</span>
+              </>
+            )}
+          </div>
+          <div className="font-mono text-[11px] text-ao-fg-3 truncate mt-[2px]">{agent.id}</div>
         </div>
+        <span
+          className={cn(
+            "inline-flex items-center gap-[5px] shrink-0 px-[8px] h-[20px] rounded-full font-mono text-[10.5px] lowercase tracking-[0.03em]",
+            isLive ? "bg-[color-mix(in_oklab,var(--ao-ok)_14%,transparent)] text-[var(--ao-ok)]" :
+            isError ? "bg-[var(--ao-bad-soft)] text-[var(--ao-bad)]" :
+            "bg-ao-bg-3 text-ao-fg-2 border border-ao-line-1",
+          )}
+        >
+          <span className={cn("w-[5px] h-[5px] rounded-full bg-current", isLive && "shadow-[0_0_5px_currentColor]")} />
+          {statusText}
+        </span>
+      </div>
+
+      {/* ── Last-activity preview ── */}
+      <div
+        className={cn(
+          "rounded-[9px] border px-3 py-[10px] min-h-[54px]",
+          isLive
+            ? "border-[color-mix(in_oklab,var(--ao-ok)_25%,transparent)] bg-[color-mix(in_oklab,var(--ao-ok)_5%,var(--ao-bg-1))]"
+            : "border-ao-line-0 bg-ao-bg-1",
+        )}
+      >
+        <div className="text-[9.5px] uppercase tracking-[0.1em] font-mono text-ao-fg-3 mb-[5px]">last activity</div>
+        <div className="font-mono text-[12px] leading-[1.5] text-ao-fg-1 line-clamp-2">{lastLine}</div>
+      </div>
+
+      {/* ── Footer: model / effort / time ── */}
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-[5px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-2 px-[7px] h-[22px] rounded-[6px] font-mono text-[10.5px]">
+          {agent.defaultModel ?? "default"}
+        </span>
+        <span className="inline-flex items-center gap-[5px] bg-ao-bg-3 border border-ao-line-1 text-ao-fg-2 px-[7px] h-[22px] rounded-[6px] font-mono text-[10.5px]">
+          effort {agent.defaultEffort ?? "default"}
+        </span>
         {instance.worktreeMissing && (
           <span
             title="Git worktree missing — open this instance and click Repair worktree"
-            className="ml-auto inline-flex items-center gap-1 shrink-0 px-[6px] h-[18px] rounded-[9px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] text-[10px] font-semibold border border-[rgba(217,83,79,0.30)]"
+            className="inline-flex items-center gap-1 shrink-0 px-[7px] h-[22px] rounded-[6px] bg-[var(--ao-bad-soft)] text-[var(--ao-bad)] text-[10.5px] font-semibold border border-[rgba(217,83,79,0.30)]"
           >
             <Icon name="wrench" size={10} /> repair
           </span>
         )}
-      </div>
-      <div className="font-mono text-[11px] text-ao-fg-2 leading-[1.4] line-clamp-2 min-h-[28px]">
-        {lastLine}
+        <span className="ml-auto font-mono text-[10.5px] text-ao-fg-3 shrink-0">
+          {lastTs ? relativeTime(lastTs) : "no activity"}
+        </span>
       </div>
     </button>
   );
@@ -116,22 +184,26 @@ function InstanceOverview({
   const runsQ = useRuns({ agentId: agent.id, limit: 200 });
   const runs = runsQ.data ?? [];
 
-  // Get last output line per instance
-  const lastLineByInstance = (instanceId: string): string => {
+  // Per-instance derived view: last output line, live status, last-run time.
+  const infoByInstance = (instanceId: string) => {
     const instRuns = runs
       .filter((r) => r.instanceId === instanceId)
       .sort((a, b) => b.ts - a.ts);
     const lastRun = instRuns[0];
-    if (!lastRun) return "No activity";
-    const lines = (lastRun.output ?? lastRun.prompt ?? "").trim().split("\n");
-    const last = lines[lines.length - 1]?.trim() ?? "";
-    return last || lastRun.prompt || "No activity";
+    const lines = (lastRun?.output ?? lastRun?.prompt ?? "").trim().split("\n");
+    const lastLine =
+      lines[lines.length - 1]?.trim() || lastRun?.prompt || "No activity yet";
+    return {
+      lastLine,
+      status: statusFromRunsForInstance(instanceId, runs).status,
+      lastTs: lastRun?.ts,
+    };
   };
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Back button in header area */}
-      <div className="flex items-center gap-2 px-6 py-3 border-b border-ao-line-1 shrink-0">
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-ao-line-1 shrink-0">
         <button
           type="button"
           onClick={onBack}
@@ -143,23 +215,30 @@ function InstanceOverview({
           All instances of{" "}
           <span className="text-ao-fg-0 font-semibold">{formatAgentDisplayName(agent.name)}</span>
         </span>
+        <span className="ml-auto inline-flex items-center justify-center min-w-[22px] h-[22px] px-[8px] rounded-full bg-ao-bg-3 border border-ao-line-1 text-ao-fg-2 font-mono text-[11.5px]">
+          {instances.length}
+        </span>
       </div>
 
       {/* Grid of instance cards */}
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-5">
-        <div className="flex flex-wrap gap-3 [&>*]:[flex:1_1_200px]">
-          {instances.map((inst, idx) => (
-            <InstanceCard
-              key={inst.instanceId}
-              instance={inst}
-              index={idx}
-              agent={agent}
-              lastLine={lastLineByInstance(inst.instanceId)}
-              status={agent.status}
-              isSelected={selectedInstanceId === inst.instanceId}
-              onSelect={onSelect}
-            />
-          ))}
+        <div className="flex flex-wrap gap-4 [&>*]:[flex:1_1_300px] [&>*]:max-w-[520px]">
+          {instances.map((inst, idx) => {
+            const info = infoByInstance(inst.instanceId);
+            return (
+              <InstanceCard
+                key={inst.instanceId}
+                instance={inst}
+                index={idx}
+                agent={agent}
+                lastLine={info.lastLine}
+                status={info.status}
+                lastTs={info.lastTs}
+                isSelected={selectedInstanceId === inst.instanceId}
+                onSelect={onSelect}
+              />
+            );
+          })}
         </div>
       </div>
     </div>
@@ -264,6 +343,23 @@ export function AgentDetailsModal() {
   // Track active run id to show live usage in header
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const stream = useRunStream(activeRunId);
+
+  // Runtime (model / effort) dropdowns in the header. Editing these writes the
+  // agent definition, which only takes effect on the next task — hence the toast.
+  const agentDetailQ = useAgent(selectedId);
+  const agentBodyQ = useAgentBody(selectedId);
+  const writeAgentMut = useWriteAgent();
+  const applyRuntime = async (patch: { model?: string; effort?: string }) => {
+    // Guard against clobbering the body before it has loaded.
+    if (!agentDetailQ.data || agentBodyQ.data === undefined) return;
+    const values = fromApi(agentDetailQ.data, agentBodyQ.data);
+    await writeAgentMut.mutateAsync(toBody({ ...values, ...patch }));
+    toast(
+      patch.model
+        ? `Model set to ${patch.model} — applies on next task`
+        : `Effort set to ${patch.effort} — applies on next task`,
+    );
+  };
 
   useEffect(() => {
     if (inspectorOpen) {
@@ -471,10 +567,42 @@ export function AgentDetailsModal() {
               ) : (
                 <div className="font-bold text-base text-ao-fg-0">{formatAgentDisplayName(agent.name)}</div>
               )}
-              <div className="flex items-center gap-2 text-ao-fg-2 font-mono text-[12px]">
-                <span>{agent.defaultModel ?? "default"}</span>
+              <div className="flex items-center gap-1 text-ao-fg-2 font-mono text-[12px]">
+                <DropdownMenu
+                  align="start"
+                  ariaLabel="Model"
+                  triggerClassName="!h-[22px] !px-[6px] !-mx-[2px] !text-[12px] !font-mono !text-ao-fg-2 hover:!text-ao-fg-0 hover:!bg-ao-bg-3"
+                  trigger={
+                    <span className="flex items-center gap-[5px]">
+                      <span>{agent.defaultModel ?? "default"}</span>
+                      <Icon name="chevron-down" size={11} className="shrink-0 text-ao-fg-3" />
+                    </span>
+                  }
+                  items={MODEL_OPTS.map((m) => ({
+                    key: m,
+                    label: runtimeItemLabel(m, (agent.defaultModel ?? "") === m),
+                    selected: (agent.defaultModel ?? "") === m,
+                    onSelect: () => void applyRuntime({ model: m }),
+                  }))}
+                />
                 <span className="w-[3px] h-[3px] bg-ao-fg-3 rounded-full" />
-                <span>effort {agent.defaultEffort ?? "default"}</span>
+                <DropdownMenu
+                  align="start"
+                  ariaLabel="Effort"
+                  triggerClassName="!h-[22px] !px-[6px] !-mx-[2px] !text-[12px] !font-mono !text-ao-fg-2 hover:!text-ao-fg-0 hover:!bg-ao-bg-3"
+                  trigger={
+                    <span className="flex items-center gap-[5px]">
+                      <span>effort {agent.defaultEffort ?? "default"}</span>
+                      <Icon name="chevron-down" size={11} className="shrink-0 text-ao-fg-3" />
+                    </span>
+                  }
+                  items={EFFORT_OPTS.map((e) => ({
+                    key: e,
+                    label: runtimeItemLabel(e, (agent.defaultEffort ?? "") === e),
+                    selected: (agent.defaultEffort ?? "") === e,
+                    onSelect: () => void applyRuntime({ effort: e }),
+                  }))}
+                />
               </div>
             </div>
             <div className="ml-auto flex items-center gap-2">

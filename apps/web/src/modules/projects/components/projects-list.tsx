@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
+import { ACCENT_BTN } from "@/lib/button-styles";
 import { PlanetCanvas } from "@/components/ui/planet-canvas";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useProjects } from "../hooks/use-projects";
@@ -159,7 +160,7 @@ function ProjectsListHeader({ count, onCreate }: { count?: number; onCreate: () 
       actions={
         <button
           type="button"
-          className="inline-flex items-center gap-[6px] bg-acc font-semibold cursor-pointer px-[14px] py-[8px] text-white rounded-[9px] text-[13px] transition-[background] duration-[120ms] hover:bg-[var(--acc-hover)] border-none"
+          className={`inline-flex items-center gap-[6px] ${ACCENT_BTN} font-semibold cursor-pointer px-[14px] py-[8px] rounded-[9px] text-[13px]`}
           onClick={onCreate}
         >
           <Icon name="plus" size={13} /> Create project
