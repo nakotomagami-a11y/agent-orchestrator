@@ -39,12 +39,20 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end", trigger
     if (!open) return;
     const rect = triggerRef.current?.getBoundingClientRect();
     if (!rect) return;
+    // Flip upward when there isn't room below the trigger (e.g. a dropdown at
+    // the bottom of a modal), and cap the height to the available space so the
+    // menu scrolls instead of spilling off-screen in either direction.
+    const menuH = items.length * 34 + 12; // fixed 34px rows + padding
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < menuH + 8 && rect.top > spaceBelow;
     setStyle({
       position: "fixed",
-      top: rect.bottom + 4,
+      maxHeight: `${Math.max(120, (openUp ? rect.top : spaceBelow) - 12)}px`,
+      overflowY: "auto",
+      ...(openUp ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }),
       ...(align === "end" ? { right: window.innerWidth - rect.right } : { left: rect.left }),
     });
-  }, [open, align]);
+  }, [open, align, items.length]);
 
   useEffect(() => {
     if (!open) return;

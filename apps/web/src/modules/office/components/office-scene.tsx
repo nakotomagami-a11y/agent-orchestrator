@@ -29,6 +29,7 @@ import { useOfficeKeyboardShortcuts } from "../hooks/use-office-keyboard-shortcu
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
 import { useProjectSpend } from "@/modules/projects/hooks/use-project-spend";
+import { useFpsMeterStore } from "@/lib/fps-meter-store";
 import {
   DEFAULT_GRASS_COLOR,
   isGrassColor,
@@ -139,6 +140,10 @@ export function OfficeScene({
     onPointerMove: paintPointerMove,
     onPointerUp: paintPointerUp,
   } = useOfficePainting({ panRef, zoomRef });
+
+  // Dev instrument: the in-canvas FPS readouts show only when the FPS meter is
+  // toggled on in the dev menu.
+  const fpsEnabled = useFpsMeterStore((s) => s.enabled);
 
   // Sync painting refs with React state
   useEffect(() => { buildModeRef.current = buildMode; }, [buildMode, buildModeRef]);
@@ -893,8 +898,12 @@ export function OfficeScene({
                 </div>
               )}
             </div>
-            <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
-            <FpsCounter />
+            {fpsEnabled && (
+              <>
+                <div className="shrink-0 w-[1px] h-[16px] bg-[rgba(255,240,230,0.10)] mx-[2px]" />
+                <FpsCounter />
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -930,7 +939,7 @@ export function OfficeScene({
       {/* Build-mode FPS badge — the canvas-tools bar (which holds the FPS) hides
           in build mode, so a standalone FPS readout animates in to replace it. */}
       <AnimatePresence initial={false}>
-        {buildMode && (
+        {buildMode && fpsEnabled && (
           <motion.div
             key="build-fps"
             className="absolute z-[10] pointer-events-none flex items-center top-[14px] left-[14px] bg-[rgba(20,16,14,0.95)] border border-[rgba(255,240,230,0.12)] rounded-[8px] px-[6px] py-[3px]"

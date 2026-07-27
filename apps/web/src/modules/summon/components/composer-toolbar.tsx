@@ -3,9 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/cn";
 import { ACCENT_BTN } from "@/lib/button-styles";
-import { PROFILE_CYCLE, PROFILE_TOK } from "../format/composer-config";
 import type { ContextProfile } from "@agent-office/domain/types";
 
 export type ComposerToolbarProps = {
@@ -39,9 +37,6 @@ export function ComposerToolbar(props: ComposerToolbarProps): React.ReactElement
       <Button variant="ghost" size="sm" title={`${t("workflows.open_picker")} (Ctrl+P)`} aria-label={t("workflows.open_picker")} onClick={props.onPromptPickerOpen}>
         <Icon name="sparkle" />
       </Button>
-      {props.cwdChip ? <ToolbarChip title="working directory" text={props.cwdChip} /> : null}
-      {props.modelChip ? <ToolbarChip title="active model" text={props.modelChip} /> : null}
-      {props.onProfileChange ? <ProfileToggle current={props.contextProfile} onChange={props.onProfileChange} /> : null}
       <div className="ml-auto flex items-center gap-[6px]">
         {props.abortable ? (
           <Button size="sm" onClick={props.onAbort}>
@@ -53,39 +48,6 @@ export function ComposerToolbar(props: ComposerToolbarProps): React.ReactElement
         <SendButton disabled={props.sendDisabled} onSend={props.onSend} label={t("composer.send_label")} />
       </div>
     </div>
-  );
-}
-
-function ToolbarChip({ title, text }: { title: string; text: string }): React.ReactElement {
-  return (
-    <span
-      className="inline-flex items-center gap-[5px] bg-bg-2 border border-line text-txt-2 rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] hover:bg-bg-3"
-      title={title}
-    >
-      {text}
-    </span>
-  );
-}
-
-function ProfileToggle({ current, onChange }: { current: ContextProfile; onChange: (p: ContextProfile) => void }): React.ReactElement {
-  const cycle = () => {
-    const next = PROFILE_CYCLE[(PROFILE_CYCLE.indexOf(current) + 1) % PROFILE_CYCLE.length] ?? "balanced";
-    onChange(next);
-  };
-  return (
-    <button
-      type="button"
-      title="Context profile — click to cycle"
-      onClick={cycle}
-      className={cn(
-        "inline-flex items-center gap-[5px] rounded-full cursor-pointer px-[8px] py-[3px] text-[11.5px] font-[var(--font-mono)] transition-colors",
-        current === "balanced"
-          ? "bg-bg-2 border border-line text-txt-2 hover:bg-bg-3"
-          : "bg-acc-faint border border-acc-tint text-acc hover:bg-acc-softer",
-      )}
-    >
-      ctx:{current} <span className="text-txt-4">{PROFILE_TOK[current]}</span>
-    </button>
   );
 }
 

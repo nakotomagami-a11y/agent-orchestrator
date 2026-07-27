@@ -9,6 +9,7 @@ import { ACCENT_BTN } from "@/lib/button-styles";
 import { getDbStats, runSeed, type DbStats, type SeedAction } from "@/lib/api/dev-seed";
 import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { usePerformanceStore, type PerformanceMode } from "@/lib/performance-store";
+import { useFpsMeterStore } from "@/lib/fps-meter-store";
 import { dumpStores, appStateSnapshot } from "./dev-instruments";
 
 const GIT_SHA = process.env.NEXT_PUBLIC_GIT_SHA || "";
@@ -310,9 +311,11 @@ export function DevMenu() {
   const setIsoEnabled = useOfficeStore((s) => s.setIsoEnabled);
   const perfMode = usePerformanceStore((s) => s.mode);
   const setPerfMode = usePerformanceStore((s) => s.setMode);
+  const fpsEnabled = useFpsMeterStore((s) => s.enabled);
+  const setFpsEnabled = useFpsMeterStore((s) => s.setEnabled);
 
   // Wired interface instruments (ephemeral — reset on reload, which is fine for dev).
-  const [instruments, setInstruments] = useState({ reduceMotion: false, outlines: false, fps: false });
+  const [instruments, setInstruments] = useState({ reduceMotion: false, outlines: false });
   // Transient state for one-shot client actions (dump / snapshot / etc.).
   const [clientState, setClientState] = useState<Record<string, BtnState>>({});
   const [uptimeNow, setUptimeNow] = useState(() => Date.now());
@@ -410,7 +413,7 @@ export function DevMenu() {
         Dev
       </button>
 
-      {instruments.fps ? <FpsMeter /> : null}
+      {fpsEnabled ? <FpsMeter /> : null}
 
       <ModalShell open={open} onClose={() => setOpen(false)} maxWidth={660} bareContent>
         {/* Header */}
@@ -495,8 +498,7 @@ export function DevMenu() {
                     </div>
                   </div>
                   <ToggleRow icon="zap" label="Reduce motion" desc="Collapse animations and transitions across the app." checked={instruments.reduceMotion} onChange={(v) => setInstruments((p) => ({ ...p, reduceMotion: v }))} />
-                  <ToggleRow icon="grid" label="Debug grid overlay" desc="Overlay the isometric tile grid + coordinates." planned checked={false} onChange={() => {}} />
-                  <ToggleRow icon="activity" label="FPS meter" desc="Pin a live frame-rate readout to the corner." checked={instruments.fps} onChange={(v) => setInstruments((p) => ({ ...p, fps: v }))} />
+                  <ToggleRow icon="activity" label="FPS meter" desc="Pin a live frame-rate readout to the corner." checked={fpsEnabled} onChange={setFpsEnabled} />
                   <ToggleRow icon="crosshair" label="Component outlines" desc="Outline every element boundary to spot layout bugs." checked={instruments.outlines} onChange={(v) => setInstruments((p) => ({ ...p, outlines: v }))} />
                 </div>
               </div>

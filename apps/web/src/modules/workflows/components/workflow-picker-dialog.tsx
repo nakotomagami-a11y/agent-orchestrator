@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Portal } from "@/components/ui/portal";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/cn";
 import {
   useWorkflows,
@@ -151,21 +152,23 @@ function AddWorkflowForm({ onAdded }: { onAdded?: () => void }) {
         <label className="text-[11.5px] text-txt-2 shrink-0">
           {t("workflows.add_category_label")}
         </label>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-          className="h-[28px] py-0 pr-6 pl-[8px] bg-bg-2 border border-line-2 rounded-[7px] text-txt [font:inherit] text-[12px] outline-none cursor-pointer appearance-none bg-no-repeat bg-[right_6px_center] bg-[length:14px]"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238A8079' stroke-width='1.7'><path d='m6 9 6 6 6-6'/></svg>\")",
-          }}
-        >
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>
-              {capitalize(c)}
-            </option>
-          ))}
-        </select>
+        <DropdownMenu
+          align="start"
+          ariaLabel={t("workflows.add_category_label")}
+          triggerClassName="h-[28px] px-[10px] bg-bg-2 border-line-2 rounded-[7px] text-txt text-[12px] hover:bg-bg-3"
+          trigger={
+            <>
+              {capitalize(category)}
+              <Icon name="chevron-down" size={13} className="text-txt-3" />
+            </>
+          }
+          items={CATEGORIES.map((c) => ({
+            key: c,
+            label: capitalize(c),
+            selected: c === category,
+            onSelect: () => setCategory(c),
+          }))}
+        />
         <Button
           size="sm"
           variant="primary"
@@ -388,7 +391,7 @@ export function WorkflowPickerDialog({ open, onClose, onSelect }: WorkflowPicker
           </div>
 
           {/* Workflow list */}
-          <div className="flex-1 min-h-0 overflow-y-auto px-[12px] py-[10px] [scrollbar-width:thin] [scrollbar-color:var(--bg-4)_transparent]">
+          <div className="flex-1 min-h-0 overflow-y-auto px-[12px] py-[10px]">
             {workflowsQ.isLoading ? (
               <div className="text-txt-3 text-[12px] py-[20px] text-center">
                 {t("common.loading")}
