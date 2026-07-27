@@ -6,7 +6,6 @@ import { Portal } from "@/components/ui/portal";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { useRegisterModal } from "@/lib/modal-manager";
 import {
   useWorkflows,
   useCreateWorkflow,
@@ -184,7 +183,11 @@ function AddWorkflowForm({ onAdded }: { onAdded?: () => void }) {
 // ── Dialog ───────────────────────────────────────────────────────────────────
 
 export function WorkflowPickerDialog({ open, onClose, onSelect }: WorkflowPickerDialogProps) {
-  useRegisterModal(open, onClose);
+  // NOTE: intentionally NOT registered with the global modal-manager. This
+  // dialog opens from within the conversation inspector — itself a registered
+  // modal — and the manager's replace semantics would close that ancestor,
+  // unmounting the composer and this dialog with it. The dialog self-manages
+  // dismissal via its own Escape handler and backdrop click below.
   const t = useTranslations();
   const [rawSearch, setRawSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
