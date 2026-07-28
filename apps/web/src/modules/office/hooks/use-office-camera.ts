@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TILE } from "../components/office-map";
+import { getUiSettings, patchUiSettings } from "@/lib/api/ui-settings";
 
 // Build area — a large Civ-style map (~5× the original 48×30) so a generated
 // landmass leaves plenty of water to expand into. Terrain + foam render as
@@ -15,7 +16,7 @@ const ZOOM_MIN = 0.1;
 const ZOOM_MAX = 3.0;
 export const ZOOM_STEP = 0.15;
 
-export function useOfficeCamera() {
+export function useOfficeCamera(projectId: string | null = null) {
   const [zoom, setZoom] = useState(1.0);
   const [panX, setPanX] = useState(0);
   const [panY, setPanY] = useState(0);
@@ -27,9 +28,47 @@ export function useOfficeCamera() {
   const isDragging = useRef(false);
   const hasDragged = useRef(false);
   const dragStart = useRef({ mx: 0, my: 0, px: 0, py: 0 });
+  // Gates camera persistence: saving is disabled until the stored camera has
+  // been loaded, so the first-paint auto-centre can't clobber a saved view.
+  const cameraHydratedRef = useRef(false);
 
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
   useEffect(() => { panRef.current = { x: panX, y: panY }; }, [panX, panY]);
+
+  // Restore the saved zoom/pan for this project (per-project, keyed like the
+  // rest of the office state). If a valid camera is found we apply it and mark
+  // panInit so the auto-centre below is skipped.
+  const cameraKey = `office-camera:${projectId ?? "global"}`;
+  useEffect(() => {
+    getUiSettings()
+      .then((data) => {
+        const raw = data[cameraKey];
+        if (raw) {
+          const o = JSON.parse(raw) as { zoom?: unknown; panX?: unknown; panY?: unknown };
+          if (typeof o.zoom === "number" && typeof o.panX === "number" && typeof o.panY === "number"
+              && Number.isFinite(o.zoom) && Number.isFinite(o.panX) && Number.isFinite(o.panY)) {
+            panInitRef.current = true;
+            setZoom(Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, o.zoom)));
+            setPanX(o.panX);
+            setPanY(o.panY);
+          }
+        }
+      })
+      .catch(() => { /* ignore — fresh DB / no saved camera */ })
+      .finally(() => { cameraHydratedRef.current = true; });
+  // cameraKey change forces a remount via the scene's `key` prop, so once is fine
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist zoom/pan (debounced — pan drags fire many updates a second).
+  useEffect(() => {
+    if (!cameraHydratedRef.current) return;
+    const t = setTimeout(() => {
+      patchUiSettings({ [cameraKey]: JSON.stringify({ zoom, panX, panY }) })
+        .catch(() => { /* best-effort */ });
+    }, 500);
+    return () => clearTimeout(t);
+  }, [zoom, panX, panY, cameraKey]);
 
   // Centre map on first paint
   useEffect(() => {

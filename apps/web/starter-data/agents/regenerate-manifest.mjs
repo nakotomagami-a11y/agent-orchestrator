@@ -80,16 +80,21 @@ const files = readdirSync(HERE)
   .filter((f) => f.endsWith(".md"))
   .sort();
 
-const agents = files.map((file) => {
-  const raw = readFileSync(join(HERE, file), "utf8");
-  const fm = parseFrontmatterSubset(raw);
-  return {
+const agents = files
+  .map((file) => {
+    const raw = readFileSync(join(HERE, file), "utf8");
+    const fm = parseFrontmatterSubset(raw);
+    return { file, fm, raw };
+  })
+  // An agent must declare `name` in its frontmatter. Excludes non-agent
+  // docs like README.md that would otherwise be treated as agents.
+  .filter(({ fm }) => typeof fm.name === "string" && fm.name.length > 0)
+  .map(({ file, fm, raw }) => ({
     file,
-    name: fm.name ?? file.replace(/\.md$/, ""),
+    name: fm.name,
     description: fm.description ?? "",
     hash: shortHash(raw),
-  };
-});
+  }));
 
 const out = {
   version,

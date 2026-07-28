@@ -335,7 +335,10 @@
   "projects": {
     "title": "Projects",
     "found_count": "{count} found",
-    "empty_title": "No projects yet",
+    "empty_title": "Launch your first project",
+    "empty_body": "A project is a codebase you point agents at. Spin one up, scope a roster of agents, and watch them work — live.",
+    "empty_cta": "Create project",
+    "empty_scan_link": "or scan a folder of existing projects",
     "empty_description_prefix": "Configure a projects root in ",
     "empty_description_link": "Settings",
     "empty_description_suffix": " to scan for project folders.",

@@ -1,14 +1,8 @@
 {
   "version": "2026-07-16-1",
-  "generated": "2026-07-16",
+  "generated": "2026-07-28",
   "note": "Regenerate on any starter agent change. Version bump triggers the migration modal in-app.",
   "agents": [
-    {
-      "file": "README.md",
-      "name": "README",
-      "description": "",
-      "hash": "ce9db82ad4bf8c79"
-    },
     {
       "file": "agent-architect.md",
       "name": "agent-architect",

@@ -524,6 +524,14 @@ body {
   0% { transform: scale(0.6); opacity: 0.6; }
   100% { transform: scale(1.6); opacity: 0; }
 }
+/* Empty-state decorative planet cluster — gentle, offset floats so the
+   little "solar system" drifts. The main planet bakes its -50% X centering
+   into the keyframe (an `animate-[…]` transform would otherwise clobber
+   Tailwind's -translate-x-1/2). Disabled automatically under
+   prefers-reduced-motion and perf lite/off by the blanket rules above. */
+@keyframes es-float-hero { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -9px); } }
+@keyframes es-float-a    { 0%, 100% { transform: translateY(0); }      50% { transform: translateY(-7px); } }
+@keyframes es-float-b    { 0%, 100% { transform: translateY(0); }      50% { transform: translateY(6px); } }
 
 
 /* ─── Tauri transparent window ─── */

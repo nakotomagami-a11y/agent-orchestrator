@@ -130,7 +130,7 @@ export function OfficeScene({
     zoomBy,
     resetCamera,
     focusOn,
-  } = useOfficeCamera();
+  } = useOfficeCamera(projectId);
 
   const {
     buildModeRef,
@@ -199,30 +199,49 @@ export function OfficeScene({
           : false;
         if (customMap) setUseCustomMap(true);
 
-        // localStorage is authoritative for the map once present. Only migrate
-        // from the server when there's no local copy yet (first load / new device).
-        if (initialLocal) return;
+        // localStorage is authoritative for the map once present — but only if
+        // it actually holds land. A blob with agent positions yet an empty
+        // (all-water) grid is corrupt (e.g. a past custom-map key desync that
+        // baked a water grid back into local storage); fall through to server
+        // recovery in that case so the ground/decorations can be restored.
+        // The server reads below only overwrite state when they find data, so
+        // agents/decorations already loaded from localStorage are preserved.
+        const localHasLand = initialLocal?.grid?.some((row) => row.some(Boolean)) ?? false;
+        if (initialLocal && localHasLand) return;
 
-        const gridKey  = customMap && projectId ? `office-grid:${projectId}`         : "office-grid";
-        const decoKey  = customMap && projectId ? `office-decorations:${projectId}`  : "office-decorations";
-        const grassKey = customMap && projectId ? `office-grass-color:${projectId}`  : "office-grass-color";
-        const agentKey = projectId              ? `office-agents:${projectId}`        : "office-agents";
+        // Read the preferred key for the current custom-map mode, but fall
+        // back to the other key if it's empty. Agents always used a single
+        // per-project key so they never got stranded; grid/decorations/grass
+        // flip between global and per-project on the custom-map flag, so a
+        // stale/missing `office-map-custom` flag could point the load at an
+        // empty key while the data sat under the other one — surfacing as
+        // "agents restored but the ground/decorations vanished". The fallback
+        // makes them as resilient as agent positions.
+        const pick = (perProjectKey: string, globalKey: string): string | undefined => {
+          const preferred = customMap && projectId ? perProjectKey : globalKey;
+          const fallback  = customMap && projectId ? globalKey     : perProjectKey;
+          return data[preferred] ?? (projectId ? data[fallback] : undefined);
+        };
 
-        if (data[gridKey]) {
-          const g = parseGrid(data[gridKey]);
+        const gridRaw  = projectId ? pick(`office-grid:${projectId}`, "office-grid")               : data["office-grid"];
+        const decoRaw  = projectId ? pick(`office-decorations:${projectId}`, "office-decorations") : data["office-decorations"];
+        const grassRaw = projectId ? pick(`office-grass-color:${projectId}`, "office-grass-color") : data["office-grass-color"];
+        const agentKey = projectId ? `office-agents:${projectId}` : "office-agents";
+
+        if (gridRaw) {
+          const g = parseGrid(gridRaw);
           if (g) setGrid(g);
         }
-        if (data[decoKey]) {
-          const d = parseDecorations(data[decoKey]);
+        if (decoRaw) {
+          const d = parseDecorations(decoRaw);
           if (d) setDecorations(d);
         }
         if (data[agentKey]) {
           const ap = parseAgentPositions(data[agentKey]);
           if (ap) setAgentPositions(ap);
         }
-        if (data[grassKey]) {
-          const gc = data[grassKey];
-          if (isGrassColor(gc)) setGrassColor(gc);
+        if (grassRaw && isGrassColor(grassRaw)) {
+          setGrassColor(grassRaw);
         }
       })
       .catch(() => { /* ignore */ })

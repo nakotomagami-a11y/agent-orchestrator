@@ -6,9 +6,9 @@ import { useTranslations } from "next-intl";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Icon } from "@/components/ui/icon";
 import { ACCENT_BTN } from "@/lib/button-styles";
+import { cn } from "@/lib/cn";
 import { PlanetCanvas } from "@/components/ui/planet-canvas";
 import { PAGE_ROUTES } from "@agent-office/domain/config/routes";
 import { useProjects } from "../hooks/use-projects";
@@ -170,20 +170,64 @@ function ProjectsListHeader({ count, onCreate }: { count?: number; onCreate: () 
   );
 }
 
-function ProjectsEmptyState() {
+function ProjectsEmptyState({ onCreate }: { onCreate: () => void }) {
   const t = useTranslations();
   return (
-    <EmptyState
-      icon="folder"
-      title={t("projects.empty_title")}
-      description={
-        <>
-          {t("projects.empty_description_prefix")}
-          <Link href={PAGE_ROUTES.settings}>{t("projects.empty_description_link")}</Link>
-          {t("projects.empty_description_suffix")}
-        </>
-      }
-    />
+    <div
+      role="status"
+      className="flex-1 flex items-center justify-center px-6 py-[56px] page-fade-in"
+    >
+      <div className="flex flex-col items-center text-center max-w-[440px]">
+        {/* Decorative planet cluster — a tiny procedural "solar system" that
+            ties the empty state to the app's whole aesthetic. Purely
+            ornamental, so hidden from assistive tech. */}
+        <div aria-hidden className="relative w-[240px] h-[190px] mb-[30px] shrink-0">
+          {/* Soft accent glow behind the system (gradient escape hatch). */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: "radial-gradient(circle at 50% 44%, rgba(124,106,245,0.22) 0%, transparent 62%)" }}
+          />
+          {/* Main planet. */}
+          <div className="absolute left-1/2 top-[42px] -translate-x-1/2 animate-[es-float-hero_6s_ease-in-out_infinite]">
+            <PlanetCanvas projectId="empty-hero" config={{ type: "terran", seed: 42, paletteIdx: 0 }} size={104} />
+          </div>
+          {/* Small ringed gas giant, upper right. */}
+          <div className="absolute right-[2px] top-[2px] animate-[es-float-a_4.6s_ease-in-out_infinite]">
+            <PlanetCanvas projectId="empty-satellite-a" config={{ type: "gas-giant", seed: 128, paletteIdx: 0 }} size={44} />
+          </div>
+          {/* Tiny icy moon, lower left. */}
+          <div className="absolute left-[16px] bottom-[6px] animate-[es-float-b_5.4s_ease-in-out_infinite]">
+            <PlanetCanvas projectId="empty-satellite-b" config={{ type: "ice", seed: 5, paletteIdx: 0 }} size={26} />
+          </div>
+        </div>
+
+        <h2 className="m-0 text-[21px] font-bold tracking-[-0.01em] text-txt leading-tight">
+          {t("projects.empty_title")}
+        </h2>
+        <p className="mt-[10px] mb-0 text-[13.5px] leading-[1.55] text-txt-2">
+          {t("projects.empty_body")}
+        </p>
+
+        <button
+          type="button"
+          onClick={onCreate}
+          className={cn(
+            "mt-[26px] inline-flex items-center gap-[7px] font-semibold cursor-pointer px-[18px] py-[10px] rounded-[10px] text-[13px]",
+            ACCENT_BTN,
+          )}
+        >
+          <Icon name="plus" size={14} /> {t("projects.empty_cta")}
+        </button>
+
+        <Link
+          href={PAGE_ROUTES.settings}
+          className="mt-[14px] inline-flex items-center gap-[6px] text-[12px] text-txt-3 hover:text-acc no-underline transition-colors"
+        >
+          <Icon name="folder" size={12} />
+          {t("projects.empty_scan_link")}
+        </Link>
+      </div>
+    </div>
   );
 }
 
@@ -211,7 +255,7 @@ export function ProjectsList() {
       <>
         <ProjectsListHeader onCreate={() => setCreateOpen(true)} />
         {modal}
-        <ProjectsEmptyState />
+        <ProjectsEmptyState onCreate={() => setCreateOpen(true)} />
       </>
     );
   }

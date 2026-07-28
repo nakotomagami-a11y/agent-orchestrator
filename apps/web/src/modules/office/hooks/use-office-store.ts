@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { getUiSettings, patchUiSettings } from "@/lib/api/ui-settings";
 
 export type OfficeView = "iso" | "cards";
 
@@ -50,9 +51,53 @@ type OfficeState = {
   toggleGroup: (projectId: string, agentId: string) => void;
   setGroupExpanded: (projectId: string, agentId: string, expanded: boolean) => void;
   togglePin: (projectId: string, agentId: string) => void;
+  hydrated: boolean;
+  hydrate: () => void;
 };
 
-export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
+/**
+ * Persistence — the subset of office UI *preferences* worth remembering across
+ * sessions. Stored server-side in `ui_settings["office-view"]` (same pattern as
+ * theme/tabs) so it survives a webview storage wipe, unlike the old
+ * localStorage-only zustand `persist`. Ephemeral selection/inspector state is
+ * deliberately excluded.
+ */
+const STORAGE_KEY = "office-view";
+
+type Persisted = Pick<OfficeState, "view" | "isoEnabled" | "expandedGroups" | "pinnedGroups">;
+
+const isGroupMap = (v: unknown): v is Record<string, string[]> =>
+  !!v && typeof v === "object" && !Array.isArray(v) &&
+  Object.values(v).every((a) => Array.isArray(a) && a.every((s) => typeof s === "string"));
+
+function parsePersisted(raw: unknown): Partial<Persisted> | null {
+  if (typeof raw !== "string" || !raw) return null;
+  try {
+    const o = JSON.parse(raw) as Record<string, unknown>;
+    // Unwrap the old zustand-persist envelope (`{ state, version }`) if present,
+    // so a user's local pins/expansions migrate to the server on first boot.
+    const s = (o && typeof o.state === "object" ? o.state : o) as Record<string, unknown>;
+    const out: Partial<Persisted> = {};
+    if (s.view === "iso" || s.view === "cards") out.view = s.view;
+    if (typeof s.isoEnabled === "boolean") out.isoEnabled = s.isoEnabled;
+    if (isGroupMap(s.expandedGroups)) out.expandedGroups = s.expandedGroups;
+    if (isGroupMap(s.pinnedGroups)) out.pinnedGroups = s.pinnedGroups;
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+export const useOfficeStore = create<OfficeState>()((set, get) => {
+  const save = () => {
+    const s = get();
+    const slice: Persisted = {
+      view: s.view, isoEnabled: s.isoEnabled,
+      expandedGroups: s.expandedGroups, pinnedGroups: s.pinnedGroups,
+    };
+    patchUiSettings({ [STORAGE_KEY]: JSON.stringify(slice) }).catch(() => { /* best-effort */ });
+  };
+  return {
   view: "iso",
   isoEnabled: true,
   selectedId: null,
@@ -62,8 +107,9 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   activeTab: "conversation",
   expandedGroups: {},
   pinnedGroups: {},
-  setView: (next) => set({ view: next }),
-  setIsoEnabled: (next) => set({ isoEnabled: next }),
+  hydrated: false,
+  setView: (next) => { set({ view: next }); save(); },
+  setIsoEnabled: (next) => { set({ isoEnabled: next }); save(); },
   select: (id, opts) =>
     set({
       selectedId: id,
@@ -88,6 +134,7 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
         [projectId]: isExpanded ? ids.filter((id) => id !== agentId) : [...ids, agentId],
       },
     });
+    save();
   },
   setGroupExpanded: (projectId, agentId, expanded) => {
     const current = get().expandedGroups;
@@ -100,6 +147,7 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
         [projectId]: expanded ? [...ids, agentId] : ids.filter((id) => id !== agentId),
       },
     });
+    save();
   },
   togglePin: (projectId, agentId) => {
     const current = get().pinnedGroups;
@@ -111,8 +159,34 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
         [projectId]: isPinned ? ids.filter((id) => id !== agentId) : [...ids, agentId],
       },
     });
+    save();
   },
-}), {
-  name: "office-view",
-  partialize: (s) => ({ view: s.view, isoEnabled: s.isoEnabled, expandedGroups: s.expandedGroups, pinnedGroups: s.pinnedGroups }),
-}));
+  hydrate: () => {
+    if (get().hydrated) return;
+    set({ hydrated: true });
+    getUiSettings()
+      .then((data) => {
+        // Server is authoritative; fall back to the old localStorage blob so a
+        // user's existing view/pins migrate once, then push them to the server.
+        const server = parsePersisted(data[STORAGE_KEY]);
+        const legacy = server
+          ? null
+          : parsePersisted(typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null);
+        const restored = server ?? legacy;
+        if (restored) {
+          set(restored);
+          if (legacy) save(); // migrate localStorage → server, one time
+        }
+      })
+      .catch(() => { /* ignore — pre-migration / fresh DB */ });
+  },
+  };
+});
+
+/** Mount once near the app root so office preferences hydrate from the server. */
+export function useOfficeHydration(): void {
+  const hydrate = useOfficeStore((s) => s.hydrate);
+  useEffect(() => {
+    hydrate();
+  }, [hydrate]);
+}
