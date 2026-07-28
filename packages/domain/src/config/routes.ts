@@ -1,8 +1,6 @@
 /**
  * Centralized URL config - every route, page, and external endpoint string
  * lives here. Never hardcode URLs anywhere else.
- *
- * Mirrors `packages/shared/src/config/routes.ts` rule from the architecture.
  */
 
 export const PAGE_ROUTES = {

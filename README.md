@@ -1,5 +1,8 @@
 # Agent Office
 
+> [!WARNING]
+> **🚧 Heavily under active development.** Agent Office is pre-1.0 and changes fast. Expect breaking changes, half-built features, rough edges, and undocumented behaviour. Data formats and the on-disk layout under `~/.claude/` may change without migration. **Back up your data, and don't rely on it for anything critical.**
+
 > Your Claude Code agents, visualized as a living isometric office. Summon, orchestrate, broadcast, and watch them work in real time.
 
 Personal multi-agent IDE for developers running 3+ Claude Code subagents on real projects. Pick a project, scope a roster, drop a prompt, see streamed output - all inside a GNOME-styled desktop shell with a pixel-art office floor.
@@ -12,7 +15,7 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 - **Multi-instance agents** - run the same agent 3x in parallel on different scopes (each gets its own transcript, draft, and run history)
 - **Pipelines** - multi-step orchestrator dispatch: one agent plans, dispatched subagents execute, results streamed back
 - **Broadcast** - blast the same prompt to N agents at once
-- **Saved prompts library** - curated, reusable prompts surfaced from your real history
+- **Workflows library** - a curated set of reusable, multi-step prompts; opened from the composer (Ctrl+P) or saved from any message
 - **Abort all** - kill every running agent with one click
 - **Rate-limit warning** - dedicated card in the chat thread when a run hits API rate limits
 
@@ -40,9 +43,12 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 - **Activity feed** - chronological view of every summon
 - **Spend tracking** - cost-per-agent, cost-per-project, daily totals
 - **Run detail pages** - full transcript with cost, tokens, model, duration
-- **Command palette** (Cmd/Ctrl+K) - jump to any agent, project, run, or page
+- **Analytics dashboards** - spend/runs/runtime trends, model split, per-agent and per-project rankings, tool usage, activity heatmap; per-account breakdown when multiple Claude accounts are connected
+- **Command palette** (Cmd/Ctrl+K) - jump to any page plus quick actions (toggle theme, abort all runs, open the Processes and Flutter panels)
 
 ### Integrations
+- **Multi-account** - connect several Claude accounts, see per-account usage in Analytics, and switch the account a run bills against
+- **GitHub accounts** - register GitHub identities per project for worktree/PR work
 - **Git worktrees** - each project's worktree tree is tracked and surfaced; missing worktrees auto-recreated on next summon
 - **Branch detection** - active branch shown next to project
 - **Dev-server tracking** - long-running dev servers managed and visible in the Processes modal
@@ -70,7 +76,7 @@ Personal multi-agent IDE for developers running 3+ Claude Code subagents on real
 - **Pixi.js v8** for the isometric office canvas (GPU-accelerated; PixiJS Graphics for procedural path tiles)
 - **`@agent-office/pixel-planets`** — in-house WebGL2 procedural planet renderer; one shared GL context for all project icons
 - **Zustand** for client stores, **TanStack Query** + **axios** for server state (API calls live in `src/lib/api/` modules — see [`docs/data-fetching.md`](docs/data-fetching.md))
-- **better-sqlite3** at `~/.claude/agent-office/db.sqlite` - runs, messages, transcripts, drafts, pipelines, saved prompts, UI state
+- **better-sqlite3** at `~/.claude/agent-office/db.sqlite` - runs, messages, transcripts, drafts, pipelines, workflows, UI state
 - **framer-motion** for page + modal transitions
 - **ts-pattern** + **zod** for typed control flow and validation
 - **Tauri v2** for desktop bundling
@@ -83,23 +89,26 @@ apps/
   web/            Next.js app (UI + API routes + SSE runner)
   landing/        Static marketing site
 packages/
-  shared/         Types, DB layer, services (runs, agents, pipelines, skills, worktrees, ...)
+  domain/         Types, DB layer, services (runs, agents, pipelines, skills, worktrees, accounts, ...) — imported as @agent-office/domain
   ui/             Shared design-system primitives
   pixel-planets/  WebGL2 procedural planet renderer (@agent-office/pixel-planets)
+  pixel-icons/    Procedural pixel-art icon set (@agent-office/pixel-icons)
 ```
 
 Inside `apps/web/src`:
 
-- `app/(app)/` - pages: office, activity, projects, agents, runs, search, memory, skills, docs, settings, spend
-- `app/api/` - REST + SSE endpoints: summon, runs, agents, processes, pipeline, broadcast, saved-prompts, skills, memory, transcripts, drafts, ui-settings, save (export/import), templates, account, health
+- `app/(app)/` - pages: office (root `/`), activity, analytics, projects, agents, runs, search, memory, skills, docs, settings
+- `app/api/` - REST + SSE endpoints: summon, runs, agents, processes, pipeline, broadcast, workflows, skills, memory, transcripts, drafts, ui-settings, save (export/import), templates, projects, settings, analytics, accounts, github-accounts, agent-docs, cleanup, account, health
 - `components/layout/` - GNOME window chrome, titlebar, sidebar, project switcher, mobile nav
 - `components/ui/` - design-system atoms (Icon, StatusDot, Button, Modal, Tabs, ...)
 - `components/command-palette/` - Cmd+K palette
 - `modules/office/` - isometric scene, Pixi canvas, build toolbar, map overlay
-- `modules/summon/` - chat panel, transcript thread, composer, live status
-- `modules/prompts/` - saved-prompts picker dialog
-- `modules/processes/`, `modules/limits/`, `modules/memory/`, `modules/skills/`, `modules/projects/`, `modules/agents/`, `modules/runs/`, `modules/search/`, `modules/settings/`, `modules/onboarding/`
-- `lib/` - Zustand stores (theme, active-project, claude-limits, processes, dev-server, branch, palette, flutter), the axios `api-client`, and `api/` resource modules
+- `modules/summon/` - chat panel, transcript thread, composer, workflow picker, live status
+- `modules/workflows/` - workflow (reusable multi-step prompt) picker dialog
+- `modules/analytics/` - spend/usage dashboards
+- `modules/accounts/`, `modules/github-accounts/` - multi-account management
+- `modules/processes/`, `modules/limits/`, `modules/memory/`, `modules/skills/`, `modules/projects/`, `modules/agents/`, `modules/runs/`, `modules/search/`, `modules/settings/`, `modules/docs/`, `modules/flutter/`, `modules/onboarding/`
+- `lib/` - Zustand stores (theme, active-project, tabs, claude-limits, processes, dev-server, branch, palette, flutter, performance, compare, toast, ...), the axios `api-client`, and `api/` resource modules
 
 ## Run it
 
@@ -107,13 +116,14 @@ Requires **Node 22+** and **pnpm**.
 
 ```sh
 pnpm install
-pnpm dev              # → http://localhost:3001
+pnpm dev              # → http://localhost:3000
 pnpm dev:landing      # → marketing site
 
 pnpm build            # next build of apps/web
 pnpm start            # production server
 pnpm typecheck        # tsc --noEmit across the workspace
 pnpm lint
+pnpm --filter @agent-office/web test   # vitest (unit tests in packages/domain, etc.)
 ```
 
 Desktop bundle:
@@ -128,7 +138,7 @@ pnpm --filter @agent-office/web tauri:build
 - **Agent definitions** are markdown files in `~/.claude/agents/`. The app scans that directory to build the roster and lets you edit definitions inline.
 - **Summon** shells out to `claude -p "<prompt>"` per run; stdout streams back over SSE to the chat panel and persists to SQLite as it arrives.
 - **Pipelines** are stored as a parent `pipelines` row plus N `pipeline_steps` children; each step is its own `claude -p` invocation, dispatched by the orchestrator agent and tracked independently.
-- **Saved prompts** live in their own SQLite table; the picker dialog is one keystroke away in the composer and supports tags + scopes.
+- **Workflows** (a curated library of reusable multi-step prompts, formerly "saved prompts") live in the `saved_prompts` SQLite table; the picker dialog is one keystroke away in the composer (Ctrl+P) and organised by category.
 - **Skills** are installable bundles from configured registries; updates are checked against source manifests and surfaced in the Skills page.
 - **Sleep inhibitor** acquires a `systemd-inhibit` lock for the duration of any active run so the laptop doesn't sleep mid-task.
 - **Crash recovery**: on DB open, any run still marked `running` is flipped to `error` with `exit_code=-1`; any pipeline still `running` is marked `interrupted=1`.
