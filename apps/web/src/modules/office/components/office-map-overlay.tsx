@@ -161,6 +161,81 @@ function OfficeMapOverlayImpl({
     return () => { window.removeEventListener("pointermove", onMove); window.removeEventListener("pointerup", onUp); };
   }, []);
 
+  // Overlay origin in client space — pick math converts pointer → world px.
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Per-sprite opaque-pixel masks (frame 0 alpha), cached by base src. Keyed by
+  // kind's src because silhouette is colour-independent (faction recolours reuse
+  // the same shape). `null` = load in flight → treated as opaque so the sprite
+  // is immediately hoverable while the mask decodes.
+  const maskCache = useRef<Map<string, Uint8Array | null>>(new Map());
+  const loadMask = useCallback((src: string, w: number, h: number): Uint8Array | null => {
+    const cache = maskCache.current;
+    if (cache.has(src)) return cache.get(src) ?? null;
+    cache.set(src, null);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const cv = document.createElement("canvas");
+        cv.width = w;
+        cv.height = h;
+        const ctx = cv.getContext("2d", { willReadFrequently: true });
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, w, h, 0, 0, w, h); // frame 0 (leftmost)
+        const data = ctx.getImageData(0, 0, w, h).data;
+        const alpha = new Uint8Array(w * h);
+        for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3]!;
+        cache.set(src, alpha);
+      } catch {
+        /* tainted canvas — leave null, sprite stays box-hoverable */
+      }
+    };
+    img.src = src;
+    return null;
+  }, []);
+
+  // Resolve a pointer to the front-most decoration whose opaque silhouette is
+  // under the cursor. Fixes overlapping transparent frame boxes stealing hover.
+  const pickDeco = useCallback(
+    (clientX: number, clientY: number): { key: string; index: number } | null => {
+      const root = rootRef.current;
+      if (!root) return null;
+      const rect = root.getBoundingClientRect();
+      const z = zoom || 1;
+      const wx = (clientX - rect.left) / z;
+      const wy = (clientY - rect.top) / z;
+
+      type Cand = { key: string; index: number; inst: DecoInstance; box: ReturnType<typeof decoBoxAt> };
+      const cands: Array<Cand & { y: number }> = [];
+      for (const [key, stack] of Object.entries(decorations)) {
+        const [xs, ys] = key.split(",");
+        const x = Number(xs);
+        const y = Number(ys);
+        for (let i = 0; i < stack.length; i++) {
+          const inst = stack[i]!;
+          const box = decoBoxAt(inst, x, y);
+          if (wx < box.left || wx >= box.left + box.width || wy < box.top || wy >= box.top + box.height) continue;
+          cands.push({ key, index: i, inst, box, y });
+        }
+      }
+      // Front-first = pixi render order reversed: (z, y, stack index) descending.
+      cands.sort(
+        (a, b) => (b.inst.z ?? 0) - (a.inst.z ?? 0) || b.y - a.y || b.index - a.index,
+      );
+      for (const c of cands) {
+        const def = DECORATIONS[c.inst.kind];
+        let lx = Math.floor(wx - c.box.left);
+        const ly = Math.floor(wy - c.box.top);
+        if (c.inst.flip) lx = def.frameW - 1 - lx;
+        if (lx < 0 || lx >= def.frameW || ly < 0 || ly >= def.frameH) continue;
+        const mask = loadMask(def.src, def.frameW, def.frameH);
+        if (!mask || mask[ly * def.frameW + lx]! > 8) return { key: c.key, index: c.index };
+      }
+      return null;
+    },
+    [decorations, zoom, loadMask],
+  );
+
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const dragging = useOfficeDragStore((s) => s.dragging);
   const setDragging = useOfficeDragStore((s) => s.setDragging);
@@ -258,6 +333,7 @@ function OfficeMapOverlayImpl({
 
   return (
     <div
+      ref={rootRef}
       className="absolute left-0 top-0 pointer-events-none"
       style={{ width: cols * TILE, height: grid.length * TILE }}
     >
@@ -425,6 +501,10 @@ function OfficeMapOverlayImpl({
             if (x < xStart || x > xEnd || y < yStart || y > yEnd) return [];
             return stack.map((inst, i) => {
               const { left, top, width, height } = decoBoxAt(inst, x, y);
+              // The button just covers the sprite's frame box; which decoration a
+              // pointer actually resolves to is recomputed by pickDeco (opaque
+              // pixel, front-most), so overlapping transparent boxes no longer
+              // steal each other's hover/click.
               return (
                 <button
                   key={`deco-target-${key}-${i}`}
@@ -433,12 +513,27 @@ function OfficeMapOverlayImpl({
                   style={{ left, top, width, height, touchAction: "none" }}
                   onPointerDown={(e) => {
                     if (e.button !== 0) return;
+                    const hit = pickDeco(e.clientX, e.clientY);
+                    if (!hit) return;
                     e.stopPropagation();
-                    decoDragRef.current = { key, index: i, cx: e.clientX, cy: e.clientY, dx0: inst.dx ?? 0, dy0: inst.dy ?? 0, pushed: false };
+                    const inst2 = decorations[hit.key]?.[hit.index];
+                    decoDragRef.current = { key: hit.key, index: hit.index, cx: e.clientX, cy: e.clientY, dx0: inst2?.dx ?? 0, dy0: inst2?.dy ?? 0, pushed: false };
                   }}
-                  onPointerEnter={() => onDecoHoverChange?.(`${key}:${i}`)}
+                  onPointerMove={(e) => {
+                    const hit = pickDeco(e.clientX, e.clientY);
+                    onDecoHoverChange?.(hit ? `${hit.key}:${hit.index}` : null);
+                  }}
+                  onPointerEnter={(e) => {
+                    const hit = pickDeco(e.clientX, e.clientY);
+                    onDecoHoverChange?.(hit ? `${hit.key}:${hit.index}` : null);
+                  }}
                   onPointerLeave={() => onDecoHoverChange?.(null)}
-                  onClick={(e) => { e.stopPropagation(); onDecoSelect?.(key, i); }}
+                  onClick={(e) => {
+                    const hit = pickDeco(e.clientX, e.clientY);
+                    if (!hit) return;
+                    e.stopPropagation();
+                    onDecoSelect?.(hit.key, hit.index);
+                  }}
                   onContextMenu={(e) => { e.preventDefault(); onDecoDeselect?.(); }}
                   aria-label={`Select ${DECORATIONS[inst.kind].label}`}
                 />
@@ -446,6 +541,21 @@ function OfficeMapOverlayImpl({
             });
           })}
         </>
+      )}
+
+      {/* Agent drop target for the select tool. The build-grid surface (which
+          handles drops in every other mode) is gated behind `!selectMode`, so
+          without this an agent dragged from the sidebar onto the canvas while
+          the select tool is active would land on nothing. Only mounts during a
+          drag, so it never interferes with select-mode panning or clicks. A
+          plain div (not a button) keeps camera panning working. */}
+      {dragging && selectMode && (
+        <div
+          className="absolute inset-0 pointer-events-auto"
+          onDragEnter={(e) => e.preventDefault()}
+          onDragOver={(e) => { const t = tileFromEvent(e); stableOnDragOver(t.x, t.y, e, cellValid(t.x, t.y)); }}
+          onDrop={(e) => { const t = tileFromEvent(e); stableOnDrop(t.x, t.y, e); }}
+        />
       )}
     </div>
   );
