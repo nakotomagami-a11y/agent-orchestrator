@@ -23,11 +23,18 @@ export type Ctx2D = CanvasRenderingContext2D;
 
 export interface IconOptions {
   /**
-   * Outline color as [r, g, b], 0–255. The original uses pure black
-   * ([0, 0, 0]); a dark desaturated tone (e.g. [26, 22, 34]) reads softer and
-   * matches hand-drawn pixel-art outlines. Default: black.
+   * Outline color as [r, g, b], 0–255. Default is a warm near-black
+   * ([32, 26, 38]) — the tiny-swords pack outlines in a dark desaturated plum,
+   * not pure black, which reads softer against dark UIs. Pass [0,0,0] for the
+   * original hard black.
    */
   border?: [number, number, number];
+  /**
+   * Cel-shading step count. Snaps every shade blend to N discrete value bands
+   * for the hand-drawn tiny-swords look instead of smooth gradients. 0/1 =
+   * continuous (original). Default: 4.
+   */
+  celSteps?: number;
 }
 
 export class Pen {
@@ -36,11 +43,13 @@ export class Pen {
   public rng = new Rng();
   public translation = new Vector(0, 0);
   public border: [number, number, number];
+  public celSteps: number;
 
   constructor(ctx: Ctx2D, dimension: number, options: IconOptions = {}) {
     this.ctx = ctx;
     this.dimension = dimension;
-    this.border = options.border ?? [0, 0, 0];
+    this.border = options.border ?? [32, 26, 38];
+    this.celSteps = options.celSteps ?? 4;
   }
 
   // -- low-level canvas ------------------------------------------------------

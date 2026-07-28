@@ -12,6 +12,7 @@
  */
 import type { IconClass, IconClassSelector, IconConfig } from "./types";
 import { sfc32, xmur3 } from "./rng";
+import { setCelSteps } from "./color";
 import { Pen, type Ctx2D, type IconOptions } from "./pen";
 import { drawBlade } from "./weapons/blade";
 import { drawSpear } from "./weapons/spear";
@@ -56,6 +57,7 @@ export class IconGenerator {
       drawClass = sel;
     }
 
+    setCelSteps(this.pen.celSteps);
     this.pen.rng.seed(seed);
     DRAW[drawClass](this.pen);
     return drawClass;
