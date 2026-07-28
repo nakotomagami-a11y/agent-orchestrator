@@ -23,7 +23,10 @@ const DYNAMIC_PREFIXES = [
   "office-map-rev:",
 ];
 
-const MAX_VALUE_BYTES = 10 * 1024;
+// The office grid alone (108×68 boolean array) serializes to ~40KB, so the old
+// 10KB cap silently rejected every map save once a map grew — a real data-loss
+// bug. 2MB is generous headroom while still bounding abuse.
+const MAX_VALUE_BYTES = 2 * 1024 * 1024;
 
 function isAllowedKey(key: string): boolean {
   if (STATIC_KEYS.has(key)) return true;
