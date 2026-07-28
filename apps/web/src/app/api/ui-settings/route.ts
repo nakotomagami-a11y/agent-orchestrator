@@ -11,6 +11,7 @@ const STATIC_KEYS = new Set([
   "office-decorations",
   "office-agents",
   "office-grass-color",
+  "office-map-rev",
 ]);
 
 const DYNAMIC_PREFIXES = [
@@ -19,6 +20,7 @@ const DYNAMIC_PREFIXES = [
   "office-agents:",
   "office-grass-color:",
   "office-map-custom:",
+  "office-map-rev:",
 ];
 
 const MAX_VALUE_BYTES = 10 * 1024;

@@ -23,8 +23,8 @@ import { useCanvasEditing } from "../hooks/use-canvas-editing";
 import { useOfficeAgents } from "../hooks/use-office-agents";
 import { useOfficeStore } from "../hooks/use-office-store";
 import { dragRefKey, type DragRef } from "../hooks/use-office-drag";
-import { useOfficeAutoSave } from "../hooks/use-office-auto-save";
-import { getUiSettings, patchUiSettings } from "@/lib/api/ui-settings";
+import { useOfficeMapSync } from "../hooks/use-office-map-sync";
+import { patchUiSettings } from "@/lib/api/ui-settings";
 import { useOfficeKeyboardShortcuts } from "../hooks/use-office-keyboard-shortcuts";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useSettings } from "@/modules/settings/hooks/use-settings";
@@ -32,7 +32,6 @@ import { useProjectSpend } from "@/modules/projects/hooks/use-project-spend";
 import { useFpsMeterStore } from "@/lib/fps-meter-store";
 import {
   DEFAULT_GRASS_COLOR,
-  isGrassColor,
   type GrassColor,
 } from "./grass-colors";
 import {
@@ -43,17 +42,13 @@ import {
 } from "../hooks/use-office-camera";
 import { useOfficePainting } from "../hooks/use-office-painting";
 import {
-
-  parseGrid,
-  parseDecorations,
-  parseAgentPositions,
   makeSeedGrid,
   floodFill,
   type Snapshot,
   EMPTY_ROSTER,
   EMPTY_SPEND,
 } from "../derive/office-scene-data";
-import { loadMapLocal, saveMapLocal } from "../derive/office-map-storage";
+import type { OfficeMap } from "../derive/office-map-storage";
 
 /**
  * Canvas for the new game-asset-based office view. Owns the editable
@@ -75,15 +70,14 @@ export function OfficeScene({
 }: {
   projectId: string | null;
 }) {
-  // Synchronous localStorage read — the map is available on the very first
-  // render, so it always survives a reload without waiting on the server.
-  const [initialLocal] = useState(() => loadMapLocal(projectId));
-  const [grid, setGrid] = useState<boolean[][]>(() => initialLocal?.grid ?? makeSeedGrid());
-  const [decorations, setDecorations] = useState<DecorationsMap>(() => initialLocal?.decorations ?? {});
-  const [agentPositions, setAgentPositions] = useState<AgentPositions>(() => initialLocal?.agentPositions ?? {});
+  // Server is the single source of truth: start from defaults, then the map
+  // sync hook loads the real map from the server on mount (see below).
+  const [grid, setGrid] = useState<boolean[][]>(() => makeSeedGrid());
+  const [decorations, setDecorations] = useState<DecorationsMap>({});
+  const [agentPositions, setAgentPositions] = useState<AgentPositions>({});
   const [buildMode, setBuildMode] = useState(false);
   const [tool, setTool] = useState<BuildTool | null>(null);
-  const [grassColor, setGrassColor] = useState<GrassColor>(() => initialLocal?.grassColor ?? DEFAULT_GRASS_COLOR);
+  const [grassColor, setGrassColor] = useState<GrassColor>(DEFAULT_GRASS_COLOR);
   const [sceneLoaded, setSceneLoaded] = useState(false);
   const [hoverTile, setHoverTile] = useState<{ x: number; y: number } | null>(null);
   const [hoveredAgentKey, setHoveredAgentKey] = useState<string | null>(null);
@@ -187,49 +181,34 @@ export function OfficeScene({
     return next;
   }, [panX, panY, zoom, containerSize]);
 
-  // Load scene state from the server DB on mount.
-  // Agent positions are always per-project when a project is active.
-  // Map layout (grid/decorations/grass) is shared by default; a per-project
-  // copy is used when office-map-custom:{projectId} === "true".
-  useEffect(() => {
-    getUiSettings()
-      .then((data) => {
-        const customMap = projectId
-          ? data[`office-map-custom:${projectId}`] === "true"
-          : false;
-        if (customMap) setUseCustomMap(true);
-
-        // localStorage is authoritative for the map once present. Only migrate
-        // from the server when there's no local copy yet (first load / new device).
-        if (initialLocal) return;
-
-        const gridKey  = customMap && projectId ? `office-grid:${projectId}`         : "office-grid";
-        const decoKey  = customMap && projectId ? `office-decorations:${projectId}`  : "office-decorations";
-        const grassKey = customMap && projectId ? `office-grass-color:${projectId}`  : "office-grass-color";
-        const agentKey = projectId              ? `office-agents:${projectId}`        : "office-agents";
-
-        if (data[gridKey]) {
-          const g = parseGrid(data[gridKey]);
-          if (g) setGrid(g);
-        }
-        if (data[decoKey]) {
-          const d = parseDecorations(data[decoKey]);
-          if (d) setDecorations(d);
-        }
-        if (data[agentKey]) {
-          const ap = parseAgentPositions(data[agentKey]);
-          if (ap) setAgentPositions(ap);
-        }
-        if (data[grassKey]) {
-          const gc = data[grassKey];
-          if (isGrassColor(gc)) setGrassColor(gc);
-        }
-      })
-      .catch(() => { /* ignore */ })
-      // projectId is stable for this instance - the key prop forces a remount on change
-      .finally(() => setSceneLoaded(true));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once on mount; projectId change triggers remount via key
+  // Load + persist the map. Server is the single source of truth; the hook
+  // loads on mount, atomically saves every edit (debounced + periodic + on tab
+  // close), and surfaces load/save status so failures are never silent.
+  const applyMap = useCallback((m: OfficeMap) => {
+    setGrid(m.grid);
+    setDecorations(m.decorations);
+    setGrassColor(m.grassColor);
+    setAgentPositions(m.agentPositions);
   }, []);
+  const {
+    loadState,
+    saveState,
+    retryLoad,
+    retrySave,
+    hasUnsavedBackup,
+    applyBackup,
+    discardBackup,
+  } = useOfficeMapSync({
+    projectId,
+    custom: useCustomMap,
+    grid,
+    decorations,
+    grassColor,
+    agentPositions,
+    apply: applyMap,
+    onLoaded: () => setSceneLoaded(true),
+    setCustom: setUseCustomMap,
+  });
 
   const { agents } = useOfficeAgents();
   const agentsById = useMemo(() => {
@@ -272,20 +251,6 @@ export function OfficeScene({
       return next;
     });
   }, [agentsById, sceneLoaded]);
-
-  // Auto-save effects — debounced 400ms so a 100-cell paint drag fires
-  // one PATCH after the brush lifts, not 100 individual requests.
-  useOfficeAutoSave({ sceneLoaded, useCustomMap, projectId, grid, decorations, agentPositions, grassColor });
-
-  // Primary persistence: write the whole map to localStorage (debounced). This
-  // is what makes the map survive a reload reliably, independent of the server.
-  useEffect(() => {
-    if (!sceneLoaded) return;
-    const t = setTimeout(() => {
-      saveMapLocal(projectId, { grid, decorations, grassColor, agentPositions });
-    }, 300);
-    return () => clearTimeout(t);
-  }, [grid, decorations, grassColor, agentPositions, sceneLoaded, projectId]);
 
   // Clear rectStart when the user switches tools
   useEffect(() => { setRectStart(null); }, [tool]);
@@ -605,48 +570,13 @@ export function OfficeScene({
     patchUiSettings({ [`office-map-custom:${projectId}`]: "true" }).catch(() => {});
   }, [projectId]);
 
-  // Revert back to the shared global map layout for this project.
-  // Chain the PATCH before the GET so we never read stale custom-flag state.
+  // Revert back to the shared global map layout for this project. Persist the
+  // flag; the sync hook sees `useCustomMap` flip to false and reloads the shared
+  // scope from the server.
   const disableCustomMap = useCallback(() => {
     if (!projectId) return;
-    setSceneLoaded(false); // block saves while we reload global state
     setUseCustomMap(false);
-    patchUiSettings({ [`office-map-custom:${projectId}`]: "false" })
-      .catch(() => {})
-      .finally(() => {
-        getUiSettings()
-          .then((data) => {
-            if (data["office-grid"]) {
-              const g = parseGrid(data["office-grid"]);
-              setGrid(g ?? makeSeedGrid());
-            } else {
-              setGrid(makeSeedGrid());
-            }
-            if (data["office-decorations"]) {
-              const d = parseDecorations(data["office-decorations"]);
-              setDecorations(d ?? {});
-            } else {
-              setDecorations({});
-            }
-            // Also reload agent positions from the global (non-project-specific) key
-            const agentKey = `office-agents:${projectId}`;
-            if (data[agentKey]) {
-              const ap = parseAgentPositions(data[agentKey]);
-              setAgentPositions(ap ?? {});
-            } else {
-              setAgentPositions({});
-            }
-            if (data["office-grass-color"]) {
-              const gc = data["office-grass-color"];
-              if (isGrassColor(gc)) setGrassColor(gc);
-              else setGrassColor(DEFAULT_GRASS_COLOR);
-            } else {
-              setGrassColor(DEFAULT_GRASS_COLOR);
-            }
-          })
-          .catch(() => {})
-          .finally(() => setSceneLoaded(true));
-      });
+    patchUiSettings({ [`office-map-custom:${projectId}`]: "false" }).catch(() => {});
   }, [projectId]);
 
   const selectAgent = useOfficeStore((s) => s.select);
@@ -1036,6 +966,66 @@ export function OfficeScene({
         onReset={onResetCanvas}
         onGenerateLand={onGenerateLand}
       />
+
+      {/* Save status — server is the source of truth, so surface every state. */}
+      {loadState === "loaded" && saveState !== "idle" && (
+        <div className="absolute right-3 top-3 z-40 flex items-center gap-2 rounded-full bg-[rgba(28,25,23,0.9)] px-3 py-1.5 text-[11px] shadow-md">
+          {saveState === "saving" && <span className="text-[rgba(220,214,209,0.9)]">Saving…</span>}
+          {saveState === "dirty" && <span className="text-[rgba(220,214,209,0.7)]">Unsaved changes…</span>}
+          {saveState === "saved" && <span className="text-[rgba(150,190,120,0.95)]">Saved</span>}
+          {saveState === "error" && (
+            <>
+              <span className="text-[rgba(230,140,120,0.95)]">Save failed</span>
+              <button
+                onClick={retrySave}
+                className="rounded bg-[rgba(255,255,255,0.1)] px-2 py-0.5 text-[10px] font-medium text-white hover:bg-[rgba(255,255,255,0.18)]"
+              >
+                Retry
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Recover unsaved changes from a previous session — a save that never
+          reached the server. Never applied silently. */}
+      {hasUnsavedBackup && (
+        <div className="absolute left-1/2 top-3 z-50 flex -translate-x-1/2 items-center gap-3 rounded-md bg-[rgba(38,34,31,0.98)] px-4 py-2 shadow-lg">
+          <span className="text-[12px] text-[rgba(244,239,234,0.95)]">Unsaved changes from a previous session were found.</span>
+          <button
+            onClick={applyBackup}
+            className="rounded bg-[rgba(120,160,90,0.9)] px-3 py-1 text-[11px] font-medium text-white hover:bg-[rgba(120,160,90,1)]"
+          >
+            Restore
+          </button>
+          <button
+            onClick={discardBackup}
+            className="rounded bg-[rgba(255,255,255,0.08)] px-3 py-1 text-[11px] text-[rgba(220,214,209,0.9)] hover:bg-[rgba(255,255,255,0.14)]"
+          >
+            Discard
+          </button>
+        </div>
+      )}
+
+      {/* Load failure — pause editing so a default/empty map can never overwrite
+          good server data (the exact clobber that erased earlier progress). */}
+      {loadState === "error" && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-[rgba(20,18,17,0.72)]">
+          <div className="flex flex-col items-center gap-3 rounded-lg bg-[rgba(38,34,31,0.98)] px-6 py-5 text-center shadow-xl">
+            <div className="text-[13px] font-medium text-[rgba(244,239,234,0.95)]">Couldn’t load your office from the server</div>
+            <div className="max-w-[280px] text-[11px] leading-relaxed text-[rgba(200,193,187,0.8)]">
+              Your saved map is safe on the server — editing is paused so nothing gets overwritten. Make sure the app
+              is running, then retry.
+            </div>
+            <button
+              onClick={retryLoad}
+              className="rounded-md bg-[rgba(120,160,90,0.9)] px-4 py-1.5 text-[12px] font-medium text-white hover:bg-[rgba(120,160,90,1)]"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
