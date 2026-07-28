@@ -193,6 +193,7 @@ All routes are served by the Next.js backend embedded in the Tauri shell. Base U
 | `GET` | `/api/skills/installed` | List installed skills |
 | `GET` | `/api/skills/manifest` | Flat manifest of installed skills (name, description, category, cost tier) |
 | `GET` | `/api/skills/compatibility` | Skill-vs-skill conflict data (powers the warning UI) |
+| `GET` | `/api/skills/icons` | Resolve icons for skills |
 | `POST` | `/api/skills/install` | Install skill from GitHub |
 | `GET` | `/api/skills/registry` | Fetch skill registry (`?refresh=1` to bypass cache) |
 | `GET` | `/api/skills/updates` | Check installed skills for updates |
@@ -202,18 +203,18 @@ All routes are served by the Next.js backend embedded in the Tauri shell. Base U
 | `DELETE` | `/api/skills/:name` | Uninstall skill |
 | `POST` | `/api/skills/:name/update` | Update skill to latest SHA |
 
-### Prompts & drafts
+### Workflows, prompts & drafts
+
+> Note: "Workflows" is the current name for what used to be "saved prompts" — a curated library of reusable, multi-step prompts. The underlying SQLite table is still called `saved_prompts`, but the API and UI are `workflows`.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/api/prompts` | Recent prompts across all agents |
-| `GET` | `/api/saved-prompts` | List saved prompt templates |
-| `POST` | `/api/saved-prompts` | Create a saved prompt |
-| `POST` | `/api/saved-prompts/bulk` | Bulk create / update saved prompts |
-| `GET` | `/api/saved-prompts/:id` | Get one saved prompt |
-| `PATCH` | `/api/saved-prompts/:id` | Edit a saved prompt |
-| `DELETE` | `/api/saved-prompts/:id` | Delete a saved prompt |
-| `POST` | `/api/saved-prompts/:id/use` | Record a usage (increments counter, updates lastUsed) |
+| `GET` | `/api/prompts` | Recent prompts across all agents (autocomplete history) |
+| `GET` | `/api/workflows` | List workflows |
+| `POST` | `/api/workflows` | Create a workflow |
+| `POST` | `/api/workflows/bulk` | Bulk create / update workflows |
+| `DELETE` | `/api/workflows/:id` | Delete a workflow |
+| `POST` | `/api/workflows/:id/use` | Record a usage (increments the use counter) |
 | `GET` | `/api/drafts` | Read drafts (per-agent, per-instance) |
 | `PUT` | `/api/drafts` | Write / update a draft |
 | `DELETE` | `/api/drafts` | Clear a draft |
@@ -255,18 +256,60 @@ All routes are served by the Next.js backend embedded in the Tauri shell. Base U
 | `POST` | `/api/flutter/run` | Spawn `flutter run` in a terminal |
 | `POST` | `/api/flutter/screenshot` | Capture the current device screen |
 
-### Account
+### Account & clipboard
 
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/account` | Read plan from `~/.claude/.credentials.json` |
 | `POST` | `/api/clipboard-image` | Read clipboard PNG via `wl-paste` (Wayland only) |
 
+### Claude accounts (multi-account)
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/accounts` | List connected Claude accounts |
+| `POST` | `/api/accounts` | Register a new account |
+| `PATCH` | `/api/accounts/:id` | Update account (label, active flag) |
+| `DELETE` | `/api/accounts/:id` | Remove an account |
+| `GET` | `/api/accounts/:id/status` | Live auth/usage status for one account |
+| `GET` | `/api/accounts/:id/login` | Poll an in-progress login |
+| `POST` | `/api/accounts/:id/login` | Start the OAuth login flow |
+| `DELETE` | `/api/accounts/:id/login` | Cancel an in-progress login |
+| `POST` | `/api/accounts/:id/login/code` | Submit the OAuth authorization code |
+
+### GitHub accounts
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/github-accounts` | List registered GitHub identities |
+| `POST` | `/api/github-accounts` | Add a GitHub identity |
+| `PATCH` | `/api/github-accounts/:id` | Update a GitHub identity |
+| `DELETE` | `/api/github-accounts/:id` | Remove a GitHub identity |
+| `GET` | `/api/github-accounts/:id/status` | Auth status for one identity |
+
+### Analytics
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/analytics/summary` | Aggregate spend / runs / runtime for a period |
+| `GET` | `/api/analytics/page` | Full analytics-page payload (trend, rankings, tools, heatmap) |
+| `GET` | `/api/analytics/per-account` | Usage split by connected Claude account |
+
+### Agent docs
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/agent-docs` | List saved agent-authored docs |
+| `GET` | `/api/agent-docs/:owner/:slug` | Read one agent doc |
+| `PUT` | `/api/agent-docs/:owner/:slug` | Write / update an agent doc |
+| `DELETE` | `/api/agent-docs/:owner/:slug` | Delete an agent doc |
+
 ### System
 
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/api/health` | Claude CLI availability check (`?force=1` to bypass cache) |
+| `POST` | `/api/cleanup/:kind` | Sweep stored data by kind (e.g. reaped error runs, orphaned records) |
 | `POST` | `/api/dev/seed` | (dev-only) Seed dev data |
 | `POST` | `/api/dev/backfill-planets` | (dev-only) Backfill planet icons for existing projects |
 
@@ -360,7 +403,7 @@ Pipeline definitions and per-step state.
 
 - `tool_calls` — one row per tool_use content block
 - `transcripts` — per-`tKey` (`<agentId>::<instanceId>`) chat state row: full thread items, `active_run_id`, `session_id`, `queued_messages` (JSON array of pending sends, DEFAULT `'[]'` per migration v6), `updated_at`. Written through by every chat state change so a hard refresh or app restart restores the conversation exactly.
-- `saved_prompts` — prompt templates with usage counter
+- `saved_prompts` — workflow templates with usage counter (table name predates the "Workflows" rename; exposed via `/api/workflows`)
 - `drafts` — chat draft persistence
 - `ui_settings` — key-value store for UI state (see the allow-list below)
 - `recent_prompts` — deduplicated prompt history for autocomplete
@@ -375,7 +418,7 @@ Run automatically at server start via `services/db.ts`. Idempotent — safe to r
 
 ### Crash recovery
 
-On boot, any `runs` row with `status='running'` and no matching in-memory process is marked `status='error'` with `exit_code=143` (SIGTERM). Preserves partial output.
+On boot, any `runs` row with `status='running'` and no matching in-memory process is marked `status='error'` with `exit_code=-1`. Preserves partial output. (Reaped rows can later be swept by `POST /api/cleanup/:kind`, which deletes error runs with `exit_code=-1`.)
 
 ### Direct queries
 

@@ -1,6 +1,6 @@
 # Usage
 
-Day-to-day workflows: the isometric office floor, sending agents to work and streaming their output, run history, multi-step pipelines, multi-instance worktrees, spend limits, the processes panel, and roster updates.
+Day-to-day workflows: the isometric office floor, sending agents to work and streaming their output, run history, multi-step pipelines, multi-instance worktrees, spend tracking, the processes panel, and roster updates.
 
 ## Office floor — the isometric workspace
 
@@ -180,40 +180,19 @@ Non-git projects display a warning banner and prevent adding more than one insta
 
 On server start, `services/roster.ts` walks each project's stated roster and reconciles it with on-disk worktrees. Missing worktrees are recreated; orphan worktrees are archived to `.worktrees/_archive/`.
 
-## Spend limits & quota
+## Spend tracking
 
-Each instance can carry a spend cap. When the cap is exceeded, further runs are refused until it's lifted or the period rolls over.
+Every run records its cost, tokens, and duration in the `runs` table, so spend is fully tracked — but Agent Office does not enforce hard spend caps or quotas. Runs are never auto-refused on cost; the only run-blocking signal is an Anthropic API rate limit, which surfaces as a rate-limit card in the chat thread (see the rate-limit handling in `services/runs.ts`).
 
-### Period options
+Where to see spend:
 
-- `daily` — resets at local midnight
-- `weekly` — resets Monday 00:00 local
-- `monthly` — resets on the 1st at 00:00 local
-- `never` — the cap accumulates without reset
+- **Analytics page** (`/analytics`) — spend by model, agent, project, plus trend and per-account breakdown.
+- **Per-project** — `GET /api/projects/:id/spend` returns a USD breakdown by instance.
+- **Per-instance** — `GET /api/projects/:id/roster/:instanceId` includes the instance's accumulated USD spend.
+- **Claude limits modal** — your account's plan usage against Anthropic's own session / 5-hour / weekly limits.
 
-### Hard cap modes
-
-| Mode | Behaviour on cap exceed |
-|---|---|
-| `refuse` | Block further runs. Return `429 Quota Exceeded`. |
-| `warn` | Log a warning, allow the run through. |
-| `off` | Never enforce. |
-
-### Quota exceeded error
-
-When mode is `refuse`, the summon endpoint returns:
-
-```json
-{ "error": "quota_exceeded", "cap": 5.0, "spent": 5.42, "resetsAt": "2026-07-13T00:00:00Z" }
-```
-
-### Per-run spend cap
-
-You can also cap a single run's max cost via the summon body's `maxCost` field. If the running total exceeds this, the subprocess is killed with SIGTERM.
-
-### Default limits
-
-Set at Settings → Spend Limits. Default is `daily / refuse / $5.00` per instance.
+> [!NOTE]
+> If you need a hard budget ceiling, cap it at the Anthropic account level — Agent Office reports usage but does not stop runs at a dollar threshold.
 
 ## Processes panel
 

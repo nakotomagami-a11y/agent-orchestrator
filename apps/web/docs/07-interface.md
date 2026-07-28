@@ -8,8 +8,8 @@ This page is long. Here's the lay of the land — every section below, grouped:
 
 - **Shell & navigation** — [Layout](#/interface) · [Project tabs](#/interface) · [Sidebar](#/interface) · [Command palette](#/interface)
 - **Agent details** — [the modal](#/interface) and its four tabs: [Conversation](#/interface) · [History](#/interface) · [Memory](#/interface) · [Settings](#/interface)
-- **Chat** — [Message queue](#/interface) · [Drafts](#/interface) · [Attachments](#/interface) · [Slash commands](#/interface) · [Saved prompts](#/interface)
-- **Standalone pages** — [Settings](#/interface) · [Memory](#/interface) · [Skills](#/interface) · [Spend](#/interface) · [Search](#/interface) · [Activity](#/interface)
+- **Chat** — [Message queue](#/interface) · [Drafts](#/interface) · [Attachments](#/interface) · [Slash commands](#/interface) · [Workflows](#/interface)
+- **Standalone pages** — [Settings](#/interface) · [Memory](#/interface) · [Skills](#/interface) · [Analytics](#/interface) · [Search](#/interface) · [Activity](#/interface)
 - **Modals & panels** — [Compare runs](#/interface) · [Claude limits](#/interface) · [Migration](#/interface) · [Processes](#/interface) · [Flutter](#/interface) · [Bootstrap project](#/interface)
 - **System** — [Keyboard shortcuts](#/interface) · [Themes](#/interface) · [Reduced motion](#/interface) · [Performance mode](#/interface) · [Notifications](#/interface)
 
@@ -148,51 +148,45 @@ On Wayland, `POST /api/clipboard-image` reads the clipboard PNG via `wl-paste` a
 
 ### Slash commands
 
-Start typing `/` in the composer to open a scoped command palette:
+Start typing `/` in the composer to open a scoped command menu:
 
-- `/summon <agent>` — dispatch a prompt to a different agent from this composer
-- `/clear` — clear the queue
-- `/save` — save the current draft as a saved prompt
+- `/clear` — start a new thread
+- `/branch` — fork the current thread
+- `/memory` — edit this agent's memory
+- `/prompt` — view the composed system prompt
+- `/history` — show recent runs
 
-### Saved prompts
+### Workflows
 
-Frequently-used prompts can be saved and re-used across agents/projects.
+Workflows (formerly "saved prompts") are a curated library of reusable, multi-step prompts, organised by category.
 
-- **Save** — right-click a message → *Save as prompt*, or use `/save` in the composer.
-- **Use** — command palette (`Cmd+K`) → *Prompt* section, or `POST /api/saved-prompts/:id/use` which increments the usage counter.
-- **Manage** — Settings → Saved Prompts. Bulk edit, delete, rename.
+- **Open** — the **Workflows** button in the composer toolbar (`Ctrl+P`) opens the picker; choosing one pastes its body into the composer and records a use via `POST /api/workflows/:id/use`.
+- **Save** — right-click a message → *Save as workflow* creates one from existing text.
+- **Add / delete** — the picker dialog has an inline add form; workflows are stored in the `saved_prompts` table and served from `/api/workflows`.
 
 ## Command palette (Cmd+K)
 
-Press **Cmd+K** anywhere in the app to open the command palette. Groups:
+Press **Cmd+K** anywhere in the app to open the command palette. It is a fixed command list (no dynamic per-agent / per-run rows — use the titlebar search bar for full-text message search). Groups:
 
-**Navigate** — jump to any top-level route:
+**Navigate** — jump to a top-level route or start a common flow:
 
 - Go to Office
+- Go to Activity
+- Go to Analytics
 - Go to Agents
 - Go to Projects
 - Go to Memory
 - Go to Skills
-- Go to Runs
-- Go to Spend
-- Go to Search
-- Go to Activity
-- Go to Docs
 - Go to Settings
+- Go to Docs
+- Search Runs
+- New Agent
 
-**Agents** — one row per installed agent; Enter opens the agent details modal.
+**Actions** — Toggle Theme, Stop all running agents (abort all).
 
-**Projects** — one row per project; Enter sets it as the active project.
+**Tools** — Running Servers (Processes panel), Flutter Device Manager.
 
-**Saved prompts** — every prompt from `saved-prompts`. Enter fires `POST /api/saved-prompts/:id/use` (increments the usage counter and updates `lastUsed`), then pastes into the currently-focused composer.
-
-**Full-text messages** — SQLite FTS5 across the `messages` table. Enter jumps to the transcript.
-
-**Recent runs** — last 20 completed runs. Enter jumps to the transcript.
-
-**Actions** — one-shot toggles: Toggle Theme, Toggle Build mode, Open Processes panel, Open Claude Limits modal, Clear Draft, etc.
-
-Navigate with ↑/↓, Enter to select, Esc to close. The palette state is persisted in `palette-store` so reopening within the same session restores the last query.
+Type to filter by label or section. Navigate with ↑/↓, Enter to select, Esc to close. The palette open state is held in `palette-store`.
 
 ## Compare runs modal
 
@@ -234,16 +228,34 @@ See [Usage → Roster migration](#/usage) for the full model.
 
 ## Settings page (`/settings`)
 
-The Settings route is a two-tab layout:
+The Settings route has a grouped left rail with these tabs:
 
-### Tab 1 — Projects
+**Workspace**
+
+### Projects
 
 - **Projects root** — the parent directory the app scans for candidate projects. Persisted to `~/.claude/agent-office-settings.json` as `projectsRoot`.
 - **Exclusions** — chip input of directory names to skip during scan (e.g. `node_modules`, `.next`, `.git`). Persisted as `excluded[]`.
 - **Preview** — live list of what the scanner picks up under the current root minus exclusions, so you see the effect of your edits before saving.
 - **Save** — writes back via `PUT /api/settings`; `firstRunComplete` is left untouched.
 
-### Tab 2 — About You
+### Bundled agents
+
+Manage the starter roster shipped with the app — review what's bundled, import missing agents, and see the diff against your local copies (the same data that powers the migration modal, via `/api/starter/agents` and `/api/starter/agent-diff`).
+
+**Accounts**
+
+### Claude accounts
+
+Connect one or more Claude accounts. Each row shows live auth/usage status (`/api/accounts/:id/status`); the login flow runs the CLI OAuth handshake (`POST /api/accounts/:id/login` → `POST /api/accounts/:id/login/code`). Multiple accounts let you split usage and see a per-account breakdown in Analytics.
+
+### GitHub accounts
+
+Register GitHub identities (`/api/github-accounts`) so worktree/PR work can be attributed to the right account; assigned per project.
+
+**You**
+
+### About You
 
 Runs the `user-analyst` agent against your local data (message history, run patterns, project inventory) and produces a candid person-portrait. No calls home; everything stays local.
 
@@ -251,8 +263,18 @@ Runs the `user-analyst` agent against your local data (message history, run patt
 - **View history** — every past analysis is saved with a timestamp
 - **Export** — download the current analysis as Markdown
 
+**System**
+
+### Performance
+
+Sets the rendering / animation budget — `full` · `lite` · `off` — persisted to `ui_settings.performance-mode`. `lite`/`off` reduce or disable canvas animation and can force the Office into cards view on low-power machines.
+
+### Cleanup
+
+Sweep stored data by kind (e.g. reaped error runs) via `POST /api/cleanup/:kind`, reclaiming space without touching live runs.
+
 > [!NOTE]
-> Global Memory, Skills, Spend, Search, and Activity are top-level routes (`/memory`, `/skills`, `/spend`, `/search`, `/activity`) reached from the sidebar — NOT sub-tabs of Settings. Common misconception because the sidebar groups them together with a "Settings" heading.
+> Global Memory, Skills, Analytics, Search, and Activity are top-level routes (`/memory`, `/skills`, `/analytics`, `/search`, `/activity`) reached from the sidebar — NOT sub-tabs of Settings.
 
 ### Multi-instance feature flag
 
@@ -300,17 +322,20 @@ The global memory editor. Same textarea as the per-agent memory tab. Applies to 
 - Source manager: add/remove GitHub sources for skill discovery
 - Registry cache indicator with `?refresh=1` bypass
 
-## Spend page (the `/spend` route)
+## Analytics page (the `/analytics` route)
 
-Cost dashboards:
+Usage & cost dashboards, scoped by a period selector (7 / 30 / 90 days / all time):
 
-- **Total spend** — this workspace, all time
-- **By model** — pie chart + table
-- **By agent** — top 10 by cost
-- **By project** — top 10 by cost
-- **Trend** — 30-day line chart
+- **Hero band** — headline spend for the period.
+- **Trend** — line chart switchable between Spend, Runs, and Runtime.
+- **Models** — share of spend by model.
+- **Agents** — ranked by spend.
+- **Projects** — ranked by spend.
+- **Tools** — most-used tools.
+- **Activity heatmap** — runs over time.
+- **Per-account** — usage split across connected Claude accounts (`/api/analytics/per-account`).
 
-All data pulled from the `runs` table. No cloud call.
+All data pulled from the `runs` table (`/api/analytics/*`). No cloud call.
 
 ## Search page (top-level route `/search`)
 
