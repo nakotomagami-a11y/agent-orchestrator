@@ -1,0 +1,261 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="642" height="822" viewBox="0 0 642 822" font-family="ui-monospace,Menlo,monospace">
+<rect width="642" height="822" fill="#1c2431"/>
+<text x="26" y="34" fill="#e8eef6" font-size="22" font-weight="700">Path autotile sheet — 4×4 · 16 frames · 64px tiles (256×256 PNG)</text>
+<text x="26" y="54" fill="#8aa0b8" font-size="13">bitmask N=1 E=2 S=4 W=8 · frame index = mask · cell(row=mask&gt;&gt;2, col=mask&amp;3). Colours = current in-engine path; art AI should reinterpret in Tiny-Swords pixel style.</text>
+<g transform="translate(26,86)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 0] 0000  node (isolated)</text>
+</g>
+<g transform="translate(180,86)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 1] 0001  dead-end N</text>
+</g>
+<g transform="translate(334,86)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 2] 0010  dead-end E</text>
+</g>
+<g transform="translate(488,86)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 3] 0011  elbow NE</text>
+</g>
+<g transform="translate(26,270)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 4] 0100  dead-end S</text>
+</g>
+<g transform="translate(180,270)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 5] 0101  straight NS</text>
+</g>
+<g transform="translate(334,270)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 6] 0110  elbow ES</text>
+</g>
+<g transform="translate(488,270)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 7] 0111  T-junction NES</text>
+</g>
+<g transform="translate(26,454)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 8] 1000  dead-end W</text>
+</g>
+<g transform="translate(180,454)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[ 9] 1001  elbow NW</text>
+</g>
+<g transform="translate(334,454)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[10] 1010  straight EW</text>
+</g>
+<g transform="translate(488,454)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[11] 1011  T-junction NEW</text>
+</g>
+<g transform="translate(26,638)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[12] 1100  elbow SW</text>
+</g>
+<g transform="translate(180,638)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[13] 1101  T-junction NSW</text>
+</g>
+<g transform="translate(334,638)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[14] 1110  T-junction ESW</text>
+</g>
+<g transform="translate(488,638)">
+<rect width="128" height="128" rx="6" fill="#8caf57"/>
+<rect width="128" height="128" rx="6" fill="none" stroke="#0d1420" stroke-width="1"/>
+<g transform="scale(2)" shape-rendering="crispEdges">
+<rect x="12" y="12" width="40" height="40" fill="#4a2e10"/>
+<rect x="12" y="0" width="40" height="16" fill="#4a2e10"/>
+<rect x="12" y="48" width="40" height="16" fill="#4a2e10"/>
+<rect x="48" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="0" y="12" width="16" height="40" fill="#4a2e10"/>
+<rect x="14" y="14" width="36" height="36" fill="#b8884e"/>
+<rect x="14" y="0" width="36" height="14" fill="#b8884e"/>
+<rect x="14" y="50" width="36" height="14" fill="#b8884e"/>
+<rect x="50" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="0" y="14" width="14" height="36" fill="#b8884e"/>
+<rect x="26" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="26" y="2" width="12" height="24" fill="#d0a86a"/>
+<rect x="26" y="50" width="12" height="12" fill="#d0a86a"/>
+<rect x="50" y="26" width="12" height="12" fill="#d0a86a"/>
+<rect x="2" y="26" width="24" height="12" fill="#d0a86a"/>
+</g>
+<text x="0" y="144" fill="#cfe0f0" font-size="12">[15] 1111  4-way cross</text>
+</g>
+</svg>

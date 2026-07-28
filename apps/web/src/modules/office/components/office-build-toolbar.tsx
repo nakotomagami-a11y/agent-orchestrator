@@ -208,7 +208,7 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
               )}
             </div>
             {!q && (
-              <div className="flex items-center gap-[2px] mt-[8px]" role="tablist" aria-label="Tile categories">
+              <div className="flex items-center gap-[2px] mt-[8px] overflow-x-auto pb-[2px] [scrollbar-width:thin] [scrollbar-color:var(--bg-3)_transparent] [&::-webkit-scrollbar]:h-[5px] [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-bg-3 [&::-webkit-scrollbar-track]:bg-transparent" role="tablist" aria-label="Tile categories">
                 {CATEGORY_TABS.map(({ id, label }) => {
                   const count = DECORATION_KINDS.filter((k) => DECORATIONS[k].category === id).length;
                   const on = activeTab === id;
@@ -218,7 +218,7 @@ export const OfficeBuildToolbar = memo(function OfficeBuildToolbar({
                       type="button"
                       role="tab"
                       aria-selected={on}
-                      className={`relative inline-flex items-center gap-[6px] px-[10px] pt-[8px] pb-[10px] text-[12px] cursor-pointer transition-colors duration-150 ${on ? "text-txt font-semibold after:content-[''] after:absolute after:left-[8px] after:right-[8px] after:bottom-[-1px] after:h-[2px] after:rounded-[2px_2px_0_0] after:bg-acc after:shadow-[0_0_10px_color-mix(in_srgb,var(--acc)_55%,transparent)]" : "text-txt-2 font-medium hover:text-txt"}`}
+                      className={`relative shrink-0 inline-flex items-center gap-[6px] px-[10px] pt-[8px] pb-[10px] text-[12px] cursor-pointer transition-colors duration-150 ${on ? "text-txt font-semibold after:content-[''] after:absolute after:left-[8px] after:right-[8px] after:bottom-[-1px] after:h-[2px] after:rounded-[2px_2px_0_0] after:bg-acc after:shadow-[0_0_10px_color-mix(in_srgb,var(--acc)_55%,transparent)]" : "text-txt-2 font-medium hover:text-txt"}`}
                       onClick={() => setActiveTab(id)}
                     >
                       {label}

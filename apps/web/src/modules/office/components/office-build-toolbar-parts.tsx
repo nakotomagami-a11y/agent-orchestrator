@@ -9,7 +9,9 @@ export type IconName = Parameters<typeof Icon>[0]["name"];
 
 export const CATEGORY_TABS: { id: DecoCategory; label: string }[] = [
   { id: "land", label: "Land" },
+  { id: "paths", label: "Paths" },
   { id: "buildings", label: "Buildings" },
+  { id: "animals", label: "Animals" },
   { id: "water", label: "Water" },
 ];
 

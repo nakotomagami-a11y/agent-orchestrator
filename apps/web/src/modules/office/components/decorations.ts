@@ -18,8 +18,10 @@
  * DECORATION_KINDS.
  */
 
+import type { PathMaterialId } from "../pixi/path/materials";
+
 export type Terrain = "land" | "water";
-export type DecoCategory = "land" | "buildings" | "water";
+export type DecoCategory = "land" | "buildings" | "water" | "paths" | "animals";
 
 /**
  * Logical group a decoration belongs to. Each cell may hold at most one
@@ -73,12 +75,7 @@ export type DecorationKind =
   | "tree3"
   | "tree4"
   | "house"
-  | "house4"
-  | "house5"
-  | "house_blue"
-  | "house_purple"
-  | "house_red"
-  | "house_yellow"
+  | "house_knight"
   | "house_goblin"
   | "tower"
   | "castle"
@@ -112,14 +109,11 @@ export type DecorationKind =
   | "cursed_chest"
   | "bridge_h"
   | "bridge_v"
-  // ── Butterflies ──────────────────────────────────────────────────────────
-  | "butterfly_blue"
-  | "butterfly_grey"
-  | "butterfly_pink"
-  | "butterfly_red"
-  | "butterfly_white"
-  | "butterfly_yellow"
-  | "path";
+  | "butterfly"
+  | "path"
+  | "path_stone"
+  | "path_sand"
+  | "path_gravel";
 
 export interface DecorationDef {
   label: string;
@@ -134,6 +128,8 @@ export interface DecorationDef {
    *  a family so e.g. bush2 replaces bush1 at the same cell rather than
    *  stacking two bushes. */
   family: DecoFamily;
+  /** For `path`-family kinds: which procedural material to render. */
+  pathMaterial?: PathMaterialId;
   animClass?: string;
   /** How the sprite is positioned inside its owning cell.
    *
@@ -163,6 +159,10 @@ export interface DecorationDef {
    *  sprite (`src`/`rotFrames`); other colours resolve to `<name>_<color>.png`
    *  via {@link decoSrc}. Enables the colour swatches in the select menu. */
   colorable?: boolean;
+  /** Restricts which faction colours a `colorable` building offers. Omitted =
+   *  all of BUILDING_COLORS (blue/red/purple/yellow/black). Use when the pack
+   *  only ships a subset (e.g. Knights House has no black). */
+  colors?: BuildingColor[];
 }
 
 export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
@@ -284,48 +284,15 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     terrain: "land", category: "buildings", family: "house", colorable: true,
     rotFrames: ["/decorations/house1.png", "/decorations/house2.png", "/decorations/house3.png"],
   },
-  // House 4-8: 5 new AI-generated houses (dropped in 2026-07-25). Native art
-  // was much higher-res/detailed than the Tiny Swords set (1024×1024ish
-  // square renders vs the pack's flat 128×192 sprites) - auto-cropped to
-  // their opaque bbox and downscaled to ~192px tall (house1-3's height) as a
-  // functional first pass. Style-match and per-sprite anchor/scale tuning
-  // is a follow-up, not done here.
-  house4: {
-    label: "House 4",
-    src: "/decorations/house4.png",
-    frameW: 240, frameH: 240, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
-  },
-  house5: {
-    label: "House 5",
-    src: "/decorations/house5.png",
-    frameW: 182, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
-  },
-  // Knights House - 4 faction colour variants from the Update 010 pack.
-  house_blue: {
-    label: "House (Blue)",
-    src: "/decorations/house_blue.png",
+  // Knights House - single colourable entry (Update 010 pack). Blue is the
+  // base sprite; red/purple/yellow resolve via decoSrc(). No black variant in
+  // the pack, so `colors` limits the swatches to the four that exist.
+  house_knight: {
+    label: "Knights House",
+    src: "/decorations/house_knight.png",
     frameW: 128, frameH: 192, frames: 1,
     terrain: "land", category: "buildings", family: "house",
-  },
-  house_purple: {
-    label: "House (Purple)",
-    src: "/decorations/house_purple.png",
-    frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
-  },
-  house_red: {
-    label: "House (Red)",
-    src: "/decorations/house_red.png",
-    frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
-  },
-  house_yellow: {
-    label: "House (Yellow)",
-    src: "/decorations/house_yellow.png",
-    frameW: 128, frameH: 192, frames: 1,
-    terrain: "land", category: "buildings", family: "house",
+    colorable: true, colors: ["blue", "red", "purple", "yellow"],
   },
   // Goblin Wood House - the only Goblin house variant in the pack.
   house_goblin: {
@@ -358,13 +325,13 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     frameW: 192, frameH: 128, frames: 1,
     terrain: "land", category: "buildings", family: "gold_mine",
   },
-  // Cursed chest - animated 6×64×64. Treated as a "building" so it
-  // sits in the same toolbar group as houses and the mine.
+  // Cursed chest - animated 6×64×64. A small land prop, not a structure,
+  // so it lives in the Land tab alongside the other ground decorations.
   cursed_chest: {
     label: "Cursed chest",
     src: "/decorations/cursed_chest.png",
     frameW: 64, frameH: 64, frames: 6,
-    terrain: "land", category: "buildings", family: "cursed_chest",
+    terrain: "land", category: "land", family: "cursed_chest",
     animClass: "animate-[deco-cursed-chest_1.8s_steps(6)_infinite]",
   },
   tower: {
@@ -544,71 +511,50 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     label: "Sheep",
     src: "/decorations/sheep.png",
     frameW: 128, frameH: 128, frames: 8,
-    terrain: "land", category: "land", family: "sheep", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
+    terrain: "land", category: "animals", family: "sheep", animClass: "animate-[deco-bush_1.6s_steps(8)_infinite]",
     anchor: "center",
   },
 
-  // ─ Butterflies (5 frames × 16×16, animated flutter). Six colour
-  //   variants share the "butterfly" family - only one may occupy a
-  //   cell at a time, matching the sheep/duck behaviour. Centred so
-  //   they appear to hover over the tile rather than hang from its
-  //   top edge. ──────────────────────────────────────────────────────
-  butterfly_blue: {
-    label: "Butterfly (blue)",
-    src: "/decorations/butterfly_blue.png",
+  // ─ Butterfly (5 frames × 16×16, animated flutter). Single colourable
+  //   entry; blue is the base sprite, other colours resolve via decoSrc().
+  //   Centred so it hovers over the tile. ─────────────────────────────
+  butterfly: {
+    label: "Butterfly",
+    src: "/decorations/butterfly.png",
     frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
+    terrain: "land", category: "animals", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
     anchor: "center",
-  },
-  butterfly_grey: {
-    label: "Butterfly (grey)",
-    src: "/decorations/butterfly_grey.png",
-    frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
-    anchor: "center",
-  },
-  butterfly_pink: {
-    label: "Butterfly (pink)",
-    src: "/decorations/butterfly_pink.png",
-    frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
-    anchor: "center",
-  },
-  butterfly_red: {
-    label: "Butterfly (red)",
-    src: "/decorations/butterfly_red.png",
-    frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
-    anchor: "center",
-  },
-  butterfly_white: {
-    label: "Butterfly (white)",
-    src: "/decorations/butterfly_white.png",
-    frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
-    anchor: "center",
-  },
-  butterfly_yellow: {
-    label: "Butterfly (yellow)",
-    src: "/decorations/butterfly_yellow.png",
-    frameW: 16, frameH: 16, frames: 5,
-    terrain: "land", category: "land", family: "butterfly", animClass: "animate-[deco-butterfly_0.7s_steps(5)_infinite]",
-    anchor: "center",
+    colorable: true, colors: ["blue", "grey", "pink", "red", "white", "yellow"],
   },
 
-  // ─ Path (64×64 per tile, land-only). Auto-tile: the renderer picks the
-  //   correct tile from the 4×4 sheet (path.png) based on which of the 4
-  //   cardinal neighbours also carry a "path" decoration. Single "path"
-  //   family so at most one path tile occupies a cell at a time. The
-  //   sheetW/sheetH/previewCol/previewRow fields tell DecoSprite to show
-  //   the cross tile (col 3, row 3) as the toolbar thumbnail. ──────────
+  // ─ Path (64×64 per tile, land-only). Procedurally generated at render time
+  //   (see pixi/path/*): each cell's tile is drawn from a material config +
+  //   world-space noise, auto-connecting to the 8 neighbouring "path" cells.
+  //   Single "path" family so at most one path tile occupies a cell at a time.
+  //   `src` is only used for the static toolbar thumbnail. ──────────────
   path: {
-    label: "Path",
-    src: "/tiles/path.png",
+    label: "Dirt",
+    src: "/tiles/path-dirt.png",
     frameW: 64, frameH: 64, frames: 1,
-    terrain: "land", category: "land", family: "path",
-    sheetW: 256, sheetH: 256, // full sheet size; previewCol/Row=0 → isolated tile at (0,0)
-    locked: true, // path building not style-finished yet — disabled for sharing
+    terrain: "land", category: "paths", family: "path", pathMaterial: "dirt",
+  },
+  path_stone: {
+    label: "Cobble",
+    src: "/tiles/path-stone.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "paths", family: "path", pathMaterial: "stone",
+  },
+  path_sand: {
+    label: "Sand",
+    src: "/tiles/path-sand.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "paths", family: "path", pathMaterial: "sand",
+  },
+  path_gravel: {
+    label: "Gravel",
+    src: "/tiles/path-gravel.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "paths", family: "path", pathMaterial: "gravel",
   },
 
   // ─ Bridges (static 64×64, water-only). Only the middle plank is
@@ -669,17 +615,29 @@ export const DECORATION_KINDS: DecorationKind[] = Object.keys(DECORATIONS) as De
  *   - dx/dy: pixel offset within the cell (clamped to ±TILE at the edit site)
  * All optional → an unedited instance is just `{ kind }`.
  */
-/** Faction colours for `colorable` buildings. Blue is the base sprite. */
-export type BuildingColor = "blue" | "red" | "purple" | "yellow" | "black";
+/** Colour-variant tokens for `colorable` decorations. "blue" is the base
+ *  sprite; others resolve to `<name>_<color>.png`. Buildings use the faction
+ *  set (blue/red/purple/yellow/black); butterflies add grey/pink/white. Each
+ *  decoration picks its available subset via `DecorationDef.colors`. */
+export type BuildingColor =
+  | "blue" | "red" | "purple" | "yellow" | "black" | "grey" | "pink" | "white";
 
-/** Ordered list for the colour swatches, with their display hex. */
-export const BUILDING_COLORS: { id: BuildingColor; hex: string }[] = [
-  { id: "blue", hex: "#4a90d9" },
-  { id: "red", hex: "#d94a4a" },
-  { id: "purple", hex: "#9b6bd6" },
-  { id: "yellow", hex: "#e0b23c" },
-  { id: "black", hex: "#3a3a42" },
-];
+/** Master swatch hex for every colour token. */
+export const COLOR_HEX: Record<BuildingColor, string> = {
+  blue: "#4a90d9",
+  red: "#d94a4a",
+  purple: "#9b6bd6",
+  yellow: "#e0b23c",
+  black: "#3a3a42",
+  grey: "#9aa0a8",
+  pink: "#e88bc0",
+  white: "#e8e8ea",
+};
+
+/** Default swatch set (faction colours) for a `colorable` def with no
+ *  explicit `colors` list. */
+export const BUILDING_COLORS: { id: BuildingColor; hex: string }[] =
+  (["blue", "red", "purple", "yellow", "black"] as BuildingColor[]).map((id) => ({ id, hex: COLOR_HEX[id] }));
 
 export type DecoInstance = {
   kind: DecorationKind;
@@ -731,7 +689,7 @@ export function familyOf(kind: DecorationKind): DecoFamily {
  */
 export function isStackable(kind: DecorationKind): boolean {
   const def = DECORATIONS[kind];
-  return def.category !== "buildings" && def.family !== "bridge" && kind !== "path";
+  return def.category !== "buildings" && def.family !== "bridge" && def.family !== "path";
 }
 
 /**
@@ -743,12 +701,7 @@ export function isStackable(kind: DecorationKind): boolean {
  */
 export const BUILDING_FOOTPRINTS: Partial<Record<DecorationKind, { w: number; d: number }>> = {
   house: { w: 2, d: 2 },
-  house4: { w: 3, d: 2 },
-  house5: { w: 2, d: 2 },
-  house_blue: { w: 2, d: 2 },
-  house_purple: { w: 2, d: 2 },
-  house_red: { w: 2, d: 2 },
-  house_yellow: { w: 2, d: 2 },
+  house_knight: { w: 2, d: 2 },
   house_goblin: { w: 1, d: 2 },
   tower: { w: 1, d: 2 },
   archery: { w: 2, d: 2 },

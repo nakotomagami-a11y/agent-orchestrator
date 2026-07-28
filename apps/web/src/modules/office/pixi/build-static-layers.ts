@@ -12,7 +12,8 @@ import {
 } from "../components/decorations";
 import { grassTilesetSrc, type GrassColor } from "../components/grass-colors";
 import { BRIDGE_CAP_SRCS, FOAM_ANIM_SPEED, FOAM_FRAME, FOAM_FRAMES, FOAM_SHEET } from "./constants";
-import { drawPathGraphics } from "./draw-path";
+import { getPathTexture } from "./path/path-texture";
+import { DEFAULT_PATH_MATERIAL } from "./path/materials";
 import { makeGlow, type AgentContainerExtras } from "./glow";
 
 // The deco layer is looked up by this label so the hover-glow ticker can toggle
@@ -64,8 +65,8 @@ export async function buildStaticLayers(
     for (const inst of stack) usedKinds.add(inst.kind);
   }
   for (const kind of usedKinds) {
-    if (kind === "path") continue; // drawn via Graphics — no texture needed
     const d = DECORATIONS[kind];
+    if (d.family === "path") continue; // procedurally generated — no texture load
     urls.add(d.src);
     if (d.rotFrames) for (const f of d.rotFrames) urls.add(f);
   }
@@ -73,7 +74,7 @@ export async function buildStaticLayers(
   // recoloured URL each placed instance needs (blue reuses the base above).
   for (const stack of Object.values(decorations)) {
     for (const inst of stack) {
-      if (inst.kind === "path") continue;
+      if (DECORATIONS[inst.kind].family === "path") continue;
       urls.add(decoSrc(DECORATIONS[inst.kind], inst));
     }
   }
@@ -117,10 +118,14 @@ export async function buildStaticLayers(
   const foamTilemap = new CompositeTilemap();
   const terrainTilemap = new CompositeTilemap();
   const rotatedTiles = new Container();
+  // Paths render in their own layer beneath decorations/houses so they always
+  // sit on the ground — the deco y-sort would otherwise draw a path on a lower
+  // row in front of a building on a higher row.
+  const pathLayer = new Container();
   const decoLayer = new Container();
   decoLayer.label = DECO_LAYER_LABEL;
   const capLayer = new Container();
-  staticContainer.addChild(foamTilemap, terrainTilemap, rotatedTiles, decoLayer, capLayer);
+  staticContainer.addChild(foamTilemap, terrainTilemap, rotatedTiles, pathLayer, decoLayer, capLayer);
 
   // ── Helper: create a cropped texture from a base texture ──────────────────
   function cropTexture(
@@ -228,22 +233,27 @@ export async function buildStaticLayers(
   // Path neighbour helper used inside the decoration loop below.
   const hasPath = (cx: number, cy: number): boolean => {
     const stack = decorations[`${cx},${cy}`];
-    return !!stack && stack.some((e) => e.kind === "path");
+    return !!stack && stack.some((e) => DECORATIONS[e.kind].family === "path");
   };
 
   for (const { x, y, inst, layer } of decoEntries) {
     const kind = inst.kind;
-    // ── Path: draw with Graphics (no external PNG) ──────────────────────
-    if (kind === "path") {
-      const g = drawPathGraphics(
-        hasPath(x, y - 1),
-        hasPath(x + 1, y),
-        hasPath(x, y + 1),
-        hasPath(x - 1, y),
+    // ── Path: procedurally generated tile texture (see pixi/path/*) ─────
+    if (DECORATIONS[kind].family === "path") {
+      const tex = getPathTexture(
+        DECORATIONS[kind].pathMaterial ?? DEFAULT_PATH_MATERIAL,
+        {
+          n: hasPath(x, y - 1), e: hasPath(x + 1, y), s: hasPath(x, y + 1), w: hasPath(x - 1, y),
+          ne: hasPath(x + 1, y - 1), nw: hasPath(x - 1, y - 1),
+          se: hasPath(x + 1, y + 1), sw: hasPath(x - 1, y + 1),
+        },
+        x,
+        y,
       );
-      g.x = x * TILE;
-      g.y = y * TILE;
-      decoLayer.addChild(g);
+      const sprite = new Sprite(tex);
+      sprite.x = x * TILE;
+      sprite.y = y * TILE;
+      pathLayer.addChild(sprite);
       continue;
     }
 

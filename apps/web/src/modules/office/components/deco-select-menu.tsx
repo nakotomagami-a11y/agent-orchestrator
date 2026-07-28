@@ -2,6 +2,7 @@ import { Icon } from "@/components/ui/icon";
 import { MoveControl } from "./move-control";
 import {
   BUILDING_COLORS,
+  COLOR_HEX,
   type BuildingColor,
   type DecorationDef,
   type DecoInstance,
@@ -116,7 +117,7 @@ export function DecoSelectMenu({
         <>
           <div className="h-[1px] my-[4px] mx-[10px] bg-[rgba(255,240,230,0.1)]" />
           <div className="flex items-center gap-[7px] px-[10px] py-[3px]">
-            {BUILDING_COLORS.map(({ id, hex }) => {
+            {(def.colors ? def.colors.map((id) => ({ id, hex: COLOR_HEX[id] })) : BUILDING_COLORS).map(({ id, hex }) => {
               const active = id === activeColor;
               return (
                 <button

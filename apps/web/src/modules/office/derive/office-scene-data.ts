@@ -1,5 +1,5 @@
 import { GRID_COLS, GRID_ROWS } from "../hooks/use-office-camera";
-import { DECORATIONS, type DecorationKind, type DecoInstance, type DecorationsMap } from "../components/decorations";
+import { DECORATIONS, COLOR_HEX, type BuildingColor, type DecorationKind, type DecoInstance, type DecorationsMap } from "../components/decorations";
 import type { AgentPositions } from "../components/office-map";
 import type { AgentInstance } from "@agent-office/domain/types";
 
@@ -14,6 +14,9 @@ const KIND_MIGRATIONS: Record<string, DecorationKind | null> = {
   bridge_h_r: null,
   bridge_v_t: null,
   bridge_v_b: null,
+  // Removed off-style AI houses — drop any placed instances.
+  house4: null,
+  house5: null,
 };
 
 export function migrateKind(raw: string): DecorationKind | null {
@@ -48,6 +51,15 @@ export function parseDecorations(raw: string): DecorationsMap | null {
     const out: DecorationsMap = {};
     // Legacy house1/2/3 kinds are now the single rotatable "house" (rot 0/1/2).
     const HOUSE_ROT: Record<string, 0 | 1 | 2> = { house1: 0, house2: 1, house3: 2 };
+    // Legacy per-colour Knights House kinds → the single colourable "house_knight".
+    const HOUSE_KNIGHT_COLOR: Record<string, BuildingColor> = {
+      house_blue: "blue", house_red: "red", house_purple: "purple", house_yellow: "yellow",
+    };
+    // Legacy per-colour butterfly kinds → the single colourable "butterfly".
+    const BUTTERFLY_COLOR: Record<string, BuildingColor> = {
+      butterfly_blue: "blue", butterfly_grey: "grey", butterfly_pink: "pink",
+      butterfly_red: "red", butterfly_white: "white", butterfly_yellow: "yellow",
+    };
     // Accepts legacy formats (a bare kind string, or an array of kind strings)
     // and the current object form `{ kind, rot?, flip?, dx?, dy? }`.
     const toInstance = (v: unknown): DecoInstance | null => {
@@ -56,6 +68,14 @@ export function parseDecorations(raw: string): DecorationsMap | null {
           const rot = HOUSE_ROT[v]!;
           return rot === 0 ? { kind: "house" } : { kind: "house", rot };
         }
+        if (v in HOUSE_KNIGHT_COLOR) {
+          const color = HOUSE_KNIGHT_COLOR[v]!;
+          return color === "blue" ? { kind: "house_knight" } : { kind: "house_knight", color };
+        }
+        if (v in BUTTERFLY_COLOR) {
+          const color = BUTTERFLY_COLOR[v]!;
+          return color === "blue" ? { kind: "butterfly" } : { kind: "butterfly", color };
+        }
         const kind = migrateKind(v);
         return kind ? { kind } : null;
       }
@@ -63,16 +83,25 @@ export function parseDecorations(raw: string): DecorationsMap | null {
         const o = v as Record<string, unknown>;
         if (typeof o.kind !== "string") return null;
         const houseRot = o.kind in HOUSE_ROT ? HOUSE_ROT[o.kind] : undefined;
-        const kind = houseRot !== undefined ? "house" : migrateKind(o.kind);
+        const knightColor = o.kind in HOUSE_KNIGHT_COLOR ? HOUSE_KNIGHT_COLOR[o.kind] : undefined;
+        const butterflyColor = o.kind in BUTTERFLY_COLOR ? BUTTERFLY_COLOR[o.kind] : undefined;
+        const kind = houseRot !== undefined ? "house"
+          : knightColor !== undefined ? "house_knight"
+          : butterflyColor !== undefined ? "butterfly"
+          : migrateKind(o.kind);
         if (!kind) return null;
         const inst: DecoInstance = { kind };
+        const legacyColor = knightColor ?? butterflyColor;
+        if (legacyColor && legacyColor !== "blue") inst.color = legacyColor;
         const rot = houseRot ?? o.rot;
         if (rot === 1 || rot === 2) inst.rot = rot;
         if (o.flip === true) inst.flip = true;
         if (typeof o.dx === "number" && o.dx !== 0) inst.dx = o.dx;
         if (typeof o.dy === "number" && o.dy !== 0) inst.dy = o.dy;
-        if (o.color === "red" || o.color === "purple" || o.color === "yellow" || o.color === "black") {
-          inst.color = o.color;
+        // Current form: colour stored on the instance. Accept any known token
+        // except "blue" (the base sprite needs no colour).
+        if (typeof o.color === "string" && o.color !== "blue" && o.color in COLOR_HEX) {
+          inst.color = o.color as BuildingColor;
         }
         if (typeof o.z === "number" && o.z !== 0) inst.z = o.z;
         return inst;
