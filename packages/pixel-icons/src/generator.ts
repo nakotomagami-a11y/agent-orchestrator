@@ -13,6 +13,7 @@
 import type { IconClass, IconClassSelector, IconConfig } from "./types";
 import { sfc32, xmur3 } from "./rng";
 import { setCelSteps } from "./color";
+import { drawParticles, pickParticleType, pickThemedParticle } from "./particles";
 import { Pen, type Ctx2D, type IconOptions } from "./pen";
 import { drawBlade } from "./weapons/blade";
 import { drawSpear } from "./weapons/spear";
@@ -60,6 +61,25 @@ export class IconGenerator {
     setCelSteps(this.pen.celSteps);
     this.pen.rng.seed(seed);
     DRAW[drawClass](this.pen);
+
+    // Particle FX overlay (drawn over the finished, outlined icon).
+    if (this.pen.particles && this.pen.particles !== "none") {
+      const mode = this.pen.particles;
+      // Auto modes only decorate ~30% of icons; the gate is a fresh seed hash so
+      // it's a clean uniform 30% independent of the weapon's RNG usage. An
+      // explicit type is always drawn.
+      const auto = mode === "random" || mode === "themed";
+      const fxGen = xmur3(`${seed}:fx`);
+      const fxRandom = sfc32(fxGen(), fxGen(), fxGen(), fxGen());
+      if (!auto || fxRandom() < 0.3) {
+        this.pen.rng.checkpoint();
+        const type =
+          mode === "random" ? pickParticleType(this.pen.rng)
+          : mode === "themed" ? pickThemedParticle(this.pen, this.pen.rng)
+          : mode;
+        drawParticles(this.pen, type, this.pen.rng);
+      }
+    }
     return drawClass;
   }
 }

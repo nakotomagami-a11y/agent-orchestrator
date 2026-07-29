@@ -22,7 +22,7 @@
  *   alpha=0 pixels transparent regardless of the RGB values.
  */
 
-import type { PlanetParams, PlanetLayer, ShaderName } from "../types";
+import type { PlanetParams, PlanetLayer, ShaderName, PlanetType } from "../types";
 import { VERT_SRC, FRAG_SHADERS }  from "./shaders/index";
 import { setUniform, setUniformInt } from "./uniforms";
 
@@ -257,6 +257,63 @@ interface Registration {
   destCanvas: HTMLCanvasElement;
   destCtx: CanvasRenderingContext2D;
   size: number;
+  /**
+   * Cached silhouette-outline pixels. Computed once from the first rendered
+   * frame (the outer silhouette is static — the base disc is always opaque),
+   * then re-stamped over every animated frame. `undefined` = not yet computed.
+   */
+  outline?: OutlinePix[];
+}
+
+/** A single silhouette-edge pixel and whether it faces the top-left light. */
+interface OutlinePix {
+  x: number;
+  y: number;
+  lit: boolean;
+}
+
+// Tiny-swords outline — matches the weapon icons (`pixel-icons` palette.ts):
+// warm near-black `#161c2e` on shadowed (down-right) edges, a lifted navy on
+// top-left lit edges. Gives planets the same defined pixel-art rim so they sit
+// cohesively next to the weapon sprites instead of floating as soft discs.
+const OUTLINE_SHADOW = "rgb(22,28,46)";  // #161c2e
+const OUTLINE_LIT    = "rgb(59,64,79)";  // #161c2e lifted 16% toward white
+
+/**
+ * Types whose silhouette is a static solid body — safe to trace once and cache.
+ * Excludes anything with an animated ring/corona/spiral (gas-giant, black-hole,
+ * star, galaxy): those move under a cached outline, leaving a detached "ghost"
+ * rim, and a hard outline looks noisy on a glowing ring anyway. Their soft
+ * edges also read fine without one.
+ */
+const OUTLINE_TYPES = new Set<PlanetType>([
+  "rocky", "dry", "terran", "ice", "islands", "lava", "asteroid",
+]);
+
+/**
+ * Trace the solid body's outer edge (inner outline — paints the body's own
+ * rim pixels, never expands past the canvas). Gated to fully-opaque pixels
+ * bordering fully-empty ones, so soft star/galaxy glow gradients — which fade
+ * through mid-alpha and never sit opaque-next-to-empty — get no ring.
+ */
+function computeOutline(ctx: CanvasRenderingContext2D, n: number): OutlinePix[] {
+  const d = ctx.getImageData(0, 0, n, n).data;
+  const alpha = (x: number, y: number) =>
+    x < 0 || y < 0 || x >= n || y >= n ? 0 : d[(x + y * n) * 4 + 3]!;
+  const out: OutlinePix[] = [];
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      if (alpha(x, y) < 250) continue; // solid body only
+      const up = alpha(x, y - 1) <= 8;
+      const dn = alpha(x, y + 1) <= 8;
+      const lf = alpha(x - 1, y) <= 8;
+      const rt = alpha(x + 1, y) <= 8;
+      if (!(up || dn || lf || rt)) continue; // interior pixel
+      const litScore = (up ? 1 : 0) + (lf ? 1 : 0) - (dn ? 1 : 0) - (rt ? 1 : 0);
+      out.push({ x, y, lit: litScore > 0 });
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -417,6 +474,24 @@ export class PlanetRenderer {
       // 1/canvasScale of the result; blobs, flares, and the ring fill the rest.
       destCtx.clearRect(0, 0, renderSize, renderSize);
       destCtx.drawImage(this.offscreen, 0, 0, renderSize, renderSize);
+
+      // Stamp the tiny-swords silhouette outline over the fresh frame. Only for
+      // static-body types (OUTLINE_TYPES) — the rim is fixed there, so compute
+      // it once and re-apply the cached pixels each frame (a couple hundred
+      // fillRects — cheaper than a per-frame readback). Ring/corona types are
+      // skipped so a cached rim can't ghost over their animated silhouette.
+      if (reg.outline === undefined) {
+        reg.outline = OUTLINE_TYPES.has(params.type)
+          ? computeOutline(destCtx, renderSize)
+          : [];
+      }
+      const ol = reg.outline;
+      if (ol.length) {
+        destCtx.fillStyle = OUTLINE_SHADOW;
+        for (const p of ol) if (!p.lit) destCtx.fillRect(p.x, p.y, 1, 1);
+        destCtx.fillStyle = OUTLINE_LIT;
+        for (const p of ol) if (p.lit) destCtx.fillRect(p.x, p.y, 1, 1);
+      }
     }
   }
 }

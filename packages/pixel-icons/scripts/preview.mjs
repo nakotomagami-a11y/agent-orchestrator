@@ -8,7 +8,7 @@ import { IconGenerator } from "../src/generator.ts";
 const CLASSES = ["blades", "spears", "axes", "staffs", "tridents"];
 const COLS = 8;
 const out = process.argv[2] ?? "preview-new.png";
-const nativeDim = Number(process.argv[3] ?? 64);
+const nativeDim = Number(process.argv[3] ?? 56); // matches WeaponIcon at size ~80
 const celSteps = process.argv[4] != null ? Number(process.argv[4]) : undefined;
 const cell = nativeDim;
 const pad = 6;

@@ -109,7 +109,6 @@ export function PlanetEditorModal({
   };
 
   const typeDef = PLANET_TYPE_DEFS[draft.type];
-  const pixels = draft.pixels ?? DEFAULT_PIXELS;
   const rotationDeg = Math.round(((draft.rotation ?? 0) * 180) / Math.PI);
   const dither = draft.dither ?? true;
   const isFreeform = FREEFORM_TYPES.has(draft.type);
@@ -256,21 +255,6 @@ export function PlanetEditorModal({
               <Icon name="refresh" size={10} />
               Rand
             </button>
-          </div>
-
-          {/* Pixels */}
-          <div className="flex items-center gap-[6px]">
-            <label className="text-[9px] font-mono text-txt-3 uppercase tracking-wide shrink-0 w-[40px]">Pixels</label>
-            <input
-              type="range"
-              min={10}
-              max={1000}
-              step={5}
-              value={pixels}
-              onChange={(e) => setDraft((d) => ({ ...d, pixels: parseInt(e.target.value, 10) }))}
-              className="flex-1 h-[3px] accent-[var(--acc)] cursor-pointer"
-            />
-            <span className="text-[11px] font-mono text-txt-3 w-[36px] text-right">{pixels}</span>
           </div>
 
           {/* Rotation */}

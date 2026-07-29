@@ -15,7 +15,9 @@
  */
 import type { Color } from "./types";
 import { Bounds, Vector, CorePoint, floatLerp } from "./math";
-import { colorDarken, colorLerp, colorLighten, colorStr, hsvToRgb } from "./color";
+import { colorDarken, colorLerp, colorLighten, colorStr } from "./color";
+import { pickBladeMetal, pickGuardAccent, pickHaft, OUTLINE, allTones, RUST } from "./palette";
+import type { ParticleType } from "./particles";
 import { Rng } from "./rng";
 
 /** Subset of CanvasRenderingContext2D the generator relies on. */
@@ -35,6 +37,12 @@ export interface IconOptions {
    * continuous (original). Default: 4.
    */
   celSteps?: number;
+  /**
+   * Particle FX overlay. A {@link ParticleType} draws that aura; "random" picks
+   * one from the seed; "themed" picks one matching the weapon's colour; omit /
+   * "none" for no particles.
+   */
+  particles?: ParticleType | "random" | "themed" | "none";
 }
 
 export class Pen {
@@ -44,12 +52,14 @@ export class Pen {
   public translation = new Vector(0, 0);
   public border: [number, number, number];
   public celSteps: number;
+  public particles: ParticleType | "random" | "themed" | "none";
 
   constructor(ctx: Ctx2D, dimension: number, options: IconOptions = {}) {
     this.ctx = ctx;
     this.dimension = dimension;
-    this.border = options.border ?? [32, 26, 38];
+    this.border = options.border ?? OUTLINE;
     this.celSteps = options.celSteps ?? 4;
+    this.particles = options.particles ?? "none";
   }
 
   // -- low-level canvas ------------------------------------------------------
@@ -63,12 +73,172 @@ export class Pen {
     this.ctx.fillRect(Math.floor(x), Math.floor(y), 1, 1);
   }
 
-  /** Add a 1px black outline around the current drawing. */
+  /**
+   * De-jaggy the silhouette before outlining. The tiny-swords pack reads clean
+   * because its edges are deliberate hand-drawn curves with no stray pixels; our
+   * procedural shapes leave orphan specks and single-pixel staircase notches. A
+   * 3×3 neighbour pass:
+   *   - clears opaque pixels with ≤1 opaque neighbour  → removes floating debris
+   *     and lone protrusion tips
+   *   - fills transparent pixels with ≥5 opaque neighbours → closes pinholes and
+   *     rounds concave staircase corners (filled with the neighbour-average
+   *     colour, which the outline then borders)
+   * The ≤1 / ≥5 thresholds are deliberately extreme so 1px diagonal shafts
+   * (which have exactly 2 opaque neighbours per pixel) are never eroded or
+   * fattened.
+   */
+  public cleanSilhouette(): void {
+    const w = this.dimension;
+    const h = this.dimension;
+    const ox = this.translation.x;
+    const oy = this.translation.y;
+    const src = this.ctx.getImageData(ox, oy, w, h);
+    const out = this.ctx.getImageData(ox, oy, w, h);
+    const d = src.data;
+    const isOpaque = (x: number, y: number) =>
+      x >= 0 && y >= 0 && x < w && y < h && d[(x + y * w) * 4 + 3]! > 0;
+    for (let x = 0; x < w; x++) {
+      for (let y = 0; y < h; y++) {
+        const i = (x + y * w) * 4;
+        let n = 0;
+        let rs = 0;
+        let gs = 0;
+        let bs = 0;
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            if (dx === 0 && dy === 0) continue;
+            if (isOpaque(x + dx, y + dy)) {
+              n++;
+              const j = ((x + dx) + (y + dy) * w) * 4;
+              rs += d[j]!;
+              gs += d[j + 1]!;
+              bs += d[j + 2]!;
+            }
+          }
+        }
+        if (d[i + 3]! > 0) {
+          if (n <= 1) out.data[i + 3] = 0; // orphan / lone tip → cut
+        } else if (n >= 5) {
+          out.data[i] = Math.round(rs / n); // concavity / pinhole → fill
+          out.data[i + 1] = Math.round(gs / n);
+          out.data[i + 2] = Math.round(bs / n);
+          out.data[i + 3] = 255;
+        }
+      }
+    }
+    this.ctx.putImageData(out, ox, oy);
+  }
+
+  /**
+   * Snap every opaque pixel to the nearest fixed material tone. Continuous
+   * shader gradients (cone lerps, edge lightens, orb falloff) collapse into the
+   * pack's hard 4-tones-per-material cel bands, and the whole icon's colour
+   * count drops to the ~12–16 the pack uses. Nearest-RGB keeps pixels within
+   * their material family (the ramps are hue-separated).
+   */
+  public snapToPalette(): void {
+    const w = this.dimension;
+    const h = this.dimension;
+    const ox = this.translation.x;
+    const oy = this.translation.y;
+    const img = this.ctx.getImageData(ox, oy, w, h);
+    const d = img.data;
+    const P = allTones();
+    for (let i = 0; i < d.length; i += 4) {
+      if (d[i + 3]! < 250) continue; // leave translucent FX (glow/sparkle) alone
+      let best = 0;
+      let bestDist = Infinity;
+      for (let k = 0; k < P.length; k++) {
+        const dr = d[i]! - P[k]!.r;
+        const dg = d[i + 1]! - P[k]!.g;
+        const db = d[i + 2]! - P[k]!.b;
+        const dist = dr * dr + dg * dg + db * db;
+        if (dist < bestDist) { bestDist = dist; best = k; }
+      }
+      d[i] = Math.round(P[best]!.r);
+      d[i + 1] = Math.round(P[best]!.g);
+      d[i + 2] = Math.round(P[best]!.b);
+    }
+    this.ctx.putImageData(img, ox, oy);
+  }
+
+  /**
+   * Battle-wear: a few short darker scratch strokes across the interior metal so
+   * blades/heads read as USED, not factory-new. Interior-only (all 4 orthogonal
+   * neighbours opaque) so it never nibbles the silhouette; the darkened pixels
+   * snap to the material's shadow tone in {@link snapToPalette}. `amount` 0..1
+   * scales the scratch count. Call before {@link addBorder}.
+   */
+  public weather(amount: number): void {
+    if (amount <= 0) return;
+    const w = this.dimension;
+    const h = this.dimension;
+    const ox = this.translation.x;
+    const oy = this.translation.y;
+    const img = this.ctx.getImageData(ox, oy, w, h);
+    const d = img.data;
+    const opaque = (x: number, y: number) => x >= 0 && y >= 0 && x < w && y < h && d[(x + y * w) * 4 + 3]! > 0;
+    const interior: number[] = [];
+    for (let x = 1; x < w - 1; x++) {
+      for (let y = 1; y < h - 1; y++) {
+        if (opaque(x, y) && opaque(x - 1, y) && opaque(x + 1, y) && opaque(x, y - 1) && opaque(x, y + 1)) {
+          interior.push(x, y);
+        }
+      }
+    }
+    if (!interior.length) return;
+    const r = this.rng;
+    const nScratch = 1 + Math.round(amount * 3);
+    for (let s = 0; s < nScratch; s++) {
+      const p = Math.floor(r.float() * (interior.length / 2)) * 2;
+      const sx = interior[p]!;
+      const sy = interior[p + 1]!;
+      const len = 2 + r.range(0, 3);
+      const ang = r.rangeFloat(0, Math.PI);
+      const dx = Math.cos(ang);
+      const dy = Math.sin(ang);
+      // Heavily-worn weapons corrode: some strokes are rust-tinted, not just dark.
+      const rust = r.float() < amount * 0.6;
+      for (let k = 0; k < len; k++) {
+        const px = Math.round(sx + dx * k);
+        const py = Math.round(sy + dy * k);
+        if (!opaque(px, py)) break;
+        const i = (px + py * w) * 4;
+        if (rust) {
+          d[i] = Math.round(d[i]! * 0.35 + RUST.mid.r * 0.65);
+          d[i + 1] = Math.round(d[i + 1]! * 0.35 + RUST.mid.g * 0.65);
+          d[i + 2] = Math.round(d[i + 2]! * 0.35 + RUST.mid.b * 0.65);
+        } else {
+          d[i] = Math.round(d[i]! * 0.5);
+          d[i + 1] = Math.round(d[i + 1]! * 0.5);
+          d[i + 2] = Math.round(d[i + 2]! * 0.5);
+        }
+      }
+    }
+    this.ctx.putImageData(img, ox, oy);
+  }
+
+  /**
+   * Outline the silhouette. Selective (2-tone) like the pack: the near-black
+   * `border` on shadowed (bottom-right) edges, a lifted navy on the top-left
+   * lit edges. The light edge doubles as the only thing that reads against a
+   * near-black UI card — a pure `#161c2e` outline vanishes on `#1a1a1a`.
+   */
   public addBorder(): void {
+    this.cleanSilhouette();
+    this.snapToPalette();
+
     const width = this.dimension;
     const height = this.dimension;
     const ox = this.translation.x;
     const oy = this.translation.y;
+    const bd = this.border;
+    const lift = 0.16;
+    const bl: [number, number, number] = [
+      Math.round(bd[0] + (255 - bd[0]) * lift),
+      Math.round(bd[1] + (255 - bd[1]) * lift),
+      Math.round(bd[2] + (255 - bd[2]) * lift),
+    ];
 
     const readData = this.ctx.getImageData(ox, oy, width, height);
     const mutableData = this.ctx.getImageData(ox, oy, width, height);
@@ -76,19 +246,17 @@ export class Pen {
       for (let y = 0; y < height; y++) {
         const pixelStart = (x + y * width) * 4;
         if (readData.data[pixelStart + 3] === 0 || x === 0 || y === 0 || x === width - 1 || y === height - 1) {
-          const nx = (x - 1 + y * width) * 4;
-          const ny = (x + (y - 1) * width) * 4;
-          const px = (x + 1 + y * width) * 4;
-          const py = (x + (y + 1) * width) * 4;
-          if (
-            (x > 0 && readData.data[nx + 3]! > 0) ||
-            (x < width - 1 && readData.data[px + 3]! > 0) ||
-            (y > 0 && readData.data[ny + 3]! > 0) ||
-            (y < height - 1 && readData.data[py + 3]! > 0)
-          ) {
-            mutableData.data[pixelStart + 0] = this.border[0];
-            mutableData.data[pixelStart + 1] = this.border[1];
-            mutableData.data[pixelStart + 2] = this.border[2];
+          const nxo = x > 0 && readData.data[(x - 1 + y * width) * 4 + 3]! > 0;
+          const nyo = y > 0 && readData.data[(x + (y - 1) * width) * 4 + 3]! > 0;
+          const pxo = x < width - 1 && readData.data[(x + 1 + y * width) * 4 + 3]! > 0;
+          const pyo = y < height - 1 && readData.data[(x + (y + 1) * width) * 4 + 3]! > 0;
+          if (nxo || nyo || pxo || pyo) {
+            // Object toward down-right (px/py opaque) → this is a top-left lit edge.
+            const litSide = (pxo ? 1 : 0) + (pyo ? 1 : 0) - (nxo ? 1 : 0) - (nyo ? 1 : 0);
+            const col = litSide > 0 ? bl : bd;
+            mutableData.data[pixelStart + 0] = col[0];
+            mutableData.data[pixelStart + 1] = col[1];
+            mutableData.data[pixelStart + 2] = col[2];
             mutableData.data[pixelStart + 3] = 255;
           }
         }
@@ -164,6 +332,54 @@ export class Pen {
     }
   }
 
+  /**
+   * A flowing cloth ribbon/streamer from (rx,ry) along (dx,dy). Unlike a flat
+   * fillCone it flutters (lateral sine), tapers, and shades ACROSS its width —
+   * one edge catches light, the fold darkens — with an optional swallowtail fork.
+   * Reads as cloth, not a painted triangle.
+   */
+  public drawRibbon(
+    rx: number,
+    ry: number,
+    dx: number,
+    dy: number,
+    len: number,
+    width: number,
+    ramp: { shadow: Color; mid: Color; light: Color },
+    opts: { wave?: number; waveLen?: number; taper?: boolean; twist?: boolean; swallowtail?: boolean } = {},
+  ): void {
+    const m = Math.hypot(dx, dy) || 1;
+    dx /= m;
+    dy /= m;
+    const px = -dy;
+    const py = dx; // perpendicular (ribbon width axis)
+    const steps = Math.max(3, Math.ceil(len));
+    const phase = this.rng.rangeFloat(0, Math.PI * 2);
+    const waveN = opts.wave ? len / (opts.waveLen ?? 8) : 0;
+    const litStr = colorStr(ramp.light);
+    const midStr = colorStr(ramp.mid);
+    const darkStr = colorStr(ramp.shadow);
+    for (let s = 0; s <= steps; s++) {
+      const t = s / steps;
+      const wave = opts.wave ? Math.sin(phase + t * Math.PI * 2 * waveN) * opts.wave * (0.3 + 0.7 * t) : 0;
+      const cx = rx + dx * s + px * wave;
+      const cy = ry + dy * s + py * wave;
+      const hw = Math.max(0.5, width * 0.5 * (opts.taper === false ? 1 : 1 - 0.7 * t));
+      // Surface tilt along the length: one edge lit, the fold band shadowed.
+      const twist = opts.twist ? Math.sin(phase * 1.3 + t * Math.PI * 5) : 0.5;
+      for (let w = -hw; w <= hw; w += 0.5) {
+        if (opts.swallowtail && t > 0.72 && Math.abs(w) < hw * 0.55) continue; // forked tail
+        const x = Math.round(cx + px * w);
+        const y = Math.round(cy + py * w);
+        if (x < 0 || y < 0 || x >= this.dimension || y >= this.dimension) continue;
+        const edge = hw > 0 ? Math.abs(w) / hw : 0;
+        const lightness = 0.55 + 0.4 * twist * (hw > 0 ? w / hw : 0) - 0.22 * edge;
+        this.ctx.fillStyle = lightness > 0.66 ? litStr : lightness > 0.38 ? midStr : darkStr;
+        this.drawPixel(x, y);
+      }
+    }
+  }
+
   // -- blade helper ----------------------------------------------------------
 
   public drawBladeHelper(params: BladeParams): BladeResults {
@@ -186,20 +402,25 @@ export class Pen {
     // its per-step probability is normalized. At dscale=1 all of this is a no-op.
     const bladeJogChance = 0.04 / dscale;
     const bladeJogChanceLeadIn = Math.ceil(12 * dscale);
-    const bladeJogAmount = Math.PI / 4;
+    const bladeJogAmount = Math.PI / 6;
     const bladeOmegaChance = 0.02 / dscale;
     const bladeOmegaAmount = Math.PI / 32 / dscale;
     const bladeMaxOmega = Math.PI / 32 / dscale;
 
-    const bladeWidthCosineAmp = Math.ceil(Math.max(0, r.floatLow() * 1.2 - 0.2) * 2 * dscale);
+    // Archetype overrides (see BladeStyle). When absent the original random
+    // profile is used (spears rely on it).
+    const st = params.style;
+    const bladeWidthCosineAmp = st?.widthAmp != null
+      ? Math.ceil(st.widthAmp * dscale)
+      : Math.ceil(Math.max(0, r.floatLow() * 0.8 - 0.3) * 2 * dscale);
     const bladeWidthCosineWavelength = Math.ceil(r.range(3 * Math.max(1, bladeWidthCosineAmp), 12) * dscale);
     const bladeWidthCosineOffset = r.rangeFloat(0, Math.PI * 2);
 
     // Wiggle is a heading *offset* (not integrated), and the wavelength already
     // scales with dscale — so the angular amplitude must stay constant, else the
     // physical wave grows as dscale² and the blade turns into a snake at high res.
-    const bladeWiggleAmp = (Math.max(0, r.float() * 8 - 7) * Math.PI) / 4;
-    const bladeWiggleWavelength = Math.ceil(r.rangeFloat(6, 18) * dscale);
+    const bladeWiggleAmp = st?.wave != null ? st.wave : (Math.max(0, r.float() * 8 - 7.2) * Math.PI) / 8;
+    const bladeWiggleWavelength = Math.ceil((st?.waveLen ?? r.rangeFloat(6, 18)) * dscale);
 
     const bladeCorePoints: CorePoint[] = [];
     const bladeStartOrtho = Math.floor(params.startDiag / Math.sqrt(2));
@@ -210,7 +431,13 @@ export class Pen {
     const velocity = new Vector();
     const velocityScaled = new Vector();
     let angle = -Math.PI / 4;
-    let omega = 0;
+    // A styled blade carries a constant curvature (saber arc); an unstyled one
+    // meanders via the random jog/omega below.
+    let omega = st?.curve != null ? (st.curve * (st.curveDir ?? 1)) / dscale : 0;
+    // Cap the TOTAL accumulated bend of a styled curve so long blades read as a
+    // curvy scimitar, not a full banana. Short/medium sabers stay curly.
+    let curveTurned = 0;
+    const curveCap = st?.maxTurn ?? Math.PI / 3; // ~60° (scimitar); higher = sickle hook
     do {
       const bladeWidthCosine = bladeWidthCosineAmp * Math.cos(bladeWidthCosineOffset + currentDist / bladeWidthCosineWavelength);
       const useAngle = angle + bladeWiggleAmp * Math.sin((Math.PI * 2 * currentDist) / bladeWiggleWavelength);
@@ -224,34 +451,65 @@ export class Pen {
       newPoint.dist = currentDist;
       bladeCorePoints.push(newPoint);
 
-      if (r.float() <= bladeJogChance * Math.min(1, currentDist / bladeJogChanceLeadIn)) {
-        angle += r.rangeFloat(-bladeJogAmount, bladeJogAmount);
-      }
-      if (r.float() <= bladeOmegaChance) {
-        omega += r.rangeFloat(-bladeOmegaAmount, bladeOmegaAmount);
-        omega = Math.sign(omega) * Math.min(bladeMaxOmega, Math.abs(omega));
+      if (st == null) {
+        if (r.float() <= bladeJogChance * Math.min(1, currentDist / bladeJogChanceLeadIn)) {
+          angle += r.rangeFloat(-bladeJogAmount, bladeJogAmount);
+        }
+        if (r.float() <= bladeOmegaChance) {
+          omega += r.rangeFloat(-bladeOmegaAmount, bladeOmegaAmount);
+          omega = Math.sign(omega) * Math.min(bladeMaxOmega, Math.abs(omega));
+        }
       }
 
       velocityScaled.set(velocity).multiplyScalar(bladeSampleStepSize);
       currentPoint.addVector(velocityScaled);
       currentDist += bladeSampleStepSize;
-      angle += omega * bladeSampleStepSize;
+      if (st?.curve != null) {
+        // Styled curve: integrate omega only until the total bend hits the cap,
+        // then run straight (scimitar, not banana).
+        if (Math.abs(curveTurned) < curveCap) {
+          const dTurn = omega * bladeSampleStepSize;
+          angle += dTurn;
+          curveTurned += dTurn;
+        }
+      } else {
+        angle += omega * bladeSampleStepSize;
+      }
     } while (bounds1.contains(currentPoint));
 
     for (const p of bladeCorePoints) {
       p.normalizedDist = p.dist! / currentDist;
+      const nd = p.normalizedDist;
       const invTaperFactor = 1 - params.taperFactor;
-      const taper = p.normalizedDist <= invTaperFactor ? 1 : (1 - p.normalizedDist) / params.taperFactor;
-      p.widthL! *= taper;
-      p.widthR! *= taper;
+      const taper = nd <= invTaperFactor ? 1 : (1 - nd) / params.taperFactor;
+      // Leaf/waisted: a single width swell peaking mid-blade.
+      const bulge = st?.bulge != null ? 1 + st.bulge * Math.sin(Math.PI * nd) : 1;
+      p.widthL! *= taper * bulge;
+      p.widthR! *= taper * bulge;
+      // Clip-point: the spine side (widthR) angles in to meet the tip over the
+      // last `clip` fraction, leaving the belly (widthL) to carry the point.
+      if (st?.clip != null && nd > 1 - st.clip) {
+        p.widthR! *= Math.max(0, (1 - nd) / st.clip);
+      }
+      // Serrations: triangular teeth bulging off the cutting edge (widthL), only
+      // along the mid blade so the base and tip stay clean.
+      if (st?.serrate != null && nd > 0.2 && nd < 1 - params.taperFactor) {
+        const per = st.serratePeriod ?? 3; // base-px tooth period
+        const ph = (((p.dist! % per) + per) % per) / per;
+        const tri = ph < 0.5 ? ph * 2 : (1 - ph) * 2;
+        const amt = st.serrate * tri;
+        const side = st.serrateSide ?? "edge";
+        if (side === "edge" || side === "both") p.widthL! += amt;
+        if (side === "spine" || side === "both") p.widthR! += amt;
+      }
     }
 
-    const colorBladeLinearTip = hsvToRgb({
-      h: r.rangeFloat(0, 360),
-      s: r.float() < 0.3 ? r.floatExtreme() * 0.6 : 0,
-      v: r.rangeFloat(0.75, 1),
-    });
-    const colorBladeLinearHilt = r.randomize(colorDarken(colorBladeLinearTip, 0.7), 16);
+    // Steel from the tiny-swords ramp instead of a free hue: light body toward
+    // the tip, mid toward the hilt; edge/spine shading below lifts to spec / drops
+    // to shadow.
+    const metal = st?.metal ?? pickBladeMetal(r);
+    const colorBladeLinearTip = metal.light;
+    const colorBladeLinearHilt = metal.mid;
     const bladeEdgeLighten = 0.5;
     const bladeRightDarken = 0.5;
 
@@ -281,12 +539,24 @@ export class Pen {
           let color = colorLerp(colorBladeLinearHilt, colorBladeLinearTip, bestPoint.normalizedDist!);
           const edgeColor = colorLighten(color, bladeEdgeLighten);
           const darkColor = colorDarken(color, bladeRightDarken);
-          const nonEdgeColor = dp > 0 ? darkColor : color;
-          if (useWidth > bladeCoreEdgeExcludeWidth) {
-            const edgeWidthMin = useWidth - bladeEdgeWidth;
-            let edgeAmount = (coreDistance - edgeWidthMin) / bladeEdgeWidth;
-            edgeAmount = 1 - (1 - edgeAmount) * (1 - edgeAmount);
-            color = colorLerp(nonEdgeColor, edgeColor, edgeAmount);
+          if (st?.singleEdge) {
+            // Shade by lateral position: dp<0 side is the bright cutting edge,
+            // dp>0 side the dark flat spine, mid body between — a katana bevel.
+            const lat = dp / (useWidth || 1);
+            color = lat < -0.3 ? edgeColor : lat < 0.3 ? color : darkColor;
+          } else {
+            const nonEdgeColor = dp > 0 ? darkColor : color;
+            if (useWidth > bladeCoreEdgeExcludeWidth) {
+              const edgeWidthMin = useWidth - bladeEdgeWidth;
+              let edgeAmount = (coreDistance - edgeWidthMin) / bladeEdgeWidth;
+              edgeAmount = 1 - (1 - edgeAmount) * (1 - edgeAmount);
+              color = colorLerp(nonEdgeColor, edgeColor, edgeAmount);
+            }
+          }
+          // Fuller: a recessed groove darkens a thin band down the blade centre
+          // (only where the blade is wide enough to show it).
+          if (st?.fuller && useWidth > 2.4 && coreDistance < Math.max(0.9, useWidth * 0.24)) {
+            color = colorDarken(color, 0.42);
           }
           this.ctx.fillStyle = colorStr(color);
           this.drawPixel(x, y);
@@ -311,8 +581,9 @@ export class Pen {
 
     const bounds = new Bounds(0, 0, this.dimension, this.dimension);
 
-    const xguardColorLight = hsvToRgb({ h: r.range(0, 360), s: r.floatLow() * 0.5, v: r.rangeFloat(0.7, 1) });
-    const xguardColorDark = colorDarken(xguardColorLight, 0.6);
+    const guard = pickGuardAccent(r);
+    const xguardColorLight = guard.light;
+    const xguardColorDark = guard.shadow;
     const xguardSymmetry = r.float() < 0.3 ? 0 : 1;
     const xguardThickness = params.thickness ?? r.rangeFloatHigh(1, 2.5);
     const xguardBottomTaper = r.float();
@@ -416,8 +687,9 @@ export class Pen {
       : Math.ceil(r.range(minRadius, maxRadius));
 
     const hiltWavelength = Math.max(2, Math.ceil(r.range(3, 6) * dscale));
-    const hiltColorLight = hsvToRgb({ h: r.range(0, 360), s: r.float(), v: r.rangeFloat(0.7, 1) });
-    const hiltColorDark = colorDarken(hiltColorLight, 1);
+    const grip = pickHaft(r); // cord / leather wrap
+    const hiltColorLight = grip.mid;
+    const hiltColorDark = grip.shadow;
 
     this.drawRodHelper({
       radius: hiltRadius,
@@ -442,7 +714,7 @@ export class Pen {
       ? 0.5 * Math.ceil(r.range(minRadius * 2, maxRadius * 2))
       : Math.ceil(r.range(minRadius, maxRadius));
 
-    const haftColor = params.color ?? hsvToRgb({ h: r.range(35, 45), s: r.float(), v: r.rangeFloat(0.5, 0.95) });
+    const haftColor = params.color ?? pickHaft(r).mid;
 
     this.drawRodHelper({
       radius: haftRadius,
@@ -498,8 +770,9 @@ export class Pen {
     this.rng.checkpoint();
     const r = this.rng;
 
-    const pommelColorLight = params.colorLight ?? hsvToRgb({ h: r.range(0, 360), s: r.floatLow() * 0.5, v: r.rangeFloat(0.7, 1) });
-    const pommelColorDark = params.colorDark ?? colorDarken(pommelColorLight, 0.6);
+    const orn = pickGuardAccent(r);
+    const pommelColorLight = params.colorLight ?? orn.light;
+    const pommelColorDark = params.colorDark ?? orn.shadow;
     const pommelRadius = params.radius;
     const shadowCenter = new Vector(0.5, 1).normalize().multiplyScalar(pommelRadius).addVector(params.center);
     const highlightCenter = new Vector(-1, -1).normalize().multiplyScalar(pommelRadius * 0.7).addVector(params.center);
@@ -521,10 +794,47 @@ export class Pen {
 
 // -- helper param/result shapes ----------------------------------------------
 
+/** Discrete blade-profile knobs. Absent → the original random meander. */
+export interface BladeStyle {
+  /** Constant curvature per unit length (rad) → saber / scimitar arc. */
+  curve?: number;
+  /** Curvature direction, +1 (edge-forward) or -1. */
+  curveDir?: number;
+  /** Centreline wave amplitude (rad) → flamberge / kris. */
+  wave?: number;
+  /** Wave wavelength in base px. */
+  waveLen?: number;
+  /** Width-ripple amplitude in base px (0 = clean straight edges). */
+  widthAmp?: number;
+  /** Single-edged: bright cutting edge on one lateral side, dark flat spine on
+   *  the other (saber / falchion / cleaver / katana). Default double-edged. */
+  singleEdge?: boolean;
+  /** Leaf/waisted blade: swell the width mid-blade by this factor (0.4–0.6). */
+  bulge?: number;
+  /** Clip-point (bowie): the spine side angles to the tip over the last `clip`
+   *  fraction of the blade (0.2–0.35). */
+  clip?: number;
+  /** Draw a darker fuller (blood groove) down the blade centre. */
+  fuller?: boolean;
+  /** Saw-tooth serrations; value = tooth height in base px. */
+  serrate?: number;
+  /** Which side the serrations sit on. Default "edge" (widthL). */
+  serrateSide?: "edge" | "spine" | "both";
+  /** Serration tooth period in base px. Default 3 (fine). Larger = chunkier teeth. */
+  serratePeriod?: number;
+  /** Max total accumulated bend for a styled curve (rad). Default π/3 (scimitar).
+   *  Raise for sickle/khopesh hooks. */
+  maxTurn?: number;
+  /** Override the blade metal (e.g. a magic crystal). Default: picked from the
+   *  steel/bronze/iron pool. */
+  metal?: { shadow: Color; mid: Color; light: Color; spec: Color };
+}
+
 export interface BladeParams {
   startDiag: number;
   taperFactor: number;
   startRadius: number;
+  style?: BladeStyle;
 }
 export interface BladeResults {
   startDiag: number;

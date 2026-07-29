@@ -70,7 +70,7 @@ export function WeaponIconModal({ open, name, current, onSave, onClose }: Weapon
         {/* Big preview */}
         <div className="shrink-0 flex flex-col items-center gap-[6px]">
           <div className="flex items-center justify-center rounded-[10px] bg-bg-2 border border-line" style={{ width: 140, height: 140 }}>
-            <WeaponIcon config={draft} size={120} />
+            <WeaponIcon config={draft} size={120} particles="themed" />
           </div>
           <span className="text-[9px] font-mono text-txt-3 uppercase tracking-wide">Preview</span>
         </div>
