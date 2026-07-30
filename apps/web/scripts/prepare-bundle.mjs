@@ -141,7 +141,7 @@ for (const { src, dest } of nativeModules) {
 //    On Linux these trip linuxdeploy during AppImage builds (.so files).
 //    On Windows Tauri's bundler can get confused by stray sharp .dll files.
 //    Next.js falls back to its built-in image optimizer when sharp is absent.
-if (!isWindows) {
+if (platform() !== "win32") {
   // Remove every pnpm store entry whose name starts with a sharp/img prefix.
   const pnpmVStore = join(serverDestDir, "node_modules", ".pnpm");
   if (existsSync(pnpmVStore)) {
@@ -174,7 +174,8 @@ if (!isWindows) {
 const binariesDir = join(tauriDir, "binaries");
 mkdirSync(binariesDir, { recursive: true });
 const targetTriple = getTauriTargetTriple();
-const nodeDest = join(binariesDir, `node-${targetTriple}`);
+const ext = platform() === "win32" ? ".exe" : "";
+const nodeDest = join(binariesDir, `node-${targetTriple}${ext}`);
 copyFileSync(process.execPath, nodeDest);
 if (platform() !== "win32") chmodSync(nodeDest, 0o755);
 
