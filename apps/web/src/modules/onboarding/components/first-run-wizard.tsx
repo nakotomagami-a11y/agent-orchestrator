@@ -16,29 +16,6 @@ import { ExcludedStep } from "./first-run-wizard-steps/excluded-step";
 import { AgentsStep } from "./first-run-wizard-steps/agents-step";
 import { ProjectStep } from "./first-run-wizard-steps/project-step";
 
-/**
- * First-run wizard. A four-step modal that appears once on a fresh
- * install and walks the user through:
- *
- *   1. Projects root path - where their code folders live on disk.
- *   2. Excluded folders   - names to skip when scanning (with a
- *      sensible default list pre-filled).
- *   3. Starter agents     - checkboxes for which of the 13 bundled
- *      agents to import into ~/.claude/agents/. "Select all" is the
- *      first checkbox so users who want the demo can click once.
- *   4. First project      - pick one of the scanned folders to turn
- *      into the user's first project, optionally name it.
- *
- * On finish: PUT /api/settings (marks firstRunComplete: true), POST
- * /api/starter/agents (imports the selected agents), POST
- * /api/projects (creates the first project). The user lands on a
- * populated UI with the project active in the sidebar.
- *
- * Steps can be skipped: empty agents list is allowed, project step is
- * skippable. Settings step (root path) is mandatory - it's what
- * "first-run complete" means.
- */
-
 const DEFAULT_EXCLUDED = [
   "node_modules",
   ".git",
@@ -52,6 +29,8 @@ const DEFAULT_EXCLUDED = [
 
 const HOME_FALLBACK = "~/Documents";
 
+const DRAFT_KEY = "agent-office:wizard-draft";
+
 interface StarterAgent {
   id: string;
   name: string;
@@ -61,28 +40,75 @@ interface StarterAgent {
 type Step = "requirements" | "root" | "excluded" | "agents" | "project";
 const STEP_ORDER: Step[] = ["requirements", "root", "excluded", "agents", "project"];
 
+interface WizardDraft {
+  step: Step;
+  root: string;
+  excluded: string[];
+  selectedAgents: string[];
+  chosenFolderIds: string[];
+  projectName: string;
+}
+
+function loadDraft(): WizardDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as WizardDraft;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(draft: WizardDraft) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  } catch {
+    /* storage full or unavailable — not fatal */
+  }
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const t = useTranslations();
   const qc = useQueryClient();
   const setActiveProjectId = useActiveProjectStore((s) => s.setId);
 
-  const [step, setStep] = useState<Step>("requirements");
-  const [root, setRoot] = useState(HOME_FALLBACK);
-  const [excluded, setExcluded] = useState<string[]>(DEFAULT_EXCLUDED);
+  const draft = useMemo(() => loadDraft(), []);
+
+  const [step, setStep] = useState<Step>(draft?.step ?? "requirements");
+  const [root, setRoot] = useState(draft?.root ?? HOME_FALLBACK);
+  const [excluded, setExcluded] = useState<string[]>(draft?.excluded ?? DEFAULT_EXCLUDED);
   const [excludedInput, setExcludedInput] = useState("");
-  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
-  const [chosenFolder, setChosenFolder] = useState<ScannedEntry | null>(null);
-  const [projectName, setProjectName] = useState("");
+  const [selectedAgents, setSelectedAgents] = useState<Set<string>>(
+    draft?.selectedAgents ? new Set(draft.selectedAgents) : new Set(),
+  );
+  const [chosenFolderIds, setChosenFolderIds] = useState<Set<string>>(
+    draft?.chosenFolderIds ? new Set(draft.chosenFolderIds) : new Set(),
+  );
+  const [projectName, setProjectName] = useState(draft?.projectName ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Belt-and-braces dismissal flag. The gate normally unmounts the
-  // wizard once `/api/settings` refetches and reports
-  // `firstRunComplete: true`, but if the invalidate/refetch is slow or
-  // dropped (e.g. transient network blip in the embedded webview) the
-  // user would be stranded staring at "Setting things up…". This
-  // local flag lets us close ourselves the instant the mutation
-  // succeeds, independently of whether the gate's query has caught up.
   const [dismissed, setDismissed] = useState(false);
+
+  // Persist draft after every meaningful state change.
+  useEffect(() => {
+    saveDraft({
+      step,
+      root,
+      excluded,
+      selectedAgents: [...selectedAgents],
+      chosenFolderIds: [...chosenFolderIds],
+      projectName,
+    });
+  }, [step, root, excluded, selectedAgents, chosenFolderIds, projectName]);
 
   const healthQ = useQuery({
     queryKey: ["wizard-health"],
@@ -96,14 +122,13 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   });
   const starter = useMemo(() => starterQ.data ?? [], [starterQ.data]);
 
-  // Pre-select every starter agent the first time the list loads -
-  // most users will want the full demo set, and unticking is faster
-  // than ticking 13 boxes.
+  // Pre-select every starter agent the first time the list loads, but only
+  // when there was no saved draft (so saved selections aren't overwritten).
   useEffect(() => {
-    if (starter.length > 0 && selectedAgents.size === 0) {
+    if (starter.length > 0 && selectedAgents.size === 0 && !draft?.selectedAgents) {
       setSelectedAgents(new Set(starter.map((a) => a.id)));
     }
-  }, [starter, selectedAgents.size]);
+  }, [starter, selectedAgents.size, draft?.selectedAgents]);
 
   const scanParams = useMemo(() => {
     const p = new URLSearchParams();
@@ -122,13 +147,11 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
 
   const finishMut = useMutation({
     mutationFn: async () => {
-      // 1. Persist settings - this flips firstRunComplete: true.
       await apiFetch<AppSettings>(API_ROUTES.settings, {
         method: "PUT",
         body: { projectsRoot: root.trim(), excluded },
       });
 
-      // 2. Import selected agents (no-op if the user unticked all).
       if (selectedAgents.size > 0) {
         await apiFetch<{ imported: number }>("/api/starter/agents", {
           method: "POST",
@@ -136,24 +159,30 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
         });
       }
 
-      // 3. Create the first project, if the user picked a folder.
-      let createdId: string | null = null;
-      if (chosenFolder) {
-        const name = projectName.trim() || chosenFolder.name;
+      // Create all selected projects. Custom name only applies when exactly one is chosen.
+      const chosen = candidates.filter((c) => chosenFolderIds.has(c.id));
+      let lastCreatedId: string | null = null;
+      if (chosen.length > 0) {
+        for (const folder of chosen) {
+          const name = chosen.length === 1 && projectName.trim() ? projectName.trim() : folder.name;
+          const project = await apiFetch<Project>(API_ROUTES.projects, {
+            method: "POST",
+            body: { id: folder.id, name },
+          });
+          lastCreatedId = project.id;
+        }
+      } else if (projectName.trim()) {
+        // No scanned folders — create a new folder under projectsRoot from the typed name.
         const project = await apiFetch<Project>(API_ROUTES.projects, {
           method: "POST",
-          body: { id: chosenFolder.id, name },
+          body: { name: projectName.trim() },
         });
-        createdId = project.id;
+        lastCreatedId = project.id;
       }
-      return { createdId };
+      return { createdId: lastCreatedId };
     },
     onSuccess: ({ createdId }) => {
-      // Important: close ourselves first via the local dismiss flag,
-      // BEFORE waiting on any refetches. The gate's invalidate-based
-      // unmount still runs, but we don't depend on it any more - if
-      // it succeeds the gate also returns null, and our null
-      // short-circuit makes the wizard disappear immediately.
+      clearDraft();
       if (createdId) setActiveProjectId(createdId);
       setBusy(false);
       setDismissed(true);
@@ -199,6 +228,13 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     setError(null);
     setStep(STEP_ORDER[Math.max(0, stepIdx - 1)] ?? "root");
   };
+  const jumpTo = (s: Step) => {
+    const targetIdx = STEP_ORDER.indexOf(s);
+    if (targetIdx < stepIdx) {
+      setError(null);
+      setStep(s);
+    }
+  };
 
   const addExcluded = () => {
     const v = excludedInput.trim();
@@ -243,24 +279,33 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
           <h2 id="fr-title" className="font-semibold m-0 mb-[4px] text-[18px]">{t("first_run.title")}</h2>
           <p className="text-txt-3 m-0 text-[13px]">{t("first_run.subtitle")}</p>
           <ol className="flex list-none uppercase text-txt-3 pt-[14px] m-0 gap-[6px] font-[var(--font-mono)] text-[11px] tracking-[0.06em]">
-            {STEP_ORDER.map((s, i) => (
-              <li
-                key={s}
-                className={cn(
-                  "inline-flex items-center border border-line rounded-full gap-[6px] px-[10px] py-[4px]",
-                  i === stepIdx && "text-acc [border-color:var(--acc)]",
-                  i < stepIdx && "text-txt-2",
-                )}
-              >
-                <span className={cn(
-                  "inline-flex items-center justify-center rounded-full w-[18px] h-[18px] text-[10px]",
-                  i === stepIdx ? "bg-acc text-white" : i < stepIdx ? "bg-acc-faint text-acc" : "bg-bg-2 text-txt-3",
-                )}>
-                  {i + 1}
-                </span>
-                {t(`first_run.step_${s}`)}
-              </li>
-            ))}
+            {STEP_ORDER.map((s, i) => {
+              const isActive = i === stepIdx;
+              const isPast = i < stepIdx;
+              return (
+                <li key={s}>
+                  <button
+                    type="button"
+                    onClick={() => jumpTo(s)}
+                    disabled={!isPast}
+                    className={cn(
+                      "inline-flex items-center border border-line rounded-full gap-[6px] px-[10px] py-[4px] bg-transparent",
+                      isActive && "text-acc [border-color:var(--acc)]",
+                      isPast && "text-txt-2 cursor-pointer hover:border-acc hover:text-acc transition-colors",
+                      !isActive && !isPast && "text-txt-3 cursor-default",
+                    )}
+                  >
+                    <span className={cn(
+                      "inline-flex items-center justify-center rounded-full w-[18px] h-[18px] text-[10px]",
+                      isActive ? "bg-acc text-white" : isPast ? "bg-acc-faint text-acc" : "bg-bg-2 text-txt-3",
+                    )}>
+                      {i + 1}
+                    </span>
+                    {t(`first_run.step_${s}`)}
+                  </button>
+                </li>
+              );
+            })}
           </ol>
         </header>
 
@@ -298,8 +343,15 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
               candidates={candidates}
               loading={scanQ.isLoading}
               root={root}
-              chosen={chosenFolder}
-              onChoose={(c) => { setChosenFolder(c); setProjectName(c.name); }}
+              chosen={chosenFolderIds}
+              onToggle={(c) => {
+                setChosenFolderIds((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(c.id)) { next.delete(c.id); }
+                  else { next.add(c.id); if (next.size === 1) setProjectName(c.name); }
+                  return next;
+                });
+              }}
               projectName={projectName}
               onProjectNameChange={setProjectName}
             />
@@ -338,4 +390,3 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     </div>
   );
 }
-

@@ -45,6 +45,7 @@ interface StarterAgent {
   id: string;
   name: string;
   description: string;
+  unit?: string;
 }
 
 /**
@@ -56,16 +57,16 @@ interface StarterAgent {
  * tiny subset (string scalars only) so a hand-rolled regex is enough
  * and keeps the route self-contained.
  */
-function parseFrontmatterSubset(raw: string): { name?: string; description?: string } {
+function parseFrontmatterSubset(raw: string): { name?: string; description?: string; unit?: string } {
   const m = raw.match(/^---\n([\s\S]*?)\n---\n?/);
   if (!m) return {};
   const block = m[1]!;
   const lines = block.split(/\n/);
-  const out: { name?: string; description?: string } = {};
+  const out: { name?: string; description?: string; unit?: string } = {};
   for (const line of lines) {
-    const kv = line.match(/^(name|description):\s*(.*)$/);
+    const kv = line.match(/^(name|description|unit):\s*(.*)$/);
     if (!kv) continue;
-    const key = kv[1] as "name" | "description";
+    const key = kv[1] as "name" | "description" | "unit";
     let val = kv[2]!.trim();
     if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
       val = val.slice(1, -1);
@@ -83,6 +84,7 @@ function listStarterAgents(): StarterAgent[] {
   const out: StarterAgent[] = [];
   for (const f of readdirSync(agentsDir)) {
     if (!f.endsWith(".md")) continue;
+    if (f.toUpperCase().startsWith("README")) continue;
     const id = f.replace(/\.md$/, "");
     const raw = readFileSync(join(agentsDir, f), "utf8");
     const fm = parseFrontmatterSubset(raw);
@@ -90,6 +92,7 @@ function listStarterAgents(): StarterAgent[] {
       id,
       name: fm.name ?? id,
       description: fm.description ?? "",
+      unit: fm.unit,
     });
   }
   out.sort((a, b) => a.name.localeCompare(b.name));

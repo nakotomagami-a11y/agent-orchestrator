@@ -278,10 +278,10 @@ export function AgentMigrationModal({ open, onClose }: AgentMigrationModalProps)
             <button
               type="button"
               onClick={handleApply}
-              disabled={applyM.isPending || totalActionable === 0}
+              disabled={applyM.isPending}
               className="h-[30px] px-[14px] rounded-[8px] bg-ao-accent text-white text-[13px] font-semibold cursor-pointer hover:brightness-110 transition-[filter] duration-[120ms] disabled:opacity-50 disabled:cursor-default"
             >
-              {applyM.isPending ? "Applying…" : "Apply choices"}
+              {applyM.isPending ? "Applying…" : totalActionable === 0 ? "Got it" : "Apply choices"}
             </button>
           </div>
         </div>

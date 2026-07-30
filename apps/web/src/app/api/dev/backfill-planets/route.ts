@@ -42,6 +42,8 @@ function randomPlanetConfig(): PlanetConfig {
     type,
     seed: Math.floor(Math.random() * 999_999_999) + 1,
     paletteIdx: Math.floor(Math.random() * PALETTE_COUNT_BY_TYPE[type]),
+    pixels: 1000,
+    dither: true,
   };
 }
 

@@ -46,13 +46,19 @@ export function PlanetEditorModal({
   onSave,
   onClose,
 }: PlanetEditorModalProps) {
+  const withDefaults = (c: PlanetConfig): PlanetConfig => ({
+    ...c,
+    pixels: c.pixels ?? DEFAULT_PIXELS,
+    dither: c.dither ?? true,
+  });
+
   const [draft, setDraft] = useState<PlanetConfig>(
-    current ?? { type: "gas-giant", seed: randSeed(), paletteIdx: 0, pixels: DEFAULT_PIXELS, dither: true },
+    current ? withDefaults(current) : { type: "gas-giant", seed: randSeed(), paletteIdx: 0, pixels: DEFAULT_PIXELS, dither: true },
   );
 
   useEffect(() => {
     if (open) {
-      setDraft(current ?? { type: "gas-giant", seed: randSeed(), paletteIdx: 0, pixels: DEFAULT_PIXELS, dither: true });
+      setDraft(current ? withDefaults(current) : { type: "gas-giant", seed: randSeed(), paletteIdx: 0, pixels: DEFAULT_PIXELS, dither: true });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);

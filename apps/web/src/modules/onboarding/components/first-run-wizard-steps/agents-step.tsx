@@ -1,11 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { AgentAvatar } from "@/components/ui/agent-avatar";
+import { unitForAgent } from "@/components/ui/unit-sprite-registry";
+import { formatAgentDisplayName } from "@/lib/agent-display-name";
 
 export type StarterAgent = {
   id: string;
   name: string;
   description: string;
+  unit?: string;
 };
 
 export type AgentsStepProps = {
@@ -62,11 +66,14 @@ function AgentList({ starter, selected, onToggle, onToggleAll }: {
 }
 
 function AgentCheckbox({ agent, checked, onToggle }: { agent: StarterAgent; checked: boolean; onToggle: () => void }) {
+  const unit = unitForAgent(agent.name, agent.unit);
+  const displayName = formatAgentDisplayName(agent.id);
   return (
-    <label className="flex items-start cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] hover:bg-bg-2">
-      <input type="checkbox" className="mt-[3px]" checked={checked} onChange={onToggle} />
-      <div>
-        <div className="font-medium text-[13px]">{agent.name}</div>
+    <label className="flex items-center cursor-pointer gap-[10px] px-[10px] py-[8px] rounded-[6px] transition-[background] duration-[80ms] hover:bg-bg-2">
+      <input type="checkbox" className="shrink-0" checked={checked} onChange={onToggle} />
+      <AgentAvatar unit={unit} size={40} label={displayName} />
+      <div className="min-w-0">
+        <div className="font-medium text-[13px]">{displayName}</div>
         <div className="text-txt-3 text-[11.5px] mt-[2px] leading-[1.4]">{agent.description}</div>
       </div>
     </label>

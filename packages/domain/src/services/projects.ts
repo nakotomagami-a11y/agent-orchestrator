@@ -582,6 +582,8 @@ function autoRandomPlanet(): PlanetConfig {
     type,
     seed: Math.floor(Math.random() * 999999999),
     paletteIdx: Math.floor(Math.random() * paletteCount),
+    pixels: 1000,
+    dither: true,
   };
 }
 

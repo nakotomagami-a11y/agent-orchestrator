@@ -13,8 +13,10 @@ export async function GET(request: Request) {
   const { data: q, error } = validateQuery(settingsScanQuerySchema, url.searchParams);
   if (error) return error;
 
-  // Resolve and contain the root path within the user's home directory.
-  const root = q.root ? resolve(q.root) : HOME;
+  // Expand ~ before resolving — path.resolve treats ~ as a literal directory
+  // name relative to cwd, producing a nonsense path like /cwd/~/Documents.
+  const expanded = q.root ? q.root.replace(/^~(?=\/|$)/, HOME) : HOME;
+  const root = resolve(expanded);
   if (root !== HOME && !root.startsWith(HOME + "/")) {
     return badRequest("root_outside_home");
   }
