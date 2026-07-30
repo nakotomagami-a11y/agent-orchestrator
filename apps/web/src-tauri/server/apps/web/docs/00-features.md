@@ -12,7 +12,7 @@ The raw `claude` CLI gives you one agent in one terminal, and when you close it 
 | | `claude` CLI | Agent Office |
 |---|---|---|
 | **History** | Lost on exit | Every run saved and searchable — transcript, cost, tokens, tool calls |
-| **Cost** | Untracked | Per-instance + per-run spend caps, dashboards, plan-usage meters |
+| **Cost** | Untracked | Per-run cost tracked; spend dashboards, per-instance/per-project breakdowns, plan-usage meters |
 | **Multi-step work** | Manual | Pipelines (sequence · parallel · human-gate · condition) + broadcast |
 | **Scope** | Current terminal directory | Per-project rosters, multi-instance with git-worktree isolation |
 | **Finding past work** | Scrollback | Full-text search + parent→sub-agent run tree |
@@ -32,12 +32,13 @@ The raw `claude` CLI gives you one agent in one terminal, and when you close it 
 - **Compare runs** — side-by-side diff of two runs' cost, tokens, and output. See [Interface → Compare runs](#/interface).
 - **Reconnect-safe streaming** — output streams live via SSE and keeps flowing in background tabs; return mid-token. See [Interface → Project tabs](#/interface).
 
-### Stay in control of cost
+### Stay on top of cost
 
-- **Spend caps** — per-instance daily / weekly / monthly caps with refuse · warn · off modes. See [Usage → Spend limits & quota](#/usage).
-- **Per-run cap** — kill a single run if it exceeds a max cost. See [Usage → Per-run spend cap](#/usage).
-- **Cost dashboards** — spend by model, agent, project, and a 30-day trend. See [Interface → Spend page](#/interface).
+- **Spend tracking** — every run's cost, tokens, and runtime saved to SQLite; visible per-instance and per-project. See [Usage → Spend tracking](#/usage).
+- **Cost dashboards** — spend/runs/runtime trends, model split, per-agent and per-project rankings, tool usage, and a per-account breakdown. See [Interface → Analytics page](#/interface).
 - **Plan usage meters** — 5-hour rolling usage bars against your Anthropic plan. See [Interface → Claude limits modal](#/interface).
+
+> Agent Office reports spend but does not enforce hard dollar caps — set a budget ceiling at the Anthropic account level if you need one.
 
 ### Orchestrate a team
 
@@ -56,8 +57,9 @@ The raw `claude` CLI gives you one agent in one terminal, and when you close it 
 
 - **Scriptable** — a full REST API + SSE stream sits under every feature; drive the whole app from your own tooling. See [Reference → REST API](#/reference).
 - **Project tabs** — hold multiple projects open Chrome-style; each tab's chat, stream, and draft are preserved. See [Interface → Project tabs](#/interface).
-- **Command palette** — Cmd+K to jump anywhere, run agents, search history, and fire actions. See [Interface → Command palette](#/interface).
-- **Saved prompts, drafts, attachments** — reuse prompts, autosave composer text, drop or paste files and images. See [Interface → Chat features](#/interface).
+- **Command palette** — Cmd+K to jump to any page and fire quick actions (toggle theme, abort all, open panels). See [Interface → Command palette](#/interface).
+- **Multi-account** — connect several Claude accounts, see per-account usage in Analytics, and register GitHub identities per project. See [Interface → Settings](#/interface).
+- **Workflows, drafts, attachments** — reuse curated multi-step prompts, autosave composer text, drop or paste files and images. See [Interface → Chat features](#/interface).
 - **Processes panel** — every dev server and build the app spawns, with live logs and stdin. See [Usage → Processes panel](#/usage).
 - **Project actions** — dev / build / install / clear-cache / open-folder, plus a git status widget and template bootstrapping. See [Projects → Actions](#/projects).
 - **Office view** — an isometric office (or a flat card grid) with a desk per agent and live status LEDs; one of several ways to see your team, not the point of the app. See [Usage → Office floor](#/usage).
