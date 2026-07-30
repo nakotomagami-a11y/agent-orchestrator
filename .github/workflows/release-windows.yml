@@ -74,7 +74,16 @@ jobs:
 
       - name: Prepare Tauri bundle
         working-directory: apps/web
-        run: node scripts/prepare-bundle.mjs
+        shell: pwsh
+        run: |
+          Write-Host "Node: $(node --version)"
+          Write-Host "standalone exists: $(Test-Path '.next/standalone')"
+          Write-Host "standalone contents:"
+          if (Test-Path '.next/standalone') { Get-ChildItem '.next/standalone' | Select-Object -First 20 }
+          # Apply EPERM/EACCES patch in case cpSync with dereference:true hits
+          # NTFS junctions in the pnpm virtual store during copy.
+          $env:NODE_OPTIONS = "--require $env:GITHUB_WORKSPACE\apps\web\scripts\patch-fs-eperm.cjs"
+          node scripts/prepare-bundle.mjs
 
       - name: Build Tauri app (Windows)
         working-directory: apps/web
