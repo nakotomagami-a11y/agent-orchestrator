@@ -37,7 +37,6 @@ pub fn run() {
 
             #[cfg(not(debug_assertions))]
             {
-                use std::os::unix::fs::PermissionsExt;
                 use std::process::Command;
                 use tauri::Manager;
 
@@ -46,9 +45,16 @@ pub fn run() {
                     .resource_dir()
                     .expect("resource dir not found");
 
+                #[cfg(target_os = "linux")]
                 let node_bin = resource_dir
                     .join("binaries")
                     .join("node-x86_64-unknown-linux-gnu");
+
+                #[cfg(target_os = "windows")]
+                let node_bin = resource_dir
+                    .join("binaries")
+                    .join("node-x86_64-pc-windows-msvc.exe");
+
                 // pnpm monorepo: standalone output nests the app under apps/web/
                 let server_js = resource_dir
                     .join("server")
@@ -56,12 +62,16 @@ pub fn run() {
                     .join("web")
                     .join("server.js");
 
-                let mut perms = std::fs::metadata(&node_bin)
-                    .expect("node binary missing from resources")
-                    .permissions();
-                perms.set_mode(0o755);
-                // Ignore error — dpkg installs binaries as root-owned; they're already executable.
-                let _ = std::fs::set_permissions(&node_bin, perms);
+                #[cfg(target_os = "linux")]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let mut perms = std::fs::metadata(&node_bin)
+                        .expect("node binary missing from resources")
+                        .permissions();
+                    perms.set_mode(0o755);
+                    // Ignore error — dpkg installs binaries as root-owned; they're already executable.
+                    let _ = std::fs::set_permissions(&node_bin, perms);
+                }
 
                 let child = Command::new(&node_bin)
                     .arg(&server_js)

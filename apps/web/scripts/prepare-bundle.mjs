@@ -3,7 +3,7 @@
  *
  * Outputs:
  *   src-tauri/server/   ← Next.js standalone server + static/public assets
- *   src-tauri/binaries/node-x86_64-unknown-linux-gnu  ← this Node.js binary
+ *   src-tauri/binaries/node-<triple>[.exe]  ← this Node.js binary
  *
  * Usage (via beforeBuildCommand in tauri.conf.json):
  *   pnpm exec next build && node scripts/prepare-bundle.mjs
@@ -125,43 +125,51 @@ for (const { src, dest } of nativeModules) {
   }
 }
 
-// 5. Remove sharp's bundled .so files wherever they land (top-level .pnpm
-//    packages and nested copies inside sharp@x itself). These trip linuxdeploy
-//    during AppImage builds. Next.js falls back to its built-in image optimizer.
-// Remove every pnpm store entry whose name starts with a sharp/img prefix.
-const pnpmVStore = join(serverDestDir, "node_modules", ".pnpm");
-if (existsSync(pnpmVStore)) {
-  const sharpPrefixes = ["@img+sharp", "sharp@", "sharp-linux", "sharp-libvips"];
-  for (const entry of readdirSync(pnpmVStore)) {
-    if (sharpPrefixes.some((p) => entry.startsWith(p))) {
-      rmSync(join(pnpmVStore, entry), { recursive: true, force: true });
+// 5. Remove sharp's platform-specific native libs wherever they land.
+//    On Linux these trip linuxdeploy during AppImage builds (.so files).
+//    On Windows Tauri's bundler can get confused by stray sharp .dll files.
+//    Next.js falls back to its built-in image optimizer when sharp is absent.
+if (!isWindows) {
+  // Remove every pnpm store entry whose name starts with a sharp/img prefix.
+  const pnpmVStore = join(serverDestDir, "node_modules", ".pnpm");
+  if (existsSync(pnpmVStore)) {
+    const sharpPrefixes = ["@img+sharp", "sharp@", "sharp-linux", "sharp-libvips"];
+    for (const entry of readdirSync(pnpmVStore)) {
+      if (sharpPrefixes.some((p) => entry.startsWith(p))) {
+        rmSync(join(pnpmVStore, entry), { recursive: true, force: true });
+      }
     }
   }
-}
-// Belt-and-suspenders: remove any stray .so files that reference libvips/sharp
-// anywhere in the tree (e.g. nested inside other packages).
-function removeVipsLibs(dir) {
-  if (!existsSync(dir)) return;
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      removeVipsLibs(full);
-    } else if (
-      (entry.name.endsWith(".so") || entry.name.includes(".so.")) &&
-      (full.includes("libvips") || full.includes("sharp"))
-    ) {
-      rmSync(full, { force: true });
+  // Belt-and-suspenders: remove any stray .so files that reference libvips/sharp.
+  function removeVipsLibs(dir) {
+    if (!existsSync(dir)) return;
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        removeVipsLibs(full);
+      } else if (
+        (entry.name.endsWith(".so") || entry.name.includes(".so.")) &&
+        (full.includes("libvips") || full.includes("sharp"))
+      ) {
+        rmSync(full, { force: true });
+      }
     }
   }
+  removeVipsLibs(join(serverDestDir, "node_modules"));
 }
-removeVipsLibs(join(serverDestDir, "node_modules"));
 
 // 6. Bundle the running Node.js binary as the Tauri sidecar
 const binariesDir = join(tauriDir, "binaries");
 mkdirSync(binariesDir, { recursive: true });
-const nodeDest = join(binariesDir, "node-x86_64-unknown-linux-gnu");
+const isWindows = process.platform === "win32";
+const nodeTriple = isWindows
+  ? "node-x86_64-pc-windows-msvc.exe"
+  : "node-x86_64-unknown-linux-gnu";
+const nodeDest = join(binariesDir, nodeTriple);
 copyFileSync(process.execPath, nodeDest);
-chmodSync(nodeDest, 0o755);
+if (!isWindows) {
+  chmodSync(nodeDest, 0o755);
+}
 
 console.log("✓ Bundle prepared");
 console.log(`  server  → ${serverDestDir}`);
