@@ -140,13 +140,13 @@ function DiffSection({
                   interactive
                     ? "cursor-pointer border-ao-line-1 hover:bg-ao-bg-3"
                     : "border-ao-line-1/60 bg-ao-bg-2/40",
-                  accepted && "bg-[var(--ao-accent-soft)] border-[var(--ao-accent-line)]",
+                  accepted && "bg-ao-accent-soft border-ao-accent-line",
                 ].filter(Boolean).join(" ")}
               >
                 {interactive ? (
                   <input
                     type="checkbox"
-                    className="mt-[3px] shrink-0 accent-[var(--ao-accent)] cursor-pointer"
+                    className="mt-[3px] shrink-0 accent-ao-accent cursor-pointer"
                     checked={accepted}
                     onChange={() => onToggle!(entry.id)}
                   />
@@ -279,7 +279,7 @@ export function AgentMigrationModal({ open, onClose }: AgentMigrationModalProps)
               type="button"
               onClick={handleApply}
               disabled={applyM.isPending || totalActionable === 0}
-              className="h-[30px] px-[14px] rounded-[8px] bg-[var(--ao-accent)] text-white text-[13px] font-semibold cursor-pointer hover:brightness-110 transition-[filter] duration-[120ms] disabled:opacity-50 disabled:cursor-default"
+              className="h-[30px] px-[14px] rounded-[8px] bg-ao-accent text-white text-[13px] font-semibold cursor-pointer hover:brightness-110 transition-[filter] duration-[120ms] disabled:opacity-50 disabled:cursor-default"
             >
               {applyM.isPending ? "Applying…" : "Apply choices"}
             </button>

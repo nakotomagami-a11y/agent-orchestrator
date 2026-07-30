@@ -422,14 +422,14 @@ function SidebarFoot({ spendToday }: { spendToday: number }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full p-[10px] flex items-center gap-[10px] text-txt hover:bg-bg-3 transition-colors max-[1024px]:justify-center max-[1024px]:px-0 max-[1024px]:py-3"
+        className="w-full p-[8px] flex items-center gap-[10px] text-txt hover:bg-bg-3 transition-colors max-[1024px]:justify-center max-[1024px]:px-0 max-[1024px]:py-3"
         aria-label={t("common.open_settings")}
         aria-expanded={open}
       >
         <UserAvatar size={60} className="shrink-0" />
-        <div className="min-w-0 max-[1024px]:hidden">
-          <div className="text-[12px] font-medium">{t("sidebar.me_name")}</div>
-          <div className="text-[10.5px] text-txt-3 font-[var(--font-mono)]">{t("sidebar.me_sub")}</div>
+        <div className="min-w-0 flex flex-col gap-[2px] leading-none text-left max-[1024px]:hidden">
+          <div className="text-[12px] font-medium leading-none">{t("sidebar.me_name")}</div>
+          <div className="text-[10.5px] text-txt-3 font-[var(--font-mono)] leading-none">{t("sidebar.me_sub")}</div>
         </div>
         <div className="ml-auto flex items-center gap-[6px] max-[1024px]:hidden shrink-0">
           <span className="font-[var(--font-mono)] text-[11px] bg-bg-1 border border-line py-1 px-2 rounded-[999px] text-txt-2" aria-label={t("common.spend_today_aria", { amount: spendToday.toFixed(2) })}>

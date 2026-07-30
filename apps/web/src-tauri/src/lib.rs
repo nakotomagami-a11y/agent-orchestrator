@@ -97,14 +97,37 @@ pub fn run() {
             #[cfg(debug_assertions)]
             let _ = &server_setup;
 
+            // Clamp the launch size to the monitor's usable work area so the
+            // window never opens taller/wider than the screen (a frameless
+            // window opening past the top edge hides its own header — the OS
+            // won't offer a title bar to drag it back). Also clamp the minimum
+            // constraint: if min_inner_size exceeds the display the OS forces
+            // the window oversized regardless of the requested inner_size.
+            let (mut width, mut height) = (1400.0_f64, 900.0_f64);
+            let (mut min_w, mut min_h) = (1100.0_f64, 720.0_f64);
+            if let Ok(Some(monitor)) = app.primary_monitor() {
+                let scale = monitor.scale_factor();
+                let area = monitor.work_area();
+                // work_area is physical px; the builder takes logical px.
+                let avail_w = area.size.width as f64 / scale;
+                let avail_h = area.size.height as f64 / scale;
+                // Small margin so the frameless window isn't flush to the edges.
+                let max_w = (avail_w - 40.0).max(640.0);
+                let max_h = (avail_h - 40.0).max(480.0);
+                width = width.min(max_w);
+                height = height.min(max_h);
+                min_w = min_w.min(max_w);
+                min_h = min_h.min(max_h);
+            }
+
             WebviewWindowBuilder::new(
                 app,
                 "main",
                 WebviewUrl::External("http://localhost:5173".parse().unwrap()),
             )
             .title("Agent Office")
-            .inner_size(1400.0, 900.0)
-            .min_inner_size(1100.0, 720.0)
+            .inner_size(width, height)
+            .min_inner_size(min_w, min_h)
             .resizable(true)
             .fullscreen(false)
             .decorations(false)

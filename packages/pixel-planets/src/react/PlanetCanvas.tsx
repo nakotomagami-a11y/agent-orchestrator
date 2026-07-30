@@ -34,9 +34,9 @@
  *     (omit overflow-hidden)         → effects bleed outside the box (good for
  *                                      large previews and freeform types)
  */
-import { memo, useEffect, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import type { PlanetConfig } from "../types";
-import { getPlanetParams, CANVAS_SCALE } from "../params";
+import { getPlanetParams } from "../params";
 import { PlanetRenderer } from "../renderer/index";
 
 // ---------------------------------------------------------------------------
@@ -94,9 +94,18 @@ export const PlanetCanvas = memo(function PlanetCanvas({
 }: PlanetCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // For star (2×) and black-hole (3×), the canvas is larger than the wrapper
-  // so the disc appears at `size` px and surrounding effects fill the margin.
-  const canvasScale = config ? (CANVAS_SCALE[config.type] ?? 1) : 1;
+  // Resolve the real params up front so the display canvas is sized to the
+  // scale the render loop will actually use. This matters for the config-less
+  // fallback: getPlanetParams derives a gas-giant (2×) or rocky (1×) from the
+  // projectId, and the renderer renders at params.canvasScale. Deriving the
+  // scale from `config.type` alone (undefined → 1×) mis-sizes gas-giant
+  // fallbacks, clipping the disc and reading the outline out of bounds.
+  const params = useMemo(() => getPlanetParams(projectId, config), [projectId, config]);
+
+  // For star (2×), gas-giant (2×) and black-hole (3×), the canvas is larger
+  // than the wrapper so the disc appears at `size` px and surrounding effects
+  // fill the margin.
+  const canvasScale = params.canvasScale ?? 1;
   const canvasSize = size * canvasScale;
 
   useEffect(() => {
@@ -107,8 +116,6 @@ export const PlanetCanvas = memo(function PlanetCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const params = getPlanetParams(projectId, config);
-
     // Encode all appearance-affecting props into the key so changing any one
     // triggers unregister → register → fresh render.
     const key = config
@@ -117,7 +124,7 @@ export const PlanetCanvas = memo(function PlanetCanvas({
 
     renderer.register(key, { id: projectId, params, destCanvas: canvas, destCtx: ctx, size });
     return () => renderer.unregister(key);
-  }, [projectId, config, size]);
+  }, [projectId, config, size, params]);
 
   // Canvas is absolutely-centered inside the wrapper. When `canvasSize >
   // size` (star/black-hole/gas-giant) the ring/glow paints outside the

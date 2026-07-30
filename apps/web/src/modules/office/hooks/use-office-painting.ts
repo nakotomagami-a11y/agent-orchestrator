@@ -30,7 +30,9 @@ export function useOfficePainting({
       if (
         e.button === 0 &&
         buildModeRef.current &&
-        (toolRef.current === "grass" || toolRef.current === "erase") &&
+        // grass/erase paint terrain; "floor" raises a tier — all three support
+        // click-drag to fill a region instead of one cell at a time.
+        (toolRef.current === "grass" || toolRef.current === "erase" || toolRef.current === "floor") &&
         !isOnOverlay
       ) {
         isPainting.current = true;

@@ -11,6 +11,7 @@ import {
   type DecorationsMap,
 } from "../components/decorations";
 import { grassTilesetSrc, type GrassColor } from "../components/grass-colors";
+import { raisedCells, elevatedTiles, wallTiles } from "./elevation";
 import { BRIDGE_CAP_SRCS, FOAM_ANIM_SPEED, FOAM_FRAME, FOAM_FRAMES, FOAM_SHEET } from "./constants";
 import { getPathTexture } from "./path/path-texture";
 import { DEFAULT_PATH_MATERIAL } from "./path/materials";
@@ -142,11 +143,17 @@ export async function buildStaticLayers(
   }
 
   // ── Grass tiles ────────────────────────────────────────────────────────────
+  // Cells lifted a tier (a "floor" decoration) get an elevated-grass overlay on
+  // top of their ground grass and grow an auto-tiled stone cliff wall below.
+  const raised = raisedCells(decorations);
   const tilesetTex = textureMap.get(tilesetUrl);
   if (tilesetTex) {
     const QUARTER = TILE / 2; // 32
     const placed = buildTiles(grid);
     for (const t of placed) {
+      // Raised cells keep their opaque ground grass underneath (so the highland
+      // overlay's scalloped fringe never reveals the background), then get the
+      // elevated tile + cliff wall layered on top below.
       if (t.quarter) {
         // Half-tile: 32×32 quadrant of the source tile
         const qx = t.quarter === "tr" || t.quarter === "br" ? QUARTER : 0;
@@ -174,6 +181,16 @@ export async function buildStaticLayers(
         const tex = cropTexture(tilesetTex, t.c * TILE, t.r * TILE, TILE, TILE);
         terrainTilemap.tile(tex, t.x * TILE, t.y * TILE);
       }
+    }
+    // Elevated-grass surface (auto-tiled → cohesive platform), then the cliff
+    // walls hanging one tile below any south-exposed edge.
+    for (const t of elevatedTiles(raised)) {
+      const tex = cropTexture(tilesetTex, t.c * TILE, t.r * TILE, TILE, TILE);
+      terrainTilemap.tile(tex, t.x * TILE, t.y * TILE);
+    }
+    for (const t of wallTiles(raised)) {
+      const tex = cropTexture(tilesetTex, t.c * TILE, t.r * TILE, TILE, TILE);
+      terrainTilemap.tile(tex, t.x * TILE, t.y * TILE);
     }
   }
 
@@ -256,6 +273,8 @@ export async function buildStaticLayers(
       pathLayer.addChild(sprite);
       continue;
     }
+    // Raised-floor marker: terrain-only, rendered above as highland grass.
+    if (DECORATIONS[kind].family === "floor") continue;
 
     const def = DECORATIONS[kind];
     const srcForRot = decoSrc(def, inst);
@@ -317,8 +336,15 @@ export async function buildStaticLayers(
 
   // ── Bridge caps ────────────────────────────────────────────────────────────
   if (hasBridges) {
-    const isLand = (cx: number, cy: number): boolean =>
-      grid[cy]?.[cx] === true;
+    // A cap sits on a solid endpoint: land that ISN'T another bridge plank.
+    // Excluding bridge cells matters for gap bridges (their planks sit on land,
+    // unlike water bridges) so caps only land on the platform/ground ends.
+    const isBridgeCell = (cx: number, cy: number): boolean => {
+      const s = decorations[`${cx},${cy}`];
+      return !!s && s.some((e) => e.kind === "bridge_h" || e.kind === "bridge_v");
+    };
+    const isEnd = (cx: number, cy: number): boolean =>
+      grid[cy]?.[cx] === true && !isBridgeCell(cx, cy);
     for (const [key, stack] of Object.entries(decorations)) {
       const hasH = stack.some((e) => e.kind === "bridge_h");
       const hasV = stack.some((e) => e.kind === "bridge_v");
@@ -328,15 +354,15 @@ export async function buildStaticLayers(
       const by = Number(ys);
       const capPairs: Array<{ x: number; y: number; src: string }> = [];
       if (hasH) {
-        if (isLand(bx - 1, by))
+        if (isEnd(bx - 1, by))
           capPairs.push({ x: bx - 1, y: by, src: BRIDGE_CAP_SRCS.h_l });
-        if (isLand(bx + 1, by))
+        if (isEnd(bx + 1, by))
           capPairs.push({ x: bx + 1, y: by, src: BRIDGE_CAP_SRCS.h_r });
       }
       if (hasV) {
-        if (isLand(bx, by - 1))
+        if (isEnd(bx, by - 1))
           capPairs.push({ x: bx, y: by - 1, src: BRIDGE_CAP_SRCS.v_t });
-        if (isLand(bx, by + 1))
+        if (isEnd(bx, by + 1))
           capPairs.push({ x: bx, y: by + 1, src: BRIDGE_CAP_SRCS.v_b });
       }
       for (const { x, y, src } of capPairs) {

@@ -3,6 +3,7 @@
 import { memo } from "react";
 import {
   DECORATIONS,
+  bridgeGapValid,
   buildingOccupancy,
   decorationKey,
   footprintCells,
@@ -240,7 +241,8 @@ export function isToolValidAt(
   if (tool === "fill") return !cellHasGrass;
   if (tool === "erase") return cellHasGrass || (stack !== undefined && stack.length > 0);
   if (tool === "select") return false; // select never paints cells
-  if (!isPlacementValid(tool, cellHasGrass)) return false;
+  // Bridges: normal water placement, OR spanning a raised-platform gap on land.
+  if (!isPlacementValid(tool, cellHasGrass) && !bridgeGapValid(tool, x, y, grid, decorations)) return false;
   // Stackable props can repeat in a cell; unique kinds block re-placement.
   if (!isStackable(tool) && stack?.some((e) => e.kind === tool)) return false;
   // Cells acting as a bridge ramp are reserved for the cap - block any

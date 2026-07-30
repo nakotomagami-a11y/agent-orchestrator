@@ -21,7 +21,7 @@
 import type { PathMaterialId } from "../pixi/path/materials";
 
 export type Terrain = "land" | "water";
-export type DecoCategory = "land" | "buildings" | "water" | "paths" | "animals";
+export type DecoCategory = "land" | "buildings" | "water" | "paths" | "animals" | "levels";
 
 /**
  * Logical group a decoration belongs to. Each cell may hold at most one
@@ -55,6 +55,7 @@ export type DecoFamily =
   | "gold_mine"
   | "cursed_chest"
   | "bridge"
+  | "floor"
   | "path";
 
 export type DecorationKind =
@@ -110,6 +111,7 @@ export type DecorationKind =
   | "bridge_h"
   | "bridge_v"
   | "butterfly"
+  | "floor"
   | "path"
   | "path_stone"
   | "path_sand"
@@ -527,6 +529,20 @@ export const DECORATIONS: Record<DecorationKind, DecorationDef> = {
     colorable: true, colors: ["blue", "grey", "pink", "red", "white", "yellow"],
   },
 
+  // ─ Raised floor (levels). A marker decoration: placing it on a land cell
+  //   lifts that cell to the next tier — the terrain renderer swaps it to the
+  //   elevated grass tileset and auto-draws a stone cliff wall on any edge that
+  //   drops to a lower cell. Renders no sprite of its own (handled in
+  //   build-static-layers), so `src` is only the palette thumbnail: an interior
+  //   elevated-grass tile cropped from the shared 9×6 grass sheet.
+  floor: {
+    label: "Raised floor",
+    src: "/tiles/grass.png",
+    frameW: 64, frameH: 64, frames: 1,
+    terrain: "land", category: "levels", family: "floor",
+    sheetW: 576, sheetH: 384, previewCol: 6, previewRow: 1,
+  },
+
   // ─ Path (64×64 per tile, land-only). Procedurally generated at render time
   //   (see pixi/path/*): each cell's tile is drawn from a material config +
   //   world-space noise, auto-connecting to the 8 neighbouring "path" cells.
@@ -689,7 +705,7 @@ export function familyOf(kind: DecorationKind): DecoFamily {
  */
 export function isStackable(kind: DecorationKind): boolean {
   const def = DECORATIONS[kind];
-  return def.category !== "buildings" && def.family !== "bridge" && def.family !== "path";
+  return def.category !== "buildings" && def.family !== "bridge" && def.family !== "path" && def.family !== "floor";
 }
 
 /**
@@ -752,6 +768,41 @@ export function buildingOccupancy(decorations: DecorationsMap): Map<string, stri
     }
   }
   return occ;
+}
+
+/** True when the cell carries a raised-floor decoration (a 2nd-floor platform). */
+export function cellIsRaised(x: number, y: number, decorations: DecorationsMap): boolean {
+  const stack = decorations[decorationKey(x, y)];
+  return !!stack && stack.some((e) => DECORATIONS[e.kind].family === "floor");
+}
+
+/** True when the cell holds a bridge plank of the given axis. */
+function hasBridgeAxis(x: number, y: number, decorations: DecorationsMap, kind: "bridge_h" | "bridge_v"): boolean {
+  const stack = decorations[decorationKey(x, y)];
+  return !!stack && stack.some((e) => e.kind === kind);
+}
+
+/**
+ * A bridge may also be placed on a LOWER (non-raised) land cell to span the gap
+ * between raised platforms — valid when, along the bridge's axis, at least one
+ * neighbour is a raised platform (or an existing same-axis bridge, so a wider
+ * gap can be filled). Complements the normal water placement.
+ */
+export function bridgeGapValid(
+  kind: DecorationKind,
+  x: number,
+  y: number,
+  grid: boolean[][],
+  decorations: DecorationsMap,
+): boolean {
+  if (kind !== "bridge_h" && kind !== "bridge_v") return false;
+  if (grid[y]?.[x] !== true) return false; // gap must be land
+  if (cellIsRaised(x, y, decorations)) return false; // and lower than the platforms
+  const connects = (cx: number, cy: number) =>
+    cellIsRaised(cx, cy, decorations) || hasBridgeAxis(cx, cy, decorations, kind);
+  return kind === "bridge_h"
+    ? connects(x - 1, y) || connects(x + 1, y)
+    : connects(x, y - 1) || connects(x, y + 1);
 }
 
 /**

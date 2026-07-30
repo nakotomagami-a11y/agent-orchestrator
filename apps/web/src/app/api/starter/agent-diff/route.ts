@@ -188,13 +188,18 @@ function listInstalledAgents(): InstalledAgent[] {
   if (!existsSync(AGENTS_DIR)) return [];
   const out: InstalledAgent[] = [];
   for (const f of readdirSync(AGENTS_DIR)) {
-    // Skip memory sidecars, versioned body snapshots, archive dir, dotfiles.
+    // Skip memory sidecars, versioned body snapshots, archive dir, dotfiles,
+    // and the directory README. Mirror the domain listAgents() filter so a
+    // plain doc is never mistaken for an agent (the README-as-agent nag bug).
     if (!f.endsWith(".md")) continue;
+    if (f.toLowerCase() === "readme.md") continue;
     if (f.startsWith("_")) continue;
     if (f.endsWith(".memory.md")) continue;
     if (f.endsWith(".identity.md")) continue;
     if (f.includes(".body.")) continue;
     const raw = readFileSync(join(AGENTS_DIR, f), "utf8");
+    // Real agents have YAML frontmatter; docs and notes do not.
+    if (!/^---\n[\s\S]*?\n---\n?/.test(raw)) continue;
     out.push({
       id: f.replace(/\.md$/, ""),
       hash: shortHash(raw),
