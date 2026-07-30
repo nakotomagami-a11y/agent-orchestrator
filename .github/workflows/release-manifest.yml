@@ -8,7 +8,7 @@ name: Update Manifest
 
 on:
   workflow_run:
-    workflows: ["Linux Release", "Windows Release"]
+    workflows: ["Linux Release", "Windows Release", "macOS Release"]
     types: [completed]
 
 concurrency:
