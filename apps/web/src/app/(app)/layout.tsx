@@ -17,6 +17,7 @@ import { FlutterModal } from "@/modules/flutter/components/flutter-modal";
 import { ResizeHandles } from "@/components/layout/resize-handles";
 import { AgentCapModalMount } from "@/modules/office/components/agent-cap-modal-mount";
 import { RootSignInModal } from "@/modules/accounts/components/root-sign-in-modal";
+import { UpdateChecker } from "@/components/layout/update-checker";
 import { Toaster } from "@/components/ui/toaster";
 /**
  * Group layout for in-app pages (everything except auth, if/when added).
@@ -45,6 +46,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <FlutterModal />
       <AgentCapModalMount />
       <RootSignInModal />
+      <UpdateChecker />
     </GnomeWindow>
     <Titlebar />
     <TabStrip />

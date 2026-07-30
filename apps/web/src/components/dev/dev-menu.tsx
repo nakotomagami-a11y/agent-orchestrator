@@ -11,6 +11,8 @@ import { useOfficeStore } from "@/modules/office/hooks/use-office-store";
 import { usePerformanceStore, type PerformanceMode } from "@/lib/performance-store";
 import { useFpsMeterStore } from "@/lib/fps-meter-store";
 import { dumpStores, appStateSnapshot } from "./dev-instruments";
+import { isTauri } from "@/lib/tauri-window";
+import { requestUpdateCheck } from "@/lib/updater";
 
 const GIT_SHA = process.env.NEXT_PUBLIC_GIT_SHA || "";
 /** App boot time (module eval ≈ first client load). Used for the uptime readout. */
@@ -603,6 +605,9 @@ export function DevMenu() {
                 <SectionLabel>Utilities</SectionLabel>
                 <div className="flex flex-col gap-2">
                   <DevButton icon="refresh" label="Reload window" onClick={() => window.location.reload()} />
+                  {isTauri() && (
+                    <DevButton icon="download" label="Check for updates" onClick={() => requestUpdateCheck()} />
+                  )}
                   <DevButton icon="archive" label="Clear caches & hard reload" onClick={() => void clearCachesAndReload()} />
                   <DevButton icon="folder" label="Open logs folder" planned />
                   <DevButton icon="undo" label="Reset onboarding" onClick={() => void resetOnboarding()} />

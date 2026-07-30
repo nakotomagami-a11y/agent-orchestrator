@@ -21,12 +21,24 @@ fn wait_for_port(port: u16, timeout_secs: u64) -> bool {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // WebKitGTK 2.40+ ships a DMABUF renderer that corrupts textures and skips
+    // canvas repaints on Intel/Wayland (new buildings not showing until
+    // restart, glitchy WebGL). Only affects Linux — macOS/Windows use other
+    // webviews. Must be set before the webview initializes.
+    #[cfg(target_os = "linux")]
+    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+
     let server: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
     let server_setup = server.clone();
     let server_close = server.clone();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .setup(move |app| {
+            #[cfg(desktop)]
+            app.handle()
+                .plugin(tauri_plugin_updater::Builder::new().build())?;
+
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()

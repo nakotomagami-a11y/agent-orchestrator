@@ -1,4 +1,4 @@
-name: Windows Release
+name: Linux Release
 
 on:
   push:
@@ -7,17 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
+  build-linux:
+    runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      # Redirect the pnpm content store into the workspace for ALL steps.
-      # Next.js reads this to populate webpack snapshot.managedPaths; if it
-      # points to C:\Users\runneradmin\... webpack recursively scans the user
-      # profile and hits NTFS junctions / WindowsApps aliases → EPERM/EACCES.
-      npm_config_store_dir: ${{ github.workspace }}\.pnpm-store
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +28,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-pc-windows-msvc
+          targets: x86_64-unknown-linux-gnu
 
       - name: Cache Rust build artifacts
         uses: actions/cache@v4
@@ -49,35 +42,36 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
 
+      - name: Install system dependencies (Tauri + AppImage)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            libfuse2 \
+            patchelf \
+            build-essential \
+            curl \
+            wget \
+            file
+
       - name: Install pnpm dependencies
-        # Use copy mode so pnpm never creates NTFS junctions into the global
-        # store (C:\Users\runneradmin\...). Junctions look like plain dirs to
-        # Node.js, so webpack follows them into the user profile and hits
-        # untraversable junction points (e.g. "Application Data") → EPERM.
-        shell: pwsh
-        env:
-          npm_config_package_import_method: copy
-          npm_config_store_dir: ${{ github.workspace }}\.pnpm-store
         run: pnpm install --frozen-lockfile
 
       - name: Build Next.js (standalone)
         working-directory: apps/web
-        shell: pwsh
         env:
           NEXT_TELEMETRY_DISABLED: 1
         run: |
-          Remove-Item Env:__NEXT_PRIVATE_STANDALONE_CONFIG -ErrorAction SilentlyContinue
-          # Patch fs.readdir before next starts so NTFS junction EPERM errors
-          # (C:\Users\runneradmin\Application Data) are treated as empty dirs.
-          $env:NODE_OPTIONS = "--require $env:GITHUB_WORKSPACE\apps\web\scripts\patch-fs-eperm.cjs"
+          unset __NEXT_PRIVATE_STANDALONE_CONFIG
           pnpm exec next build
 
       - name: Prepare Tauri bundle
         working-directory: apps/web
-        shell: pwsh
         run: node scripts/prepare-bundle.mjs
 
-      - name: Build Tauri app (Windows)
+      - name: Build Tauri app (Linux)
         working-directory: apps/web
         env:
           # Sign the updater artifacts so the in-app updater will accept them.
@@ -89,12 +83,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # NSIS is the updater target on Windows; the -setup.exe.sig feeds
-          # latest.json. MSI stays for manual installs. See docs/AUTO_UPDATE.md.
+          # AppImage only on Linux — the .deb can't self-update (dpkg owns its
+          # files). The .tar.gz + .sig are the updater artifacts consumed by
+          # latest.json. See docs/AUTO_UPDATE.md.
           files: |
-            apps/web/src-tauri/target/release/bundle/nsis/*-setup.exe
-            apps/web/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
-            apps/web/src-tauri/target/release/bundle/msi/*.msi
+            apps/web/src-tauri/target/release/bundle/appimage/*.AppImage
+            apps/web/src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz
+            apps/web/src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz.sig
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -103,9 +98,9 @@ jobs:
         uses: actions/upload-artifact@v4
         if: "!startsWith(github.ref, 'refs/tags/')"
         with:
-          name: windows-installer
+          name: linux-installer
           path: |
-            apps/web/src-tauri/target/release/bundle/nsis/*-setup.exe
-            apps/web/src-tauri/target/release/bundle/nsis/*-setup.exe.sig
-            apps/web/src-tauri/target/release/bundle/msi/*.msi
+            apps/web/src-tauri/target/release/bundle/appimage/*.AppImage
+            apps/web/src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz
+            apps/web/src-tauri/target/release/bundle/appimage/*.AppImage.tar.gz.sig
           if-no-files-found: error

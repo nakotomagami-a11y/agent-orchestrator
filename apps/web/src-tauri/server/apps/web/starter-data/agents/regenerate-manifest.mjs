@@ -78,6 +78,10 @@ const version = pickVersion(existingVersion, versionArg);
 
 const files = readdirSync(HERE)
   .filter((f) => f.endsWith(".md"))
+  // Exclude the directory README and any doc without agent frontmatter, so a
+  // plain markdown file is never shipped as a bogus "README" agent.
+  .filter((f) => f.toLowerCase() !== "readme.md")
+  .filter((f) => /^---\n[\s\S]*?\n---\n?/.test(readFileSync(join(HERE, f), "utf8")))
   .sort();
 
 const agents = files.map((file) => {

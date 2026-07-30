@@ -15,9 +15,21 @@
     },
     "macOSPrivateApi": true
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/nakotomagami-a11y/agent-orchestrator/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM2NUY0RjhCMUMyNUY5NzkKUldSNStTVWNpMDlmTnZqR3NNMENyMzZZcWR0QWdKYk9Kem9FVEZTODJyM0FoajlKaTRoeWoxRjEK",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "resources": [
       "server",
       "binaries/node-*"

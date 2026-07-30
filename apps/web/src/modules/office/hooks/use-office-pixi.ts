@@ -11,6 +11,21 @@ import { buildStaticLayers, DECO_LAYER_LABEL } from "../pixi/build-static-layers
 import { buildAgentLayer } from "../pixi/build-agent-layer";
 import { GLOW_AMBER, GLOW_RED, setGlowColor, type AgentContainerExtras } from "../pixi/glow";
 
+// The "water" behind the map (.office-scene backgroundColor). Pixi clears to a
+// transparent framebuffer everywhere else so this shows through empty areas.
+const WATER_COLOR = 0x47aca9;
+
+// WebKitGTK (Tauri on Linux) mis-composites a transparent WebGL framebuffer:
+// it multiplies the whole canvas — including opaque tiles — down to near-zero
+// alpha, leaving a near-blank map (faint stripes) that renders fine in
+// Chromium / WKWebView / WebView2. Giving the renderer an OPAQUE clear color
+// equal to the water color dodges the bug with zero visual change. Gated so
+// other platforms keep the transparent canvas (and any future water shader).
+const isWebKitGTK =
+  typeof window !== "undefined" &&
+  "__TAURI_INTERNALS__" in window &&
+  /Linux/.test(navigator.userAgent);
+
 export interface OfficePixiProps {
   width: number;
   height: number;
@@ -125,7 +140,8 @@ export function useOfficePixi({
         canvas,
         width,
         height,
-        backgroundAlpha: 0,
+        background: WATER_COLOR,
+        backgroundAlpha: isWebKitGTK ? 1 : 0,
         antialias: false,
         resolution,
         autoDensity: true,
