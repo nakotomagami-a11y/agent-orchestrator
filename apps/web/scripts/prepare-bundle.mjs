@@ -29,18 +29,22 @@ function getTauriTargetTriple() {
   throw new Error(`Unsupported platform: ${p} ${a}`);
 }
 
-// Robocopy-backed directory copy for Windows — handles NTFS junction points
-// and exits codes 0-7 which robocopy uses to signal success+stats.
+// Robocopy-backed directory copy for Windows.
+// /E  — copy all subdirs including empty ones.
+// No /SL: we intentionally DO NOT preserve symlinks/junctions. Robocopy
+// follows each junction and copies the real target content. This dereferences
+// the pnpm virtual-store junction chain so the destination contains only
+// ordinary files — required for the Tauri bundle to be self-contained.
+// Robocopy exit codes 1–7 indicate success with stats; only >=8 are errors.
 function winCopy(src, dest) {
   if (existsSync(dest)) rmSync(dest, { recursive: true, force: true });
   mkdirSync(dest, { recursive: true });
   try {
     execSync(
-      `robocopy "${src}" "${dest}" /E /SL /COPYALL /NFL /NDL /NJH /NJS /NC /NS /NP`,
+      `robocopy "${src}" "${dest}" /E /NFL /NDL /NJH /NJS /NC /NS /NP`,
       { stdio: "inherit" }
     );
   } catch (err) {
-    // robocopy exits 1–7 for various success states; only >=8 is a real error.
     if (!err.status || err.status >= 8) throw err;
   }
 }
