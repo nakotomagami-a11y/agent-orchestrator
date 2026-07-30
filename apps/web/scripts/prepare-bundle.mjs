@@ -13,7 +13,6 @@ import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmod
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { platform, arch } from "node:os";
-import { execSync } from "node:child_process";
 
 console.log("prepare-bundle: starting, cwd =", process.cwd());
 console.log("prepare-bundle: platform =", platform(), arch());
@@ -29,34 +28,6 @@ function getTauriTargetTriple() {
   throw new Error(`Unsupported platform: ${p} ${a}`);
 }
 
-// Robocopy-backed directory copy for Windows.
-// /E  — copy all subdirs including empty ones.
-// No /SL: we intentionally DO NOT preserve symlinks/junctions. Robocopy
-// follows each junction and copies the real target content. This dereferences
-// the pnpm virtual-store junction chain so the destination contains only
-// ordinary files — required for the Tauri bundle to be self-contained.
-// Robocopy exit codes 1–7 indicate success with stats; only >=8 are errors.
-function winCopy(src, dest) {
-  if (existsSync(dest)) rmSync(dest, { recursive: true, force: true });
-  mkdirSync(dest, { recursive: true });
-  try {
-    execSync(
-      `robocopy "${src}" "${dest}" /E /NFL /NDL /NJH /NJS /NC /NS /NP`,
-      { stdio: "inherit" }
-    );
-  } catch (err) {
-    if (!err.status || err.status >= 8) throw err;
-  }
-}
-
-function safeCpSync(src, dest, opts) {
-  if (platform() === "win32") {
-    winCopy(src, dest);
-  } else {
-    cpSync(src, dest, { recursive: true, dereference: true, ...opts });
-  }
-}
-
 try {
   const __dirname = dirname(fileURLToPath(import.meta.url));
   const appRoot = join(__dirname, ".."); // apps/web/
@@ -69,17 +40,29 @@ try {
   }
   console.log("prepare-bundle: standalone dir found");
 
-  // 1. Copy standalone server output
+  // 1. Copy standalone server output.
+  //    cpSync with { dereference: true } is used on all platforms.
+  //    On Windows, pnpm creates NTFS *junction points* (not Windows symbolic
+  //    links) for node_modules entries. Junction points appear as regular
+  //    directories to lstatSync, so cpSync traverses through them
+  //    transparently — no realpathSync or stat on the junction itself is
+  //    needed, avoiding EPERM on Windows symlink-stat restrictions.
   const serverDestDir = join(tauriDir, "server");
+  if (existsSync(serverDestDir)) {
+    rmSync(serverDestDir, { recursive: true, force: true });
+  }
   console.log("prepare-bundle: copying standalone →", serverDestDir);
-  safeCpSync(standaloneDir, serverDestDir, {});
+  cpSync(standaloneDir, serverDestDir, { recursive: true, dereference: true });
   console.log("prepare-bundle: standalone copy done");
 
-  // 1b. Fix pnpm symlinks in apps/web/node_modules — Next.js standalone with pnpm
-  //     produces relative symlinks (next → ../../../.pnpm/...); cpSync turns them
-  //     into absolute symlinks pointing into the source tree. Tauri's DEB bundler
-  //     skips symlinks entirely, so next/react never make it into the package.
+  // 1b. Fix pnpm symlinks in apps/web/node_modules — Next.js standalone with
+  //     pnpm on Linux/macOS produces relative symlinks (next →
+  //     ../../../.pnpm/...); cpSync turns them into absolute symlinks pointing
+  //     into the source tree. Tauri's DEB bundler skips symlinks entirely, so
+  //     next/react never make it into the package.
   //     Replace each symlink with a real copy dereferenced from the pnpm store.
+  //     On Windows, cpSync dereferences NTFS junctions to real directories so
+  //     there are no symlinks left — this block is a no-op there.
   const appWebModulesDir = join(serverDestDir, "apps", "web", "node_modules");
   if (existsSync(appWebModulesDir)) {
     for (const entry of readdirSync(appWebModulesDir, { withFileTypes: true })) {
@@ -92,10 +75,11 @@ try {
     }
   }
 
-  // 1c. Hoist pnpm virtual store → flat server/node_modules so next and its runtime
-  //     deps (styled-jsx, busboy, @next/env, etc.) resolve via standard Node.js
-  //     module resolution. The standalone output puts everything in .pnpm/ but
-  //     omits the top-level hoisted symlinks that pnpm normally creates.
+  // 1c. Hoist pnpm virtual store → flat server/node_modules so next and its
+  //     runtime deps (styled-jsx, busboy, @next/env, etc.) resolve via
+  //     standard Node.js module resolution. The standalone output puts
+  //     everything in .pnpm/ but omits the top-level hoisted symlinks that
+  //     pnpm normally creates.
   const pnpmVirtualStore = join(serverDestDir, "node_modules", ".pnpm");
   const rootNodeModules = join(serverDestDir, "node_modules");
   if (existsSync(pnpmVirtualStore)) {
@@ -127,8 +111,9 @@ try {
     console.log("  pnpm store hoisted → server/node_modules/");
   }
 
-  // 2. Static assets — in a pnpm monorepo the standalone tree mirrors the repo
-  //    structure, so static files must land at apps/web/.next/static/ within it.
+  // 2. Static assets — in a pnpm monorepo the standalone tree mirrors the
+  //    repo structure, so static files must land at apps/web/.next/static/
+  //    within it.
   console.log("prepare-bundle: copying static assets...");
   cpSync(
     join(appRoot, ".next", "static"),
