@@ -26,13 +26,6 @@ jobs:
         with:
           version: 11.0.9
 
-      - name: Configure pnpm store within workspace
-        # Keep the content-addressable store inside the workspace so that
-        # @vercel/nft never traces into the Windows user profile, which
-        # contains NTFS junction points that cannot be enumerated (EPERM).
-        shell: bash
-        run: pnpm config set store-dir "$GITHUB_WORKSPACE/.pnpm-store"
-
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -51,6 +44,14 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-
 
       - name: Install pnpm dependencies
+        # Use copy mode so pnpm never creates NTFS junctions into the global
+        # store (C:\Users\runneradmin\...). Junctions look like plain dirs to
+        # Node.js, so webpack follows them into the user profile and hits
+        # untraversable junction points (e.g. "Application Data") → EPERM.
+        shell: pwsh
+        env:
+          npm_config_package_import_method: copy
+          npm_config_store_dir: ${{ github.workspace }}\.pnpm-store
         run: pnpm install --frozen-lockfile
 
       - name: Build Next.js (standalone)
