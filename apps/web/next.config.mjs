@@ -1,9 +1,12 @@
 import createNextIntlPlugin from "next-intl/plugin";
 import { createRequire } from "module";
 import { execSync } from "node:child_process";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const require = createRequire(import.meta.url);
 const pkg = require("./package.json");
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -18,6 +21,10 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Constrain @vercel/nft file tracing to the monorepo root. Without this,
+  // on Windows the tracer follows pnpm junctions into the user profile and
+  // hits NTFS junction points (e.g. "Application Data") it can't enumerate.
+  outputFileTracingRoot: join(__dirname, "../../"),
   env: {
     NEXT_PUBLIC_APP_VERSION: pkg.version,
     NEXT_PUBLIC_GIT_SHA: gitSha,
