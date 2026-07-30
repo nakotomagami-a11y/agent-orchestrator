@@ -11,6 +11,12 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
+    env:
+      # Redirect the pnpm content store into the workspace for ALL steps.
+      # Next.js reads this to populate webpack snapshot.managedPaths; if it
+      # points to C:\Users\runneradmin\... webpack recursively scans the user
+      # profile and hits NTFS junctions / WindowsApps aliases → EPERM/EACCES.
+      npm_config_store_dir: ${{ github.workspace }}\.pnpm-store
 
     steps:
       - name: Checkout
