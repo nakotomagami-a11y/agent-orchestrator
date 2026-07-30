@@ -34,7 +34,7 @@ const nextConfig = {
   // Hide the default `X-Powered-By: Next.js` header — fingerprint
   // suppression, defense-in-depth.
   poweredByHeader: false,
-  transpilePackages: ["@agent-office/domain"],
+  transpilePackages: ["@agent-office/domain", "@agent-office/pixel-icons", "@agent-office/pixel-planets"],
   serverExternalPackages: ["better-sqlite3"],
   webpack: (config, { isServer }) => {
     if (isServer) {
