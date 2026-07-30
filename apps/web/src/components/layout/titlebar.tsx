@@ -16,6 +16,7 @@ import {
 import { RefreshButton } from "./refresh-button";
 import { DevMenu } from "@/components/dev/dev-menu";
 import { SkillUpdatesBell } from "./skill-updates-bell";
+import { UpdateBell } from "./update-bell";
 
 /**
  * The in-app titlebar plays two roles depending on where the app runs:
@@ -103,6 +104,7 @@ export function Titlebar() {
         </div>
         <div className="flex items-center gap-2 justify-end flex-1 min-w-0">
           <SkillUpdatesBell />
+          <UpdateBell />
           <DevMenu />
           <RefreshButton />
           <button
