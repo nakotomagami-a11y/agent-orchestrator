@@ -4,18 +4,16 @@
  * Outputs:
  *   src-tauri/server/   ← Next.js standalone server + static/public assets
  *   src-tauri/binaries/node-<triple>[.exe]  ← this Node.js binary
- *
- * Usage (via beforeBuildCommand in tauri.conf.json):
- *   pnpm exec next build && node scripts/prepare-bundle.mjs
  */
 
-import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync, realpathSync } from "node:fs";
+import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync, realpathSync, lstatSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { platform, arch } from "node:os";
 
 console.log("prepare-bundle: starting, cwd =", process.cwd());
 console.log("prepare-bundle: platform =", platform(), arch());
+console.log("prepare-bundle: node =", process.version);
 
 function getTauriTargetTriple() {
   const p = platform();
@@ -28,41 +26,77 @@ function getTauriTargetTriple() {
   throw new Error(`Unsupported platform: ${p} ${a}`);
 }
 
-try {
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const appRoot = join(__dirname, ".."); // apps/web/
-  const tauriDir = join(appRoot, "src-tauri");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const appRoot = join(__dirname, ".."); // apps/web/
+const tauriDir = join(appRoot, "src-tauri");
+const workspaceRoot = join(appRoot, "..", "..");
 
-  const standaloneDir = join(appRoot, ".next", "standalone");
-  if (!existsSync(standaloneDir)) {
-    console.error("ERROR: .next/standalone not found — did `next build` complete with output: 'standalone'?");
-    process.exit(1);
+const standaloneDir = join(appRoot, ".next", "standalone");
+if (!existsSync(standaloneDir)) {
+  console.error("ERROR: .next/standalone not found");
+  process.exit(1);
+}
+
+// Enumerate and diagnose each top-level entry in standalone
+console.log("\n=== standalone top-level entries ===");
+const topEntries = readdirSync(standaloneDir, { withFileTypes: true });
+for (const e of topEntries) {
+  const p = join(standaloneDir, e.name);
+  const flags = [
+    e.isDirectory() ? "dir" : "",
+    e.isFile() ? "file" : "",
+    e.isSymbolicLink() ? "symlink" : "",
+  ].filter(Boolean).join("+");
+
+  let realStr = "";
+  try {
+    const rp = realpathSync(p);
+    // Truncate long paths for readability
+    realStr = rp.length > 80 ? "..." + rp.slice(-77) : rp;
+  } catch (err) {
+    realStr = `[realpathSync FAIL: ${err.code}]`;
   }
-  console.log("prepare-bundle: standalone dir found");
+  console.log(`  ${e.name} [${flags}] -> ${realStr}`);
+}
+console.log("=== end ===\n");
 
-  // 1. Copy standalone server output.
-  //    cpSync with { dereference: true } is used on all platforms.
-  //    On Windows, pnpm creates NTFS *junction points* (not Windows symbolic
-  //    links) for node_modules entries. Junction points appear as regular
-  //    directories to lstatSync, so cpSync traverses through them
-  //    transparently — no realpathSync or stat on the junction itself is
-  //    needed, avoiding EPERM on Windows symlink-stat restrictions.
+// Check standalone/node_modules specifically
+const standaloneNM = join(standaloneDir, "node_modules");
+const workspaceNM = join(workspaceRoot, "node_modules");
+if (existsSync(standaloneNM)) {
+  let realNM = null;
+  try { realNM = realpathSync(standaloneNM); } catch (e) { realNM = `[FAIL: ${e.code}]`; }
+  console.log("standalone/node_modules realpath:", realNM);
+  console.log("workspace/node_modules path:    ", workspaceNM);
+  const isJunctionToWorkspace = realNM === workspaceNM;
+  console.log("isJunctionToWorkspace:", isJunctionToWorkspace, "\n");
+}
+
+try {
   const serverDestDir = join(tauriDir, "server");
   if (existsSync(serverDestDir)) {
     rmSync(serverDestDir, { recursive: true, force: true });
   }
-  console.log("prepare-bundle: copying standalone →", serverDestDir);
-  cpSync(standaloneDir, serverDestDir, { recursive: true, dereference: true });
+
+  // 1. Copy each top-level entry of standalone individually so we can
+  //    isolate any entry that crashes the process.
+  console.log("prepare-bundle: copying standalone top-level entries one by one...");
+  for (const entry of topEntries) {
+    const src = join(standaloneDir, entry.name);
+    const dest = join(serverDestDir, entry.name);
+    console.log(`  copying: ${entry.name} [${entry.isSymbolicLink() ? "symlink" : entry.isDirectory() ? "dir" : "file"}]`);
+    try {
+      cpSync(src, dest, { recursive: true, dereference: true });
+      console.log(`  done:    ${entry.name}`);
+    } catch (err) {
+      console.error(`  FAILED:  ${entry.name}: ${err.message}`);
+      throw err;
+    }
+  }
   console.log("prepare-bundle: standalone copy done");
 
-  // 1b. Fix pnpm symlinks in apps/web/node_modules — Next.js standalone with
-  //     pnpm on Linux/macOS produces relative symlinks (next →
-  //     ../../../.pnpm/...); cpSync turns them into absolute symlinks pointing
-  //     into the source tree. Tauri's DEB bundler skips symlinks entirely, so
-  //     next/react never make it into the package.
-  //     Replace each symlink with a real copy dereferenced from the pnpm store.
-  //     On Windows, cpSync dereferences NTFS junctions to real directories so
-  //     there are no symlinks left — this block is a no-op there.
+  // 1b. Fix pnpm symlinks in apps/web/node_modules (Linux/macOS only — on
+  //     Windows cpSync dereferences NTFS junctions to real dirs, so no-op).
   const appWebModulesDir = join(serverDestDir, "apps", "web", "node_modules");
   if (existsSync(appWebModulesDir)) {
     for (const entry of readdirSync(appWebModulesDir, { withFileTypes: true })) {
@@ -75,11 +109,7 @@ try {
     }
   }
 
-  // 1c. Hoist pnpm virtual store → flat server/node_modules so next and its
-  //     runtime deps (styled-jsx, busboy, @next/env, etc.) resolve via
-  //     standard Node.js module resolution. The standalone output puts
-  //     everything in .pnpm/ but omits the top-level hoisted symlinks that
-  //     pnpm normally creates.
+  // 1c. Hoist pnpm virtual store → flat server/node_modules.
   const pnpmVirtualStore = join(serverDestDir, "node_modules", ".pnpm");
   const rootNodeModules = join(serverDestDir, "node_modules");
   if (existsSync(pnpmVirtualStore)) {
@@ -111,9 +141,7 @@ try {
     console.log("  pnpm store hoisted → server/node_modules/");
   }
 
-  // 2. Static assets — in a pnpm monorepo the standalone tree mirrors the
-  //    repo structure, so static files must land at apps/web/.next/static/
-  //    within it.
+  // 2. Static assets
   console.log("prepare-bundle: copying static assets...");
   cpSync(
     join(appRoot, ".next", "static"),
@@ -121,16 +149,14 @@ try {
     { recursive: true }
   );
 
-  // 3. Public dir — same nesting
+  // 3. Public dir
   const publicDir = join(appRoot, "public");
   if (existsSync(publicDir)) {
     cpSync(publicDir, join(serverDestDir, "apps", "web", "public"), { recursive: true });
   }
 
-  // 4. Copy better-sqlite3 (+ its runtime deps) — Next.js standalone doesn't
-  //    trace native addons from workspace packages automatically.
+  // 4. Copy better-sqlite3 (+ its runtime deps)
   console.log("prepare-bundle: copying native modules...");
-  const workspaceRoot = join(appRoot, "..", "..");
   const pnpmStore = join(workspaceRoot, "node_modules", ".pnpm");
   const nativeModules = [
     {
@@ -155,10 +181,7 @@ try {
     }
   }
 
-  // 5. Remove sharp's platform-specific native libs wherever they land.
-  //    On Linux these trip linuxdeploy during AppImage builds (.so files).
-  //    On Windows Tauri's bundler can get confused by stray sharp .dll files.
-  //    Next.js falls back to its built-in image optimizer when sharp is absent.
+  // 5. Remove sharp native libs on Linux (trip linuxdeploy)
   if (platform() !== "win32") {
     const pnpmVStore = join(serverDestDir, "node_modules", ".pnpm");
     if (existsSync(pnpmVStore)) {
@@ -199,7 +222,6 @@ try {
   console.log("✓ Bundle prepared");
   console.log(`  server  → ${serverDestDir}`);
   console.log(`  node    → ${nodeDest}`);
-  console.log(`  (node ${process.version} from ${process.execPath} [${targetTriple}])`);
 } catch (err) {
   console.error("prepare-bundle FAILED:", err.message);
   console.error(err.stack);
