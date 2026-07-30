@@ -37,6 +37,10 @@ const nextConfig = {
         "bindings",
       ];
     }
+    // pnpm uses symlinks extensively. On Windows, following those symlinks can
+    // lead webpack outside the project tree into NTFS junction points (e.g.
+    // "Application Data") that aren't enumerable, causing fatal EPERM errors.
+    config.resolve.symlinks = false;
     return config;
   },
   /**
