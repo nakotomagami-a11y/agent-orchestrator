@@ -134,7 +134,7 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end", trigger
                 "flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline w-full",
                 item.destructive && "text-status-error",
                 item.selected && "bg-acc text-[var(--acc-ink)]",
-                i === activeIndex && "bg-acc text-[var(--acc-ink)]"
+                !item.selected && i === activeIndex && "bg-bg-3 text-txt"
               )}
               >
                 {item.label}
