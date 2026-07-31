@@ -234,6 +234,15 @@ try {
       }
     }
     console.log("  pnpm store hoisted → server/node_modules/");
+
+    // Delete the virtual store now that packages are hoisted. NSIS bundles
+    // everything under server/ recursively; the traced standalone output only
+    // contains a production subset of each package, so files like Next.js
+    // dev-overlay components are absent and NSIS aborts on the missing entry.
+    // The flat hoisted packages are all the runtime needs — .pnpm is never
+    // used by Node.js module resolution when every dependency is at the root.
+    rmSync(pnpmVirtualStore, { recursive: true, force: true });
+    console.log("  removed .pnpm virtual store (not needed after hoisting)");
   }
 
   // 2. Static assets
