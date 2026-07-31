@@ -54,8 +54,7 @@ jobs:
             build-essential \
             curl \
             wget \
-            file \
-            strace
+            file
 
       - name: Install pnpm dependencies
         run: pnpm install --frozen-lockfile
@@ -136,9 +135,7 @@ jobs:
           sudo chattr +i ~/.cache/tauri/linuxdeploy-x86_64.AppImage
 
       - name: Build Tauri app (Linux)
-        id: build
         working-directory: apps/web
-        continue-on-error: true
         env:
           # Sign the updater artifacts so the in-app updater will accept them.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -148,28 +145,7 @@ jobs:
           # linuxdeploy to produce the final .AppImage) fails to start. This
           # forces every nested AppImage to self-extract instead.
           APPIMAGE_EXTRACT_AND_RUN: "1"
-        # DIAGNOSTIC: strace-wrapped to find the exact missing path behind the
-        # recurring "No such file or directory (os error 2)" AppImage bundling
-        # failure, which survived eliminating the linuxdeploy-plugin-gtk
-        # symlink bug, FUSE, and a suspected cold-cache download race. Remove
-        # the strace wrapper once the root cause is confirmed and fixed.
-        run: |
-          strace -f -e trace=openat,open,stat,lstat,newfstatat,execve -s 300 \
-            -o /tmp/tauri-build-strace.log -- pnpm tauri build
-
-      - name: Show strace context around the failure
-        if: steps.build.outcome == 'failure'
-        run: |
-          echo "=== strace file size ==="
-          wc -l /tmp/tauri-build-strace.log
-          echo "=== lines mentioning appimage/AppDir (the actual bundling phase, not Rust compile noise) ==="
-          grep -in "appimage\|appdir" /tmp/tauri-build-strace.log | tail -200
-          echo "=== ENOENT within those ==="
-          grep -in "appimage\|appdir" /tmp/tauri-build-strace.log | grep ENOENT
-
-      - name: Fail job if build failed
-        if: steps.build.outcome == 'failure'
-        run: exit 1
+        run: pnpm tauri build
 
       - name: Upload installers to GitHub Release
         uses: softprops/action-gh-release@v2
