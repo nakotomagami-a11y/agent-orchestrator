@@ -72,6 +72,84 @@ if (existsSync(standaloneNM)) {
   console.log("isJunctionToWorkspace:", isJunctionToWorkspace, "\n");
 }
 
+// Also check standalone/apps/web/node_modules — on Windows this is often an
+// NTFS junction back to the workspace node_modules, causing cpSync to recurse
+// into the full pnpm virtual store and crash at the C level.
+const standaloneAppWebNM = join(standaloneDir, "apps", "web", "node_modules");
+if (existsSync(standaloneAppWebNM)) {
+  let appWebNMStat = null;
+  let appWebNMReal = null;
+  try { appWebNMStat = lstatSync(standaloneAppWebNM); } catch (e) { /* ignore */ }
+  try { appWebNMReal = realpathSync(standaloneAppWebNM); } catch (e) { appWebNMReal = `[FAIL: ${e.code}]`; }
+  const isJunction = appWebNMStat?.isSymbolicLink() ?? false;
+  console.log("standalone/apps/web/node_modules isSymlink/junction:", isJunction);
+  console.log("standalone/apps/web/node_modules realpath:", appWebNMReal, "\n");
+}
+
+/**
+ * JS-level recursive copy that dereferences symlinks/junctions safely.
+ * cpSync(dereference:true) uses C-level recursion and crashes on Windows when
+ * it follows an NTFS junction into the deep pnpm virtual store (C stack
+ * overflow). This version uses JS recursion with a cycle-detection stack.
+ */
+function safeCpSync(src, dest, _stack = new Set()) {
+  let srcStat;
+  try {
+    srcStat = lstatSync(src);
+  } catch (err) {
+    console.warn(`    WARN: cannot stat ${src}: ${err.message}`);
+    return;
+  }
+
+  if (srcStat.isSymbolicLink()) {
+    let realSrc;
+    try {
+      realSrc = realpathSync(src);
+    } catch (err) {
+      console.warn(`    WARN: cannot resolve symlink ${src}: ${err.message}`);
+      return;
+    }
+    if (_stack.has(realSrc)) {
+      console.warn(`    WARN: circular junction ${src} -> ${realSrc}, skipping`);
+      return;
+    }
+    safeCpSync(realSrc, dest, _stack);
+    return;
+  }
+
+  if (srcStat.isDirectory()) {
+    let realSrc;
+    try { realSrc = realpathSync(src); } catch { realSrc = src; }
+    if (_stack.has(realSrc)) {
+      console.warn(`    WARN: circular dir ref ${src}, skipping`);
+      return;
+    }
+    mkdirSync(dest, { recursive: true });
+    _stack.add(realSrc);
+    let entries;
+    try {
+      entries = readdirSync(src, { withFileTypes: true });
+    } catch (err) {
+      console.warn(`    WARN: cannot readdir ${src}: ${err.message}`);
+      _stack.delete(realSrc);
+      return;
+    }
+    for (const entry of entries) {
+      safeCpSync(join(src, entry.name), join(dest, entry.name), _stack);
+    }
+    _stack.delete(realSrc);
+    return;
+  }
+
+  if (srcStat.isFile()) {
+    try {
+      copyFileSync(src, dest);
+    } catch (err) {
+      console.warn(`    WARN: cannot copy file ${src}: ${err.message}`);
+    }
+  }
+}
+
 try {
   const serverDestDir = join(tauriDir, "server");
   if (existsSync(serverDestDir)) {
@@ -86,7 +164,14 @@ try {
     const dest = join(serverDestDir, entry.name);
     console.log(`  copying: ${entry.name} [${entry.isSymbolicLink() ? "symlink" : entry.isDirectory() ? "dir" : "file"}]`);
     try {
-      cpSync(src, dest, { recursive: true, dereference: true });
+      // On Windows use safeCpSync (JS-level recursion with cycle detection)
+      // to avoid C-level stack overflows caused by deeply nested NTFS junctions
+      // in the pnpm virtual store (e.g. apps/web/node_modules junction).
+      if (platform() === "win32") {
+        safeCpSync(src, dest);
+      } else {
+        cpSync(src, dest, { recursive: true, dereference: true });
+      }
       console.log(`  done:    ${entry.name}`);
     } catch (err) {
       console.error(`  FAILED:  ${entry.name}: ${err.message}`);
