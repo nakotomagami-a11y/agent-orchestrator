@@ -83,6 +83,10 @@ jobs:
           # Sign the updater artifacts so the in-app updater will accept them.
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # tauri.conf.json beforeBuildCommand re-runs `next build`. Apply the
+          # same EPERM patch as the explicit build step so webpack doesn't crash
+          # scanning .next/standalone NTFS junctions on the second pass.
+          NODE_OPTIONS: "--require ${{ github.workspace }}/apps/web/scripts/patch-fs-eperm.cjs"
         run: pnpm tauri build
 
       - name: Upload installers to GitHub Release
