@@ -37,11 +37,26 @@ export async function PUT(request: Request) {
   const raw: unknown = await request.json();
   const { data, error } = validateBody(settingsPatchSchema, raw);
   if (error) return error;
-  const next = {
+  const next: AppSettings = {
     projectsRoot: data.projectsRoot.trim(),
     excluded: data.excluded.filter((s) => typeof s === "string"),
     firstRunComplete: true,
   };
+  // Preserve an existing saved key unless the caller is explicitly clearing it
+  // (empty string) or providing a new one.
+  const trimmedKey = data.anthropicApiKey?.trim();
+  if (trimmedKey) {
+    next.anthropicApiKey = trimmedKey;
+  } else if (typeof data.anthropicApiKey === "string") {
+    // empty string passed → clear the stored key
+    next.anthropicApiKey = undefined;
+  } else {
+    // field absent → carry over whatever was previously saved
+    const existing = settings.readSettings();
+    if (existing?.anthropicApiKey) next.anthropicApiKey = existing.anthropicApiKey;
+  }
   settings.writeSettings(next);
-  return NextResponse.json(next);
+  // Don't echo back the key in the response
+  const { anthropicApiKey: _omit, ...safe } = next;
+  return NextResponse.json(safe);
 }

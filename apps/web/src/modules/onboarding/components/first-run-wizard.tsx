@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useActiveProjectStore } from "@/lib/active-project-store";
 import { cn } from "@/lib/cn";
 import { RequirementsStep } from "./first-run-wizard-steps/requirements-step";
+import { ApiKeyStep } from "./first-run-wizard-steps/api-key-step";
 import { RootStep } from "./first-run-wizard-steps/root-step";
 import { ExcludedStep } from "./first-run-wizard-steps/excluded-step";
 import { AgentsStep } from "./first-run-wizard-steps/agents-step";
@@ -37,11 +38,12 @@ interface StarterAgent {
   description: string;
 }
 
-type Step = "requirements" | "root" | "excluded" | "agents" | "project";
-const STEP_ORDER: Step[] = ["requirements", "root", "excluded", "agents", "project"];
+type Step = "requirements" | "api-key" | "root" | "excluded" | "agents" | "project";
+const STEP_ORDER: Step[] = ["requirements", "api-key", "root", "excluded", "agents", "project"];
 
 interface WizardDraft {
   step: Step;
+  apiKey: string;
   root: string;
   excluded: string[];
   selectedAgents: string[];
@@ -84,6 +86,7 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const draft = useMemo(() => loadDraft(), []);
 
   const [step, setStep] = useState<Step>(draft?.step ?? "requirements");
+  const [apiKey, setApiKey] = useState(draft?.apiKey ?? "");
   const [root, setRoot] = useState(draft?.root ?? HOME_FALLBACK);
   const [excluded, setExcluded] = useState<string[]>(draft?.excluded ?? DEFAULT_EXCLUDED);
   const [excludedInput, setExcludedInput] = useState("");
@@ -99,9 +102,13 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
   const [dismissed, setDismissed] = useState(false);
 
   // Persist draft after every meaningful state change.
+  // Note: the API key is intentionally NOT saved to localStorage draft —
+  // we only send it to the server at finish time to avoid persisting secrets
+  // in browser storage.
   useEffect(() => {
     saveDraft({
       step,
+      apiKey: "",
       root,
       excluded,
       selectedAgents: [...selectedAgents],
@@ -149,7 +156,13 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
     mutationFn: async () => {
       await apiFetch<AppSettings>(API_ROUTES.settings, {
         method: "PUT",
-        body: { projectsRoot: root.trim(), excluded },
+        body: {
+          projectsRoot: root.trim(),
+          excluded,
+          // Only include the key if the user actually entered one. Empty string
+          // is omitted so we don't accidentally clear a key saved elsewhere.
+          ...(apiKey.trim() ? { anthropicApiKey: apiKey.trim() } : {}),
+        },
       });
 
       if (selectedAgents.size > 0) {
@@ -312,6 +325,10 @@ export function FirstRunWizard({ onDone }: { onDone: () => void }) {
         <div className="overflow-y-auto flex-1 px-[24px] py-[18px]">
           {step === "requirements" ? (
             <RequirementsStep health={healthQ.data} loading={healthQ.isLoading} />
+          ) : null}
+
+          {step === "api-key" ? (
+            <ApiKeyStep apiKey={apiKey} onApiKeyChange={setApiKey} />
           ) : null}
 
           {step === "root" ? (

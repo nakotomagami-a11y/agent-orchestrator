@@ -20,6 +20,8 @@ export const agentBodyListSchema = z.array(agentBodySchema);
 export const settingsPatchSchema = z.object({
   projectsRoot: z.string().min(1),
   excluded: z.array(z.string()).default([]),
+  /** Optional API key collected during first-run setup. Empty string = clear. */
+  anthropicApiKey: z.string().optional(),
 });
 
 export const settingsScanQuerySchema = z.object({
