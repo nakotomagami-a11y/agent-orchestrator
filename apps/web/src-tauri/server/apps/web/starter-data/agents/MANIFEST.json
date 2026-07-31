@@ -1,6 +1,6 @@
 {
-  "version": "2026-07-16-1",
-  "generated": "2026-07-30",
+  "version": "2026-07-31-1",
+  "generated": "2026-07-31",
   "note": "Regenerate on any starter agent change. Version bump triggers the migration modal in-app.",
   "agents": [
     {
