@@ -225,12 +225,6 @@ export interface AppSettings {
   projectsRoot: string;
   excluded: string[];
   firstRunComplete: boolean;
-  /**
-   * Anthropic API key stored by the user during first-run setup.
-   * Injected into every `claude` subprocess env when `ANTHROPIC_API_KEY` is
-   * not already present in the server process environment.
-   */
-  anthropicApiKey?: string;
   features?: {
     multiInstance?: boolean;
   };

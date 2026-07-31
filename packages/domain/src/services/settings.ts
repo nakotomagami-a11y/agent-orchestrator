@@ -17,16 +17,12 @@ export function readSettings(): AppSettings | null {
     if (typeof raw.projectsRoot !== "string") return null;
     const features: AppSettings["features"] =
       raw.features && typeof raw.features === "object" ? { ...raw.features } : {};
-    const result: AppSettings = {
+    return {
       projectsRoot: raw.projectsRoot,
       excluded: Array.isArray(raw.excluded) ? raw.excluded.filter((s) => typeof s === "string") : [],
       firstRunComplete: raw.firstRunComplete === true,
       features,
     };
-    if (typeof raw.anthropicApiKey === "string" && raw.anthropicApiKey.trim()) {
-      result.anthropicApiKey = raw.anthropicApiKey.trim();
-    }
-    return result;
   } catch {
     return null;
   }

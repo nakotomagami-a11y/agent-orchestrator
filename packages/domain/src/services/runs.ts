@@ -16,7 +16,6 @@ import * as db from "./db";
 import * as accounts from "./accounts";
 import * as githubAccounts from "./github-accounts";
 import { readProject } from "./projects";
-import { readSettings } from "./settings";
 import { acquireInhibit, releaseInhibit, forceReleaseInhibit } from "./sleep-inhibit";
 
 export type SseEvent =
@@ -296,15 +295,6 @@ export function resolveSpawnEnv(opts: StartRunOpts): { env: NodeJS.ProcessEnv; a
   const fromProject = !explicit ? project?.meta.accountId : undefined;
   const resolvedId = explicit ?? fromProject;
   const env: NodeJS.ProcessEnv = { ...process.env, PATH: buildAugmentedPath() };
-
-  // Inject the API key saved via the wizard when it is not already present in
-  // the server process environment (e.g. on a clean Tauri install where the
-  // user has no ANTHROPIC_API_KEY system env var but entered it during setup).
-  if (!env.ANTHROPIC_API_KEY || env.ANTHROPIC_API_KEY.trim() === "") {
-    const saved = readSettings()?.anthropicApiKey;
-    if (saved) env.ANTHROPIC_API_KEY = saved;
-  }
-
   if (resolvedId && resolvedId !== DEFAULT_ACCOUNT_ID) {
     const account = accounts.get(resolvedId);
     if (account) {
