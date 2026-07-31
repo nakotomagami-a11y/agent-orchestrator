@@ -18,8 +18,13 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
   /** Anthropic Claude API key. Passed to every `claude` subprocess.
-   *  Warns (does not fatal) when missing so builds work in CI. */
-  ANTHROPIC_API_KEY: z.string().min(1).optional(),
+   *  Warns (does not fatal) when missing so builds work in CI.
+   *  Empty strings are normalised to undefined so that ANTHROPIC_API_KEY=""
+   *  (a common "clear the variable" pattern) does not cause a boot failure. */
+  ANTHROPIC_API_KEY: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
+    z.string().min(1).optional(),
+  ),
 
   /** Optional override for the bundled starter-data directory. */
   AGENT_OFFICE_STARTER_DATA: z.string().optional(),
