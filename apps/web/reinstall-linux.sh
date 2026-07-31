@@ -4,7 +4,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-pnpm tauri build
+# Scoped to deb only: the full build also creates a signed AppImage updater
+# artifact (createUpdaterArtifacts in tauri.conf.json), which requires
+# TAURI_SIGNING_PRIVATE_KEY — that key only exists as a GitHub Actions
+# secret, not on this machine. Local test installs don't need it.
+pnpm tauri build --bundles deb
 
 DEB=$(find src-tauri/target/release/bundle/deb -maxdepth 1 -name '*.deb' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
 if [ -z "$DEB" ]; then
