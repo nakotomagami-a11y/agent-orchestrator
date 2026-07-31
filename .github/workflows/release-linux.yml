@@ -71,6 +71,41 @@ jobs:
         working-directory: apps/web
         run: node scripts/prepare-bundle.mjs
 
+      - name: Pre-seed patched linuxdeploy (AppImage bundling fixes)
+        # 1. linuxdeploy-plugin-gtk.sh's `ln -s` at line 308 dies under `set -e`
+        #    when the AppDir already has that symlink — append `|| true`.
+        # 2. sharp's native .node/.so files aren't ELF-parseable by linuxdeploy's
+        #    dependency scanner and abort the whole bundle — strip them from the
+        #    AppDir right before linuxdeploy runs, via a wrapper around the real
+        #    binary (tauri-bundler skips downloading if the cache file exists).
+        run: |
+          mkdir -p ~/.cache/tauri
+          curl -fsSL -o ~/.cache/tauri/linuxdeploy-x86_64.AppImage.real \
+            https://github.com/tauri-apps/binary-releases/releases/download/linuxdeploy/linuxdeploy-x86_64.AppImage
+          chmod +x ~/.cache/tauri/linuxdeploy-x86_64.AppImage.real
+
+          curl -fsSL -o ~/.cache/tauri/linuxdeploy-plugin-gtk.sh \
+            https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gtk/master/linuxdeploy-plugin-gtk.sh
+          sed -i 's#\(ln \$verbose -s "\${file/\\/usr\\/lib\\//}" "\$APPDIR/usr/lib"\)$#\1 || true#' \
+            ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+          chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
+
+          cat > ~/.cache/tauri/linuxdeploy-x86_64.AppImage <<'EOF'
+          #!/bin/bash
+          APPDIR=""
+          for arg in "$@"; do
+            if [ -n "$_next" ]; then APPDIR="$arg"; _next=""; fi
+            [ "$arg" = "--appdir" ] && _next=1
+          done
+          if [ -n "$APPDIR" ]; then
+            find "$APPDIR" -name "sharp-linux-x64.node" -delete 2>/dev/null
+            find "$APPDIR" -name "libvips-cpp.so*" -delete 2>/dev/null
+          fi
+          "$HOME/.cache/tauri/linuxdeploy-x86_64.AppImage.real" "$@"
+          exit $?
+          EOF
+          chmod +x ~/.cache/tauri/linuxdeploy-x86_64.AppImage
+
       - name: Build Tauri app (Linux)
         working-directory: apps/web
         env:
