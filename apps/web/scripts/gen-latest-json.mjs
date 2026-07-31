@@ -24,10 +24,11 @@ const gh = (args) => execFileSync("gh", args, { encoding: "utf8" });
 
 // Map a `.sig` artifact filename → [tauri platform key, the artifact it signs].
 function platformFor(name) {
-  if (name.endsWith(".AppImage.tar.gz.sig")) return ["linux-x86_64", name.slice(0, -4)];
+  // This Tauri version signs the AppImage directly — no .tar.gz wrapping,
+  // despite what older Tauri docs describe.
+  if (name.endsWith(".AppImage.sig")) return ["linux-x86_64", name.slice(0, -4)];
   if (name.endsWith("-setup.exe.sig")) return ["windows-x86_64", name.slice(0, -4)];
-  // macOS updater artifacts (.app.tar.gz.sig) are added once a signed macOS
-  // build workflow exists — see docs/AUTO_UPDATE.md.
+  if (name.endsWith(".app.tar.gz.sig")) return ["darwin-aarch64", name.slice(0, -4)];
   return null;
 }
 
