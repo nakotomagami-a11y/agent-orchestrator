@@ -125,6 +125,16 @@ jobs:
           EOF
           chmod +x ~/.cache/tauri/linuxdeploy-x86_64.AppImage
 
+          # 4. ROOT CAUSE (found via strace): the execve() for this wrapper
+          #    itself returns ENOENT, despite the file existing right after
+          #    this step. tauri-bundler must revalidate/replace the cached
+          #    tool right before invoking it (it's not a real AppImage), and
+          #    the exec loses the race against that replacement. The exact
+          #    same failure was already solved for the local dev machine per
+          #    project notes: lock the wrapper immutable so nothing can
+          #    delete or overwrite it out from under the build.
+          sudo chattr +i ~/.cache/tauri/linuxdeploy-x86_64.AppImage
+
       - name: Build Tauri app (Linux)
         id: build
         working-directory: apps/web
