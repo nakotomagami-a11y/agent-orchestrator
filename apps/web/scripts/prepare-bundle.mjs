@@ -6,8 +6,8 @@
  *   src-tauri/binaries/node-<triple>[.exe]  ← this Node.js binary
  */
 
-import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync, realpathSync, lstatSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { copyFileSync, mkdirSync, cpSync, rmSync, readdirSync, existsSync, chmodSync, realpathSync, readlinkSync, lstatSync } from "node:fs";
+import { dirname, join, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { platform, arch } from "node:os";
 
@@ -105,9 +105,19 @@ function safeCpSync(src, dest, _stack = new Set()) {
     let realSrc;
     try {
       realSrc = realpathSync(src);
-    } catch (err) {
-      console.warn(`    WARN: cannot resolve symlink ${src}: ${err.message}`);
-      return;
+    } catch {
+      // realpathSync traverses the full junction chain and hits EPERM when any
+      // hop points through a protected Windows path. Fall back to readlinkSync
+      // which reads only the immediate reparse-point target (one hop).
+      try {
+        let link = readlinkSync(src);
+        if (!isAbsolute(link)) link = join(dirname(src), link);
+        // Strip Windows internal \??\ namespace prefix if present.
+        realSrc = link.replace(/^\\\?\?\\/, "");
+      } catch (err2) {
+        console.warn(`    WARN: cannot resolve symlink ${src}: ${err2.message}`);
+        return;
+      }
     }
     if (_stack.has(realSrc)) {
       console.warn(`    WARN: circular junction ${src} -> ${realSrc}, skipping`);
