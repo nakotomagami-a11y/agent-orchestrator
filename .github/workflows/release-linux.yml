@@ -90,6 +90,24 @@ jobs:
             ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
           chmod +x ~/.cache/tauri/linuxdeploy-plugin-gtk.sh
 
+          # 3. tauri-bundler downloads these on-demand right as it starts the
+          #    AppImage bundling step and appears to use them before the async
+          #    download finishes on a cold cache (fails instantly with ENOENT,
+          #    every time, on a fresh runner — never seen locally because these
+          #    have been cached there for months). Pre-seed them too so nothing
+          #    downloads during the actual build step.
+          curl -fsSL -o ~/.cache/tauri/AppRun-x86_64 \
+            https://github.com/tauri-apps/binary-releases/releases/download/apprun-old/AppRun-x86_64
+          chmod +x ~/.cache/tauri/AppRun-x86_64
+
+          curl -fsSL -o ~/.cache/tauri/linuxdeploy-plugin-gstreamer.sh \
+            https://raw.githubusercontent.com/tauri-apps/linuxdeploy-plugin-gstreamer/master/linuxdeploy-plugin-gstreamer.sh
+          chmod +x ~/.cache/tauri/linuxdeploy-plugin-gstreamer.sh
+
+          curl -fsSL -o ~/.cache/tauri/linuxdeploy-plugin-appimage.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-appimage/releases/download/continuous/linuxdeploy-plugin-appimage-x86_64.AppImage
+          chmod +x ~/.cache/tauri/linuxdeploy-plugin-appimage.AppImage
+
           cat > ~/.cache/tauri/linuxdeploy-x86_64.AppImage <<'EOF'
           #!/bin/bash
           APPDIR=""
