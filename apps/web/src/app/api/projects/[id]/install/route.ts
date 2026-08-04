@@ -1,21 +1,15 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { basename } from "node:path";
 import { promisify } from "node:util";
 import { NextResponse } from "next/server";
 import { projects } from "@agent-office/domain/services";
 import { validateIdParam, notFound } from "@/lib/api-helpers";
+import { detectPackageManager, resolvePackageDirs, PM_PATH_SETUP } from "@/lib/server/project-runtime";
 
 const execFileAsync = promisify(execFile);
 
 type Params = { params: Promise<{ id: string }> };
-
-function detectPackageManager(cwd: string): string {
-  if (existsSync(join(cwd, "pnpm-lock.yaml"))) return "pnpm";
-  if (existsSync(join(cwd, "yarn.lock"))) return "yarn";
-  if (existsSync(join(cwd, "bun.lockb")) || existsSync(join(cwd, "bun.lock"))) return "bun";
-  return "npm";
-}
 
 export async function POST(_req: Request, { params }: Params) {
   const { value: id, error } = validateIdParam((await params).id);
@@ -29,17 +23,37 @@ export async function POST(_req: Request, { params }: Params) {
     return NextResponse.json({ error: "Working directory not found" }, { status: 400 });
   }
 
-  const pm = detectPackageManager(cwd);
-
-  try {
-    await execFileAsync(pm, ["install"], { cwd, timeout: 120_000 });
-  } catch (err: unknown) {
-    const e = err as { stderr?: string; message?: string };
+  // Install where package.json actually lives (root, or frontend/backend/… for
+  // split projects) — not the bare project root, which may have none.
+  const dirs = resolvePackageDirs(cwd);
+  if (dirs.length === 0) {
     return NextResponse.json(
-      { error: (e.stderr ?? e.message ?? "Install failed").slice(-2000) },
-      { status: 500 },
+      { error: "No package.json found in this project or its frontend/backend folders." },
+      { status: 400 },
     );
   }
 
-  return NextResponse.json({ ok: true, pm });
+  const installed: Array<{ dir: string; pm: string }> = [];
+  for (const dir of dirs) {
+    const pm = detectPackageManager(dir);
+    try {
+      // Run through bash so the nvm/pnpm/bun PATH bootstrap applies — a
+      // GUI-launched app otherwise can't find the package manager.
+      await execFileAsync("bash", ["-lc", `${PM_PATH_SETUP}${pm} install`], {
+        cwd: dir,
+        timeout: 300_000,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      installed.push({ dir: basename(dir), pm });
+    } catch (err: unknown) {
+      const e = err as { stderr?: string; stdout?: string; message?: string };
+      const detail = (e.stderr || e.stdout || e.message || "Install failed").trim().slice(-2000);
+      return NextResponse.json(
+        { error: `${pm} install failed in ${basename(dir)}:\n${detail}`, installed },
+        { status: 500 },
+      );
+    }
+  }
+
+  return NextResponse.json({ ok: true, installed });
 }

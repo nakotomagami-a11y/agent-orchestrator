@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Icon } from "@/components/ui/icon";
 import { ActionBar } from "@/components/ui/action-bar";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -28,7 +28,7 @@ import { listProcesses, getProcess, killProcess } from "@/lib/api/processes";
 // Shared compact button style for all toolbar action buttons
 const TBTN = "inline-flex items-center gap-[5px] px-[9px] h-[30px] rounded-[7px] text-[12px] text-txt-2 border border-transparent hover:bg-bg-3 hover:text-txt transition-[background,color,border-color] duration-[120ms] cursor-pointer select-none shrink-0";
 
-type InstallState = "unknown" | "needed" | "installing" | "done";
+type InstallState = "unknown" | "needed" | "installing" | "done" | "failed";
 
 type RunState =
   | { phase: "idle" }
@@ -38,9 +38,11 @@ type RunState =
 
 export function DevServerButton({ projectId }: { projectId: string }) {
   const [install, setInstall] = useState<InstallState>("unknown");
+  const [installError, setInstallError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const dropRef = useRef<HTMLDivElement>(null);
 
+  const qc = useQueryClient();
   const store = useDevServerStore();
 
   const devQ = useQuery({
@@ -109,17 +111,30 @@ export function DevServerButton({ projectId }: { projectId: string }) {
     store.setRunState(projectId, key, s);
   }
 
-  async function runInstall() {
+  async function runInstall(): Promise<boolean> {
     setInstall("installing");
+    setInstallError(null);
     try {
       await installDeps(projectId);
       setInstall("done");
-    } catch {
-      setInstall("needed");
+      // node_modules now exists — refresh the dev-config so button state and the
+      // Dev/Build buttons reflect it without a manual reload.
+      void qc.invalidateQueries({ queryKey: ["project-dev-config", projectId] });
+      return true;
+    } catch (err) {
+      setInstall("failed");
+      setInstallError(err instanceof Error ? err.message : "Install failed");
+      return false;
     }
   }
 
   async function startCmd(key: string) {
+    // Smart default: if deps were never installed, install them first instead
+    // of launching a dev server that would immediately crash on missing modules.
+    if (install === "needed" || install === "failed") {
+      const ok = await runInstall();
+      if (!ok) return;
+    }
     setKeyState(key, { phase: "starting" });
     try {
       const body = await startDevCommand(projectId, key);
@@ -138,7 +153,9 @@ export function DevServerButton({ projectId }: { projectId: string }) {
   }
 
   const runningCount = commands.filter((cmd) => store.getRunState(projectId, cmd.key).phase === "running").length;
-  const busyInstall = install === "needed" || install === "installing";
+  // Only block the Dev/Start buttons while an install is actually running.
+  // When deps are merely "needed", clicking Dev auto-installs first (startCmd).
+  const busyInstall = install === "installing";
 
   // No package.json and no detected commands (e.g. non-JS project) — hide entirely
   if (install !== "unknown" && install !== "installing" && !hasPackageJson && commands.length === 0) {
@@ -154,6 +171,12 @@ export function DevServerButton({ projectId }: { projectId: string }) {
     <button type="button" className={TBTN} disabled>
       <Icon name="refresh" size={12} className="[animation:spin_1s_linear_infinite]" /> Installing…
     </button>
+  ) : install === "failed" ? (
+    <Tooltip content={installError ?? "Install failed — click to retry"} side="bottom">
+      <button type="button" className={cn(TBTN, "text-[var(--error)]")} onClick={() => { void runInstall(); }}>
+        <Icon name="x" size={12} /> Install failed — retry
+      </button>
+    </Tooltip>
   ) : null;
 
   // ── Single command: inline buttons ─────────────────────────────────────────
