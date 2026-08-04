@@ -33,8 +33,11 @@ export async function startDevCommand(
   return res.data;
 }
 
-export async function installDeps(projectId: string): Promise<void> {
-  await apiClient.post(API_ROUTES.projectInstall(projectId));
+export async function installDeps(projectId: string): Promise<{ installed: Array<{ dir: string; pm: string }> }> {
+  const res = await apiClient.post<{ ok?: boolean; installed?: Array<{ dir: string; pm: string }> }>(
+    API_ROUTES.projectInstall(projectId),
+  );
+  return { installed: res.data.installed ?? [] };
 }
 
 export async function getBuildInfo(projectId: string): Promise<{ hasBuild: boolean }> {
