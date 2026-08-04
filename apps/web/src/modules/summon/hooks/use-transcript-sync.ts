@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
 import { loadTranscript, saveTranscript } from "../format/transcript-store";
+import { createTranscriptSaver, type TranscriptSaver } from "../format/throttle-save";
 import { readChatEntry } from "../state/chat-state-registry";
 import type { ThreadItem } from "../format/thread-types";
 
@@ -114,9 +115,28 @@ function useLoadEffect(input: TranscriptSyncInput, loadedTKeyRef: MutableRefObje
 
 function useWriteThroughEffect(input: TranscriptSyncInput, loadedTKeyRef: MutableRefObject<string | null>): void {
   const { tKey, thread, activeRunId, sessionId, queuedMessages, transcriptLoaded } = input;
+
+  // A streaming run mutates `thread` once per token; persisting on every
+  // mutation JSON.stringify-s the entire (multi-MB, thousands of items)
+  // transcript + PUTs it per token — the main-thread stall behind long-chat
+  // lag. The saver coalesces those into one save per window (trailing edge,
+  // newest data); idle turns still save immediately. The guard lives in the
+  // save callback so a tKey switch mid-window can't clobber the new row.
+  const saverRef = useRef<TranscriptSaver | null>(null);
+  if (saverRef.current === null) {
+    saverRef.current = createTranscriptSaver((a) => {
+      if (loadedTKeyRef.current !== a.tKey) return;
+      void saveTranscript(a.tKey, a.thread, a.activeRunId, a.sessionId, a.queuedMessages);
+    });
+  }
+
   useEffect(() => {
     if (!transcriptLoaded) return;
     if (loadedTKeyRef.current !== tKey) return;
-    void saveTranscript(tKey, thread, activeRunId, sessionId, queuedMessages);
+    saverRef.current!.schedule({ tKey, thread, activeRunId, sessionId, queuedMessages });
   }, [tKey, thread, activeRunId, sessionId, transcriptLoaded, queuedMessages, loadedTKeyRef]);
+
+  // Flush a pending throttled save on unmount so the last tokens aren't lost
+  // when the panel closes mid-window.
+  useEffect(() => () => saverRef.current?.flushPending(), []);
 }
