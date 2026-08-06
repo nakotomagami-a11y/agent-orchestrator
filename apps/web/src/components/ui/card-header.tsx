@@ -1,7 +1,7 @@
 import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
-export type CardHeaderProps = HTMLAttributes<HTMLDivElement> & {
+export type CardHeaderProps = Omit<HTMLAttributes<HTMLDivElement>, "title"> & {
   title: ReactNode;
   /** Secondary text (mono, muted) shown next to the title. */
   sub?: ReactNode;
