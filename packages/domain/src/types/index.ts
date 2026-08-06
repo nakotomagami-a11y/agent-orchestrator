@@ -295,6 +295,30 @@ export interface SummonRequest {
 
 export type ContextProfile = "tight" | "balanced" | "deep";
 
+export type ScheduledJobStatus = "pending" | "firing" | "done" | "cancelled" | "needs-attention";
+export type ScheduledJobAttention = "stale" | "missing-instance" | "retry-exceeded";
+
+/** A unit of scheduled work: a serialized summon plus the time to fire it. */
+export interface ScheduledJob {
+  id: string;
+  /** Unix ms. Job fires on the first tick at or after this time. */
+  fireAt: number;
+  summonRequest: SummonRequest;
+  /** How the job was created. */
+  reason: "manual" | "rate-limit";
+  /** Human label for the schedules list (agent + prompt snippet). */
+  label: string;
+  status: ScheduledJobStatus;
+  /** Why a job needs the user's attention (only set when status is needs-attention). */
+  attention?: ScheduledJobAttention;
+  /** Consecutive rate-limit re-schedules of this job. */
+  attempts: number;
+  /** Run started by the most recent fire (used to detect a repeat rate-limit). */
+  firedRunId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type SseEventName = "chunk" | "tool" | "usage" | "done" | "error" | "attached" | "subagent" | "subagent-update" | "rate-limit";
 
 export interface SseChunkEvent { runId: string; text: string }

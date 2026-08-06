@@ -16,6 +16,8 @@ export type RateLimitCardProps = {
   severity?: "warning" | "limit";
   onStop?: () => void;
   onDismiss?: () => void;
+  /** Schedule a server-side auto-resume when the limit resets. */
+  onSchedule?: () => void;
 };
 
 /**
@@ -24,10 +26,14 @@ export type RateLimitCardProps = {
  * and continue. A hard LIMIT (red, "hit") means the run stopped. Displays
  * current budget usage and a live countdown to reset.
  */
-export function RateLimitCard({ message, resetsAt, severity = "limit", onStop, onDismiss }: RateLimitCardProps) {
+export function RateLimitCard({ message, resetsAt, severity = "limit", onStop, onDismiss, onSchedule }: RateLimitCardProps) {
   const usageLabel = useRateLimitUsageLabel();
   const secsLeft = useRateLimitCountdown(resetsAt);
   const isLimit = severity === "limit";
+  const [scheduled, setScheduled] = useState(false);
+  const handleSchedule = onSchedule
+    ? () => { onSchedule(); setScheduled(true); }
+    : undefined;
   return (
     <div
       className={
@@ -45,7 +51,7 @@ export function RateLimitCard({ message, resetsAt, severity = "limit", onStop, o
             Resets in <span className={isLimit ? "text-[#dc2626]" : "text-[#ca8a04]"}>{formatCountdown(secsLeft)}</span>
           </div>
         ) : null}
-        <RateLimitActions onStop={onStop} onDismiss={onDismiss} isLimit={isLimit} />
+        <RateLimitActions onStop={onStop} onDismiss={onDismiss} onSchedule={handleSchedule} scheduled={scheduled} isLimit={isLimit} />
       </div>
     </div>
   );
@@ -104,9 +110,9 @@ function RateLimitHeader({ usageLabel, isLimit }: { usageLabel: string; isLimit:
   );
 }
 
-function RateLimitActions({ onStop, onDismiss, isLimit }: { onStop: (() => void) | undefined; onDismiss: (() => void) | undefined; isLimit: boolean }) {
+function RateLimitActions({ onStop, onDismiss, onSchedule, scheduled, isLimit }: { onStop: (() => void) | undefined; onDismiss: (() => void) | undefined; onSchedule: (() => void) | undefined; scheduled: boolean; isLimit: boolean }) {
   return (
-    <div className="mt-2 flex items-center gap-3">
+    <div className="mt-2 flex items-center gap-3 flex-wrap">
       <button
         onClick={onStop}
         disabled={!onStop}
@@ -121,6 +127,15 @@ function RateLimitActions({ onStop, onDismiss, isLimit }: { onStop: (() => void)
       >
         <Icon name="refresh" size={11} /> {isLimit ? "Retry" : "Continue"}
       </button>
+      {onSchedule ? (
+        <button
+          onClick={onSchedule}
+          disabled={scheduled}
+          className="text-ao-fg-2 text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-60 disabled:cursor-default"
+        >
+          <Icon name={scheduled ? "check" : "activity"} size={11} /> {scheduled ? "Resume scheduled" : "Resume when limit resets"}
+        </button>
+      ) : null}
     </div>
   );
 }

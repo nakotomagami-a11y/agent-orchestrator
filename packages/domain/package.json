@@ -13,6 +13,7 @@
     "./hooks/query-keys": "./src/hooks/query-keys.ts",
     "./hooks/api": "./src/hooks/api.ts",
     "./services": "./src/services/index.ts",
+    "./services/db": "./src/services/db/index.ts",
     "./services/*": "./src/services/*.ts"
   },
   "scripts": {

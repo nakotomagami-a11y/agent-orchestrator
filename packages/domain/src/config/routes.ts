@@ -18,6 +18,7 @@ export const PAGE_ROUTES = {
   settings: "/settings",
   activity: "/activity",
   analytics: "/analytics",
+  schedules: "/schedules",
   docs: "/docs",
 } as const;
 
@@ -94,6 +95,9 @@ export const API_ROUTES = {
   runTree: (id: string) => `/api/runs/${encodeURIComponent(id)}/tree`,
 
   summon: "/api/summon",
+  schedules: "/api/schedules",
+  schedule: (id: string) => `/api/schedules/${encodeURIComponent(id)}`,
+  scheduleRun: (id: string) => `/api/schedules/${encodeURIComponent(id)}/run`,
   broadcast: "/api/broadcast",
 
   settings: "/api/settings",

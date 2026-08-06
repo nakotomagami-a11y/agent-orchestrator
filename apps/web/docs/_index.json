@@ -9,6 +9,7 @@
     { "id": "projects",        "label": "Projects",        "file": "04-projects.md" },
     { "id": "memory",          "label": "Memory",          "file": "05-memory.md" },
     { "id": "usage",           "label": "Usage",           "file": "06-usage.md" },
+    { "id": "schedules",       "label": "Schedules",       "file": "09-schedules.md" },
     { "id": "interface",       "label": "Interface",       "file": "07-interface.md" },
     { "id": "reference",       "label": "Reference",       "file": "08-reference.md" }
   ]

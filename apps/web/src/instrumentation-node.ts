@@ -22,7 +22,7 @@ import {
 } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { projects, settings } from "@agent-office/domain/services";
+import { projects, scheduler, settings } from "@agent-office/domain/services";
 import { logEnvDiagnostics } from "./lib/env";
 
 // Env validation runs on module import (throws on malformed config).
@@ -100,6 +100,15 @@ try {
 try {
   projects.reconcileAllWorktrees(settings.readSettings());
 } catch (err) {
-   
+
   console.warn("[worktree-reconcile] skipped:", err);
+}
+
+// Start the server-side scheduler (rate-limit auto-resume + scheduled tasks).
+// Idempotent — a no-op if a previous HMR worker already started the loop.
+try {
+  scheduler.startScheduler();
+} catch (err) {
+
+  console.warn("[scheduler] failed to start:", err);
 }

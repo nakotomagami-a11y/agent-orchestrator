@@ -7,6 +7,8 @@ export * as skills from "./skills";
 export * as userAnalysis from "./user-analysis";
 export * as runs from "./runs";
 export * as summon from "./summon";
+export * as summonRun from "./summon-run";
+export * as scheduler from "./scheduler";
 export * as templates from "./templates";
 export * as health from "./health";
 export * as settings from "./settings";

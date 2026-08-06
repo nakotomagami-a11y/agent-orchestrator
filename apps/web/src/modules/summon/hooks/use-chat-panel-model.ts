@@ -13,6 +13,8 @@ import { useChatState, type ChatState } from "./use-chat-state";
 import { transcriptKey } from "../format/transcript-store";
 import { useProject } from "@/modules/projects/hooks/use-projects";
 import { useBranchStore } from "@/lib/branch-store";
+import { toast } from "@/lib/toast-store";
+import { parseResetTimeFromMessage } from "../format/parse-reset-time";
 import {
   deriveChatPhase,
   findLastUserMessageText,
@@ -51,6 +53,10 @@ export type ChatPanelModel = {
   onNewThread: () => void;
   onContinueRecovered: () => void;
   onResummonLastMessage: () => void;
+  onScheduleRateLimit: (resetsAtSeconds: number) => Promise<void>;
+  onScheduleErrorResume: (message: string) => Promise<void>;
+  /** True when a rate-limit reset time is known for this thread. */
+  canScheduleResume: boolean;
 };
 
 /**
@@ -173,6 +179,47 @@ export function useChatPanelModel(input: UseChatPanelModelInput): ChatPanelModel
     state.setPendingSeed(lastUserMessageText);
   };
 
+  // The most recent rate-limit reset time seen in this thread (unix seconds).
+  // A hard limit posts a rate-limit card carrying resetsAt even when the run
+  // then ends as a generic error — so this is our reset signal for both the
+  // rate-limit card AND the error card.
+  const lastRateLimitResetsAt = findLastRateLimitResetsAt(state.thread);
+
+  // Schedule a rate-limit auto-resume: when the limit resets, the server fires
+  // a run that resumes this session and continues the interrupted work.
+  const scheduleResume = async (fireAtMs: number) => {
+    const summonRequest = {
+      agentId: input.agent.id,
+      prompt: "Continue the previous task where you left off — the run was interrupted by a rate limit.",
+      projectId: input.projectId,
+      instanceId: input.instanceId,
+      resumeSessionId: state.sessionId ?? undefined,
+    };
+    await fetch("/api/schedules", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fireAt: fireAtMs,
+        summonRequest,
+        reason: "rate-limit",
+        label: `${input.agent.name}: resume after rate limit`,
+      }),
+    });
+    toast(`Resume scheduled for ${new Date(fireAtMs).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`);
+  };
+
+  const onScheduleRateLimit = (resetsAtSeconds: number) => scheduleResume(resetsAtSeconds * 1000);
+
+  // Error-card entry point. Best reset time, in order: one parsed out of the
+  // error text ("resets 10:10pm (Africa/Cairo)"), then a rate-limit event seen
+  // earlier in the thread, then Claude's 5h session window as a last resort.
+  const onScheduleErrorResume = (message: string) => {
+    const fromMessage = parseResetTimeFromMessage(message);
+    const fireAt = fromMessage
+      ?? (lastRateLimitResetsAt ? lastRateLimitResetsAt * 1000 : Date.now() + FIVE_HOURS_MS);
+    return scheduleResume(fireAt);
+  };
+
   return {
     tKey,
     projectName,
@@ -191,7 +238,21 @@ export function useChatPanelModel(input: UseChatPanelModelInput): ChatPanelModel
     onNewThread: newThread,
     onContinueRecovered,
     onResummonLastMessage,
+    onScheduleRateLimit,
+    onScheduleErrorResume,
+    canScheduleResume: lastRateLimitResetsAt != null,
   };
+}
+
+const FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
+
+/** Most recent rate-limit reset time (unix seconds) seen in the thread. */
+function findLastRateLimitResetsAt(thread: ChatState["thread"]): number | undefined {
+  for (let i = thread.length - 1; i >= 0; i--) {
+    const it = thread[i];
+    if (it && it.kind === "system-rate-limit" && it.resetsAt) return it.resetsAt;
+  }
+  return undefined;
 }
 
 /** Fire the parent's active-run change callback whenever activeRunId flips. */

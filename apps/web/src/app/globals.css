@@ -94,6 +94,10 @@
 }
 
 :root {
+  /* Tell the browser which palette native controls should adopt. This makes
+     date/time picker indicator icons and native popups follow the app theme
+     (light icon on dark, dark icon on light) instead of a fixed default. */
+  color-scheme: light;
   --bg-0: #f2f3f5;
   --bg-1: #ffffff;
   --bg-2: #f2f3f5;
@@ -213,6 +217,7 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg-0: #0f0f0f;
   --bg-1: #1a1a1a;
   --bg-2: #202020;

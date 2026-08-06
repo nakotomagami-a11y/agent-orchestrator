@@ -683,6 +683,11 @@ function handleStreamLine(run: LiveRun, line: string): void {
     const event = buildRateLimitEvent(evt.rate_limit_info, run.id);
     if (event) {
       run.rateLimitResetsAt = event.resetsAt;
+      // Persist the reset time only on a hard LIMIT so the scheduler can tell a
+      // fired auto-resume hit the wall again (→ reschedule) vs finished cleanly.
+      if (event.severity === "limit" && event.resetsAt) {
+        db.setRunRateLimitResetsAt(run.id, event.resetsAt);
+      }
       // Never kill the run here. On an early WARNING the CLI keeps going; on a
       // hard LIMIT the CLI exits on its own if Anthropic blocks it. Either way
       // the card lets the user decide to stop or continue.

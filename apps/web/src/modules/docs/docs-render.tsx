@@ -79,7 +79,10 @@ function Callout({ kind, body }: { kind: string; body: string }) {
         <span aria-hidden>{style.icon}</span>
         <span>{style.label}</span>
       </div>
-      <div className="text-[13px] text-[var(--txt-2)] leading-[1.65]">
+      {/* react-markdown wraps a fenced block in <pre>, which would force
+          `white-space: pre` + a monospace font onto this body (long lines
+          then clip instead of wrapping). Reset both back to normal prose. */}
+      <div className="text-[13px] text-[var(--txt-2)] leading-[1.65] whitespace-normal break-words [font-family:var(--font-sans)]">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
       </div>
     </div>
@@ -232,6 +235,11 @@ const MD_COMPONENTS: Components = {
       {children}
     </td>
   ),
+  // react-markdown wraps every fenced block in a <pre>. Both our fenced
+  // targets — <Callout> and <CodeBlock> — supply their own container, and the
+  // outer <pre> only leaks `white-space: pre` + a monospace font down into the
+  // callout body (long lines then clip instead of wrapping). Unwrap it.
+  pre: ({ children }) => <>{children}</>,
   code: ({ className, children }) => {
     const langMatch = /language-(\S+)/.exec(className ?? "");
     const lang = langMatch?.[1] ?? "";

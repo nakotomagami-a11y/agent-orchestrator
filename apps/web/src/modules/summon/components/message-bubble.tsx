@@ -263,6 +263,10 @@ export type MessageBubbleProps = {
   onStopRun?: () => void;
   /** Dismiss the rate-limit warning card (Continue — run keeps going). */
   onDismissRateLimit?: () => void;
+  /** Schedule an auto-resume when the limit resets (rate-limit card). */
+  onScheduleRateLimit?: () => void;
+  /** Schedule an auto-resume from a run-error card (limit surfaced as error). */
+  onScheduleErrorResume?: () => void;
   /** When true, hides the avatar (consecutive messages from the same sender). */
   hideAvatar?: boolean;
 };
@@ -283,12 +287,15 @@ function ErrorCard({
   message,
   onRetry,
   onRepair,
+  onScheduleResume,
 }: {
   message: string;
   onRetry?: () => void;
   onRepair?: () => Promise<void> | void;
+  onScheduleResume?: () => void;
 }) {
   const [repairing, setRepairing] = useState(false);
+  const [scheduled, setScheduled] = useState(false);
   const showRepair = onRepair && isWorktreeError(message);
   const showAuth = isAuthError(message);
 
@@ -327,6 +334,15 @@ function ErrorCard({
           >
             <Icon name="refresh" size={11} /> Retry
           </button>
+          {onScheduleResume && (
+            <button
+              onClick={() => { onScheduleResume(); setScheduled(true); }}
+              disabled={scheduled}
+              className="text-ao-fg-2 text-[12px] cursor-pointer inline-flex items-center gap-1 bg-transparent border-0 p-0 disabled:opacity-60 disabled:cursor-default"
+            >
+              <Icon name={scheduled ? "check" : "activity"} size={11} /> {scheduled ? "Resume scheduled" : "Resume when limit resets"}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -390,7 +406,7 @@ function AuthErrorCard({ message, onRetry }: { message: string; onRetry?: () => 
   );
 }
 
-export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, onRepair, onStopRun, onDismissRateLimit, hideAvatar }: MessageBubbleProps) {
+export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRetry, onRepair, onStopRun, onDismissRateLimit, onScheduleRateLimit, onScheduleErrorResume, hideAvatar }: MessageBubbleProps) {
   return match(item)
     .with({ kind: "you" }, (item) => {
       const youImgs = extractImages(item.text);
@@ -458,10 +474,10 @@ export function MessageBubble({ item, agent, isQuestion, onReply, onRerun, onRet
       <ThinkingRow id={item.id} text={item.text} agent={agent} hideAvatar={hideAvatar} />
     ))
     .with({ kind: "system-rate-limit" }, (item) => (
-      <RateLimitCard message={item.message} resetsAt={item.resetsAt} severity={item.severity} onStop={onStopRun} onDismiss={onDismissRateLimit} />
+      <RateLimitCard message={item.message} resetsAt={item.resetsAt} severity={item.severity} onStop={onStopRun} onDismiss={onDismissRateLimit} onSchedule={onScheduleRateLimit} />
     ))
     .with({ kind: "system-error" }, (item) => (
-      <ErrorCard message={item.message} onRetry={onRetry} onRepair={onRepair} />
+      <ErrorCard message={item.message} onRetry={onRetry} onRepair={onRepair} onScheduleResume={onScheduleErrorResume} />
     ))
     .with({ kind: "system-done" }, (item) => {
       const totalTok =

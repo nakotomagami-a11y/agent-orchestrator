@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TextInput } from "@/components/ui/text-input";
 import { Icon } from "@/components/ui/icon";
+import { openExternalUrl } from "@/lib/tauri-window";
 import {
   useStartLogin,
   useSubmitLoginCode,
@@ -44,7 +45,7 @@ export function SignInPanel({ accountId, onSuccess }: SignInPanelProps) {
   useEffect(() => {
     if (state.url && openedUrlRef.current !== state.url) {
       openedUrlRef.current = state.url;
-      window.open(state.url, "_blank", "noopener,noreferrer");
+      openExternalUrl(state.url);
     }
   }, [state.url]);
 
@@ -82,9 +83,7 @@ export function SignInPanel({ accountId, onSuccess }: SignInPanelProps) {
         <Button
           size="sm"
           variant="ghost"
-          onClick={() =>
-            state.url && window.open(state.url, "_blank", "noopener,noreferrer")
-          }
+          onClick={() => state.url && openExternalUrl(state.url)}
           disabled={!state.url}
         >
           <Icon name="external-link" size={14} />

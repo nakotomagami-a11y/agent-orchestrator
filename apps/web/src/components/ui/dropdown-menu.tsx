@@ -62,12 +62,21 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end", trigger
       }
     };
     const close = () => setOpen(false);
+    // Close when the PAGE scrolls (the menu is position:fixed and would detach
+    // from its trigger) — but NOT when the user scrolls *inside* the menu's own
+    // overflow area. The capture-phase listener sees inner scrolls too, so skip
+    // any scroll whose target is within the menu.
+    const onScroll = (e: Event) => {
+      const t = e.target as Node | null;
+      if (t && menuRef.current?.contains(t)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", onClick);
-    window.addEventListener("scroll", close, { passive: true, capture: true });
+    window.addEventListener("scroll", onScroll, { passive: true, capture: true });
     window.addEventListener("resize", close);
     return () => {
       document.removeEventListener("mousedown", onClick);
-      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("scroll", onScroll, true);
       window.removeEventListener("resize", close);
     };
   }, [open]);
@@ -133,7 +142,12 @@ export function DropdownMenu({ trigger, items, ariaLabel, align = "end", trigger
                 className={cn(
                 "flex items-center gap-[10px] h-[34px] px-[10px] rounded-[var(--r-sm)] text-[13px] text-txt-2 cursor-pointer border-none bg-transparent font-[inherit] text-left no-underline w-full",
                 item.destructive && "text-status-error",
-                item.selected && "bg-acc text-[var(--acc-ink)]",
+                // Selected sits on the accent (purple) fill. Use `--txt`, which
+                // is near-white in dark theme and near-black in light theme, so
+                // the label always reads on the purple. `[&_*]` forces nested
+                // label spans/icons to inherit it too (they otherwise keep their
+                // own muted colour and vanish on the fill).
+                item.selected && "bg-acc text-txt [&_*]:!text-txt",
                 !item.selected && i === activeIndex && "bg-bg-3 text-txt"
               )}
               >

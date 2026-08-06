@@ -47,6 +47,8 @@ export function Sidebar() {
   const setGroupExpanded = useOfficeStore((s) => s.setGroupExpanded);
   const pinnedGroups = useOfficeStore((s) => s.pinnedGroups);
   const togglePin = useOfficeStore((s) => s.togglePin);
+  const navHeight = useOfficeStore((s) => s.navHeight);
+  const setNavHeight = useOfficeStore((s) => s.setNavHeight);
 
   const activeProjectId = useActiveProjectStore((s) => s.id);
   const projectQ = useProject(activeProjectId);
@@ -164,12 +166,50 @@ export function Sidebar() {
     setRenamingInstanceId(null);
   }, []);
 
+  // Draggable divider between the links (nav) block and the roster block. The
+  // nav is pinned to `navHeight`; the roster block flexes to fill the rest.
+  const asideRef = useRef<HTMLElement>(null);
+  const [draggingSplit, setDraggingSplit] = useState(false);
+
+  useEffect(() => {
+    if (!draggingSplit) return;
+    const prevCursor = document.body.style.cursor;
+    const prevSelect = document.body.style.userSelect;
+    document.body.style.cursor = "row-resize";
+    document.body.style.userSelect = "none";
+    const onMove = (e: PointerEvent) => {
+      const rect = asideRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      // Leave room for the roster header + a few rows + the footer.
+      const max = Math.max(96, rect.height - 220);
+      setNavHeight(Math.round(Math.min(max, Math.max(96, e.clientY - rect.top))));
+    };
+    const onUp = () => setDraggingSplit(false);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevSelect;
+    };
+  }, [draggingSplit, setNavHeight]);
+
   return (
     <aside
+      ref={asideRef}
       className="bg-bg-2 border-r border-line flex flex-col min-h-0 h-full overflow-hidden max-[1024px]:overflow-hidden max-[600px]:hidden"
       aria-label={t("app.name")}
     >
-      <nav className="p-[6px] flex flex-col gap-[2px]" aria-label={t("nav.primary_label")}>
+      <nav
+        className="p-[6px] flex flex-col gap-[2px] overflow-y-auto"
+        style={
+          navHeight != null
+            ? { flexBasis: navHeight, flexGrow: 0, flexShrink: 1, minHeight: 96 }
+            : { flexShrink: 0, minHeight: 96 }
+        }
+        aria-label={t("nav.primary_label")}
+      >
         <NavItem
           href={PAGE_ROUTES.office}
           icon="home"
@@ -218,9 +258,34 @@ export function Sidebar() {
           badge={`$${spendToday.toFixed(2)}`}
           active={isActiveRoute(pathname, PAGE_ROUTES.analytics)}
         />
+        <NavItem
+          href={PAGE_ROUTES.schedules}
+          icon="list"
+          label="Schedules"
+          active={isActiveRoute(pathname, PAGE_ROUTES.schedules)}
+        />
         <ProcessesNavButton />
         <CommandPaletteNavButton />
       </nav>
+
+      {/* Draggable divider. Geometry + cursor are inline styles on purpose: the
+          dev JIT sometimes drops arbitrary utilities mid-session (see MainShell),
+          and a 0-height handle silently kills the drag. */}
+      <div
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label={t("sidebar.resize_blocks_aria")}
+        onPointerDown={(e) => { e.preventDefault(); setDraggingSplit(true); }}
+        onDoubleClick={() => setNavHeight(null)}
+        title={t("sidebar.resize_blocks_title")}
+        className="group/split relative shrink-0"
+        style={{ height: 11, cursor: "row-resize", touchAction: "none", zIndex: 10 }}
+      >
+        <div
+          className={cn("transition-colors", draggingSplit ? "bg-acc" : "bg-line group-hover/split:bg-acc")}
+          style={{ position: "absolute", left: 0, right: 0, top: 5, height: 1 }}
+        />
+      </div>
 
       <div className="flex flex-col min-h-0 flex-1">
         {/* Roster header */}

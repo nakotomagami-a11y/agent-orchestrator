@@ -4,7 +4,7 @@
 // React code ships to both targets. Uses dynamic imports so the plugin
 // bundles are never pulled into a browser build where they'd 404.
 
-import { isTauri } from "./tauri-window";
+import { isTauri, openExternalUrl } from "./tauri-window";
 
 export type UpdateInfo = {
   version: string;
@@ -112,7 +112,7 @@ export async function detectUpdate(): Promise<UpdateStatus | null> {
 
 /** Opens the GitHub releases page in the user's browser (macOS manual path). */
 export function openReleasesPage(url: string = RELEASES_URL): void {
-  if (typeof window !== "undefined") window.open(url, "_blank", "noopener,noreferrer");
+  void openExternalUrl(url);
 }
 
 /**

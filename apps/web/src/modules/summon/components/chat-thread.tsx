@@ -41,6 +41,12 @@ export type ChatThreadProps = {
   onAbortRun?: () => void;
   /** Dismiss a rate-limit warning card (Continue button). */
   onDismissRateLimit?: (itemId: string) => void;
+  /** Schedule a resume of this session when the limit resets (unix seconds). */
+  onScheduleRateLimit?: (resetsAtSeconds: number) => Promise<void>;
+  /** Schedule a resume from a run-error card (limit hit but surfaced as an error). */
+  onScheduleErrorResume?: (message: string) => Promise<void>;
+  /** True when a rate-limit reset time is known for this thread. */
+  canScheduleResume?: boolean;
   phase: ChatPhase;
   phaseHint?: string;
   phaseStats?: string;
@@ -56,7 +62,7 @@ const SUGGESTIONS: Array<{ lbl: string; text: string }> = [
   { lbl: "Explain", text: "Walk me through how this part of the system handles errors." },
 ];
 
-export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit, onRepairWorktree, onAbortRun, onDismissRateLimit, phase, phaseHint, phaseStats, queuedMessages, onCancelQueuedMessage }: ChatThreadProps) {
+export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit, onRepairWorktree, onAbortRun, onDismissRateLimit, onScheduleRateLimit, onScheduleErrorResume, canScheduleResume, phase, phaseHint, phaseStats, queuedMessages, onCancelQueuedMessage }: ChatThreadProps) {
   // Idempotent guard: collapse a user bubble that was double-added by a
   // resume / queue-drain / recovery effect re-firing (common because the dev
   // server restarts on any server-side edit and the panel replays the active
@@ -312,6 +318,12 @@ export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit,
                 const lastYouText = row.item.kind === "system-error" && onSubmit
                   ? (items.slice(0, items.indexOf(row.item)).reverse().find(it => it.kind === "you") as { kind: "you"; text: string } | undefined)?.text
                   : undefined;
+                const rlResetsAt = row.item.kind === "system-rate-limit" ? row.item.resetsAt : undefined;
+                const errMsg = row.item.kind === "system-error" ? row.item.message : "";
+                const errLooksLimited =
+                  row.item.kind === "system-error" &&
+                  (canScheduleResume === true ||
+                    /\blimit\b|\bresets?\b|too many requests|\b429\b/i.test(errMsg));
                 return (
                   <MessageBubble
                     key={row.item.id + "mbbl_"+idx}
@@ -332,6 +344,12 @@ export function ChatThread({ items: rawItems, agent, onPickSuggestion, onSubmit,
                     }
                     onStopRun={row.item.kind === "system-rate-limit" ? onAbortRun : undefined}
                     onDismissRateLimit={row.item.kind === "system-rate-limit" && onDismissRateLimit ? () => onDismissRateLimit(row.item.id) : undefined}
+                    onScheduleRateLimit={
+                      rlResetsAt && onScheduleRateLimit ? () => onScheduleRateLimit(rlResetsAt) : undefined
+                    }
+                    onScheduleErrorResume={
+                      errLooksLimited && onScheduleErrorResume ? () => onScheduleErrorResume(errMsg) : undefined
+                    }
                   />
                 );
               }

@@ -141,6 +141,19 @@ export const summonRequestSchema = z.object({
   contextProfile: z.enum(["tight", "balanced", "deep"]).optional(),
 });
 
+export const createScheduleSchema = z.object({
+  fireAt: z.number().int().positive(),
+  summonRequest: summonRequestSchema,
+  reason: z.enum(["manual", "rate-limit"]).optional(),
+  label: z.string().max(200).optional(),
+});
+
+export const reassignScheduleSchema = z.object({
+  agentId: z.string().min(1).optional(),
+  projectId: z.string().optional(),
+  instanceId: z.string().optional(),
+});
+
 export const runsQuerySchema = z.object({
   agent: z
     .string()

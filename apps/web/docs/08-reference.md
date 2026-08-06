@@ -166,6 +166,18 @@ All routes are served by the Next.js backend embedded in the Tauri shell. Base U
 | `GET` | `/api/pipeline/:id` | Poll pipeline status |
 | `POST` | `/api/broadcast` | Fan-out prompt to all roster instances (202) |
 
+### Schedules
+
+Scheduled work — manual timed tasks and rate-limit auto-resume. See [Schedules](#/schedules) for the feature guide. `fireAt` is unix **milliseconds**.
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/schedules` | List all jobs → `{ jobs: [...] }` |
+| `POST` | `/api/schedules` | Create a job `{ fireAt, summonRequest, reason?, label? }` → `{ job }` (201) |
+| `DELETE` | `/api/schedules/:id` | Cancel a job |
+| `PATCH` | `/api/schedules/:id` | Reassign target `{ agentId?, projectId?, instanceId? }` → `{ job }` |
+| `POST` | `/api/schedules/:id/run` | Fire immediately, bypassing the 12h stale cap → `{ job }` |
+
 ### Processes
 
 | Method | Path | Description |
@@ -390,6 +402,26 @@ Every summon creates one row. Never mutated except at `done` (append output, set
 | `cwd` | TEXT | Working directory |
 | `started_at`, `ended_at` | INT | Unix milliseconds |
 | `parent_run_id` | TEXT | Set for sub-agent runs |
+| `rate_limited_resets_at` | INT | Unix **seconds**; set only when a run hit a hard limit. Lets the scheduler detect a repeat rate-limit on a resume (migration v12) |
+
+### `scheduled_jobs`
+
+One row per scheduled job (manual task or rate-limit resume). Added in migration v12. See [Schedules](#/schedules).
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | TEXT PK | UUID |
+| `fire_at` | INT | Unix **milliseconds** — job fires on the first tick at/after this |
+| `summon_request` | TEXT | JSON-serialized `SummonRequest` (agent, prompt, project, resume session…) |
+| `reason` | TEXT | `manual` · `rate-limit` (default `manual`) |
+| `label` | TEXT | Human label for the list |
+| `status` | TEXT | `pending` · `firing` · `done` · `cancelled` · `needs-attention` |
+| `attention` | TEXT | `stale` · `missing-instance` · `retry-exceeded` (only when `needs-attention`) |
+| `attempts` | INT | Consecutive rate-limit re-schedules (ceiling 5) |
+| `fired_run_id` | TEXT | Run started by the most recent fire |
+| `created_at`, `updated_at` | INT | Unix milliseconds |
+
+Indexed by `(status, fire_at)` for the scheduler's due-job scan.
 
 ### `messages`
 

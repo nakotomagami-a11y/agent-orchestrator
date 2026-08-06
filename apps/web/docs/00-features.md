@@ -45,6 +45,7 @@ The raw `claude` CLI gives you one agent in one terminal, and when you close it 
 - **Multi-instance + worktree isolation** — drop the same agent onto a project many times; each gets its own isolated git worktree so parallel instances run at once without colliding. This is genuinely hard to do by hand — it's the standout. See [Usage → Multi-instance & worktrees](#/usage).
 - **Message queue** — line up prompts while a run is streaming; they dispatch in order, editable until they start. See [Interface → Message queue](#/interface).
 - **Pipelines** — chain agents in sequence, run groups in parallel, pause for a human gate, or skip on a condition. See [Usage → Pipelines](#/usage).
+- **Schedules** — run an agent at a set time, or auto-resume a run the moment its rate limit resets — no babysitting. See [Schedules](#/schedules).
 - **Broadcast** — send one prompt to every agent on a project at once. See [Reference → Pipelines & broadcast](#/reference).
 - **Curated roster** — specialist agents bundled for convenience: dev tiers, C-suite advisors, QA, engineering, research. The CLI already supports `.md` subagents; this is a ready-made starting set, not a lock-in. See [Agents → Starter roster](#/agents).
 

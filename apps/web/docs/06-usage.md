@@ -182,7 +182,7 @@ On server start, `services/roster.ts` walks each project's stated roster and rec
 
 ## Spend tracking
 
-Every run records its cost, tokens, and duration in the `runs` table, so spend is fully tracked — but Agent Office does not enforce hard spend caps or quotas. Runs are never auto-refused on cost; the only run-blocking signal is an Anthropic API rate limit, which surfaces as a rate-limit card in the chat thread (see the rate-limit handling in `services/runs.ts`).
+Every run records its cost, tokens, and duration in the `runs` table, so spend is fully tracked — but Agent Office does not enforce hard spend caps or quotas. Runs are never auto-refused on cost; the only run-blocking signal is an Anthropic API rate limit, which surfaces as a rate-limit card in the chat thread (see the rate-limit handling in `services/runs.ts`). From that card you can **auto-resume the run when the limit resets** — see [Schedules](#/schedules).
 
 Where to see spend:
 

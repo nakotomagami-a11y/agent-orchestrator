@@ -49,6 +49,9 @@ export type ChatPanelBodyProps = {
   lastUserMessageText: string | null;
   onContinueRecovered: () => void;
   onResummonLastMessage: () => void;
+  onScheduleRateLimit: (resetsAtSeconds: number) => Promise<void>;
+  onScheduleErrorResume: (message: string) => Promise<void>;
+  canScheduleResume: boolean;
   onSubmit: (text: string) => void;
   onAbort: () => void;
   onCommand: (cmd: string) => void;
@@ -100,6 +103,9 @@ export function ChatPanelBody(props: ChatPanelBodyProps): React.ReactElement {
         }
         onAbortRun={props.onAbort}
         onDismissRateLimit={(id) => props.setThread((prev) => prev.filter((it) => it.id !== id))}
+        onScheduleRateLimit={props.onScheduleRateLimit}
+        onScheduleErrorResume={props.onScheduleErrorResume}
+        canScheduleResume={props.canScheduleResume}
         phase={props.phase}
         phaseHint={phaseHint(props.phase, props.stream.usage)}
         phaseStats={props.liveStats}

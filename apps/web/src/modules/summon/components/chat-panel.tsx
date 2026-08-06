@@ -83,6 +83,9 @@ export function ChatPanel({
       lastUserMessageText={m.lastUserMessageText}
       onContinueRecovered={m.onContinueRecovered}
       onResummonLastMessage={m.onResummonLastMessage}
+      onScheduleRateLimit={m.onScheduleRateLimit}
+      onScheduleErrorResume={m.onScheduleErrorResume}
+      canScheduleResume={m.canScheduleResume}
       onSubmit={m.onSubmit}
       onAbort={m.onAbort}
       onCommand={m.onCommand}

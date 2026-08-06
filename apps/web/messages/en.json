@@ -113,6 +113,8 @@
   "sidebar": {
     "roster_label": "Roster · {count}",
     "filter_aria": "Filter roster",
+    "resize_blocks_aria": "Resize the links and roster blocks",
+    "resize_blocks_title": "Drag to resize · double-click to reset",
     "no_agents_in_project": "No agents in {project}. Click \"Add agent\" on the office toolbar.",
     "no_agent_definitions": "No agent definitions yet. Drop a markdown file in ~/.claude/agents/.",
     "row_open_chat_title": "Click to view details · open chat from there",

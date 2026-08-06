@@ -41,6 +41,13 @@ type OfficeState = {
    * Keyed by projectId, same shape as `expandedGroups`.
    */
   pinnedGroups: Record<string, string[]>;
+  /**
+   * Height (px) the sidebar's nav/links block is pinned to, set by dragging the
+   * divider between the links and roster blocks. `null` = natural content height
+   * (roster takes all remaining space). Persisted.
+   */
+  navHeight: number | null;
+  setNavHeight: (px: number | null) => void;
   setView: (next: OfficeView) => void;
   setIsoEnabled: (next: boolean) => void;
   select: (id: string | null, opts?: SelectOptions) => void;
@@ -62,6 +69,8 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   activeTab: "conversation",
   expandedGroups: {},
   pinnedGroups: {},
+  navHeight: null,
+  setNavHeight: (px) => set({ navHeight: px }),
   setView: (next) => set({ view: next }),
   setIsoEnabled: (next) => set({ isoEnabled: next }),
   select: (id, opts) =>
@@ -114,5 +123,5 @@ export const useOfficeStore = create<OfficeState>()(persist((set, get) => ({
   },
 }), {
   name: "office-view",
-  partialize: (s) => ({ view: s.view, isoEnabled: s.isoEnabled, expandedGroups: s.expandedGroups, pinnedGroups: s.pinnedGroups }),
+  partialize: (s) => ({ view: s.view, isoEnabled: s.isoEnabled, expandedGroups: s.expandedGroups, pinnedGroups: s.pinnedGroups, navHeight: s.navHeight }),
 }));

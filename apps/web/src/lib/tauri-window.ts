@@ -58,6 +58,28 @@ export async function toggleMaximizeWindow(): Promise<void> {
   await w?.toggleMaximize();
 }
 
+/**
+ * Opens a URL in the user's default system browser.
+ *
+ * `window.open()` is a no-op inside the Tauri webview (there's no browser
+ * tab for it to open) — the app needs the shell plugin's `open()` to hand
+ * the URL off to the OS. Falls back to `window.open` in a plain browser tab.
+ */
+export async function openExternalUrl(url: string): Promise<void> {
+  if (isTauri()) {
+    try {
+      const { open } = await import("@tauri-apps/plugin-shell");
+      await open(url);
+      return;
+    } catch {
+      // fall through to window.open as a last resort
+    }
+  }
+  if (typeof window !== "undefined") {
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
 export type ResizeDirection = 'East' | 'North' | 'NorthEast' | 'NorthWest' | 'South' | 'SouthEast' | 'SouthWest' | 'West';
 
 export async function startResizeDragging(direction: ResizeDirection): Promise<void> {
