@@ -25,12 +25,17 @@ function setProc(p: ChildProcess | null) {
 }
 
 function startInhibit() {
+  if (process.platform !== "linux") return;
   try {
     const proc = spawn(
       "systemd-inhibit",
       ["--what=sleep:idle", "--who=Agent Office", "--why=Agent is running", "--mode=block", "sleep", "infinity"],
       { stdio: "ignore", detached: false },
     );
+    proc.on("error", (err) => {
+      log.warn("sleep_inhibit.spawn_error", { code: (err as NodeJS.ErrnoException).code });
+      if (getProc() === proc) setProc(null);
+    });
     proc.unref();
     proc.on("exit", () => {
       if (getProc() !== proc) return;

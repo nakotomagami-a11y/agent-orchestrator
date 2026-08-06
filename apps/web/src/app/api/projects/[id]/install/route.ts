@@ -37,13 +37,24 @@ export async function POST(_req: Request, { params }: Params) {
   for (const dir of dirs) {
     const pm = detectPackageManager(dir);
     try {
-      // Run through bash so the nvm/pnpm/bun PATH bootstrap applies — a
+      // On Windows bash isn't available; run the PM directly (system PATH is
+      // sufficient since Windows PM installs register globally). On Unix we
+      // wrap in bash -lc so the nvm/pnpm/bun PATH bootstrap applies — a
       // GUI-launched app otherwise can't find the package manager.
-      await execFileAsync("bash", ["-lc", `${PM_PATH_SETUP}${pm} install`], {
-        cwd: dir,
-        timeout: 300_000,
-        maxBuffer: 10 * 1024 * 1024,
-      });
+      if (process.platform === "win32") {
+        await execFileAsync(pm, ["install"], {
+          cwd: dir,
+          timeout: 300_000,
+          maxBuffer: 10 * 1024 * 1024,
+          shell: true, // needed so cmd.exe resolves .cmd shims (npm.cmd, pnpm.cmd)
+        });
+      } else {
+        await execFileAsync("bash", ["-lc", `${PM_PATH_SETUP}${pm} install`], {
+          cwd: dir,
+          timeout: 300_000,
+          maxBuffer: 10 * 1024 * 1024,
+        });
+      }
       installed.push({ dir: basename(dir), pm });
     } catch (err: unknown) {
       const e = err as { stderr?: string; stdout?: string; message?: string };
